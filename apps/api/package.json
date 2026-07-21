@@ -1,0 +1,26 @@
+{
+  "name": "@vlog-studio/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate deploy",
+    "prisma:studio": "prisma studio"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.10.1",
+    "@vlog-studio/shared-types": "*",
+    "fastify": "^4.29.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "prisma": "^6.10.1",
+    "tsx": "^4.20.3"
+  }
+}
