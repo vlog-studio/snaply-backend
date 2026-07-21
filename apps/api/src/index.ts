@@ -5,7 +5,7 @@ import { disconnectPrisma } from './db/client.js';
 
 async function main(): Promise<void> {
   const config = loadConfig();
-  const app = await buildApp();
+  const app = await buildApp(config);
 
   const shutdown = async (signal: string): Promise<void> => {
     app.log.info({ signal }, 'shutting down');
