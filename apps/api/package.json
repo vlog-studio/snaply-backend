@@ -16,7 +16,9 @@
   "dependencies": {
     "@prisma/client": "^6.10.1",
     "@vlog-studio/shared-types": "*",
-    "fastify": "^4.29.1"
+    "fastify": "^4.29.1",
+    "fastify-plugin": "^4.5.1",
+    "jose": "^5.10.0"
   },
   "devDependencies": {
     "@types/node": "^20.19.43",
