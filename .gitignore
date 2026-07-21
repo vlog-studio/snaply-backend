@@ -1,0 +1,23 @@
+# deps
+node_modules/
+.turbo/
+
+# build
+dist/
+*.tsbuildinfo
+
+# env
+.env
+.env.*
+!.env.example
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# misc
+.DS_Store
+*.log
+coverage/
