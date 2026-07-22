@@ -1,11 +1,15 @@
 import Fastify, { type FastifyInstance } from 'fastify';
+import websocket from '@fastify/websocket';
 import type { AppConfig } from './config.js';
 import { AppError } from './lib/errors.js';
 import { authPlugin } from './plugins/auth.js';
 import { initStorage } from './services/storage.service.js';
+import { initRedis } from './lib/redis.js';
+import { initEditQueue } from './queue/edit-queue.js';
 import { healthRoutes } from './routes/health.js';
 import { authRoutes } from './routes/auth.js';
 import { videoRoutes } from './routes/videos.js';
+import { editJobRoutes } from './routes/edit-jobs.js';
 
 export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   const app = Fastify({
@@ -55,11 +59,15 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   });
 
   initStorage(config.storage);
+  initRedis(config.redis);
+  initEditQueue(config.redis.editQueueName);
 
+  await app.register(websocket);
   await app.register(authPlugin, config);
   await app.register(healthRoutes);
   await app.register(authRoutes);
   await app.register(videoRoutes);
+  await app.register(editJobRoutes);
 
   return app;
 }

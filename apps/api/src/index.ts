@@ -3,6 +3,8 @@ import { buildApp } from './app.js';
 import { loadConfig } from './config.js';
 import { disconnectPrisma } from './db/client.js';
 import { ensureBucketForDev } from './services/storage.service.js';
+import { closeEditQueue } from './queue/edit-queue.js';
+import { disconnectRedis } from './lib/redis.js';
 
 async function main(): Promise<void> {
   const config = loadConfig();
@@ -14,6 +16,8 @@ async function main(): Promise<void> {
   const shutdown = async (signal: string): Promise<void> => {
     app.log.info({ signal }, 'shutting down');
     await app.close();
+    await closeEditQueue();
+    await disconnectRedis();
     await disconnectPrisma();
     process.exit(0);
   };
