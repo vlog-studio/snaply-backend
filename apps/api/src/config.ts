@@ -10,6 +10,12 @@ export interface AppConfig {
   /** JWT 대상(aud) */
   jwtAudience: string;
   storage: StorageConfig;
+  redis: RedisConfig;
+}
+
+export interface RedisConfig {
+  url: string;
+  editQueueName: string;
 }
 
 export interface StorageConfig {
@@ -70,5 +76,9 @@ export function loadConfig(): AppConfig {
     jwtIssuer: `${supabaseUrl}/auth/v1`,
     jwtAudience: process.env.SUPABASE_JWT_AUDIENCE ?? 'authenticated',
     storage: loadStorageConfig(),
+    redis: {
+      url: requireEnv('REDIS_URL'),
+      editQueueName: process.env.EDIT_QUEUE_NAME ?? 'edit-jobs',
+    },
   };
 }
