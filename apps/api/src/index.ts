@@ -2,10 +2,14 @@ import './env.js';
 import { buildApp } from './app.js';
 import { loadConfig } from './config.js';
 import { disconnectPrisma } from './db/client.js';
+import { ensureBucketForDev } from './services/storage.service.js';
 
 async function main(): Promise<void> {
   const config = loadConfig();
   const app = await buildApp(config);
+
+  // 개발(MinIO)에서 버킷이 없으면 생성. 실제 AWS에서는 no-op.
+  await ensureBucketForDev();
 
   const shutdown = async (signal: string): Promise<void> => {
     app.log.info({ signal }, 'shutting down');

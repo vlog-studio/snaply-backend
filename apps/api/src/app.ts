@@ -2,8 +2,10 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import type { AppConfig } from './config.js';
 import { AppError } from './lib/errors.js';
 import { authPlugin } from './plugins/auth.js';
+import { initStorage } from './services/storage.service.js';
 import { healthRoutes } from './routes/health.js';
 import { authRoutes } from './routes/auth.js';
+import { videoRoutes } from './routes/videos.js';
 
 export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   const app = Fastify({
@@ -52,9 +54,12 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
     });
   });
 
+  initStorage(config.storage);
+
   await app.register(authPlugin, config);
   await app.register(healthRoutes);
   await app.register(authRoutes);
+  await app.register(videoRoutes);
 
   return app;
 }
