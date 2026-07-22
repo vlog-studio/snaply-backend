@@ -76,7 +76,9 @@ model Video {
   durationSeconds Int?      @map("duration_seconds")
   stylePreset     String?   @map("style_preset") @db.VarChar(20)
   status          String    @default("pending") @db.VarChar(20)
+  s3Key           String?   @map("s3_key")
   createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(6)
 
   user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   editJobs   EditJob[]
