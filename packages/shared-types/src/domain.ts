@@ -1,6 +1,6 @@
 export type Plan = 'free' | 'standard' | 'premium';
 
-export type VideoStatus = 'pending' | 'ready' | 'processing' | 'done' | 'failed';
+export type VideoStatus = 'pending' | 'ready' | 'processing' | 'done' | 'failed' | 'deleted';
 
 export type EditJobStatus = 'queued' | 'processing' | 'done' | 'failed';
 
