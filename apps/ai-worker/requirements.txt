@@ -1,10 +1,14 @@
-# Phase 1: 서버 뼈대용 최소 의존성
+# Phase 1: 서버 뼈대
 fastapi==0.115.14
 uvicorn[standard]==0.35.0
 loguru==0.7.3
-redis==6.2.0
 
-# Phase 4~5에서 활성화 예정
+# Phase 4: 큐 구독 워커
+bullmq==2.14.0
+redis==5.3.1          # bullmq 2.x 가 redis<6 을 요구
+asyncpg==0.30.0
+
+# Phase 5에서 활성화 예정
 # boto3
 # ffmpeg-python
 # moviepy
