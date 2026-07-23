@@ -11,6 +11,13 @@ export interface AppConfig {
   jwtAudience: string;
   storage: StorageConfig;
   redis: RedisConfig;
+  firebase: FirebaseConfig;
+}
+
+export interface FirebaseConfig {
+  projectId: string | undefined;
+  /** 서비스 계정 JSON(base64). 없으면 FCM은 dry-run(로그만). */
+  serviceAccountJson: string | undefined;
 }
 
 export interface RedisConfig {
@@ -80,5 +87,25 @@ export function loadConfig(): AppConfig {
       url: requireEnv('REDIS_URL'),
       editQueueName: process.env.EDIT_QUEUE_NAME ?? 'edit-jobs',
     },
+    firebase: {
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      serviceAccountJson: decodeServiceAccount(process.env.FIREBASE_SERVICE_ACCOUNT_KEY),
+    },
   };
+}
+
+/** base64로 인코딩된 서비스 계정 JSON을 디코드. 평문 JSON도 허용. */
+function decodeServiceAccount(raw: string | undefined): string | undefined {
+  if (!raw) {
+    return undefined;
+  }
+  const trimmed = raw.trim();
+  if (trimmed.startsWith('{')) {
+    return trimmed;
+  }
+  try {
+    return Buffer.from(trimmed, 'base64').toString('utf-8');
+  } catch {
+    return undefined;
+  }
 }
