@@ -17,6 +17,14 @@ __pycache__/
 .venv/
 venv/
 
+# BGM 음원 (라이선스 음원/개발 placeholder는 git에 커밋하지 않음)
+apps/ai-worker/assets/bgm/**/*.m4a
+apps/ai-worker/assets/bgm/**/*.mp3
+apps/ai-worker/assets/bgm/**/*.aac
+apps/ai-worker/assets/bgm/**/*.wav
+apps/ai-worker/assets/bgm/**/*.ogg
+apps/ai-worker/assets/bgm/**/*.flac
+
 # misc
 .DS_Store
 *.log
