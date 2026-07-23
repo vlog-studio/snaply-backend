@@ -128,3 +128,26 @@
 - 무거운 stage(ffmpeg/whisper)는 `asyncio.to_thread`로 실행해 이벤트 루프(BullMQ 하트비트) 논블로킹
 - 가이드의 moviepy/ffmpeg-python 대신 **FFmpeg subprocess 직접 호출**(제어·안정성). 결과 반영도 "API 콜백" 대신 워커가 asyncpg로 직접 DB 업데이트 (Phase 4 패턴과 일관)
 - 로컬 검증: macOS `say`로 한국어 음성 클립 생성 → whisper가 정확히 전사 확인. FFmpeg는 Homebrew로 설치(8.1.2)
+
+---
+
+## Phase 6 — 위치 알림 시스템 ✅
+
+**목표**: Geofence 진입 이벤트 수신 시 조건에 맞으면 FCM 푸시 발송.
+
+**완료 조건 검증** (통합 테스트 11/11)
+- `POST /notifications/geofence-enter` 첫 진입 → 발송(dry-run) ✅
+- 30분 이내 같은 위치 재호출 → 미발송(cooldown) ✅
+- quiet_hours 구간 → 미발송 ✅ / `notification_enabled=false` → 미발송 ✅
+- `GET /locations` Haversine 반경 필터 + 거리순 정렬 ✅ / 없는 위치 404, 미인증 401
+
+**구현 내용**
+- `services/fcm.service.ts`: firebase-admin 초기화 + `sendToUser`. 서비스 계정 미설정 시 **dry-run**(로그만), 무효 토큰(`registration-token-not-registered`)은 자동 정리
+- `services/location.service.ts`: Haversine 거리 계산·필터, geofence 처리(위치 유효성 → 알림설정 → quiet_hours(KST) → 30분 쿨다운 → 발송 → 로그 기록)
+- `routes/locations.ts`(`GET /locations`), `routes/notifications.ts`(`POST /notifications/geofence-enter`)
+- 위치 시드: `prisma/seeds/locations.sql`(서울 관광지/카페 + 제주 여행지 50개, `md5(name)` 결정적 id로 멱등), `npm run seed:locations`
+
+**특이사항 / 가이드와 다른 점**
+- FCM 실제 수신은 Firebase 서비스 계정(운영) 필요. 개발은 dry-run으로 발송 로직·쿨다운·quiet_hours·enabled 분기를 모두 검증
+- 발송 실패해도 200 유지(에러는 로깅), 실제 발송 성공 시에만 `notification_logs` 기록 → 쿨다운 기준
+- quiet_hours는 KST(UTC+9) 기준, 자정 넘김(22~8시) 지원. `notification_enabled`/quiet 값은 가이드상 PATCH /auth/me 대상이 아니라 테스트에서 DB로 직접 설정해 검증
