@@ -6,10 +6,13 @@ import { authPlugin } from './plugins/auth.js';
 import { initStorage } from './services/storage.service.js';
 import { initRedis } from './lib/redis.js';
 import { initEditQueue } from './queue/edit-queue.js';
+import { initFcm } from './services/fcm.service.js';
 import { healthRoutes } from './routes/health.js';
 import { authRoutes } from './routes/auth.js';
 import { videoRoutes } from './routes/videos.js';
 import { editJobRoutes } from './routes/edit-jobs.js';
+import { locationRoutes } from './routes/locations.js';
+import { notificationRoutes } from './routes/notifications.js';
 
 export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   const app = Fastify({
@@ -61,6 +64,7 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   initStorage(config.storage);
   initRedis(config.redis);
   initEditQueue(config.redis.editQueueName);
+  initFcm(config.firebase);
 
   await app.register(websocket);
   await app.register(authPlugin, config);
@@ -68,6 +72,8 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   await app.register(authRoutes);
   await app.register(videoRoutes);
   await app.register(editJobRoutes);
+  await app.register(locationRoutes);
+  await app.register(notificationRoutes);
 
   return app;
 }
