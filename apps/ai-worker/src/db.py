@@ -34,6 +34,37 @@ def _pool_or_raise() -> asyncpg.Pool:
     return _pool
 
 
+async def fetch_job_context(job_id: str) -> dict | None:
+    """edit_jobs에서 결과물 video_id, user_id 조회."""
+    async with _pool_or_raise().acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT user_id, video_id FROM edit_jobs WHERE id=$1", job_id
+        )
+        if not row:
+            return None
+        return {"user_id": str(row["user_id"]), "video_id": str(row["video_id"])}
+
+
+async def fetch_source_keys(video_ids: list[str]) -> list[str]:
+    """주어진 video_ids 순서대로 s3_key 반환 (없는 항목은 제외)."""
+    async with _pool_or_raise().acquire() as conn:
+        rows = await conn.fetch(
+            "SELECT id, s3_key FROM videos WHERE id = ANY($1::uuid[])", video_ids
+        )
+    by_id = {str(r["id"]): r["s3_key"] for r in rows if r["s3_key"]}
+    return [by_id[vid] for vid in video_ids if vid in by_id]
+
+
+async def set_video_result(video_id: str, edited_url: str, thumbnail_url: str) -> None:
+    async with _pool_or_raise().acquire() as conn:
+        await conn.execute(
+            "UPDATE videos SET edited_url=$2, thumbnail_url=$3, status='done' WHERE id=$1",
+            video_id,
+            edited_url,
+            thumbnail_url,
+        )
+
+
 async def mark_processing(job_id: str) -> None:
     now = datetime.now(timezone.utc)
     async with _pool_or_raise().acquire() as conn:
