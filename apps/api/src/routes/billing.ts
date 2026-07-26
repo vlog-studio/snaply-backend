@@ -1,0 +1,60 @@
+import type { FastifyInstance } from 'fastify';
+import type { ApiSuccess } from '@vlog-studio/shared-types';
+import {
+  getPlans,
+  createCheckout,
+  getSubscription,
+  cancelSubscription,
+  type PlanInfo,
+  type SubscriptionDto,
+} from '../services/billing.service.js';
+
+interface CheckoutBody {
+  plan: 'standard' | 'premium';
+}
+
+export async function billingRoutes(app: FastifyInstance): Promise<void> {
+  // GET /billing/plans — 플랜 목록 (인증 불필요)
+  app.get('/billing/plans', async (): Promise<ApiSuccess<PlanInfo[]>> => {
+    return { success: true, data: getPlans() };
+  });
+
+  // GET /billing/subscription — 내 구독 상태
+  app.get(
+    '/billing/subscription',
+    { preHandler: app.authenticate },
+    async (request): Promise<ApiSuccess<SubscriptionDto>> => {
+      return { success: true, data: await getSubscription(request.user.id) };
+    },
+  );
+
+  // POST /billing/checkout — Checkout Session 생성
+  app.post<{ Body: CheckoutBody }>(
+    '/billing/checkout',
+    {
+      preHandler: app.authenticate,
+      schema: {
+        body: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['plan'],
+          properties: { plan: { type: 'string', enum: ['standard', 'premium'] } },
+        },
+      },
+    },
+    async (request): Promise<ApiSuccess<{ checkoutUrl: string }>> => {
+      const data = await createCheckout({ userId: request.user.id, plan: request.body.plan });
+      return { success: true, data };
+    },
+  );
+
+  // POST /billing/cancel — 기간 만료 후 해지
+  app.post(
+    '/billing/cancel',
+    { preHandler: app.authenticate },
+    async (request): Promise<ApiSuccess<{ canceling: true }>> => {
+      await cancelSubscription(request.user.id);
+      return { success: true, data: { canceling: true } };
+    },
+  );
+}

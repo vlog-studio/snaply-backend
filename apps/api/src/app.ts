@@ -9,6 +9,7 @@ import { initEditQueue } from './queue/edit-queue.js';
 import { initFcm } from './services/fcm.service.js';
 import { initCrypto } from './lib/crypto.js';
 import { initSns } from './services/sns.service.js';
+import { initBilling } from './services/billing.service.js';
 import { healthRoutes } from './routes/health.js';
 import { authRoutes } from './routes/auth.js';
 import { videoRoutes } from './routes/videos.js';
@@ -16,6 +17,8 @@ import { editJobRoutes } from './routes/edit-jobs.js';
 import { locationRoutes } from './routes/locations.js';
 import { notificationRoutes } from './routes/notifications.js';
 import { snsRoutes } from './routes/sns.js';
+import { billingRoutes } from './routes/billing.js';
+import { billingWebhookRoutes } from './routes/billing-webhook.js';
 
 export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   const app = Fastify({
@@ -70,6 +73,7 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   initFcm(config.firebase);
   initCrypto(config.sns.tokenEncryptionKey);
   initSns(config.sns);
+  initBilling(config.stripe, config.sns.appDeepLinkScheme);
 
   await app.register(websocket);
   await app.register(authPlugin, config);
@@ -80,6 +84,8 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   await app.register(locationRoutes);
   await app.register(notificationRoutes);
   await app.register(snsRoutes);
+  await app.register(billingRoutes);
+  await app.register(billingWebhookRoutes);
 
   return app;
 }
