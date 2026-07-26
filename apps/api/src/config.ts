@@ -12,6 +12,24 @@ export interface AppConfig {
   storage: StorageConfig;
   redis: RedisConfig;
   firebase: FirebaseConfig;
+  sns: SnsConfig;
+}
+
+export interface SnsProviderConfig {
+  clientId: string | undefined;
+  clientSecret: string | undefined;
+  redirectUri: string | undefined;
+  /** 실키 미설정 시 외부 API 호출을 모의(mock)한다. */
+  mock: boolean;
+}
+
+export interface SnsConfig {
+  instagram: SnsProviderConfig;
+  tiktok: SnsProviderConfig;
+  /** access_token 암호화 키 (임의 문자열, 내부적으로 sha256으로 32바이트화). */
+  tokenEncryptionKey: string;
+  /** OAuth 완료 후 앱으로 돌아가는 딥링크 스킴. */
+  appDeepLinkScheme: string;
 }
 
 export interface FirebaseConfig {
@@ -91,6 +109,29 @@ export function loadConfig(): AppConfig {
       projectId: process.env.FIREBASE_PROJECT_ID,
       serviceAccountJson: decodeServiceAccount(process.env.FIREBASE_SERVICE_ACCOUNT_KEY),
     },
+    sns: loadSnsConfig(),
+  };
+}
+
+function loadSnsConfig(): SnsConfig {
+  const forceMock = process.env.SNS_MOCK === 'true';
+  const instagram: SnsProviderConfig = {
+    clientId: process.env.INSTAGRAM_APP_ID,
+    clientSecret: process.env.INSTAGRAM_APP_SECRET,
+    redirectUri: process.env.INSTAGRAM_REDIRECT_URI,
+    mock: forceMock || !process.env.INSTAGRAM_APP_ID,
+  };
+  const tiktok: SnsProviderConfig = {
+    clientId: process.env.TIKTOK_CLIENT_KEY,
+    clientSecret: process.env.TIKTOK_CLIENT_SECRET,
+    redirectUri: process.env.TIKTOK_REDIRECT_URI,
+    mock: forceMock || !process.env.TIKTOK_CLIENT_KEY,
+  };
+  return {
+    instagram,
+    tiktok,
+    tokenEncryptionKey: process.env.SNS_TOKEN_ENCRYPTION_KEY ?? 'dev-insecure-sns-key',
+    appDeepLinkScheme: process.env.APP_DEEPLINK_SCHEME ?? 'snaply://',
   };
 }
 
