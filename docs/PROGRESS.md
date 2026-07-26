@@ -151,3 +151,26 @@
 - FCM 실제 수신은 Firebase 서비스 계정(운영) 필요. 개발은 dry-run으로 발송 로직·쿨다운·quiet_hours·enabled 분기를 모두 검증
 - 발송 실패해도 200 유지(에러는 로깅), 실제 발송 성공 시에만 `notification_logs` 기록 → 쿨다운 기준
 - quiet_hours는 KST(UTC+9) 기준, 자정 넘김(22~8시) 지원. `notification_enabled`/quiet 값은 가이드상 PATCH /auth/me 대상이 아니라 테스트에서 DB로 직접 설정해 검증
+
+---
+
+## Phase 7 — SNS 연동 업로드 ✅
+
+**목표**: 편집 완료 영상을 인스타그램 릴스·틱톡에 업로드.
+
+**완료 조건 검증** (mock 모드 통합 테스트 14/14)
+- 인스타그램 연동 → 릴스 업로드 success + platform_post_id ✅
+- 틱톡 연동 → 영상 업로드 success ✅
+- `sns_uploads` 이력 기록 ✅
+- 추가: state CSRF 변조 차단, PERSONAL 계정 거부, 토큰 만료 임박 자동 갱신, disconnect, 미연동 업로드 400
+
+**구현 내용** (9개 엔드포인트: connections/connect/callback/disconnect/upload × instagram·tiktok)
+- `lib/crypto.ts`: **AES-256-GCM**로 access/refresh 토큰 암호화 저장, OAuth **state HMAC 서명**(CSRF 방지, userId+nonce)
+- `services/sns/*.client.ts`: 인스타그램(Graph API 릴스 컨테이너→게시)·틱톡(Content Posting API v2) 클라이언트. **실키 있으면 실제 호출 / 없으면 mock** 분기
+- `services/sns.service.ts`: connect URL 생성, 콜백(토큰 교환→암호화 저장→앱 딥링크 리다이렉트), 업로드(소유권·편집완료 확인→업로드→이력), 틱톡 **토큰 만료 임박 시 refresh 자동 갱신**
+- 인스타그램 **비즈니스/크리에이터 계정만 허용** (PERSONAL이면 `snaply://sns/error?reason=account_type` 리다이렉트, 미저장)
+
+**특이사항 / 가이드와 다른 점**
+- 실제 업로드는 인스타/틱톡 앱 등록 + 비즈니스 계정 + 실키 필요. 개발은 mock으로 OAuth·암호화·업로드 이력·자동 갱신 로직을 모두 검증 (운영에서 `INSTAGRAM_APP_ID`/`TIKTOK_CLIENT_KEY` 등 설정 시 실제 호출로 전환)
+- 토큰은 평문 저장 금지 — DB에는 `iv.tag.ciphertext`(base64) 형태로만 저장됨을 테스트로 확인
+- 업로드 실패 시 `sns_uploads.status='failed'` 기록 후 에러 메시지 반환 (동기 응답)
