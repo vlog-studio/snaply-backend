@@ -13,6 +13,16 @@ export interface AppConfig {
   redis: RedisConfig;
   firebase: FirebaseConfig;
   sns: SnsConfig;
+  stripe: StripeConfig;
+}
+
+export interface StripeConfig {
+  secretKey: string | undefined;
+  webhookSecret: string;
+  priceStandard: string;
+  pricePremium: string;
+  /** 실키 미설정 시 외부 API 호출을 모의(mock)한다. */
+  mock: boolean;
 }
 
 export interface SnsProviderConfig {
@@ -110,6 +120,13 @@ export function loadConfig(): AppConfig {
       serviceAccountJson: decodeServiceAccount(process.env.FIREBASE_SERVICE_ACCOUNT_KEY),
     },
     sns: loadSnsConfig(),
+    stripe: {
+      secretKey: process.env.STRIPE_SECRET_KEY || undefined,
+      webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || 'dev-webhook-secret',
+      priceStandard: process.env.STRIPE_PRICE_STANDARD || 'price_standard_mock',
+      pricePremium: process.env.STRIPE_PRICE_PREMIUM || 'price_premium_mock',
+      mock: process.env.SNS_MOCK === 'true' || !process.env.STRIPE_SECRET_KEY,
+    },
   };
 }
 
