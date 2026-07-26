@@ -174,3 +174,27 @@
 - 실제 업로드는 인스타/틱톡 앱 등록 + 비즈니스 계정 + 실키 필요. 개발은 mock으로 OAuth·암호화·업로드 이력·자동 갱신 로직을 모두 검증 (운영에서 `INSTAGRAM_APP_ID`/`TIKTOK_CLIENT_KEY` 등 설정 시 실제 호출로 전환)
 - 토큰은 평문 저장 금지 — DB에는 `iv.tag.ciphertext`(base64) 형태로만 저장됨을 테스트로 확인
 - 업로드 실패 시 `sns_uploads.status='failed'` 기록 후 에러 메시지 반환 (동기 응답)
+
+---
+
+## Phase 8 — 결제 시스템 ✅
+
+**목표**: Stripe 구독 결제 완성 및 플랜별 기능 제한 적용.
+
+**완료 조건 검증** (mock 모드 통합 테스트 13/13)
+- 결제 완료(webhook created) → `subscriptions.plan='standard'` ✅
+- 웹훅 해지(subscription.deleted) → `plan='free'` 복귀 ✅
+- Free 플랜 4번째 편집 → 403 ✅ (Standard는 4편 모두 202로 무제한 확인)
+- 추가: 웹훅 서명 검증(변조/누락 → 400), payment_failed → past_due, cancel은 기간말 해지(즉시 다운그레이드 아님), 결제 전 plan 미변경
+
+**구현 내용**
+- `services/billing/stripe.client.ts`: 고객 생성, Checkout Session, 기간말 해지, **웹훅 서명 검증**. 실키 있으면 stripe SDK / 없으면 mock(HMAC-SHA256 서명 검증)
+- `services/billing.service.ts`: 플랜 카탈로그(Free/Standard ₩9,900/Premium ₩24,900), checkout(고객 저장·plan은 웹훅 후에만 변경), 구독 조회, 취소, 웹훅 동기화(created/updated/deleted/payment_failed)
+- `routes/billing.ts`: `GET /billing/plans`(공개), `GET /billing/subscription`, `POST /billing/checkout`, `POST /billing/cancel`
+- `routes/billing-webhook.ts`: **raw body 보존**을 위해 캡슐화 스코프에서 buffer 파서 등록 → 서명 검증 (전역 JSON 파서 미영향)
+- 플랜 반영: 웹훅으로 `subscriptions.plan` 갱신 → `request.user.plan`이 자동 반영되어 편집 제한(Free 월 3편)에 연동
+
+**특이사항 / 가이드와 다른 점**
+- 실제 결제는 Stripe 테스트 키로 검증 가능하나, 이번엔 mock으로 결제 플로우·웹훅 동기화·서명 검증·플랜 제한을 모두 검증 (운영에서 `STRIPE_SECRET_KEY` 등 설정 시 실제 호출로 전환)
+- 720p/1080p/4K·워터마크 등 해상도 제한은 편집 파라미터라 워커(편집 엔진) 몫 — 백엔드는 plan을 `request.user.plan`으로 노출하고 편집 횟수 제한을 강제
+- 웹훅 raw body 파서를 전역이 아닌 웹훅 라우트 스코프에만 적용해 다른 JSON 라우트에 영향 없음
