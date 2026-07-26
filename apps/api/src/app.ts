@@ -7,12 +7,15 @@ import { initStorage } from './services/storage.service.js';
 import { initRedis } from './lib/redis.js';
 import { initEditQueue } from './queue/edit-queue.js';
 import { initFcm } from './services/fcm.service.js';
+import { initCrypto } from './lib/crypto.js';
+import { initSns } from './services/sns.service.js';
 import { healthRoutes } from './routes/health.js';
 import { authRoutes } from './routes/auth.js';
 import { videoRoutes } from './routes/videos.js';
 import { editJobRoutes } from './routes/edit-jobs.js';
 import { locationRoutes } from './routes/locations.js';
 import { notificationRoutes } from './routes/notifications.js';
+import { snsRoutes } from './routes/sns.js';
 
 export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   const app = Fastify({
@@ -65,6 +68,8 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   initRedis(config.redis);
   initEditQueue(config.redis.editQueueName);
   initFcm(config.firebase);
+  initCrypto(config.sns.tokenEncryptionKey);
+  initSns(config.sns);
 
   await app.register(websocket);
   await app.register(authPlugin, config);
@@ -74,6 +79,7 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   await app.register(editJobRoutes);
   await app.register(locationRoutes);
   await app.register(notificationRoutes);
+  await app.register(snsRoutes);
 
   return app;
 }
