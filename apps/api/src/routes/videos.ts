@@ -34,6 +34,8 @@ export async function videoRoutes(app: FastifyInstance): Promise<void> {
     {
       preHandler: app.authenticate,
       schema: {
+        tags: ['videos'],
+        summary: 'presigned 업로드 URL 발급',
         querystring: {
           type: 'object',
           required: ['filename', 'contentType'],
@@ -60,6 +62,8 @@ export async function videoRoutes(app: FastifyInstance): Promise<void> {
     {
       preHandler: app.authenticate,
       schema: {
+        tags: ['videos'],
+        summary: '업로드 완료 등록 (status → ready)',
         body: {
           type: 'object',
           additionalProperties: false,
@@ -88,6 +92,8 @@ export async function videoRoutes(app: FastifyInstance): Promise<void> {
     {
       preHandler: app.authenticate,
       schema: {
+        tags: ['videos'],
+        summary: '내 영상 목록 (커서 페이지네이션)',
         querystring: {
           type: 'object',
           properties: {
@@ -110,7 +116,7 @@ export async function videoRoutes(app: FastifyInstance): Promise<void> {
   // GET /videos/:id — 영상 상세
   app.get<{ Params: { id: string } }>(
     '/videos/:id',
-    { preHandler: app.authenticate },
+    { preHandler: app.authenticate, schema: { tags: ['videos'], summary: '영상 상세' } },
     async (request): Promise<ApiSuccess<Video>> => {
       const data = await getVideo({ userId: request.user.id, videoId: request.params.id });
       return { success: true, data };
@@ -120,7 +126,7 @@ export async function videoRoutes(app: FastifyInstance): Promise<void> {
   // DELETE /videos/:id — S3 삭제 + 소프트 삭제
   app.delete<{ Params: { id: string } }>(
     '/videos/:id',
-    { preHandler: app.authenticate },
+    { preHandler: app.authenticate, schema: { tags: ['videos'], summary: '영상 삭제' } },
     async (request): Promise<ApiSuccess<{ deleted: true }>> => {
       await deleteVideo({ userId: request.user.id, videoId: request.params.id });
       return { success: true, data: { deleted: true } };

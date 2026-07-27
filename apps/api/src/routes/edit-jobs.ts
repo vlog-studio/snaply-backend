@@ -23,6 +23,8 @@ export async function editJobRoutes(app: FastifyInstance): Promise<void> {
         },
       },
       schema: {
+        tags: ['edit-jobs'],
+        summary: '편집 요청 (큐 적재)',
         body: {
           type: 'object',
           additionalProperties: false,
@@ -54,7 +56,7 @@ export async function editJobRoutes(app: FastifyInstance): Promise<void> {
   // GET /edit-jobs/:id — 편집 작업 상태 조회
   app.get<{ Params: { id: string } }>(
     '/edit-jobs/:id',
-    { preHandler: app.authenticate },
+    { preHandler: app.authenticate, schema: { tags: ['edit-jobs'], summary: '편집 작업 상태 조회' } },
     async (request): Promise<ApiSuccess<EditJob>> => {
       const data = await getEditJob({ userId: request.user.id, jobId: request.params.id });
       return { success: true, data };
@@ -64,7 +66,8 @@ export async function editJobRoutes(app: FastifyInstance): Promise<void> {
   // WebSocket GET /edit-jobs/:id/progress — 실시간 진행률 스트리밍
   app.get<{ Params: { id: string } }>(
     '/edit-jobs/:id/progress',
-    { websocket: true, preHandler: app.authenticate },
+    // WebSocket은 OpenAPI로 표현되지 않으므로 문서에서 숨김 (api-spec.md 참고)
+    { websocket: true, preHandler: app.authenticate, schema: { hide: true } },
     async (connection, request) => {
       const ws = connection.socket;
       const jobId = request.params.id;

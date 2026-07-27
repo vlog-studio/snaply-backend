@@ -10,7 +10,7 @@ export async function billingWebhookRoutes(app: FastifyInstance): Promise<void> 
     done(null, body);
   });
 
-  app.post('/billing/webhook', async (request, reply) => {
+  app.post('/billing/webhook', { schema: { tags: ['system'], summary: 'Stripe 웹훅' } }, async (request, reply) => {
     const signature = request.headers['stripe-signature'];
     const rawBody = request.body as Buffer;
     // 서명 검증 실패 → 400 (Stripe 재시도 트리거), 성공 → 200

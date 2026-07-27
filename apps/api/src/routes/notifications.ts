@@ -21,6 +21,8 @@ export async function notificationRoutes(app: FastifyInstance): Promise<void> {
         },
       },
       schema: {
+        tags: ['locations'],
+        summary: 'Geofence 진입 → FCM',
         body: {
           type: 'object',
           additionalProperties: false,

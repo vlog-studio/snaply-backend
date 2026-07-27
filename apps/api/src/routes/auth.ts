@@ -17,7 +17,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
   // GET /auth/me — 내 프로필 조회 (미들웨어에서 첫 로그인 시 자동 생성됨)
   app.get(
     '/auth/me',
-    { preHandler: app.authenticate },
+    { preHandler: app.authenticate, schema: { tags: ['auth'], summary: '내 프로필 조회' } },
     async (request): Promise<ApiSuccess<UserProfile>> => {
       const profile = await getProfile(request.user.id);
       if (!profile) {
@@ -33,6 +33,8 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     {
       preHandler: app.authenticate,
       schema: {
+        tags: ['auth'],
+        summary: '프로필 수정',
         body: {
           type: 'object',
           additionalProperties: false,
@@ -60,6 +62,8 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     {
       preHandler: app.authenticate,
       schema: {
+        tags: ['auth'],
+        summary: 'FCM 토큰 등록/갱신',
         body: {
           type: 'object',
           additionalProperties: false,

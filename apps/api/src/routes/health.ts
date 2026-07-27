@@ -9,7 +9,7 @@ interface HealthData {
 }
 
 export async function healthRoutes(app: FastifyInstance): Promise<void> {
-  app.get('/health', async (): Promise<ApiSuccess<HealthData>> => {
+  app.get('/health', { schema: { tags: ['system'], summary: '헬스체크' } }, async (): Promise<ApiSuccess<HealthData>> => {
     let db: HealthData['db'] = 'not_configured';
 
     if (process.env.DATABASE_URL) {

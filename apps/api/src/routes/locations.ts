@@ -15,6 +15,8 @@ export async function locationRoutes(app: FastifyInstance): Promise<void> {
     {
       preHandler: app.authenticate,
       schema: {
+        tags: ['locations'],
+        summary: '주변 위치 목록 (Haversine)',
         querystring: {
           type: 'object',
           required: ['lat', 'lng'],

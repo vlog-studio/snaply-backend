@@ -15,14 +15,18 @@ interface CheckoutBody {
 
 export async function billingRoutes(app: FastifyInstance): Promise<void> {
   // GET /billing/plans — 플랜 목록 (인증 불필요)
-  app.get('/billing/plans', async (): Promise<ApiSuccess<PlanInfo[]>> => {
-    return { success: true, data: getPlans() };
-  });
+  app.get(
+    '/billing/plans',
+    { schema: { tags: ['billing'], summary: '플랜 목록' } },
+    async (): Promise<ApiSuccess<PlanInfo[]>> => {
+      return { success: true, data: getPlans() };
+    },
+  );
 
   // GET /billing/subscription — 내 구독 상태
   app.get(
     '/billing/subscription',
-    { preHandler: app.authenticate },
+    { preHandler: app.authenticate, schema: { tags: ['billing'], summary: '내 구독 상태' } },
     async (request): Promise<ApiSuccess<SubscriptionDto>> => {
       return { success: true, data: await getSubscription(request.user.id) };
     },
@@ -34,6 +38,8 @@ export async function billingRoutes(app: FastifyInstance): Promise<void> {
     {
       preHandler: app.authenticate,
       schema: {
+        tags: ['billing'],
+        summary: 'Checkout Session 생성',
         body: {
           type: 'object',
           additionalProperties: false,
@@ -51,7 +57,7 @@ export async function billingRoutes(app: FastifyInstance): Promise<void> {
   // POST /billing/cancel — 기간 만료 후 해지
   app.post(
     '/billing/cancel',
-    { preHandler: app.authenticate },
+    { preHandler: app.authenticate, schema: { tags: ['billing'], summary: '구독 해지(기간말)' } },
     async (request): Promise<ApiSuccess<{ canceling: true }>> => {
       await cancelSubscription(request.user.id);
       return { success: true, data: { canceling: true } };
