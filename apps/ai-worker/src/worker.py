@@ -24,6 +24,25 @@ from pipeline.editor import get_preset
 _publisher: aioredis.Redis | None = None
 
 
+def _init_sentry() -> None:
+    """SENTRY_DSN이 있을 때만 초기화. 없으면 no-op."""
+    dsn = os.environ.get("SENTRY_DSN")
+    if not dsn:
+        return
+    import sentry_sdk
+
+    sentry_sdk.init(dsn=dsn, environment=os.environ.get("NODE_ENV", "development"))
+    logger.info("Sentry 초기화 완료")
+
+
+def _capture(exc: BaseException) -> None:
+    if not os.environ.get("SENTRY_DSN"):
+        return
+    import sentry_sdk
+
+    sentry_sdk.capture_exception(exc)
+
+
 async def _publish(job_id: str, payload: dict) -> None:
     if _publisher is not None:
         await _publisher.publish(config.edit_progress_channel(job_id), json.dumps(payload))
@@ -112,6 +131,7 @@ async def process_edit_job(job, _job_token) -> dict:
         raise
     except Exception as exc:  # noqa: BLE001
         logger.exception("편집 실패 job_id={}", job_id)
+        _capture(exc)
         await db.mark_failed(job_id, str(exc))
         await _publish(job_id, {"status": "failed", "error": "편집 중 오류가 발생했습니다."})
         raise
@@ -121,6 +141,7 @@ async def process_edit_job(job, _job_token) -> dict:
 
 async def main() -> None:
     global _publisher
+    _init_sentry()
     await db.init_pool()
     _publisher = aioredis.from_url(config.REDIS_URL, decode_responses=True)
     subtitle.load_model()  # 시작 시 1회 로드
