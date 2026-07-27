@@ -3,6 +3,7 @@ import websocket from '@fastify/websocket';
 import type { AppConfig } from './config.js';
 import rateLimit from '@fastify/rate-limit';
 import { AppError } from './lib/errors.js';
+import { registerDocs } from './plugins/swagger.js';
 import { captureException } from './lib/sentry.js';
 import { authPlugin } from './plugins/auth.js';
 import { initStorage } from './services/storage.service.js';
@@ -104,6 +105,12 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
     timeWindow: '1 minute',
     keyGenerator: (req) => req.ip,
   });
+
+  // OpenAPI 문서(개발 환경에서만) — 라우트 등록 전에 등록해야 스키마가 수집된다.
+  const docsEnabled = process.env.NODE_ENV !== 'production' || process.env.ENABLE_DOCS === 'true';
+  if (docsEnabled) {
+    await registerDocs(app);
+  }
 
   await app.register(websocket);
   await app.register(authPlugin, config);
