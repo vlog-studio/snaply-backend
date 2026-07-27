@@ -5,9 +5,11 @@ import { disconnectPrisma } from './db/client.js';
 import { ensureBucketForDev } from './services/storage.service.js';
 import { closeEditQueue } from './queue/edit-queue.js';
 import { disconnectRedis } from './lib/redis.js';
+import { initSentry } from './lib/sentry.js';
 
 async function main(): Promise<void> {
   const config = loadConfig();
+  initSentry(process.env.SENTRY_DSN);
   const app = await buildApp(config);
 
   // 개발(MinIO)에서 버킷이 없으면 생성. 실제 AWS에서는 no-op.

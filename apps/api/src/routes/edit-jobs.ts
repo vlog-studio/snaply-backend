@@ -14,6 +14,14 @@ export async function editJobRoutes(app: FastifyInstance): Promise<void> {
     '/edit-jobs',
     {
       preHandler: app.authenticate,
+      config: {
+        // 유저(토큰)당 분당 5회
+        rateLimit: {
+          max: 5,
+          timeWindow: '1 minute',
+          keyGenerator: (req) => req.headers.authorization ?? req.ip,
+        },
+      },
       schema: {
         body: {
           type: 'object',

@@ -1,7 +1,9 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import websocket from '@fastify/websocket';
 import type { AppConfig } from './config.js';
+import rateLimit from '@fastify/rate-limit';
 import { AppError } from './lib/errors.js';
+import { captureException } from './lib/sentry.js';
 import { authPlugin } from './plugins/auth.js';
 import { initStorage } from './services/storage.service.js';
 import { initRedis } from './lib/redis.js';
@@ -24,11 +26,30 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   const app = Fastify({
     logger: {
       level: process.env.LOG_LEVEL ?? 'info',
+      // 개인정보/자격증명 로그 마스킹
+      redact: [
+        'req.headers.authorization',
+        'req.headers["stripe-signature"]',
+        'req.query.token',
+        '*.accessToken',
+        '*.refreshToken',
+        '*.fcmToken',
+        '*.access_token',
+      ],
     },
   });
 
   // 에러/404 핸들러는 라우트 등록보다 먼저 설정해야 자식 컨텍스트가 상속받는다.
   app.setErrorHandler((error, request, reply) => {
+    // Rate limit 초과 → 429
+    if (error.statusCode === 429 || error.code === 'FST_ERR_RATE_LIMIT') {
+      reply.status(429).send({
+        success: false,
+        error: { code: 'RATE_LIMITED', message: '요청이 너무 많습니다. 잠시 후 다시 시도하세요.' },
+      });
+      return;
+    }
+
     // 커스텀 도메인 에러
     if (error instanceof AppError) {
       reply.status(error.statusCode).send({
@@ -50,6 +71,7 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
     const statusCode = error.statusCode && error.statusCode >= 400 ? error.statusCode : 500;
     if (statusCode >= 500) {
       request.log.error(error);
+      captureException(error, { url: request.url, method: request.method });
     }
     reply.status(statusCode).send({
       success: false,
@@ -74,6 +96,14 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   initCrypto(config.sns.tokenEncryptionKey);
   initSns(config.sns);
   initBilling(config.stripe, config.sns.appDeepLinkScheme);
+
+  // 전역 rate limit: IP당 분당 60 (라우트별로 override 가능)
+  await app.register(rateLimit, {
+    global: true,
+    max: 60,
+    timeWindow: '1 minute',
+    keyGenerator: (req) => req.ip,
+  });
 
   await app.register(websocket);
   await app.register(authPlugin, config);

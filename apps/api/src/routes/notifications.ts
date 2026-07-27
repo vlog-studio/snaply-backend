@@ -12,6 +12,14 @@ export async function notificationRoutes(app: FastifyInstance): Promise<void> {
     '/notifications/geofence-enter',
     {
       preHandler: app.authenticate,
+      config: {
+        // 유저(토큰)당 분당 10회
+        rateLimit: {
+          max: 10,
+          timeWindow: '1 minute',
+          keyGenerator: (req) => req.headers.authorization ?? req.ip,
+        },
+      },
       schema: {
         body: {
           type: 'object',
