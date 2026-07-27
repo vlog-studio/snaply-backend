@@ -1,0 +1,97 @@
+# 로컬 개발용 전체 스택 (api + ai-worker + redis + postgres + minio)
+# 실행: docker compose up --build
+# 최초 1회 마이그레이션: docker compose exec api npx prisma migrate deploy --schema prisma/schema.prisma
+# 주의: SUPABASE_URL 등 일부 값은 실제 인증/기능에 필요 — .env 또는 환경변수로 주입 권장.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: snaply
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+    ports:
+      - "9200:9000"
+      - "9201:9001"
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      minio: { condition: service_healthy }
+    environment:
+      API_PORT: "3000"
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/snaply
+      DIRECT_URL: postgresql://postgres:postgres@postgres:5432/snaply
+      REDIS_URL: redis://redis:6379
+      S3_ENDPOINT: http://minio:9000
+      S3_BUCKET_NAME: snaply
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin123
+      AWS_REGION: ap-northeast-2
+      # 아래는 실제 값으로 교체 필요 (없으면 인증/외부연동 비활성)
+      SUPABASE_URL: ${SUPABASE_URL:-https://example.supabase.co}
+      SNS_TOKEN_ENCRYPTION_KEY: ${SNS_TOKEN_ENCRYPTION_KEY:-dev-insecure-sns-key}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-dev-webhook-secret}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+    ports:
+      - "3000:3000"
+
+  ai-worker:
+    build:
+      context: ./apps/ai-worker
+    depends_on:
+      redis: { condition: service_healthy }
+      minio: { condition: service_healthy }
+    command: ["python", "worker.py"]
+    environment:
+      REDIS_URL: redis://redis:6379
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/snaply
+      EDIT_QUEUE_NAME: edit-jobs
+      S3_ENDPOINT: http://minio:9000
+      S3_BUCKET_NAME: snaply
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin123
+      AWS_REGION: ap-northeast-2
+      WHISPER_MODEL: ${WHISPER_MODEL:-small}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+
+volumes:
+  pgdata:
+  miniodata:
