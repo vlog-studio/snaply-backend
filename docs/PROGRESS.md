@@ -198,3 +198,31 @@
 - 실제 결제는 Stripe 테스트 키로 검증 가능하나, 이번엔 mock으로 결제 플로우·웹훅 동기화·서명 검증·플랜 제한을 모두 검증 (운영에서 `STRIPE_SECRET_KEY` 등 설정 시 실제 호출로 전환)
 - 720p/1080p/4K·워터마크 등 해상도 제한은 편집 파라미터라 워커(편집 엔진) 몫 — 백엔드는 plan을 `request.user.plan`으로 노출하고 편집 횟수 제한을 강제
 - 웹훅 raw body 파서를 전역이 아닌 웹훅 라우트 스코프에만 적용해 다른 JSON 라우트에 영향 없음
+
+---
+
+## Phase 9 — 마무리 및 배포 준비 ✅
+
+**목표**: 운영 배포 및 모니터링 세팅.
+
+**완료 조건 검증** (rate-limit 통합 테스트 5/5, compose 실기동)
+- Rate limit: `/edit-jobs` 6번째 429, `/notifications/geofence-enter` 11번째 429, 공통 포맷(`RATE_LIMITED`) ✅
+- Docker Compose로 core 스택(postgres+redis+minio+api) 실제 기동 → `/health` 200 (db connected) ✅
+- Sentry는 `SENTRY_DSN` 있을 때만 캡처(없으면 no-op) — 전역 에러 핸들러 5xx 캡처 경로 구현 ✅
+- `docs/api-spec.md` 작성(FE 전달용)
+
+**구현 내용**
+- `lib/sentry.ts` + `index.ts`: SENTRY_DSN 있을 때만 초기화, 전역 에러 핸들러에서 5xx `captureException`. 워커도 `SENTRY_DSN` 시 init + 편집 실패 캡처
+- 전역 에러 핸들러: rate limit(429)·AppError·검증(400)·5xx(500+Sentry) 분기, 공통 응답 포맷 유지
+- 로그 PII 마스킹: `authorization`/`stripe-signature`/`token`/`accessToken`/`refreshToken`/`fcmToken` redact
+- Rate limiting(`@fastify/rate-limit`): 전역 IP 60/분, `/edit-jobs` 토큰당 5/분, `/notifications/geofence-enter` 토큰당 10/분
+- `docs/api-spec.md`: 전 엔드포인트 요청/응답 예시 + 에러 코드 + rate limit
+- `apps/api/Dockerfile`(모노레포 빌드), `docker-compose.yml`(api+ai-worker+redis+postgres+minio), `.dockerignore`
+- `.github/workflows/deploy.yml`: main push 시 GHCR 이미지 빌드/푸시 + 마이그레이션 + 배포 훅(`vars.DEPLOY_ENABLED`로 게이트)
+
+**특이사항 / 가이드와 다른 점**
+- Sentry 실수집은 운영 DSN 필요. 개발은 no-op이며 캡처 호출 경로만 구현
+- rate-limit 초과 에러는 statusCode를 잃고 전역 핸들러로 던져져 500이 되던 문제 → 핸들러에서 429/`FST_ERR_RATE_LIMIT` 감지해 `RATE_LIMITED`로 매핑
+- 인증 전 단계(onRequest)라 유저별 제한 키는 `request.user` 대신 Authorization 토큰 기준
+- compose 빠른 검증은 core 스택(api+인프라)까지 실기동 확인. ai-worker 이미지는 torch/faster-whisper로 용량이 커서 이 검증에선 빌드 생략(워커 자체는 Phase 5에서 네이티브 실행 검증 완료)
+- 컨테이너 최초 1회 마이그레이션: `docker compose exec api npx prisma migrate deploy --schema prisma/schema.prisma`
