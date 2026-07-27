@@ -1,0 +1,152 @@
+# Snaply API 명세 (FE 전달용)
+
+- **Base URL**: `{API_BASE_URL}` (개발: `http://localhost:3000`)
+- **인증**: 인증 필요 엔드포인트는 `Authorization: Bearer {supabase_jwt}` 헤더 필수. 토큰은 Supabase Auth 로그인으로 발급.
+- **응답 형식(공통)**
+  - 성공: `{ "success": true, "data": ... }`
+  - 실패: `{ "success": false, "error": { "code": "STRING", "message": "..." } }`
+- **에러 코드**: `UNAUTHORIZED`(401), `FORBIDDEN`(403), `NOT_FOUND`(404), `BAD_REQUEST`/`VALIDATION_ERROR`(400), `RATE_LIMITED`(429), `INTERNAL_SERVER_ERROR`(500)
+- **Rate limit**: 기본 IP당 60req/분. `POST /edit-jobs` 유저당 5req/분, `POST /notifications/geofence-enter` 유저당 10req/분. 초과 시 429.
+
+---
+
+## 인증 / 프로필
+
+### GET /auth/me  🔒
+내 프로필 조회 (첫 호출 시 유저 자동 생성).
+```json
+{ "success": true, "data": {
+  "id": "uuid", "nickname": "다연", "avatarUrl": null,
+  "interests": ["여행","카페"], "notificationEnabled": true,
+  "quietStart": 22, "quietEnd": 8, "plan": "free"
+}}
+```
+
+### PATCH /auth/me  🔒
+프로필 수정. Body(모두 선택): `{ "nickname": "다연", "avatarUrl": "https://...", "interests": ["여행"] }` → 수정된 프로필 반환.
+
+### POST /auth/fcm-token  🔒
+Body: `{ "fcmToken": "..." }` → `{ "success": true, "data": { "updated": true } }`
+
+---
+
+## 영상
+
+### GET /videos/upload-url  🔒
+Query: `filename`, `contentType`. presigned 업로드 URL 발급 + pending 레코드 생성.
+```json
+{ "success": true, "data": { "videoId": "uuid", "uploadUrl": "https://...", "s3Key": "uploads/{userId}/{videoId}.mp4" }}
+```
+클라이언트는 `uploadUrl`에 **PUT**으로 파일 업로드(헤더 `Content-Type` 동일). 단일 클립 최대 500MB.
+
+### POST /videos  🔒
+업로드 완료 후 등록. Body: `{ "videoId": "uuid", "durationSeconds": 12 }` → 201, `status: "ready"`인 영상 반환.
+
+### GET /videos  🔒
+Query: `cursor`(선택), `limit`(기본 20, 최대 50). `{ "data": { "items": [Video...], "nextCursor": "uuid|null" } }`
+
+### GET /videos/:id  🔒 · DELETE /videos/:id  🔒
+상세 조회 / 삭제(S3 원본 삭제 + 소프트 삭제). 타 유저 리소스는 404.
+
+**Video 객체**: `{ id, originalUrls[], editedUrl, thumbnailUrl, durationSeconds, stylePreset, status, createdAt }`
+`status`: `pending | ready | processing | done | failed`
+
+---
+
+## AI 편집
+
+### POST /edit-jobs  🔒  (5req/분)
+Body: `{ "videoIds": ["uuid", ...(최대 10)], "stylePreset": "감성|여행|일상" }` → 202 `{ "data": { "jobId": "uuid" } }`
+- 소유·`ready` 상태 영상만 허용(아니면 403). Free 플랜 월 3편 초과 시 403.
+
+### GET /edit-jobs/:id  🔒
+```json
+{ "success": true, "data": {
+  "id":"uuid","videoId":"uuid","status":"processing","progress":70,
+  "errorMessage":null,"startedAt":"...","completedAt":null,"createdAt":"..."
+}}
+```
+`status`: `queued | processing | done | failed`
+
+### WebSocket /edit-jobs/:id/progress
+연결: `ws(s)://.../edit-jobs/{id}/progress?token={supabase_jwt}` (쿼리 파라미터 토큰).
+서버 → 클라이언트 메시지(JSON):
+```
+{ "progress": 30, "step": "음악 매칭 중..." }
+{ "progress": 100, "step": "완료", "outputUrl": "https://..." }
+{ "status": "failed", "error": "편집 중 오류가 발생했습니다." }
+```
+완료/실패 시 서버가 연결을 종료.
+
+---
+
+## 위치 알림
+
+### GET /locations  🔒
+Query: `lat`, `lng`(필수), `radius`(m, 기본 5000, 최대 50000). Haversine 반경 필터 + 거리순.
+```json
+{ "success": true, "data": [
+  { "id":"uuid","name":"성수동 카페거리","lat":37.5440,"lng":127.0558,
+    "radiusMeters":500,"category":"카페","distanceMeters":120 }
+]}
+```
+
+### POST /notifications/geofence-enter  🔒  (10req/분)
+Body: `{ "locationId": "uuid" }` → 200
+```json
+{ "success": true, "data": { "notified": true } }
+{ "success": true, "data": { "notified": false, "reason": "cooldown" } }
+```
+`reason`: `cooldown`(30분 내 재진입) | `quiet_hours` | `notifications_disabled` | `no_token` | `send_failed`. 없는 위치는 404.
+
+---
+
+## SNS 연동
+
+### GET /sns/connections  🔒
+연동된 계정 목록: `[{ "platform":"instagram","platformUsername":"...","connectedAt":"..." }]`
+
+### GET /sns/{instagram|tiktok}/connect  🔒
+`{ "data": { "authorizeUrl": "https://..." } }` — 앱에서 이 URL로 OAuth 진행.
+
+### GET /sns/{instagram|tiktok}/callback  (인증 불필요)
+OAuth 콜백. 완료 후 앱 딥링크로 302 리다이렉트:
+`snaply://sns/connected?platform=instagram` (성공) / `snaply://sns/error?platform=...&reason=account_type|invalid_state` (실패).
+※ 인스타그램은 비즈니스/크리에이터 계정만 허용.
+
+### DELETE /sns/{instagram|tiktok}/disconnect  🔒
+`{ "data": { "disconnected": true } }`
+
+### POST /sns/{instagram|tiktok}/upload  🔒
+Body: `{ "videoId": "uuid", "caption": "문구(선택)" }`
+```json
+{ "success": true, "data": { "uploadId":"uuid","platform":"instagram","status":"success","platformPostId":"..." }}
+```
+편집 완료(`editedUrl` 존재) 영상만 업로드 가능. 미연동 시 400.
+
+---
+
+## 결제
+
+### GET /billing/plans  (인증 불필요)
+`[{ "plan":"free","name":"Free","priceKrw":0,"features":[...] }, ...]` (standard ₩9,900 / premium ₩24,900)
+
+### GET /billing/subscription  🔒
+`{ "data": { "plan":"standard","status":"active","currentPeriodEnd":"..." } }`
+
+### POST /billing/checkout  🔒
+Body: `{ "plan": "standard|premium" }` → `{ "data": { "checkoutUrl": "https://checkout.stripe.com/..." } }`
+success/cancel 시 앱 딥링크(`snaply://billing/success|cancel`)로 복귀.
+
+### POST /billing/cancel  🔒
+기간 만료 후 해지 예약. `{ "data": { "canceling": true } }`
+
+### POST /billing/webhook  (Stripe 전용, 서명 검증)
+Stripe에서 호출. `customer.subscription.created/updated/deleted`, `invoice.payment_failed` 처리.
+
+---
+
+## 공통
+
+### GET /health  (인증 불필요)
+`{ "success": true, "data": { "status":"ok","uptimeSeconds":123,"db":"connected" } }`
