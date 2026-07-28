@@ -1,0 +1,30 @@
+# 개발용 인프라만 (MinIO + Redis). apps/api/.env 의 기본 포트와 일치.
+# 사용: npm run infra:up  /  npm run infra:down
+# ※ 앱(api/worker)은 네이티브로 실행(npm run dev:api, npm run worker).
+#    전체 스택을 이미지로 빌드해 돌리려면 docker-compose.yml 을 사용.
+
+services:
+  minio:
+    image: minio/minio
+    container_name: snaply-minio-dev
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+    ports:
+      - "9100:9000" # API (S3_ENDPOINT=http://localhost:9100)
+      - "9101:9001" # 콘솔 (http://localhost:9101, minioadmin/minioadmin123)
+    volumes:
+      - minio-dev:/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: snaply-redis-dev
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-dev:/data
+
+volumes:
+  minio-dev:
+  redis-dev:

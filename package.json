@@ -14,7 +14,17 @@
     "dev": "turbo run dev",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
-    "test": "turbo run test"
+    "test": "turbo run test",
+    "infra:up": "docker compose -f docker-compose.dev.yml up -d",
+    "infra:down": "docker compose -f docker-compose.dev.yml down",
+    "infra:logs": "docker compose -f docker-compose.dev.yml logs -f",
+    "dev:api": "npm run dev -w apps/api",
+    "worker": "cd apps/ai-worker && .venv/bin/python src/worker.py",
+    "worker:install": "cd apps/ai-worker && python3.11 -m venv .venv && .venv/bin/pip install -r requirements.txt",
+    "db:generate": "npm run prisma:generate -w apps/api",
+    "db:migrate": "npm run prisma:migrate -w apps/api",
+    "db:seed": "npm run seed:locations -w apps/api",
+    "db:studio": "npm run prisma:studio -w apps/api"
   },
   "devDependencies": {
     "eslint": "^9.30.0",
