@@ -211,12 +211,21 @@ POST /me/media                  → 200
 ## 3. 틱톡 앱 등록
 
 1. https://developers.tiktok.com → **Manage apps** → 앱 생성
-2. **Content Posting API** 제품 추가
-3. 리디렉션 URI 등록:
+2. **제품을 두 개 추가해야 한다** — 이걸 빠뜨리면 authorize 단계에서
+   "TikTok으로 로그인할 수 없습니다 … client_key" 로 막힌다:
+   - **Login Kit** — OAuth(로그인) 담당. **리디렉션 URI 는 여기에 등록한다.**
+   - **Content Posting API** — 게시 담당. `video.publish` 스코프 제공.
+3. Login Kit 설정에 리디렉션 URI 등록 (https 필수, 파라미터/프래그먼트 불가):
    ```
    https://<A>.trycloudflare.com/sns/tiktok/callback
    ```
-4. 스코프: `user.info.basic`, `video.publish`
+4. 스코프: `user.info.basic`(Login Kit), `video.publish`(Content Posting API)
+
+> ⚠️ **틱톡 크리덴셜은 사전 검증이 불가능하다.** 토큰 엔드포인트
+> (`/v2/oauth/token/`)는 `code` 를 먼저 검사해서, **존재하지 않는 client_key 로도**
+> `invalid_grant: Authorization code is expired` 를 반환한다(실측 확인).
+> 즉 client_key/secret 이 맞는지는 **authorize 를 실제로 통과해봐야만** 알 수 있다.
+> (인스타는 authorize URL 요청만으로도 일부 판별이 되지만 틱톡은 안 된다.)
 
 `.env`:
 ```bash
@@ -285,5 +294,5 @@ curl -X POST -H "Authorization: Bearer <토큰>" -H 'content-type: application/j
 | 공개 콜백 URL | cloudflared 터널로 확보 |
 | 공개 영상 URL + 버킷 익명 읽기 | 확보 (`npm run dev:public-bucket`) |
 | 인스타 앱 등록·연동·게시 파이프라인 | **완료** — 컨테이너 FINISHED 까지 실검증. 남은 건 실제 게시 1회 |
-| 틱톡 앱 등록 | **진행 필요** (+ 도메인 검증 관문) |
+| 틱톡 앱 등록 | **진행 중** — Login Kit 제품 추가 필요(누락 시 client_key 에러). 이후 도메인 검증 관문 |
 | 틱톡 FILE_UPLOAD 대안 | 미구현 (필요 시) |
