@@ -61,7 +61,10 @@ export async function cancelAtPeriodEnd(cfg: StripeConfig, subscriptionId: strin
 }
 
 export interface StripeEvent {
+  id?: string;
   type: string;
+  /** 이벤트 생성 시각(unix seconds). 웹훅 순서 보정에 쓴다. */
+  created?: number;
   data: { object: Record<string, unknown> };
 }
 
