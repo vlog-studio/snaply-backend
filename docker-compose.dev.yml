@@ -1,9 +1,28 @@
-# 개발용 인프라만 (MinIO + Redis). apps/api/.env 의 기본 포트와 일치.
+# 개발용 인프라만 (Postgres + MinIO + Redis). apps/api/.env 의 기본 포트와 일치.
 # 사용: npm run infra:up  /  npm run infra:down
 # ※ 앱(api/worker)은 네이티브로 실행(npm run dev:api, npm run worker).
 #    전체 스택을 이미지로 빌드해 돌리려면 docker-compose.yml 을 사용.
 
 services:
+  # 로컬 Postgres (TEAM.md §4 옵션 A) — 마이그레이션을 각자 로컬에서 자유롭게 돌리기 위함.
+  # 공유 Supabase로 전환하려면 .env 의 DATABASE_URL/DIRECT_URL 만 교체하면 된다.
+  postgres:
+    image: postgres:16-alpine
+    container_name: snaply-postgres-dev
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: snaply
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata-dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   minio:
     image: minio/minio
     container_name: snaply-minio-dev
@@ -26,5 +45,6 @@ services:
       - redis-dev:/data
 
 volumes:
+  pgdata-dev:
   minio-dev:
   redis-dev:

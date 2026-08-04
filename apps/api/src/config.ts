@@ -40,6 +40,11 @@ export interface SnsConfig {
   tokenEncryptionKey: string;
   /** OAuth 완료 후 앱으로 돌아가는 딥링크 스킴. */
   appDeepLinkScheme: string;
+  /**
+   * 인스타 웹훅 등록 시 Meta 콘솔에 입력하는 "인증 토큰"(직접 정하는 임의 문자열).
+   * 게시 기능 자체에는 필요 없지만, 콘솔의 웹훅 설정 단계를 통과하려면 검증 응답이 필요하다.
+   */
+  instagramWebhookVerifyToken: string | undefined;
 }
 
 export interface FirebaseConfig {
@@ -125,7 +130,8 @@ export function loadConfig(): AppConfig {
       webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || 'dev-webhook-secret',
       priceStandard: process.env.STRIPE_PRICE_STANDARD || 'price_standard_mock',
       pricePremium: process.env.STRIPE_PRICE_PREMIUM || 'price_premium_mock',
-      mock: process.env.SNS_MOCK === 'true' || !process.env.STRIPE_SECRET_KEY,
+      // SNS_MOCK 과 분리 — SNS 는 mock 인 채로 Stripe 만 실키로 검증할 수 있어야 한다.
+      mock: process.env.STRIPE_MOCK === 'true' || !process.env.STRIPE_SECRET_KEY,
     },
   };
 }
@@ -149,6 +155,7 @@ function loadSnsConfig(): SnsConfig {
     tiktok,
     tokenEncryptionKey: process.env.SNS_TOKEN_ENCRYPTION_KEY ?? 'dev-insecure-sns-key',
     appDeepLinkScheme: process.env.APP_DEEPLINK_SCHEME ?? 'snaply://',
+    instagramWebhookVerifyToken: process.env.INSTAGRAM_WEBHOOK_VERIFY_TOKEN || undefined,
   };
 }
 
