@@ -1,0 +1,42 @@
+/**
+ * 테스트 실행 전 환경변수를 고정한다.
+ *
+ * 주의: Vitest 는 `apps/api/.env` 를 process.env 에 자동으로 주입한다.
+ * 그래서 값을 채워 넣는 것만으로는 부족하고, 외부 서비스 크리덴셜은 **명시적으로 지워야** 한다.
+ * (예: 개발용 .env 에 STRIPE_SECRET_KEY 를 넣는 순간 모든 결제 테스트가 실키 모드로 바뀐다.)
+ * 실키 경로를 검증하는 테스트는 harness(env) 로 그때만 주입한다.
+ *
+ * SUPABASE_URL 만은 auth 스텁 포트가 동적이라 harness 에서 주입한다.
+ */
+import { TEST_DATABASE_URL, TEST_REDIS_URL, TEST_S3_ENDPOINT } from './constants.js';
+import { clearExternalCredentials } from './hermetic.js';
+
+clearExternalCredentials();
+
+process.env.NODE_ENV = 'test';
+process.env.LOG_LEVEL = process.env.TEST_LOG_LEVEL ?? 'silent';
+
+process.env.DATABASE_URL = TEST_DATABASE_URL;
+process.env.DIRECT_URL = TEST_DATABASE_URL;
+
+process.env.REDIS_URL = TEST_REDIS_URL;
+process.env.EDIT_QUEUE_NAME = 'edit-jobs-test';
+
+process.env.AWS_ACCESS_KEY_ID = 'minioadmin';
+process.env.AWS_SECRET_ACCESS_KEY = 'minioadmin123';
+process.env.AWS_REGION = 'ap-northeast-2';
+process.env.S3_BUCKET_NAME = 'snaply-test';
+process.env.S3_ENDPOINT = TEST_S3_ENDPOINT;
+
+// 외부 연동은 기본적으로 mock/dry-run. 개별 테스트가 필요 시 덮어쓴다.
+process.env.SNS_TOKEN_ENCRYPTION_KEY = 'test-encryption-key-do-not-use-in-prod';
+process.env.APP_DEEPLINK_SCHEME = 'snaply://';
+// 플랫폼 처리 대기 폴링을 테스트에서 빠르게 돌리기 위한 값
+process.env.INSTAGRAM_POLL_INTERVAL_MS = '10';
+process.env.INSTAGRAM_POLL_TIMEOUT_MS = '2000';
+process.env.TIKTOK_POLL_INTERVAL_MS = '10';
+process.env.TIKTOK_POLL_TIMEOUT_MS = '2000';
+
+process.env.STRIPE_WEBHOOK_SECRET = 'whsec_test_secret';
+process.env.STRIPE_PRICE_STANDARD = 'price_test_standard';
+process.env.STRIPE_PRICE_PREMIUM = 'price_test_premium';
