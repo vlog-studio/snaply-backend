@@ -113,7 +113,9 @@ Body: `{ "locationId": "uuid" }` → 200
 
 ### GET /sns/{instagram|tiktok}/callback  (인증 불필요)
 OAuth 콜백. 완료 후 앱 딥링크로 302 리다이렉트:
-`snaply://sns/connected?platform=instagram` (성공) / `snaply://sns/error?platform=...&reason=account_type|invalid_state` (실패).
+`snaply://sns/connected?platform=instagram` (성공) / `snaply://sns/error?platform=...&reason=<사유>` (실패).
+`reason`: `invalid_state`(state 위조) | `account_type`(인스타 개인계정) | `missing_params` | `access_denied`(사용자 취소) | `exchange_failed`(토큰 교환 실패).
+※ 콜백은 **항상 302 딥링크**로 응답한다 — 실패해도 JSON을 반환하지 않으므로 앱은 딥링크만 처리하면 된다.
 ※ 인스타그램은 비즈니스/크리에이터 계정만 허용.
 
 ### DELETE /sns/{instagram|tiktok}/disconnect  🔒
@@ -125,6 +127,17 @@ Body: `{ "videoId": "uuid", "caption": "문구(선택)" }`
 { "success": true, "data": { "uploadId":"uuid","platform":"instagram","status":"success","platformPostId":"..." }}
 ```
 편집 완료(`editedUrl` 존재) 영상만 업로드 가능. 미연동 시 400.
+
+400이 나는 경우:
+- 미연동 / 편집 미완료 / 남의 영상(404)
+- **영상이 공개 URL이 아님** — 인스타·틱톡이 URL을 직접 내려받으므로 `https` 공개 주소여야 한다. 로컬 MinIO 주소는 호출 전에 차단된다.
+- **연동 만료** — `SNS 연동이 만료되었습니다. 계정을 다시 연동해 주세요.` → 앱은 재연동 플로우로 유도.
+
+`status` 는 `success` | `pending` 두 가지로 돌아온다:
+- **인스타그램**은 컨테이너 처리 완료까지 서버가 대기하므로 응답이 수십 초 걸릴 수 있다(최대 5분). 완료되면 `success`.
+- **틱톡**은 영상을 자기 서버로 내려받아 게시하므로, 게시 완료까지 상태를 폴링한다(최대 2분).
+  그 안에 끝나면 `success`, 아직 진행 중이면 **`pending`**(실패가 아님, `uploadedAt`은 `null`).
+  앱은 `pending`이면 "업로드 중" 으로 표시하면 된다.
 
 ---
 
@@ -145,6 +158,9 @@ success/cancel 시 앱 딥링크(`snaply://billing/success|cancel`)로 복귀.
 
 ### POST /billing/webhook  (Stripe 전용, 서명 검증)
 Stripe에서 호출. `customer.subscription.created/updated/deleted`, `invoice.payment_failed` 처리.
+- 서명 실패 → 400 (Stripe 재시도 유도), 그 외에는 항상 200.
+- 전역 rate limit 제외 — 발신 IP가 소수라 429가 나면 재시도가 쌓인다.
+- 이벤트 순서를 보장하지 않으므로, 이미 반영한 것보다 **오래된 이벤트는 무시**한다(`subscriptions.last_stripe_event_at`).
 
 ---
 
