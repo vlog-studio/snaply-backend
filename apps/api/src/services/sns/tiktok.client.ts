@@ -5,6 +5,27 @@ import type { TokenExchangeResult, UploadResult } from './types.js';
 
 const SCOPE = 'user.info.basic,video.publish';
 
+/**
+ * 틱톡은 실패를 **HTTP 200 + 에러 본문**으로 돌려준다. 그래서 res.ok 만 보면 안 된다.
+ * 응답 형태가 두 가지다:
+ *   - OAuth:          { error: "invalid_grant", error_description: "..." }
+ *   - Content Posting: { data: {...}, error: { code: "ok" | "...", message: "..." } }
+ * 둘 다 확인해서 실패면 예외를 던진다. (이걸 안 하면 undefined 토큰을 암호화하려다 500 이 난다.)
+ */
+function assertTikTokOk(body: unknown, context: string): void {
+  const b = (body ?? {}) as { error?: unknown; error_description?: string };
+
+  if (typeof b.error === 'string' && b.error.length > 0) {
+    throw AppError.badRequest(`${context} (${b.error}: ${b.error_description ?? ''})`.trim());
+  }
+  if (b.error !== null && typeof b.error === 'object') {
+    const nested = b.error as { code?: string; message?: string };
+    if (nested.code && nested.code !== 'ok') {
+      throw AppError.badRequest(`${context} (${nested.code}: ${nested.message ?? ''})`.trim());
+    }
+  }
+}
+
 export function authorizeUrl(config: SnsProviderConfig, state: string): string {
   if (config.mock) {
     const params = new URLSearchParams({ state, mock: 'tiktok' });
@@ -45,20 +66,21 @@ export async function exchangeCode(
       code,
     }),
   });
-  if (!res.ok) {
-    throw AppError.badRequest('TikTok 토큰 교환에 실패했습니다.');
-  }
   const b = (await res.json()) as {
-    access_token: string;
-    refresh_token: string;
-    expires_in: number;
-    open_id: string;
+    access_token?: string;
+    refresh_token?: string;
+    expires_in?: number;
+    open_id?: string;
   };
+  assertTikTokOk(b, 'TikTok 토큰 교환에 실패했습니다.');
+  if (!b.access_token) {
+    throw AppError.badRequest('TikTok 응답에 access_token 이 없습니다.');
+  }
   return {
     accessToken: b.access_token,
     refreshToken: b.refresh_token,
-    expiresAt: new Date(Date.now() + b.expires_in * 1000),
-    platformUserId: b.open_id,
+    expiresAt: b.expires_in ? new Date(Date.now() + b.expires_in * 1000) : undefined,
+    platformUserId: b.open_id ?? '',
     platformUsername: '',
   };
 }
@@ -87,21 +109,30 @@ export async function refreshAccessToken(
       refresh_token: refreshToken,
     }),
   });
-  if (!res.ok) {
-    throw AppError.badRequest('TikTok 토큰 갱신에 실패했습니다.');
-  }
   const b = (await res.json()) as {
-    access_token: string;
-    refresh_token: string;
-    expires_in: number;
+    access_token?: string;
+    refresh_token?: string;
+    expires_in?: number;
   };
+  assertTikTokOk(b, 'TikTok 토큰 갱신에 실패했습니다.');
+  if (!b.access_token) {
+    throw AppError.badRequest('TikTok 갱신 응답에 access_token 이 없습니다.');
+  }
   return {
     accessToken: b.access_token,
     refreshToken: b.refresh_token,
-    expiresAt: new Date(Date.now() + b.expires_in * 1000),
+    expiresAt: b.expires_in ? new Date(Date.now() + b.expires_in * 1000) : undefined,
     platformUserId: '',
     platformUsername: '',
   };
+}
+
+/** 게시 상태 폴링 설정. 호출 시점에 읽는다. */
+function pollIntervalMs(): number {
+  return Number(process.env.TIKTOK_POLL_INTERVAL_MS ?? 5_000);
+}
+function pollTimeoutMs(): number {
+  return Number(process.env.TIKTOK_POLL_TIMEOUT_MS ?? 2 * 60_000);
 }
 
 export async function uploadVideo(
@@ -112,6 +143,7 @@ export async function uploadVideo(
     return { postId: `tt-post-${randomBytes(6).toString('hex')}` };
   }
   // 운영: Content Posting API v2 (PULL_FROM_URL)
+  // ※ 심사를 통과하지 않은 앱은 어떤 privacy_level 을 줘도 비공개로만 게시된다.
   const res = await fetch('https://open.tiktokapis.com/v2/post/publish/video/init/', {
     method: 'POST',
     headers: {
@@ -124,8 +156,77 @@ export async function uploadVideo(
     }),
   });
   if (!res.ok) {
-    throw AppError.badRequest('TikTok 업로드에 실패했습니다.');
+    throw AppError.badRequest(`TikTok 업로드에 실패했습니다. ${await errorDetail(res)}`);
   }
-  const b = (await res.json()) as { data?: { publish_id?: string } };
-  return { postId: b.data?.publish_id ?? '' };
+  const body = (await res.json()) as { data?: { publish_id?: string } };
+  assertTikTokOk(body, 'TikTok 업로드에 실패했습니다.');
+  const publishId = body.data?.publish_id ?? '';
+  if (!publishId) {
+    throw AppError.badRequest('TikTok 이 publish_id 를 반환하지 않았습니다.');
+  }
+
+  // init 은 "접수" 일 뿐이다. 실제 게시 완료까지 확인해야 이력의 status 가 사실과 맞는다.
+  const status = await waitForPublish(params.accessToken, publishId);
+  return { postId: publishId, status };
+}
+
+/**
+ * 게시 완료까지 폴링.
+ * 완료 → 'success', 실패 → 예외, 시간 내 미완료 → 'pending'(플랫폼에서 계속 진행 중).
+ */
+async function waitForPublish(
+  accessToken: string,
+  publishId: string,
+): Promise<'success' | 'pending'> {
+  const deadline = Date.now() + pollTimeoutMs();
+
+  while (Date.now() < deadline) {
+    const res = await fetch('https://open.tiktokapis.com/v2/post/publish/status/fetch/', {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${accessToken}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ publish_id: publishId }),
+    });
+    if (!res.ok) {
+      throw AppError.badRequest(`TikTok 게시 상태 조회에 실패했습니다. ${await errorDetail(res)}`);
+    }
+    const body = (await res.json()) as {
+      data?: { status?: string; fail_reason?: string };
+    };
+    assertTikTokOk(body, 'TikTok 게시 상태 조회에 실패했습니다.');
+
+    switch (body.data?.status) {
+      case 'PUBLISH_COMPLETE':
+        return 'success';
+      // 심사 전 앱은 사용자 받은함으로 전달되는 경우가 있다 — 우리 쪽 처리는 끝난 것으로 본다.
+      case 'SEND_TO_USER_INBOX':
+        return 'success';
+      case 'FAILED':
+        throw AppError.badRequest(
+          `TikTok 게시에 실패했습니다. ${body.data.fail_reason ?? ''}`.trim(),
+        );
+      default:
+        // PROCESSING_UPLOAD / PROCESSING_DOWNLOAD 등
+        await sleep(pollIntervalMs());
+    }
+  }
+
+  // 아직 진행 중 — 실패로 단정하지 않는다.
+  return 'pending';
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** TikTok 에러 본문을 짧게 추출. */
+async function errorDetail(res: Response): Promise<string> {
+  try {
+    const body = (await res.json()) as { error?: { code?: string; message?: string } };
+    return body.error?.message ? `(${res.status}: ${body.error.message})` : `(${res.status})`;
+  } catch {
+    return `(${res.status})`;
+  }
 }
