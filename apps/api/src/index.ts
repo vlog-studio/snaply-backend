@@ -5,7 +5,7 @@ import { disconnectPrisma } from './db/client.js';
 import { ensureBucketForDev } from './services/storage.service.js';
 import { closeEditQueue } from './queue/edit-queue.js';
 import { disconnectRedis } from './lib/redis.js';
-import { initSentry } from './lib/sentry.js';
+import { initSentry, flushSentry } from './lib/sentry.js';
 
 async function main(): Promise<void> {
   const config = loadConfig();
@@ -21,6 +21,8 @@ async function main(): Promise<void> {
     await closeEditQueue();
     await disconnectRedis();
     await disconnectPrisma();
+    // Sentry 전송은 비동기 버퍼링이라, flush 없이 종료하면 직전 5xx 이벤트가 유실된다.
+    await flushSentry();
     process.exit(0);
   };
   process.on('SIGINT', () => void shutdown('SIGINT'));
