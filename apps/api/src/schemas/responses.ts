@@ -102,6 +102,7 @@ export const VIDEO_SCHEMA = {
   additionalProperties: false,
   required: [
     'id',
+    'kind',
     'originalUrls',
     'editedUrl',
     'thumbnailUrl',
@@ -112,6 +113,7 @@ export const VIDEO_SCHEMA = {
   ],
   properties: {
     id: { type: 'string', format: 'uuid' },
+    kind: { type: 'string', enum: ['source', 'result'] },
     originalUrls: { type: 'array', items: { type: 'string' } },
     editedUrl: { type: 'string', nullable: true },
     thumbnailUrl: { type: 'string', nullable: true },

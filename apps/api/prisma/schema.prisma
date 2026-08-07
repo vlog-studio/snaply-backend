@@ -67,9 +67,15 @@ model NotificationLog {
 }
 
 // 영상 원본 및 편집 결과
+enum VideoKind {
+  source
+  result
+}
+
 model Video {
   id              String    @id @default(uuid()) @db.Uuid
   userId          String    @map("user_id") @db.Uuid
+  kind            VideoKind @default(source)
   originalUrls    String[]  @default([]) @map("original_urls")
   editedUrl       String?   @map("edited_url")
   thumbnailUrl    String?   @map("thumbnail_url")
@@ -85,6 +91,7 @@ model Video {
   snsUploads SnsUpload[]
 
   @@index([userId, createdAt])
+  @@index([userId, kind, createdAt])
   @@map("videos")
 }
 

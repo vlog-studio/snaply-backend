@@ -1,5 +1,11 @@
 import { randomUUID } from 'node:crypto';
-import type { CursorPaginated, StylePreset, Video, VideoStatus } from '@vlog-studio/shared-types';
+import type {
+  CursorPaginated,
+  StylePreset,
+  Video,
+  VideoKind,
+  VideoStatus,
+} from '@vlog-studio/shared-types';
 import { getPrisma } from '../db/client.js';
 import { AppError } from '../lib/errors.js';
 import {
@@ -12,6 +18,7 @@ import {
 
 interface VideoRow {
   id: string;
+  kind: string;
   originalUrls: string[];
   editedUrl: string | null;
   thumbnailUrl: string | null;
@@ -24,6 +31,7 @@ interface VideoRow {
 function toDto(row: VideoRow): Video {
   return {
     id: row.id,
+    kind: row.kind as VideoKind,
     originalUrls: row.originalUrls,
     editedUrl: row.editedUrl,
     thumbnailUrl: row.thumbnailUrl,
@@ -36,6 +44,7 @@ function toDto(row: VideoRow): Video {
 
 const SELECT = {
   id: true,
+  kind: true,
   originalUrls: true,
   editedUrl: true,
   thumbnailUrl: true,
@@ -69,6 +78,7 @@ export async function createUploadTarget(params: {
     data: {
       id: videoId,
       userId: params.userId,
+      kind: 'source',
       status: 'pending',
       s3Key,
       originalUrls: [],
@@ -117,11 +127,16 @@ export async function confirmUpload(params: {
 
 export async function listVideos(params: {
   userId: string;
+  kind?: VideoKind;
   cursor?: string;
   limit: number;
 }): Promise<CursorPaginated<Video>> {
   const rows = await getPrisma().video.findMany({
-    where: { userId: params.userId, deletedAt: null },
+    where: {
+      userId: params.userId,
+      deletedAt: null,
+      ...(params.kind ? { kind: params.kind } : {}),
+    },
     orderBy: { createdAt: 'desc' },
     take: params.limit + 1,
     ...(params.cursor ? { cursor: { id: params.cursor }, skip: 1 } : {}),

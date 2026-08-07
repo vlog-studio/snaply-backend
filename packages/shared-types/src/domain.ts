@@ -2,6 +2,8 @@ export type Plan = 'free' | 'standard' | 'premium';
 
 export type VideoStatus = 'pending' | 'ready' | 'processing' | 'done' | 'failed' | 'deleted';
 
+export type VideoKind = 'source' | 'result';
+
 export type EditJobStatus = 'queued' | 'processing' | 'done' | 'failed';
 
 export type StylePreset = '감성' | '여행' | '일상';
@@ -25,6 +27,7 @@ export interface UserProfile {
 
 export interface Video {
   id: string;
+  kind: VideoKind;
   originalUrls: string[];
   editedUrl: string | null;
   thumbnailUrl: string | null;
