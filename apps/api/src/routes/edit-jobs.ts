@@ -1,5 +1,13 @@
 import type { FastifyInstance } from 'fastify';
-import type { ApiSuccess, EditJob, StylePreset } from '@vlog-studio/shared-types';
+import {
+  DEFAULT_FIT_MODE,
+  DEFAULT_OUTPUT_PROFILE,
+  type ApiSuccess,
+  type EditJob,
+  type FitMode,
+  type OutputProfile,
+  type StylePreset,
+} from '@vlog-studio/shared-types';
 import { createRedisConnection, editProgressChannel } from '../lib/redis.js';
 import {
   API_ERROR_SCHEMA,
@@ -13,6 +21,8 @@ import { createEditJob, getEditJob, getEditJobForOwner } from '../services/edit-
 interface CreateEditJobBody {
   videoIds: string[];
   stylePreset: StylePreset;
+  outputProfile?: OutputProfile;
+  fitMode?: FitMode;
 }
 
 export async function editJobRoutes(app: FastifyInstance): Promise<void> {
@@ -44,6 +54,16 @@ export async function editJobRoutes(app: FastifyInstance): Promise<void> {
               maxItems: 10,
             },
             stylePreset: { type: 'string', enum: ['감성', '여행', '일상'] },
+            outputProfile: {
+              type: 'string',
+              enum: ['short_vertical', 'youtube_landscape', 'instagram_portrait', 'square'],
+              default: DEFAULT_OUTPUT_PROFILE,
+            },
+            fitMode: {
+              type: 'string',
+              enum: ['contain', 'cover', 'blur_background'],
+              default: DEFAULT_FIT_MODE,
+            },
           },
         },
         response: {
@@ -60,6 +80,8 @@ export async function editJobRoutes(app: FastifyInstance): Promise<void> {
         plan: request.user.plan,
         videoIds: request.body.videoIds,
         stylePreset: request.body.stylePreset,
+        outputProfile: request.body.outputProfile ?? DEFAULT_OUTPUT_PROFILE,
+        fitMode: request.body.fitMode ?? DEFAULT_FIT_MODE,
       });
       reply.status(202);
       return { success: true, data };
