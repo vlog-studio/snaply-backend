@@ -109,7 +109,11 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   // OpenAPI 문서(개발 환경에서만) — 라우트 등록 전에 등록해야 스키마가 수집된다.
   const docsEnabled = process.env.NODE_ENV !== 'production' || process.env.ENABLE_DOCS === 'true';
   if (docsEnabled) {
-    await registerDocs(app);
+    await registerDocs(app, {
+      supabaseUrl: config.supabaseUrl,
+      supabasePublishableKey: config.supabasePublishableKey,
+      allowDevLogin: process.env.NODE_ENV !== 'production',
+    });
   }
 
   await app.register(websocket);
