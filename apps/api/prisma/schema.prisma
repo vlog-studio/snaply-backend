@@ -97,15 +97,18 @@ model Video {
 
 // AI 편집 작업 상태 추적
 model EditJob {
-  id           String    @id @default(uuid()) @db.Uuid
-  videoId      String    @map("video_id") @db.Uuid
-  userId       String    @map("user_id") @db.Uuid
-  status       String    @default("queued") @db.VarChar(20)
-  progress     Int       @default(0)
-  errorMessage String?   @map("error_message")
-  startedAt    DateTime? @map("started_at") @db.Timestamptz(6)
-  completedAt  DateTime? @map("completed_at") @db.Timestamptz(6)
-  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  id              String    @id @default(uuid()) @db.Uuid
+  videoId         String    @map("video_id") @db.Uuid
+  userId          String    @map("user_id") @db.Uuid
+  pipelineVersion String    @default("2") @map("pipeline_version") @db.VarChar(20)
+  editSpec        Json      @default("{}") @map("edit_spec")
+  renderSpec      Json      @default("{}") @map("render_spec")
+  status          String    @default("queued") @db.VarChar(20)
+  progress        Int       @default(0)
+  errorMessage    String?   @map("error_message")
+  startedAt       DateTime? @map("started_at") @db.Timestamptz(6)
+  completedAt     DateTime? @map("completed_at") @db.Timestamptz(6)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
 
   video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)

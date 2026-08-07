@@ -2,11 +2,11 @@
 
 import json
 import subprocess
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from loguru import logger
 
-WIDTH, HEIGHT, FPS = 1920, 1080, 30
+from pipeline.render_spec import RenderSpec, build_video_filter
 
 
 @dataclass(frozen=True)
@@ -60,27 +60,27 @@ def _has_audio(path: str) -> bool:
     return bool(json.loads(out.stdout).get("streams"))
 
 
-def normalize_clip(src: str, dst: str, eq: str) -> None:
-    """모든 클립을 1080p/30fps/오디오 포함의 동일 포맷으로 정규화."""
-    vf = (
-        f"scale={WIDTH}:{HEIGHT}:force_original_aspect_ratio=decrease,"
-        f"pad={WIDTH}:{HEIGHT}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps={FPS}"
-    )
-    if eq:
-        vf += f",{eq}"
-
+def normalize_clip(src: str, dst: str, eq: str, render_spec: RenderSpec) -> None:
+    """Normalize one clip to the selected canvas without truncating it to audio length."""
     cmd = ["ffmpeg", "-y"]
     has_audio = _has_audio(src)
+    duration = probe_duration(src)
     cmd += ["-i", src]
     if not has_audio:
         cmd += ["-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=48000"]
+    audio_input = "[0:a:0]" if has_audio else "[1:a:0]"
+    filter_graph = (
+        f"{build_video_filter(render_spec, eq)};"
+        f"{audio_input}aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo,"
+        f"apad,atrim=duration={duration:.3f},asetpts=PTS-STARTPTS[a]"
+    )
     cmd += [
-        "-map", "0:v:0",
-        "-map", ("0:a:0" if has_audio else "1:a:0"),
-        "-vf", vf,
+        "-filter_complex", filter_graph,
+        "-map", "[v]",
+        "-map", "[a]",
         "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p",
         "-c:a", "aac", "-ar", "48000", "-ac", "2",
-        "-shortest", dst,
+        dst,
     ]
     _run(cmd)
 
@@ -135,12 +135,14 @@ def extract_thumbnail(video: str, out: str, at_seconds: float = 1.0) -> None:
     ])
 
 
-def edit(clips: list[str], preset: StylePreset, work_dir: str) -> str:
+def edit(
+    clips: list[str], preset: StylePreset, render_spec: RenderSpec, work_dir: str
+) -> str:
     """원본 클립들을 편집해 편집본(BGM/자막 전) 경로를 반환."""
     normalized: list[str] = []
     for i, clip in enumerate(clips):
         dst = f"{work_dir}/norm_{i}.mp4"
-        normalize_clip(clip, dst, preset.eq)
+        normalize_clip(clip, dst, preset.eq, render_spec)
         normalized.append(dst)
 
     out = f"{work_dir}/edited_base.mp4"
@@ -155,5 +157,11 @@ def edit(clips: list[str], preset: StylePreset, work_dir: str) -> str:
     else:
         _concat(normalized, out)
 
-    logger.info("컷편집 완료 preset={} clips={}", preset.name, len(clips))
+    logger.info(
+        "컷편집 완료 preset={} profile={} fit={} clips={}",
+        preset.name,
+        render_spec.output_profile,
+        render_spec.fit_mode,
+        len(clips),
+    )
     return out

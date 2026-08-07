@@ -1,4 +1,14 @@
-import type { EditJob, EditJobStatus, Plan, StylePreset } from '@vlog-studio/shared-types';
+import {
+  createRenderSpec,
+  type EditJob,
+  type EditJobStatus,
+  type EditSpec,
+  type FitMode,
+  type OutputProfile,
+  type Plan,
+  type RenderSpec,
+  type StylePreset,
+} from '@vlog-studio/shared-types';
 import { getPrisma } from '../db/client.js';
 import { AppError } from '../lib/errors.js';
 import { enqueueEditJob } from '../queue/edit-queue.js';
@@ -8,6 +18,9 @@ const FREE_MONTHLY_LIMIT = 3;
 interface EditJobRow {
   id: string;
   videoId: string;
+  pipelineVersion: string;
+  editSpec: unknown;
+  renderSpec: unknown;
   status: string;
   progress: number;
   errorMessage: string | null;
@@ -19,6 +32,9 @@ interface EditJobRow {
 const SELECT = {
   id: true,
   videoId: true,
+  pipelineVersion: true,
+  editSpec: true,
+  renderSpec: true,
   status: true,
   progress: true,
   errorMessage: true,
@@ -27,10 +43,50 @@ const SELECT = {
   createdAt: true,
 } as const;
 
+const LEGACY_RENDER_SPEC = createRenderSpec('youtube_landscape', 'contain');
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function parseEditSpec(value: unknown): EditSpec {
+  if (
+    isRecord(value) &&
+    value.version === 1 &&
+    ['감성', '여행', '일상'].includes(String(value.stylePreset))
+  ) {
+    return value as unknown as EditSpec;
+  }
+  return { version: 1, stylePreset: '일상' };
+}
+
+function parseRenderSpec(value: unknown): RenderSpec {
+  if (
+    isRecord(value) &&
+    value.profileVersion === 1 &&
+    ['short_vertical', 'youtube_landscape', 'instagram_portrait', 'square'].includes(
+      String(value.outputProfile),
+    ) &&
+    ['contain', 'cover', 'blur_background'].includes(String(value.fitMode)) &&
+    Number.isInteger(value.width) &&
+    Number(value.width) > 0 &&
+    Number.isInteger(value.height) &&
+    Number(value.height) > 0 &&
+    Number.isInteger(value.fps) &&
+    Number(value.fps) > 0
+  ) {
+    return value as unknown as RenderSpec;
+  }
+  return LEGACY_RENDER_SPEC;
+}
+
 function toDto(row: EditJobRow): EditJob {
   return {
     id: row.id,
     videoId: row.videoId,
+    pipelineVersion: row.pipelineVersion,
+    editSpec: parseEditSpec(row.editSpec),
+    renderSpec: parseRenderSpec(row.renderSpec),
     status: row.status as EditJobStatus,
     progress: row.progress,
     errorMessage: row.errorMessage,
@@ -50,8 +106,12 @@ export async function createEditJob(params: {
   plan: Plan;
   videoIds: string[];
   stylePreset: StylePreset;
+  outputProfile: OutputProfile;
+  fitMode: FitMode;
 }): Promise<{ jobId: string }> {
   const prisma = getPrisma();
+  const editSpec: EditSpec = { version: 1, stylePreset: params.stylePreset };
+  const renderSpec = createRenderSpec(params.outputProfile, params.fitMode);
 
   // 1) 소유권 + 준비 상태 검증
   const sources = await prisma.video.findMany({
@@ -98,6 +158,19 @@ export async function createEditJob(params: {
     data: {
       videoId: outputVideo.id,
       userId: params.userId,
+      pipelineVersion: '2',
+      editSpec: {
+        version: editSpec.version,
+        stylePreset: editSpec.stylePreset,
+      },
+      renderSpec: {
+        profileVersion: renderSpec.profileVersion,
+        outputProfile: renderSpec.outputProfile,
+        width: renderSpec.width,
+        height: renderSpec.height,
+        fps: renderSpec.fps,
+        fitMode: renderSpec.fitMode,
+      },
       status: 'queued',
       progress: 0,
     },
@@ -111,6 +184,8 @@ export async function createEditJob(params: {
       userId: params.userId,
       videoIds: params.videoIds,
       stylePreset: params.stylePreset,
+      editSpec,
+      renderSpec,
     });
   } catch (err) {
     await prisma.editJob.update({
