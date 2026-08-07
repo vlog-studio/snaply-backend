@@ -62,6 +62,8 @@ export interface StorageConfig {
   secretAccessKey: string;
   /** MinIO 등 S3 호환 서버용 커스텀 endpoint. 미설정 시 실제 AWS S3. */
   endpoint: string | undefined;
+  /** Client-reachable S3-compatible endpoint used to create presigned URLs. */
+  publicEndpoint: string | undefined;
   /** MinIO는 path-style(엔드포인트/버킷/키)이 필요. endpoint가 있으면 자동 true. */
   forcePathStyle: boolean;
   /** 공개 URL 베이스. 운영은 CloudFront, 개발은 MinIO 공개 URL. */
@@ -80,13 +82,18 @@ function requireEnv(key: string): string {
 
 function loadStorageConfig(): StorageConfig {
   const endpoint = process.env.S3_ENDPOINT?.replace(/\/$/, '') || undefined;
+  const publicEndpoint = process.env.S3_PUBLIC_ENDPOINT?.replace(/\/$/, '') || undefined;
   const bucket = requireEnv('S3_BUCKET_NAME');
   const cloudfront = process.env.CLOUDFRONT_DOMAIN?.replace(/\/$/, '');
 
   // 공개 URL: CloudFront가 있으면 우선(운영), 없으면 MinIO 등 endpoint의 path-style URL(개발)
   const publicBaseUrl =
     cloudfront ??
-    (endpoint ? `${endpoint}/${bucket}` : `https://${bucket}.s3.amazonaws.com`);
+    (publicEndpoint
+      ? `${publicEndpoint}/${bucket}`
+      : endpoint
+        ? `${endpoint}/${bucket}`
+        : `https://${bucket}.s3.amazonaws.com`);
 
   return {
     region: process.env.AWS_REGION ?? 'ap-northeast-2',
@@ -94,6 +101,7 @@ function loadStorageConfig(): StorageConfig {
     accessKeyId: requireEnv('AWS_ACCESS_KEY_ID'),
     secretAccessKey: requireEnv('AWS_SECRET_ACCESS_KEY'),
     endpoint,
+    publicEndpoint,
     forcePathStyle: Boolean(endpoint),
     publicBaseUrl,
     presignExpirySeconds: Number(process.env.S3_PRESIGN_EXPIRY_SECONDS ?? 15 * 60),

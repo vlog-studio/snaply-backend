@@ -56,6 +56,7 @@ cp .env.example apps/api/.env
 | `SUPABASE_ANON_KEY` | Legacy API Keys의 anon key (레거시 fallback, 신규 설정에는 불필요) |
 | `SUPABASE_SERVICE_ROLE_KEY` | Settings → API (Secret key) |
 | `S3_ENDPOINT` | `http://localhost:9100` (로컬 MinIO) |
+| `S3_PUBLIC_ENDPOINT` | 클라이언트 접근 주소. PC만 테스트하면 `http://localhost:9100`, 휴대폰은 `http://<PC의 LAN IP>:9100` |
 | `S3_BUCKET_NAME` | `snaply-dev` |
 | `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | `minioadmin` / `minioadmin123` |
 | `REDIS_URL` | `redis://localhost:6379` |
@@ -117,6 +118,7 @@ npm run worker                           # edit-jobs 큐 구독 시작
 ## 5. 트러블슈팅
 
 - **포트 충돌(MinIO 9000)**: 다른 프로젝트가 9000을 쓰는 경우가 있어 snaply는 **9100/9101**을 쓴다. `.env`의 `S3_ENDPOINT`도 9100.
+- **휴대폰에서 MinIO 접근 실패**: `S3_PUBLIC_ENDPOINT`를 `http://<PC의 LAN IP>:9100`으로 설정하고 OS/WSL 방화벽에서 MinIO API 포트를 허용한다. 관리 콘솔 포트(9101)는 필요한 관리자 대역에만 연다.
 - **`db: not_configured`**: `DATABASE_URL` 미설정. Supabase 값 확인.
 - **워커 DB 연결 실패**: `DATABASE_URL`에 pgbouncer 파라미터가 있으면 asyncpg가 실패 → DIRECT_URL(5432) 사용.
 - **Supabase 무료 프로젝트 일시정지**: 1주일 미사용 시 자동 정지. 대시보드에서 재개.

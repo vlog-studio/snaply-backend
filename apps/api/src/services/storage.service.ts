@@ -10,26 +10,31 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import type { StorageConfig } from '../config.js';
 
 let client: S3Client | null = null;
+let presignClient: S3Client | null = null;
 let cfg: StorageConfig | null = null;
 
 export function initStorage(config: StorageConfig): void {
   cfg = config;
-  client = new S3Client({
+  const clientOptions = {
     region: config.region,
-    endpoint: config.endpoint,
     forcePathStyle: config.forcePathStyle,
     credentials: {
       accessKeyId: config.accessKeyId,
       secretAccessKey: config.secretAccessKey,
     },
+  };
+  client = new S3Client({ ...clientOptions, endpoint: config.endpoint });
+  presignClient = new S3Client({
+    ...clientOptions,
+    endpoint: config.publicEndpoint ?? config.endpoint,
   });
 }
 
-function ensureInit(): { client: S3Client; cfg: StorageConfig } {
-  if (!client || !cfg) {
+function ensureInit(): { client: S3Client; presignClient: S3Client; cfg: StorageConfig } {
+  if (!client || !presignClient || !cfg) {
     throw new Error('storage가 초기화되지 않았습니다. initStorage(config)를 먼저 호출하세요.');
   }
-  return { client, cfg };
+  return { client, presignClient, cfg };
 }
 
 const EXT_RE = /\.[a-z0-9]{1,8}$/i;
@@ -52,7 +57,7 @@ export async function createUploadUrl(params: {
   filename: string;
   contentType: string;
 }): Promise<PresignedUpload> {
-  const { client, cfg } = ensureInit();
+  const { presignClient, cfg } = ensureInit();
   const s3Key = buildUploadKey(params.userId, params.videoId, params.filename);
 
   const command = new PutObjectCommand({
@@ -60,7 +65,7 @@ export async function createUploadUrl(params: {
     Key: s3Key,
     ContentType: params.contentType,
   });
-  const uploadUrl = await getSignedUrl(client, command, {
+  const uploadUrl = await getSignedUrl(presignClient, command, {
     expiresIn: cfg.presignExpirySeconds,
   });
 

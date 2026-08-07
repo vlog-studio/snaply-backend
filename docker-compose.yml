@@ -61,6 +61,8 @@ services:
       DIRECT_URL: postgresql://postgres:postgres@postgres:5432/snaply
       REDIS_URL: redis://redis:6379
       S3_ENDPOINT: http://minio:9000
+      S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-http://localhost:9200}
+      CLOUDFRONT_DOMAIN: ${CLOUDFRONT_DOMAIN:-}
       S3_BUCKET_NAME: snaply
       AWS_ACCESS_KEY_ID: minioadmin
       AWS_SECRET_ACCESS_KEY: minioadmin123
@@ -85,6 +87,8 @@ services:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/snaply
       EDIT_QUEUE_NAME: edit-jobs
       S3_ENDPOINT: http://minio:9000
+      S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-http://localhost:9200}
+      CLOUDFRONT_DOMAIN: ${CLOUDFRONT_DOMAIN:-}
       S3_BUCKET_NAME: snaply
       AWS_ACCESS_KEY_ID: minioadmin
       AWS_SECRET_ACCESS_KEY: minioadmin123
