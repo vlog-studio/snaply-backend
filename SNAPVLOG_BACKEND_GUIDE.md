@@ -619,7 +619,8 @@ subscriptions (
 ```bash
 # Supabase
 SUPABASE_URL=
-SUPABASE_ANON_KEY=
+SUPABASE_PUBLISHABLE_KEY=         # sb_publishable_... (Swagger 개발 로그인/클라이언트용)
+SUPABASE_ANON_KEY=                # 레거시 fallback
 SUPABASE_SERVICE_ROLE_KEY=        # 서버 전용, 클라이언트 노출 금지
 
 # AWS
