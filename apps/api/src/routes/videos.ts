@@ -8,6 +8,15 @@ import {
   deleteVideo,
   type UploadTarget,
 } from '../services/video.service.js';
+import {
+  API_ERROR_SCHEMA,
+  AUTHENTICATED_ERROR_RESPONSES,
+  DELETED_DATA_SCHEMA,
+  UPLOAD_TARGET_SCHEMA,
+  VIDEO_PAGE_SCHEMA,
+  VIDEO_SCHEMA,
+  successResponseSchema,
+} from '../schemas/responses.js';
 
 interface UploadUrlQuery {
   filename: string;
@@ -44,6 +53,11 @@ export async function videoRoutes(app: FastifyInstance): Promise<void> {
             contentType: { type: 'string', minLength: 1, maxLength: 100 },
           },
         },
+        response: {
+          200: successResponseSchema(UPLOAD_TARGET_SCHEMA),
+          400: API_ERROR_SCHEMA,
+          ...AUTHENTICATED_ERROR_RESPONSES,
+        },
       },
     },
     async (request): Promise<ApiSuccess<UploadTarget>> => {
@@ -73,6 +87,12 @@ export async function videoRoutes(app: FastifyInstance): Promise<void> {
             durationSeconds: { type: 'integer', minimum: 0, maximum: 86400 },
           },
         },
+        response: {
+          201: successResponseSchema(VIDEO_SCHEMA),
+          400: API_ERROR_SCHEMA,
+          404: API_ERROR_SCHEMA,
+          ...AUTHENTICATED_ERROR_RESPONSES,
+        },
       },
     },
     async (request, reply): Promise<ApiSuccess<Video>> => {
@@ -101,6 +121,11 @@ export async function videoRoutes(app: FastifyInstance): Promise<void> {
             limit: { type: 'integer', minimum: 1, maximum: MAX_LIMIT },
           },
         },
+        response: {
+          200: successResponseSchema(VIDEO_PAGE_SCHEMA),
+          400: API_ERROR_SCHEMA,
+          ...AUTHENTICATED_ERROR_RESPONSES,
+        },
       },
     },
     async (request): Promise<ApiSuccess<CursorPaginated<Video>>> => {
@@ -116,7 +141,18 @@ export async function videoRoutes(app: FastifyInstance): Promise<void> {
   // GET /videos/:id — 영상 상세
   app.get<{ Params: { id: string } }>(
     '/videos/:id',
-    { preHandler: app.authenticate, schema: { tags: ['videos'], summary: '영상 상세' } },
+    {
+      preHandler: app.authenticate,
+      schema: {
+        tags: ['videos'],
+        summary: '영상 상세',
+        response: {
+          200: successResponseSchema(VIDEO_SCHEMA),
+          404: API_ERROR_SCHEMA,
+          ...AUTHENTICATED_ERROR_RESPONSES,
+        },
+      },
+    },
     async (request): Promise<ApiSuccess<Video>> => {
       const data = await getVideo({ userId: request.user.id, videoId: request.params.id });
       return { success: true, data };
@@ -126,7 +162,18 @@ export async function videoRoutes(app: FastifyInstance): Promise<void> {
   // DELETE /videos/:id — S3 삭제 + 소프트 삭제
   app.delete<{ Params: { id: string } }>(
     '/videos/:id',
-    { preHandler: app.authenticate, schema: { tags: ['videos'], summary: '영상 삭제' } },
+    {
+      preHandler: app.authenticate,
+      schema: {
+        tags: ['videos'],
+        summary: '영상 삭제',
+        response: {
+          200: successResponseSchema(DELETED_DATA_SCHEMA),
+          404: API_ERROR_SCHEMA,
+          ...AUTHENTICATED_ERROR_RESPONSES,
+        },
+      },
+    },
     async (request): Promise<ApiSuccess<{ deleted: true }>> => {
       await deleteVideo({ userId: request.user.id, videoId: request.params.id });
       return { success: true, data: { deleted: true } };

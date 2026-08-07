@@ -1,6 +1,13 @@
 import type { FastifyInstance } from 'fastify';
 import type { ApiSuccess, EditJob, StylePreset } from '@vlog-studio/shared-types';
 import { createRedisConnection, editProgressChannel } from '../lib/redis.js';
+import {
+  API_ERROR_SCHEMA,
+  AUTHENTICATED_ERROR_RESPONSES,
+  EDIT_JOB_SCHEMA,
+  JOB_CREATED_SCHEMA,
+  successResponseSchema,
+} from '../schemas/responses.js';
 import { createEditJob, getEditJob, getEditJobForOwner } from '../services/edit-job.service.js';
 
 interface CreateEditJobBody {
@@ -39,6 +46,12 @@ export async function editJobRoutes(app: FastifyInstance): Promise<void> {
             stylePreset: { type: 'string', enum: ['감성', '여행', '일상'] },
           },
         },
+        response: {
+          202: successResponseSchema(JOB_CREATED_SCHEMA),
+          400: API_ERROR_SCHEMA,
+          403: API_ERROR_SCHEMA,
+          ...AUTHENTICATED_ERROR_RESPONSES,
+        },
       },
     },
     async (request, reply): Promise<ApiSuccess<{ jobId: string }>> => {
@@ -56,7 +69,18 @@ export async function editJobRoutes(app: FastifyInstance): Promise<void> {
   // GET /edit-jobs/:id — 편집 작업 상태 조회
   app.get<{ Params: { id: string } }>(
     '/edit-jobs/:id',
-    { preHandler: app.authenticate, schema: { tags: ['edit-jobs'], summary: '편집 작업 상태 조회' } },
+    {
+      preHandler: app.authenticate,
+      schema: {
+        tags: ['edit-jobs'],
+        summary: '편집 작업 상태 조회',
+        response: {
+          200: successResponseSchema(EDIT_JOB_SCHEMA),
+          404: API_ERROR_SCHEMA,
+          ...AUTHENTICATED_ERROR_RESPONSES,
+        },
+      },
+    },
     async (request): Promise<ApiSuccess<EditJob>> => {
       const data = await getEditJob({ userId: request.user.id, jobId: request.params.id });
       return { success: true, data };
