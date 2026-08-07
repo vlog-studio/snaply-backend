@@ -52,3 +52,7 @@ jobs:
       - name: Compile check
         run: python -m compileall src
         working-directory: apps/ai-worker
+
+      - name: Unit tests
+        run: python -m unittest discover -s tests
+        working-directory: apps/ai-worker
