@@ -3,6 +3,8 @@ export interface AppConfig {
   host: string;
   databaseUrl: string | undefined;
   supabaseUrl: string;
+  /** Swagger 개발 로그인에서 사용하는 공개 API 키. */
+  supabasePublishableKey: string | undefined;
   /** Supabase Auth JWKS 엔드포인트 (ES256 비대칭 키) */
   jwksUrl: string;
   /** JWT 발급자(iss) — Supabase Auth */
@@ -107,6 +109,8 @@ export function loadConfig(): AppConfig {
     host: process.env.API_HOST ?? '0.0.0.0',
     databaseUrl: process.env.DATABASE_URL,
     supabaseUrl,
+    supabasePublishableKey:
+      process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || undefined,
     jwksUrl: `${supabaseUrl}/auth/v1/.well-known/jwks.json`,
     jwtIssuer: `${supabaseUrl}/auth/v1`,
     jwtAudience: process.env.SUPABASE_JWT_AUDIENCE ?? 'authenticated',
