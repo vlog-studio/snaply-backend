@@ -52,7 +52,8 @@ cp .env.example apps/api/.env
 |---|---|
 | `DATABASE_URL`, `DIRECT_URL` | Supabase → Connect → ORMs(Prisma) |
 | `SUPABASE_URL` | Supabase → Settings → API (Project URL) |
-| `SUPABASE_ANON_KEY` | Settings → API (Publishable key) |
+| `SUPABASE_PUBLISHABLE_KEY` | Settings → API Keys (Publishable key, Swagger 개발 로그인용) |
+| `SUPABASE_ANON_KEY` | Legacy API Keys의 anon key (레거시 fallback, 신규 설정에는 불필요) |
 | `SUPABASE_SERVICE_ROLE_KEY` | Settings → API (Secret key) |
 | `S3_ENDPOINT` | `http://localhost:9100` (로컬 MinIO) |
 | `S3_BUCKET_NAME` | `snaply-dev` |
@@ -82,6 +83,13 @@ npm run dev:api       # http://localhost:3000
 curl http://localhost:3000/health        # {"data":{"status":"ok","db":"connected"}}
 open http://localhost:3000/docs          # Swagger UI (인터랙티브 테스트)
 ```
+
+`SUPABASE_PUBLISHABLE_KEY`가 설정되어 있으면 Swagger의 `Authorize`에 `devLogin`
+항목이 나타난다. Username에는 Supabase 테스트 이메일을, Password에는 비밀번호를
+입력하고 `Authorize`를 누르면 발급된 access token이 이후 요청의 Bearer 토큰으로
+자동 주입된다. Client ID/Secret은 비워둔다. 키가 없으면 기존 `bearerAuth`에 JWT를
+직접 입력하는 방식만 제공된다.
+운영 환경에서는 `ENABLE_DOCS=true`로 문서를 열더라도 `devLogin`은 등록되지 않는다.
 
 ### 3-6. AI 워커 (미디어 트랙만)
 ```bash
