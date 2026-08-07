@@ -20,6 +20,7 @@ import db
 import storage
 from pipeline import editor, music, subtitle
 from pipeline.editor import get_preset
+from pipeline.render_spec import parse_render_spec
 
 _publisher: aioredis.Redis | None = None
 
@@ -56,7 +57,9 @@ async def _progress(job_id: str, progress: int, step: str, extra: dict | None = 
 async def _run_pipeline(job_id: str, data: dict, work_dir: str) -> None:
     user_id = data["userId"]
     video_ids = data["videoIds"]
-    preset = get_preset(data["stylePreset"])
+    edit_spec = data.get("editSpec") or {"stylePreset": data.get("stylePreset", "일상")}
+    preset = get_preset(edit_spec["stylePreset"])
+    render_spec = parse_render_spec(data.get("renderSpec"))
 
     ctx = await db.fetch_job_context(job_id)
     if ctx is None:
@@ -78,7 +81,7 @@ async def _run_pipeline(job_id: str, data: dict, work_dir: str) -> None:
     await _progress(job_id, 10, "원본 다운로드 완료")
 
     # 2) 컷편집
-    base = await asyncio.to_thread(editor.edit, clips, preset, work_dir)
+    base = await asyncio.to_thread(editor.edit, clips, preset, render_spec, work_dir)
     duration = await asyncio.to_thread(editor.probe_duration, base)
     await _progress(job_id, 35, "컷편집 완료")
 

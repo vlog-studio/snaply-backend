@@ -1,12 +1,15 @@
 import { Queue } from 'bullmq';
-import type { StylePreset } from '@vlog-studio/shared-types';
+import type { EditSpec, RenderSpec, StylePreset } from '@vlog-studio/shared-types';
 import { createRedisConnection } from '../lib/redis.js';
 
 export interface EditJobData {
   jobId: string; // edit_jobs.id
   userId: string;
   videoIds: string[];
+  /** 이전 워커가 순차 배포 중에도 작업을 소비할 수 있도록 유지한다. */
   stylePreset: StylePreset;
+  editSpec: EditSpec;
+  renderSpec: RenderSpec;
 }
 
 let queue: Queue<EditJobData> | null = null;

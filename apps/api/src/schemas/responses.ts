@@ -155,12 +155,42 @@ export const JOB_CREATED_SCHEMA = {
   properties: { jobId: { type: 'string', format: 'uuid' } },
 } as const;
 
+const EDIT_SPEC_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['version', 'stylePreset'],
+  properties: {
+    version: { type: 'integer', enum: [1] },
+    stylePreset: { type: 'string', enum: ['감성', '여행', '일상'] },
+  },
+} as const;
+
+const RENDER_SPEC_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['profileVersion', 'outputProfile', 'width', 'height', 'fps', 'fitMode'],
+  properties: {
+    profileVersion: { type: 'integer', enum: [1] },
+    outputProfile: {
+      type: 'string',
+      enum: ['short_vertical', 'youtube_landscape', 'instagram_portrait', 'square'],
+    },
+    width: { type: 'integer', minimum: 2 },
+    height: { type: 'integer', minimum: 2 },
+    fps: { type: 'integer', minimum: 1 },
+    fitMode: { type: 'string', enum: ['contain', 'cover', 'blur_background'] },
+  },
+} as const;
+
 export const EDIT_JOB_SCHEMA = {
   type: 'object',
   additionalProperties: false,
   required: [
     'id',
     'videoId',
+    'pipelineVersion',
+    'editSpec',
+    'renderSpec',
     'status',
     'progress',
     'errorMessage',
@@ -171,6 +201,9 @@ export const EDIT_JOB_SCHEMA = {
   properties: {
     id: { type: 'string', format: 'uuid' },
     videoId: { type: 'string', format: 'uuid' },
+    pipelineVersion: { type: 'string' },
+    editSpec: EDIT_SPEC_SCHEMA,
+    renderSpec: RENDER_SPEC_SCHEMA,
     status: { type: 'string', enum: ['queued', 'processing', 'done', 'failed'] },
     progress: { type: 'integer', minimum: 0, maximum: 100 },
     errorMessage: { type: 'string', nullable: true },
