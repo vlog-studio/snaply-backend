@@ -16,3 +16,9 @@
 - 커밋 전에 `git diff --cached`, `git diff --cached --check`, 관련 테스트를 확인한다.
 - `.env`, API 키, 토큰, 비밀번호와 다른 비밀값은 커밋하지 않는다. 공개 가능한 예시만 `.env.example`에 둔다.
 - 사용자의 별도 요청 없이 기존 커밋을 amend, squash, rebase하거나 원격으로 push하지 않는다.
+
+## Pull Request
+
+- 사용자가 PR 생성을 요청한 경우 먼저 [`docs/PULL_REQUEST_GUIDELINES.md`](docs/PULL_REQUEST_GUIDELINES.md)를 읽고 따른다.
+- PR 본문에는 실제 변경 범위와 실행한 검증만 기록하며, 실행하지 않은 검증을 통과한 것으로 표시하지 않는다.
+- 별도 요청이 없으면 PR은 Draft로 생성하고, 생성 후 링크와 검증 결과를 사용자에게 알린다.
