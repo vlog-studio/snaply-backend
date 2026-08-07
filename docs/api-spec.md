@@ -59,7 +59,9 @@ Query: `kind`(`source | result`, 선택), `cursor`(선택), `limit`(기본 20, �
 ## AI 편집
 
 ### POST /edit-jobs  🔒  (5req/분)
-Body: `{ "videoIds": ["uuid", ...(최대 10)], "stylePreset": "감성|여행|일상" }` → 202 `{ "data": { "jobId": "uuid" } }`
+Body: `{ "videoIds": ["uuid", ...(최대 10)], "stylePreset": "감성|여행|일상", "outputProfile": "short_vertical|youtube_landscape|instagram_portrait|square" (선택), "fitMode": "contain|cover|blur_background" (선택) }` → 202 `{ "data": { "jobId": "uuid" } }`
+
+`outputProfile` 기본값은 `short_vertical`(1080×1920), `fitMode` 기본값은 `blur_background`입니다. 작업 상태 응답에는 재현 가능한 `pipelineVersion`, `editSpec`, `renderSpec` 스냅샷이 포함됩니다.
 - 소유·`source`·`ready` 상태 영상만 허용(아니면 403). Free 플랜 월 3편 초과 시 403.
 
 ### GET /edit-jobs/:id  🔒
