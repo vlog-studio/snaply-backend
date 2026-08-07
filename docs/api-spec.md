@@ -45,12 +45,13 @@ Query: `filename`, `contentType`. presigned 업로드 URL 발급 + pending 레�
 업로드 완료 후 등록. Body: `{ "videoId": "uuid", "durationSeconds": 12 }` → 201, `status: "ready"`인 영상 반환.
 
 ### GET /videos  🔒
-Query: `cursor`(선택), `limit`(기본 20, 최대 50). `{ "data": { "items": [Video...], "nextCursor": "uuid|null" } }`
+Query: `kind`(`source | result`, 선택), `cursor`(선택), `limit`(기본 20, 최대 50). `kind`를 생략하면 전체 영상을 반환합니다. `{ "data": { "items": [Video...], "nextCursor": "uuid|null" } }`
 
 ### GET /videos/:id  🔒 · DELETE /videos/:id  🔒
 상세 조회 / 삭제(S3 원본 삭제 + 소프트 삭제). 타 유저 리소스는 404.
 
-**Video 객체**: `{ id, originalUrls[], editedUrl, thumbnailUrl, durationSeconds, stylePreset, status, createdAt }`
+**Video 객체**: `{ id, kind, originalUrls[], editedUrl, thumbnailUrl, durationSeconds, stylePreset, status, createdAt }`
+`kind`: `source`(직접 업로드한 편집 원본) | `result`(합성·편집 결과물)
 `status`: `pending | ready | processing | done | failed`
 
 ---
@@ -59,7 +60,7 @@ Query: `cursor`(선택), `limit`(기본 20, 최대 50). `{ "data": { "items": [V
 
 ### POST /edit-jobs  🔒  (5req/분)
 Body: `{ "videoIds": ["uuid", ...(최대 10)], "stylePreset": "감성|여행|일상" }` → 202 `{ "data": { "jobId": "uuid" } }`
-- 소유·`ready` 상태 영상만 허용(아니면 403). Free 플랜 월 3편 초과 시 403.
+- 소유·`source`·`ready` 상태 영상만 허용(아니면 403). Free 플랜 월 3편 초과 시 403.
 
 ### GET /edit-jobs/:id  🔒
 ```json

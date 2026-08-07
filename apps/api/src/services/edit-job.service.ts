@@ -59,6 +59,7 @@ export async function createEditJob(params: {
       id: { in: params.videoIds },
       userId: params.userId,
       deletedAt: null,
+      kind: 'source',
       status: 'ready',
     },
     select: { id: true, originalUrls: true },
@@ -84,6 +85,7 @@ export async function createEditJob(params: {
   const outputVideo = await prisma.video.create({
     data: {
       userId: params.userId,
+      kind: 'result',
       status: 'processing',
       stylePreset: params.stylePreset,
       originalUrls,

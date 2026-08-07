@@ -122,6 +122,7 @@ notification_logs (
 videos (
   id               UUID PK
   user_id          UUID FK → users
+  kind             VideoKind -- source | result
   original_urls    TEXT[]     -- S3 원본 클립 URL 배열
   edited_url       TEXT       -- 편집 완료 영상 URL
   thumbnail_url    TEXT
@@ -210,7 +211,7 @@ subscriptions (
 |--------|------|------|------|
 | GET | /videos/upload-url | ✅ | S3 presigned URL 발급 |
 | POST | /videos | ✅ | 영상 메타데이터 등록 (S3 업로드 완료 후 호출) |
-| GET | /videos | ✅ | 내 영상 목록 (페이지네이션) |
+| GET | /videos | ✅ | 내 영상 목록 (`kind=source|result`, 페이지네이션) |
 | GET | /videos/:id | ✅ | 영상 상세 |
 | DELETE | /videos/:id | ✅ | 영상 삭제 (S3 파일 + DB 동시 삭제) |
 
@@ -351,7 +352,7 @@ subscriptions (
    - 반환: `{ uploadUrl, videoId, s3Key }`
    - DB에 status='pending'으로 video 레코드 미리 생성
 3. `POST /videos` 구현 — S3 업로드 완료 후 클라이언트가 호출, status를 'ready'로 업데이트
-4. `GET /videos` 구현 — 내 영상 목록, 커서 기반 페이지네이션 (limit 20)
+4. `GET /videos` 구현 — `kind=source|result` 필터, 커서 기반 페이지네이션 (limit 20)
 5. `GET /videos/:id` 구현
 6. `DELETE /videos/:id` 구현 — S3 파일 삭제 + DB 소프트 삭제
 
@@ -375,7 +376,7 @@ subscriptions (
 **[API 서버]**
 1. BullMQ Queue 초기화 — `edit-jobs` 큐, Redis 연결
 2. `POST /edit-jobs` 구현
-   - videoIds, stylePreset 검증 (소유권 확인 필수)
+   - videoIds, stylePreset 검증 (소유권 및 `kind='source'`, `status='ready'` 확인 필수)
    - edit_jobs 테이블에 status='queued' 레코드 생성
    - BullMQ에 job 추가 — `{ jobId, userId, videoIds, stylePreset }`
    - 반환: `{ jobId }`

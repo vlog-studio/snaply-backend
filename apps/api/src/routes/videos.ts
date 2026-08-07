@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import type { ApiSuccess, CursorPaginated, Video } from '@vlog-studio/shared-types';
+import type { ApiSuccess, CursorPaginated, Video, VideoKind } from '@vlog-studio/shared-types';
 import {
   createUploadTarget,
   confirmUpload,
@@ -29,6 +29,7 @@ interface CreateVideoBody {
 }
 
 interface ListQuery {
+  kind?: VideoKind;
   cursor?: string;
   limit?: number;
 }
@@ -117,6 +118,7 @@ export async function videoRoutes(app: FastifyInstance): Promise<void> {
         querystring: {
           type: 'object',
           properties: {
+            kind: { type: 'string', enum: ['source', 'result'] },
             cursor: { type: 'string' },
             limit: { type: 'integer', minimum: 1, maximum: MAX_LIMIT },
           },
@@ -131,6 +133,7 @@ export async function videoRoutes(app: FastifyInstance): Promise<void> {
     async (request): Promise<ApiSuccess<CursorPaginated<Video>>> => {
       const data = await listVideos({
         userId: request.user.id,
+        kind: request.query.kind,
         cursor: request.query.cursor,
         limit: request.query.limit ?? DEFAULT_LIMIT,
       });
