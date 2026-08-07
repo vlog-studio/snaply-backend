@@ -8,7 +8,7 @@
 ```
 apps/
   api/          # Fastify + TypeScript API 서버
-  ai-worker/    # Python FastAPI AI 편집 워커
+  ai-worker/    # Python BullMQ AI 편집 워커
 packages/
   shared-types/ # FE와 공유하는 API 요청/응답 타입
 ```
@@ -42,9 +42,10 @@ curl http://localhost:3000/health
 cd apps/ai-worker
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-python src/main.py
-curl http://localhost:8000/health
+python src/worker.py
 ```
+
+워커는 `edit-jobs` Redis 큐를 구독하는 백그라운드 프로세스입니다. 별도의 HTTP 포트를 열지 않습니다.
 
 ## 스크립트 (루트)
 
