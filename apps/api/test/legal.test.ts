@@ -99,6 +99,28 @@ describe('URL 소유권 검증 — 파일 방식', () => {
     expect(res.body).toBe('tiktok-developers-site-verification=abc123');
   });
 
+  it('URL prefix 검증용으로 /legal/ 아래에서도 서빙한다', async () => {
+    process.env.SITE_VERIFICATION_FILE_NAME = 'tiktokAbc123.txt';
+    process.env.SITE_VERIFICATION_FILE_CONTENT = 'prefix-ok';
+
+    // domain 검증(루트) / URL prefix 검증(/legal/) 둘 다 대응해야 한다
+    for (const url of ['/tiktokAbc123.txt', '/legal/tiktokAbc123.txt']) {
+      const res = await h.app.inject({ method: 'GET', url });
+      expect(res.statusCode, url).toBe(200);
+      expect(res.body).toBe('prefix-ok');
+    }
+  });
+
+  it('/legal/ 아래 검증 파일이 약관·개인정보 페이지를 가리지 않는다', async () => {
+    process.env.SITE_VERIFICATION_FILE_NAME = 'terms'; // 일부러 충돌
+    process.env.SITE_VERIFICATION_FILE_CONTENT = 'should-not-win';
+
+    const res = await h.app.inject({ method: 'GET', url: '/legal/terms' });
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['content-type']).toContain('text/html');
+    expect(res.body).toContain('이용약관');
+  });
+
   it('다른 파일명은 404 (설정된 것만 응답)', async () => {
     process.env.SITE_VERIFICATION_FILE_NAME = 'tiktokAbc123.txt';
     process.env.SITE_VERIFICATION_FILE_CONTENT = 'x';

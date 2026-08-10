@@ -1,4 +1,4 @@
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 
 /**
  * 플랫폼 콘솔(틱톡 Login Kit, Meta 앱 검수)이 요구하는 공개 페이지.
@@ -85,25 +85,37 @@ ${body}
 
 export async function legalRoutes(app: FastifyInstance): Promise<void> {
   /**
-   * 검증 파일 서빙. 플랫폼이 "이 파일을 도메인 루트에 올려라" 하는 방식에 대응한다.
+   * 검증 파일 서빙.
    *   SITE_VERIFICATION_FILE_NAME=tiktokAbc123.txt
    *   SITE_VERIFICATION_FILE_CONTENT=<파일에 들어갈 문자열>
    *
-   * 루트의 단일 세그먼트만 받으며, 설정된 파일명이 아니면 404 로 흘려보낸다.
-   * (Fastify 는 정적 경로를 파라미터 경로보다 우선하므로 /health, /legal/* 등에는 영향이 없다.)
+   * 플랫폼의 검증 방식이 두 가지라 경로도 두 곳에서 받는다:
+   *  - **domain** 검증 → 파일이 도메인 루트에 있어야 한다        → `/<파일명>`
+   *  - **URL prefix** 검증 → 파일이 그 prefix 아래 있어야 한다    → `/legal/<파일명>`
+   *    (약관·개인정보 URL 을 검증할 때 prefix 는 보통 `.../legal/` 이 된다)
+   *
+   * 설정된 파일명이 아니면 404 로 흘려보낸다. Fastify 는 정적 경로를 파라미터 경로보다
+   * 우선하므로 /health, /legal/terms 같은 기존 경로에는 영향이 없다(테스트로 고정).
    */
-  app.get<{ Params: { filename: string } }>(
-    '/:filename',
-    { schema: { tags: ['system'], summary: '플랫폼 URL 소유권 검증 파일' } },
-    async (request, reply) => {
-      const expected = process.env.SITE_VERIFICATION_FILE_NAME;
-      const content = process.env.SITE_VERIFICATION_FILE_CONTENT;
-      if (!expected || !content || request.params.filename !== expected) {
-        return reply.callNotFound();
-      }
-      return reply.type('text/plain; charset=utf-8').send(content);
-    },
-  );
+  const serveVerificationFile = async (
+    request: FastifyRequest<{ Params: { filename: string } }>,
+    reply: FastifyReply,
+  ): Promise<unknown> => {
+    const expected = process.env.SITE_VERIFICATION_FILE_NAME;
+    const content = process.env.SITE_VERIFICATION_FILE_CONTENT;
+    if (!expected || !content || request.params.filename !== expected) {
+      return reply.callNotFound();
+    }
+    return reply.type('text/plain; charset=utf-8').send(content);
+  };
+
+  for (const path of ['/:filename', '/legal/:filename']) {
+    app.get<{ Params: { filename: string } }>(
+      path,
+      { schema: { tags: ['system'], summary: '플랫폼 URL 소유권 검증 파일' } },
+      serveVerificationFile,
+    );
+  }
 
   // 서비스 소개 (콘솔의 Web/Desktop URL 용)
   app.get('/', { schema: { tags: ['system'], summary: '서비스 소개' } }, async (_req, reply) => {
