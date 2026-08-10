@@ -34,6 +34,9 @@ process.env.APP_DEEPLINK_SCHEME = 'snaply://';
 // 플랫폼 처리 대기 폴링을 테스트에서 빠르게 돌리기 위한 값
 process.env.INSTAGRAM_POLL_INTERVAL_MS = '10';
 process.env.INSTAGRAM_POLL_TIMEOUT_MS = '2000';
+// 호출 시점에 읽히는 값이라 "지우기"로는 개인 .env 오염을 막을 수 없다(dotenv 가 되살림).
+// 값을 명시적으로 박아둔다 — 개별 테스트가 필요하면 직접 덮어쓴다.
+process.env.TIKTOK_SCOPES = 'user.info.basic,video.publish';
 process.env.TIKTOK_POLL_INTERVAL_MS = '10';
 process.env.TIKTOK_POLL_TIMEOUT_MS = '2000';
 

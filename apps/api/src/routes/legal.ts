@@ -14,12 +14,47 @@ const SERVICE = 'Snaply';
 const CONTACT = process.env.LEGAL_CONTACT_EMAIL ?? 'support@snaply.app';
 const UPDATED = '2026-08-10';
 
+/**
+ * 플랫폼의 URL 소유권 검증용 메타 태그.
+ *
+ * 틱톡·Meta 등은 약관/개인정보 URL 이나 영상 URL prefix 의 소유권 검증을 요구한다.
+ * DNS TXT 방식은 우리가 도메인을 소유하지 않는 개발 터널에서는 불가능하므로,
+ * 서빙하는 페이지에 메타 태그를 넣거나(아래) 검증 파일을 서빙하는(verificationFile) 방식을 쓴다.
+ *
+ * 형식: `name=content` 를 콤마로 구분.
+ * 예: SITE_VERIFICATION_META="tiktok-developers-site-verification=abc123"
+ */
+function verificationMetaTags(): string {
+  const raw = process.env.SITE_VERIFICATION_META;
+  if (!raw) {
+    return '';
+  }
+  return raw
+    .split(',')
+    .map((pair) => pair.trim())
+    .filter(Boolean)
+    .map((pair) => {
+      const idx = pair.indexOf('=');
+      if (idx <= 0) return '';
+      const name = pair.slice(0, idx).trim();
+      const content = pair.slice(idx + 1).trim();
+      return `<meta name="${escapeAttr(name)}" content="${escapeAttr(content)}">`;
+    })
+    .filter(Boolean)
+    .join('\n');
+}
+
+function escapeAttr(v: string): string {
+  return v.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 function page(title: string, body: string): string {
   return `<!doctype html>
 <html lang="ko">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+${verificationMetaTags()}
 <title>${title} · ${SERVICE}</title>
 <style>
   :root { color-scheme: light dark; }
@@ -49,6 +84,27 @@ ${body}
 }
 
 export async function legalRoutes(app: FastifyInstance): Promise<void> {
+  /**
+   * 검증 파일 서빙. 플랫폼이 "이 파일을 도메인 루트에 올려라" 하는 방식에 대응한다.
+   *   SITE_VERIFICATION_FILE_NAME=tiktokAbc123.txt
+   *   SITE_VERIFICATION_FILE_CONTENT=<파일에 들어갈 문자열>
+   *
+   * 루트의 단일 세그먼트만 받으며, 설정된 파일명이 아니면 404 로 흘려보낸다.
+   * (Fastify 는 정적 경로를 파라미터 경로보다 우선하므로 /health, /legal/* 등에는 영향이 없다.)
+   */
+  app.get<{ Params: { filename: string } }>(
+    '/:filename',
+    { schema: { tags: ['system'], summary: '플랫폼 URL 소유권 검증 파일' } },
+    async (request, reply) => {
+      const expected = process.env.SITE_VERIFICATION_FILE_NAME;
+      const content = process.env.SITE_VERIFICATION_FILE_CONTENT;
+      if (!expected || !content || request.params.filename !== expected) {
+        return reply.callNotFound();
+      }
+      return reply.type('text/plain; charset=utf-8').send(content);
+    },
+  );
+
   // 서비스 소개 (콘솔의 Web/Desktop URL 용)
   app.get('/', { schema: { tags: ['system'], summary: '서비스 소개' } }, async (_req, reply) => {
     return reply.type('text/html; charset=utf-8').send(
