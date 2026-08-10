@@ -14,6 +14,7 @@ import { initCrypto } from './lib/crypto.js';
 import { initSns } from './services/sns.service.js';
 import { initBilling } from './services/billing.service.js';
 import { healthRoutes } from './routes/health.js';
+import { legalRoutes } from './routes/legal.js';
 import { authRoutes } from './routes/auth.js';
 import { videoRoutes } from './routes/videos.js';
 import { editJobRoutes } from './routes/edit-jobs.js';
@@ -119,6 +120,7 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   await app.register(websocket);
   await app.register(authPlugin, config);
   await app.register(healthRoutes);
+  await app.register(legalRoutes);
   await app.register(authRoutes);
   await app.register(videoRoutes);
   await app.register(editJobRoutes);
