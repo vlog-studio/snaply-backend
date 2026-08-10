@@ -301,7 +301,40 @@ TIKTOK_CLIENT_SECRET=...
 
 ---
 
-### 틱톡 진행 상황 (2026-08-10 기준) — authorize 에서 막힘
+### 틱톡 실업로드 성공 — Phase 7 end-to-end 완료 (2026-08-10)
+
+Sandbox 앱 + `video.upload`(받은함) 스코프로 실제 업로드까지 통과했다.
+
+```
+POST /sns/tiktok/upload → 200 (16.8초)
+  { status: "success", platformPostId: "v_inbox_url~v2.7672...", requiresUserAction: true }
+틱톡 상태 조회 → {"data":{"status":"SEND_TO_USER_INBOX"},"error":{"code":"ok"}}
+sns_uploads: status=success, uploaded_at 기록
+```
+
+`v_inbox_url~` 접두사가 받은함 전달을 뜻한다. 영상은 사용자의 TikTok 초안함에 있고,
+사용자가 앱에서 마무리하면 게시된다 — 그래서 `requiresUserAction: true` 를 실어 보낸다.
+
+**막혔던 관문 3개와 원인 (전부 콘솔 설정, 코드 문제 아님)**
+
+| 에러 | 원인 |
+|---|---|
+| `client_key` (1차) | **Login Kit 제품 미추가**. OAuth 는 Content Posting API 가 아니라 Login Kit 이 담당하고, 리디렉션 URI 도 Login Kit 설정에 등록한다 |
+| `client_key` (2차) | **Sandbox 는 자체 client_key/secret 을 가진다** (`sb` 접두사). Production 키로는 심사 전 authorize 가 불가능하다. 문서 미명시 |
+| `non_sandbox_target` | 로그인 계정이 Sandbox **Target users** 에 없음. 반영에 최대 1시간 |
+| `403 URL ownership` | **영상 URL 호스트**의 prefix 소유권 미검증. API 호스트와 **별개로** 검증해야 한다 |
+
+**URL prefix 소유권 검증 — 실측으로 확인한 것**
+- `trycloudflare.com` 같은 공유 도메인도 **파일 서빙 방식으로 검증된다** (DNS TXT 불필요).
+- 검증 파일명은 generic 이 아니라 `tiktok<CODE>.txt`, 내용은 `tiktok-developers-site-verification=<CODE>`.
+- **서명은 property 별로 따로 발급된다.** `/legal/` 과 `/snaply-dev/` 가 서로 다른 코드를 받았다
+  (앱 단위 재사용을 먼저 시도해봤지만 통과하지 못했다).
+- 검증할 prefix 가 2개 필요하다:
+  · API 호스트 `.../legal/` — 약관·개인정보 URL (콘솔 저장용) → `routes/legal.ts` 가 서빙
+  · MinIO 호스트 `.../snaply-dev/` — 영상 URL (PULL_FROM_URL) → 버킷에 파일 업로드
+  운영에서 CloudFront 도메인 하나로 합쳐지면 검증도 한 번으로 줄어든다.
+
+### (참고) 이전 진행 기록 — authorize 에서 막혀 있던 시점
 
 **통과한 것**
 - 앱 등록, Login Kit + Content Posting API 제품 추가
@@ -388,5 +421,5 @@ curl -X POST -H "Authorization: Bearer <토큰>" -H 'content-type: application/j
 | 공개 콜백 URL | cloudflared 터널로 확보 |
 | 공개 영상 URL + 버킷 익명 읽기 | 확보 (`npm run dev:public-bucket`) |
 | 인스타 앱 등록·연동·게시 파이프라인 | **완료** — 컨테이너 FINISHED 까지 실검증. 남은 건 실제 게시 1회 |
-| 틱톡 앱 등록 | **authorize 에서 막힘** — Sandbox client_key 확인 필요. 위 "틱톡 진행 상황" 참고 |
+| 틱톡 앱 등록·연동·업로드 | **완료** (2026-08-10) — Sandbox + video.upload 받은함 업로드 실검증 |
 | 틱톡 FILE_UPLOAD 대안 | 미구현 (필요 시) |

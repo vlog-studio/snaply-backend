@@ -369,6 +369,28 @@ Content Posting 형태(`{error:{code,message}}`) 둘 다 검사하고, `access_t
 
 회귀 테스트 7개 추가(`test/sns-realkey.test.ts`). **남은 것은 브라우저 로그인 1회뿐이다.**
 
+### 틱톡 실업로드 성공 — Phase 7 완결 (2026-08-10)
+
+Sandbox 앱 + `video.upload`(받은함) 스코프로 실제 업로드까지 통과.
+
+```
+POST /sns/tiktok/upload → 200 (16.8초)
+  { status:"success", platformPostId:"v_inbox_url~v2.7672...", requiresUserAction:true }
+틱톡 상태 조회 → SEND_TO_USER_INBOX (error.code=ok)
+```
+
+막혔던 관문은 **전부 콘솔 설정**이었고 코드 문제는 없었다:
+Login Kit 제품 미추가 → Sandbox 별도 client_key(`sb` 접두, 문서 미명시) →
+Target users 미등록 → 영상 URL 호스트의 prefix 소유권 미검증.
+
+이 과정에서 코드 쪽으로 확인된 것:
+- 틱톡이 403 으로 준 URL 검증 에러 메시지가 **문서 링크까지 그대로** 로그·응답에 실렸다.
+  인스타에서 "Meta 응답 본문을 버리던" 문제를 고쳐둔 것이 여기서 바로 효과를 봤다.
+- 스코프 기반 엔드포인트 자동 분기(`video.upload` → `/inbox/video/init/`)와
+  `requiresUserAction` 이 실제 응답에서 의도대로 동작했다.
+
+**Phase 7 은 이제 인스타(직접 게시)·틱톡(받은함) 양쪽 모두 실검증 완료.**
+
 ### 인스타그램 실업로드 성공 — Phase 7 end-to-end 완료 (2026-08-04)
 
 실제 앱·실제 프로페셔널 계정(`gagejigi`)으로 릴스 게시까지 통과했다.
@@ -464,7 +486,7 @@ stripe trigger customer.subscription.created --api-key $STRIPE_SECRET_KEY
 |---|---|
 | **Stripe 상품/가격 생성** | 미완 — `sk_test_` 키는 확보·검증 완료(2026-08-04)했고 계정에 상품이 0개다.<br>Standard(₩9,900/월)·Premium(₩24,900/월) 상품을 만들고 Price ID 2개를 `STRIPE_PRICE_STANDARD`/`STRIPE_PRICE_PREMIUM` 에 넣어야<br>실제 Checkout Session 생성·결제 플로우 검증이 가능하다. (대시보드 Product catalog 또는 `stripe products create` + `stripe prices create --currency krw`) |
 | ~~Sentry 실수집~~ | **완료** (2026-08-04) — DSN 설정·수집 경로 검증. 워커도 같은 DSN 사용 |
-| ~~인스타 실업로드~~ **완료** / 틱톡 실업로드 (authorize 막힘 — [sns-setup.md](./sns-setup.md) 참고) | 앱 등록만 남음 — 공개 URL 준비는 완료([sns-setup.md](./sns-setup.md)).<br>틱톡은 PULL_FROM_URL 도메인 검증이 추가 관문(터널 주소로는 막힐 수 있음 → FILE_UPLOAD 대안 검토) |
+| ~~인스타/틱톡 실업로드~~ **양쪽 완료** (2026-08-10). 상세: [sns-setup.md](./sns-setup.md) | 앱 등록만 남음 — 공개 URL 준비는 완료([sns-setup.md](./sns-setup.md)).<br>틱톡은 PULL_FROM_URL 도메인 검증이 추가 관문(터널 주소로는 막힐 수 있음 → FILE_UPLOAD 대안 검토) |
 | FCM 실기기 수신 | **크리덴셜 검증 완료** (2026-08-04). 남은 것은 실기기 FCM 토큰 = FE 앱 필요 |
 | 멀티 디바이스 푸시 | `users.fcm_token` 단일 컬럼 → 기기 교체 시 이전 토큰 덮어씀. users 는 공통 소유라 합의 필요 |
 | notification_logs 보존 정책 | 무한 증가. 정리 주기 미정 |
