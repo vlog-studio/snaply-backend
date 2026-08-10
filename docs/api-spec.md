@@ -59,7 +59,23 @@ Query: `kind`(`source | result`, 선택), `cursor`(선택), `limit`(기본 20, �
 ## AI 편집
 
 ### POST /edit-jobs  🔒  (5req/분)
-Body: `{ "videoIds": ["uuid", ...(최대 10)], "stylePreset": "감성|여행|일상", "outputProfile": "short_vertical|youtube_landscape|instagram_portrait|square" (선택), "fitMode": "contain|cover|blur_background" (선택) }` → 202 `{ "data": { "jobId": "uuid" } }`
+```json
+{
+  "clips": [
+    { "videoId": "uuid-1", "startMs": 3500, "endMs": 8000 },
+    { "videoId": "uuid-2", "startMs": 0 },
+    { "videoId": "uuid-1", "startMs": 12000, "endMs": 15500 }
+  ],
+  "stylePreset": "일상",
+  "outputProfile": "short_vertical",
+  "fitMode": "blur_background"
+}
+```
+→ 202 `{ "data": { "jobId": "uuid" } }`
+
+- `clips`는 최종 합성 순서이며 최대 10개입니다. 같은 영상을 서로 다른 구간으로 반복 사용할 수 있습니다.
+- `startMs`는 생략하면 0, `endMs`는 생략하면 실제 영상 끝까지 사용합니다. 지정한 구간은 최소 100ms여야 합니다.
+- 이전 클라이언트의 `{ "videoIds": [...] }` 요청도 지원하지만 전체 영상을 사용하며, `clips`와 동시에 보낼 수 없습니다.
 
 `outputProfile` 기본값은 `short_vertical`(1080×1920), `fitMode` 기본값은 `blur_background`입니다. 작업 상태 응답에는 재현 가능한 `pipelineVersion`, `editSpec`, `renderSpec` 스냅샷이 포함됩니다.
 - 소유·`source`·`ready` 상태 영상만 허용(아니면 403). Free 플랜 월 3편 초과 시 403.
