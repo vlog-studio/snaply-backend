@@ -3,6 +3,7 @@ import {
   DEFAULT_FIT_MODE,
   DEFAULT_OUTPUT_PROFILE,
   type ApiSuccess,
+  type ClipSpec,
   type EditJob,
   type FitMode,
   type OutputProfile,
@@ -19,7 +20,9 @@ import {
 import { createEditJob, getEditJob, getEditJobForOwner } from '../services/edit-job.service.js';
 
 interface CreateEditJobBody {
-  videoIds: string[];
+  clips?: Array<Omit<ClipSpec, 'startMs'> & { startMs?: number }>;
+  /** @deprecated clips를 사용하세요. */
+  videoIds?: string[];
   stylePreset: StylePreset;
   outputProfile?: OutputProfile;
   fitMode?: FitMode;
@@ -45,8 +48,24 @@ export async function editJobRoutes(app: FastifyInstance): Promise<void> {
         body: {
           type: 'object',
           additionalProperties: false,
-          required: ['videoIds', 'stylePreset'],
+          required: ['stylePreset'],
+          oneOf: [{ required: ['clips'] }, { required: ['videoIds'] }],
           properties: {
+            clips: {
+              type: 'array',
+              items: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['videoId'],
+                properties: {
+                  videoId: { type: 'string', format: 'uuid' },
+                  startMs: { type: 'integer', minimum: 0, maximum: 86_400_000, default: 0 },
+                  endMs: { type: 'integer', minimum: 1, maximum: 86_400_000 },
+                },
+              },
+              minItems: 1,
+              maxItems: 10,
+            },
             videoIds: {
               type: 'array',
               items: { type: 'string', format: 'uuid' },
@@ -75,10 +94,17 @@ export async function editJobRoutes(app: FastifyInstance): Promise<void> {
       },
     },
     async (request, reply): Promise<ApiSuccess<{ jobId: string }>> => {
+      const clips: ClipSpec[] = request.body.clips
+        ? request.body.clips.map((clip) => ({
+            videoId: clip.videoId,
+            startMs: clip.startMs ?? 0,
+            ...(clip.endMs !== undefined ? { endMs: clip.endMs } : {}),
+          }))
+        : (request.body.videoIds ?? []).map((videoId) => ({ videoId, startMs: 0 }));
       const data = await createEditJob({
         userId: request.user.id,
         plan: request.user.plan,
-        videoIds: request.body.videoIds,
+        clips,
         stylePreset: request.body.stylePreset,
         outputProfile: request.body.outputProfile ?? DEFAULT_OUTPUT_PROFILE,
         fitMode: request.body.fitMode ?? DEFAULT_FIT_MODE,

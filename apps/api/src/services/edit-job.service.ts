@@ -1,5 +1,6 @@
 import {
   createRenderSpec,
+  type ClipSpec,
   type EditJob,
   type EditJobStatus,
   type EditSpec,
@@ -14,6 +15,8 @@ import { AppError } from '../lib/errors.js';
 import { enqueueEditJob } from '../queue/edit-queue.js';
 
 const FREE_MONTHLY_LIMIT = 3;
+const MAX_CLIPS = 10;
+const MIN_CLIP_DURATION_MS = 100;
 
 interface EditJobRow {
   id: string;
@@ -52,12 +55,72 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function parseEditSpec(value: unknown): EditSpec {
   if (
     isRecord(value) &&
+    value.version === 2 &&
+    ['감성', '여행', '일상'].includes(String(value.stylePreset)) &&
+    Array.isArray(value.clips)
+  ) {
+    const clips = value.clips.map(parseClipSpec);
+    if (clips.length >= 1 && clips.length <= MAX_CLIPS && clips.every((clip) => clip !== null)) {
+      return {
+        version: 2,
+        stylePreset: value.stylePreset as StylePreset,
+        clips: clips as ClipSpec[],
+      };
+    }
+  }
+  if (
+    isRecord(value) &&
     value.version === 1 &&
     ['감성', '여행', '일상'].includes(String(value.stylePreset))
   ) {
     return value as unknown as EditSpec;
   }
   return { version: 1, stylePreset: '일상' };
+}
+
+function parseClipSpec(value: unknown): ClipSpec | null {
+  if (!isRecord(value) || typeof value.videoId !== 'string') {
+    return null;
+  }
+  if (!Number.isInteger(value.startMs) || Number(value.startMs) < 0) {
+    return null;
+  }
+  if (value.endMs !== undefined) {
+    if (
+      !Number.isInteger(value.endMs) ||
+      Number(value.endMs) - Number(value.startMs) < MIN_CLIP_DURATION_MS
+    ) {
+      return null;
+    }
+    return {
+      videoId: value.videoId,
+      startMs: Number(value.startMs),
+      endMs: Number(value.endMs),
+    };
+  }
+  return { videoId: value.videoId, startMs: Number(value.startMs) };
+}
+
+function validateClips(clips: ClipSpec[]): void {
+  if (clips.length < 1 || clips.length > MAX_CLIPS) {
+    throw AppError.badRequest(`클립은 1개 이상 ${MAX_CLIPS}개 이하로 요청해야 합니다.`);
+  }
+  for (const clip of clips) {
+    if (!clip.videoId) {
+      throw AppError.badRequest('클립 videoId가 필요합니다.');
+    }
+    if (!Number.isInteger(clip.startMs) || clip.startMs < 0) {
+      throw AppError.badRequest('클립 시작 시간은 0 이상의 정수 밀리초여야 합니다.');
+    }
+    if (clip.endMs !== undefined) {
+      if (!Number.isInteger(clip.endMs) || clip.endMs <= clip.startMs) {
+        throw AppError.badRequest('클립 종료 시간은 시작 시간보다 커야 합니다.');
+      }
+      if (clip.endMs - clip.startMs < MIN_CLIP_DURATION_MS) {
+        throw AppError.badRequest(`클립 길이는 최소 ${MIN_CLIP_DURATION_MS}ms여야 합니다.`);
+      }
+    }
+  }
 }
 
 function parseRenderSpec(value: unknown): RenderSpec {
@@ -104,19 +167,26 @@ function startOfMonth(): Date {
 export async function createEditJob(params: {
   userId: string;
   plan: Plan;
-  videoIds: string[];
+  clips: ClipSpec[];
   stylePreset: StylePreset;
   outputProfile: OutputProfile;
   fitMode: FitMode;
 }): Promise<{ jobId: string }> {
   const prisma = getPrisma();
-  const editSpec: EditSpec = { version: 1, stylePreset: params.stylePreset };
+  validateClips(params.clips);
+  const clips = params.clips.map((clip) => ({
+    videoId: clip.videoId,
+    startMs: clip.startMs,
+    ...(clip.endMs !== undefined ? { endMs: clip.endMs } : {}),
+  }));
+  const editSpec: EditSpec = { version: 2, stylePreset: params.stylePreset, clips };
   const renderSpec = createRenderSpec(params.outputProfile, params.fitMode);
+  const uniqueVideoIds = [...new Set(clips.map((clip) => clip.videoId))];
 
   // 1) 소유권 + 준비 상태 검증
   const sources = await prisma.video.findMany({
     where: {
-      id: { in: params.videoIds },
+      id: { in: uniqueVideoIds },
       userId: params.userId,
       deletedAt: null,
       kind: 'source',
@@ -124,7 +194,7 @@ export async function createEditJob(params: {
     },
     select: { id: true, originalUrls: true },
   });
-  if (sources.length !== params.videoIds.length) {
+  if (sources.length !== uniqueVideoIds.length) {
     throw AppError.forbidden('편집할 수 없는 영상이 포함되어 있습니다. (소유권 또는 상태 확인)');
   }
 
@@ -141,7 +211,8 @@ export async function createEditJob(params: {
   }
 
   // 3) 결과물 video 레코드 생성 (원본 클립 URL 취합)
-  const originalUrls = sources.flatMap((s) => s.originalUrls);
+  const sourcesById = new Map(sources.map((source) => [source.id, source]));
+  const originalUrls = uniqueVideoIds.flatMap((id) => sourcesById.get(id)?.originalUrls ?? []);
   const outputVideo = await prisma.video.create({
     data: {
       userId: params.userId,
@@ -158,10 +229,15 @@ export async function createEditJob(params: {
     data: {
       videoId: outputVideo.id,
       userId: params.userId,
-      pipelineVersion: '2',
+      pipelineVersion: '3',
       editSpec: {
         version: editSpec.version,
         stylePreset: editSpec.stylePreset,
+        clips: clips.map((clip) => ({
+          videoId: clip.videoId,
+          startMs: clip.startMs,
+          ...(clip.endMs !== undefined ? { endMs: clip.endMs } : {}),
+        })),
       },
       renderSpec: {
         profileVersion: renderSpec.profileVersion,
@@ -182,7 +258,7 @@ export async function createEditJob(params: {
     await enqueueEditJob({
       jobId: job.id,
       userId: params.userId,
-      videoIds: params.videoIds,
+      clips,
       stylePreset: params.stylePreset,
       editSpec,
       renderSpec,

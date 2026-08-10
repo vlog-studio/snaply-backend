@@ -16,10 +16,24 @@ export type OutputProfile =
 
 export type FitMode = 'contain' | 'cover' | 'blur_background';
 
-export interface EditSpec {
+export interface ClipSpec {
+  videoId: string;
+  startMs: number;
+  endMs?: number;
+}
+
+export interface EditSpecV1 {
   version: 1;
   stylePreset: StylePreset;
 }
+
+export interface EditSpecV2 {
+  version: 2;
+  stylePreset: StylePreset;
+  clips: ClipSpec[];
+}
+
+export type EditSpec = EditSpecV1 | EditSpecV2;
 
 export interface RenderSpec {
   profileVersion: 1;
