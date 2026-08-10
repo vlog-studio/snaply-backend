@@ -57,6 +57,13 @@ def _contain_scale(spec: RenderSpec) -> str:
     )
 
 
+def _fit_scale(spec: RenderSpec) -> str:
+    return (
+        f"scale={spec.width}:{spec.height}:"
+        "force_original_aspect_ratio=decrease:force_divisible_by=2"
+    )
+
+
 def build_video_filter(spec: RenderSpec, eq: str, *, input_label: str = "[0:v:0]") -> str:
     """Build a labelled filter graph whose video output is always named ``[v]``."""
     prefix = f"{input_label}setpts=PTS-STARTPTS"
@@ -81,7 +88,7 @@ def build_video_filter(spec: RenderSpec, eq: str, *, input_label: str = "[0:v:0]
     return (
         f"{prefix},split=2[background][foreground];"
         f"[background]{cover},gblur=sigma=30[background_blurred];"
-        f"[foreground]{_contain_scale(spec)}[foreground_scaled];"
+        f"[foreground]{_fit_scale(spec)}[foreground_scaled];"
         "[background_blurred][foreground_scaled]"
         "overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2,"
         f"{finish}"

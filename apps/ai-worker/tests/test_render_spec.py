@@ -60,6 +60,17 @@ class RenderSpecTest(unittest.TestCase):
         self.assertIn("min(1920,iw)", graph)
         self.assertIn("pad=1920:1080", graph)
 
+    def test_blur_background_upscales_foreground_to_fit_canvas(self) -> None:
+        graph = build_video_filter(DEFAULT_RENDER_SPEC, "")
+
+        self.assertIn(
+            "[foreground]scale=1080:1920:"
+            "force_original_aspect_ratio=decrease:force_divisible_by=2"
+            "[foreground_scaled]",
+            graph,
+        )
+        self.assertNotIn("[foreground]scale=w='min(", graph)
+
     def test_cover_and_blur_have_independent_filter_strategies(self) -> None:
         cover = parse_render_spec(
             {
