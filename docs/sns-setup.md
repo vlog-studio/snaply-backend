@@ -312,10 +312,25 @@ TIKTOK_CLIENT_SECRET=...
   `tiktok-developers-site-verification=<CODE>` 였다.
 - Sandbox 생성, 제품 추가, 리디렉션 URI 등록, Apply changes, Target users 추가
 
-**막힌 것**
+**해결된 것 — `client_key` 에러의 원인**
+
+**Sandbox 는 자체 client_key/secret 을 가진다.** Production 키로는 authorize 가 계속 거부된다.
+Sandbox 키는 **`sb` 접두사**가 붙는다(예: `sbaw6r2lmvaihvh97j`). 문서에 명시돼 있지 않아
+콘솔에서 직접 확인해야 한다: Manage apps → 앱 → 이름 옆 스위치를 **Sandbox** 로 → 그 상태의 Client key.
+
+Sandbox 키로 바꾸자 에러가 `client_key` → **`non_sandbox_target`** 으로 바뀌었다.
+
+**막힌 것 (현재)**
 ```
-authorize 요청 → "TikTok으로 로그인할 수 없습니다 … client_key"
+authorize 요청 → "… non_sandbox_target"
 ```
+로그인한 TikTok 계정이 그 Sandbox 의 **Target users** 에 없다는 뜻이다. 확인할 것:
+1. Sandbox settings → Target users 에 **실제로 로그인할 계정**이 있는지
+2. 브라우저에 **다른 TikTok 계정으로 로그인**돼 있지 않은지 (로그아웃 후 재시도)
+3. 반영 지연 — 문서상 추가 후 **최대 1시간**
+
+> 에러 문구가 `client_key` → `non_sandbox_target` 으로 바뀌는 것이 진척의 신호다.
+> 앞 단계(앱·제품·리디렉션 URI·URL 검증)는 모두 통과했다는 뜻이다.
 
 **진단 한계 (중요)**: 틱톡 크리덴셜은 **사전 검증이 불가능하다.**
 `/v2/oauth/token/` 은 `code` 를 먼저 검사해서 **존재하지 않는 client_key 로도**
@@ -323,15 +338,8 @@ authorize 요청 → "TikTok으로 로그인할 수 없습니다 … client_key"
 client_key 유효성은 **authorize 를 통과해봐야만** 알 수 있고, 실패 시 원인을 코드 쪽에서
 좁힐 수단이 없다.
 
-**남은 가설 (콘솔 확인 필요)**
-1. **Sandbox 는 자체 client_key/secret 을 가진다** — 가장 유력. 현재 쓰는 값은 Production 앱의 키다.
-   문서에 명시돼 있지 않아 콘솔에서 직접 확인해야 한다.
-   (Manage apps → 앱 → 이름 옆 스위치를 Sandbox 로 → 그 상태의 Client key)
-2. Target users 반영 지연 — 문서상 최대 1시간.
-3. `Apply changes` 미반영 — 필수 필드 때문에 저장이 막혔던 이력이 있다.
-
-**재개 방법**: 위 1번 값을 확보해 `TIKTOK_CLIENT_KEY`/`TIKTOK_CLIENT_SECRET` 교체 →
-`GET /sns/tiktok/connect` 로 새 authorize URL 발급 → 승인.
+**재개 방법**: Sandbox 키를 `TIKTOK_CLIENT_KEY`/`TIKTOK_CLIENT_SECRET` 에 넣고
+Target users 에 로그인 계정을 추가한 뒤 → `GET /sns/tiktok/connect` 로 새 authorize URL 발급 → 승인.
 코드는 양쪽 스코프(`video.upload` 받은함 / `video.publish` 직접 게시)를 모두 지원하며
 테스트로 고정돼 있어, 크리덴셜만 맞으면 바로 진행된다.
 
