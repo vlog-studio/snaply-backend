@@ -55,8 +55,23 @@ curl https://<B>.trycloudflare.com/snaply-dev/<some-key>        # 200 (익명 �
 ```
 
 > ⚠️ **trycloudflare 주소는 터널을 재시작하면 바뀐다.** 바뀌면 `.env` 와 각 플랫폼 콘솔의
-> 리디렉션 URI를 다시 맞춰야 한다. 며칠 이상 붙잡고 갈 거라면 고정 도메인(cloudflared named tunnel +
-> 보유 도메인, 또는 ngrok 유료 static domain)을 쓰는 게 낫다.
+> 리디렉션 URI를 **양쪽 다** 다시 등록해야 한다. 실제로 세션이 끊길 때마다 겪게 된다.
+
+### 고정 주소로 바꾸기 (권장, 보유 도메인 필요)
+
+Cloudflare 에 등록된 도메인이 있으면 named tunnel 로 고정 서브도메인을 쓸 수 있다.
+한 번 등록하면 콘솔 재등록이 사라진다.
+
+```bash
+cloudflared tunnel login          # 1회, 브라우저 인증 (사람이 직접)
+./apps/api/scripts/dev-tunnel.sh <도메인>          # 터널 생성 + DNS 연결 + 설정 작성
+./apps/api/scripts/dev-tunnel.sh <도메인> --run    # 위 + 바로 실행
+```
+
+`api-dev.<도메인>` → API(:3000), `media-dev.<도메인>` → MinIO(:9100) 로 라우팅되며,
+스크립트가 `.env` 와 콘솔에 넣을 값을 그대로 출력한다.
+
+> ngrok 무료 플랜은 고정 도메인이 1개뿐이라, 다른 프로젝트가 이미 쓰고 있으면 공유가 어렵다.
 
 ---
 
