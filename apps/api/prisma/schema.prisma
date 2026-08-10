@@ -77,8 +77,11 @@ model Video {
   userId          String    @map("user_id") @db.Uuid
   kind            VideoKind @default(source)
   originalUrls    String[]  @default([]) @map("original_urls")
+  originalS3Keys  String[]  @default([]) @map("original_s3_keys")
   editedUrl       String?   @map("edited_url")
+  editedS3Key     String?   @map("edited_s3_key")
   thumbnailUrl    String?   @map("thumbnail_url")
+  thumbnailS3Key  String?   @map("thumbnail_s3_key")
   durationSeconds Int?      @map("duration_seconds")
   stylePreset     String?   @map("style_preset") @db.VarChar(20)
   status          String    @default("pending") @db.VarChar(20)

@@ -1,6 +1,7 @@
 import {
   S3Client,
   PutObjectCommand,
+  GetObjectCommand,
   DeleteObjectCommand,
   HeadObjectCommand,
   HeadBucketCommand,
@@ -70,6 +71,15 @@ export async function createUploadUrl(params: {
   });
 
   return { uploadUrl, s3Key };
+}
+
+/** Issue a client-reachable, time-limited URL for private object playback/download. */
+export async function createDownloadUrl(s3Key: string): Promise<string> {
+  const { presignClient, cfg } = ensureInit();
+  const command = new GetObjectCommand({ Bucket: cfg.bucket, Key: s3Key });
+  return getSignedUrl(presignClient, command, {
+    expiresIn: cfg.downloadUrlExpirySeconds,
+  });
 }
 
 /** 업로드 완료 확인용: 객체 크기 반환. 객체가 없으면 null. */

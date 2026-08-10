@@ -32,6 +32,9 @@ AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID", "")
 AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY", "")
 AWS_REGION = os.environ.get("AWS_REGION", "ap-northeast-2")
 CLOUDFRONT_DOMAIN = (os.environ.get("CLOUDFRONT_DOMAIN") or "").rstrip("/") or None
+S3_DOWNLOAD_URL_EXPIRY_SECONDS = int(
+    os.environ.get("S3_DOWNLOAD_URL_EXPIRY_SECONDS", "3600")
+)
 
 # 편집 엔진
 WHISPER_MODEL = os.environ.get("WHISPER_MODEL", "small")

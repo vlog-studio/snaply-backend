@@ -69,6 +69,7 @@ export interface StorageConfig {
   /** 공개 URL 베이스. 운영은 CloudFront, 개발은 MinIO 공개 URL. */
   publicBaseUrl: string;
   presignExpirySeconds: number;
+  downloadUrlExpirySeconds: number;
   maxUploadBytes: number;
 }
 
@@ -105,6 +106,9 @@ function loadStorageConfig(): StorageConfig {
     forcePathStyle: Boolean(endpoint),
     publicBaseUrl,
     presignExpirySeconds: Number(process.env.S3_PRESIGN_EXPIRY_SECONDS ?? 15 * 60),
+    downloadUrlExpirySeconds: Number(
+      process.env.S3_DOWNLOAD_URL_EXPIRY_SECONDS ?? 60 * 60,
+    ),
     maxUploadBytes: Number(process.env.S3_MAX_UPLOAD_BYTES ?? 500 * 1024 * 1024),
   };
 }

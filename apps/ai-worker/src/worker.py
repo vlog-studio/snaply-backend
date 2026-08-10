@@ -119,9 +119,16 @@ async def _run_pipeline(job_id: str, data: dict, work_dir: str) -> None:
     await _progress(job_id, 95, "업로드 중...")
 
     # 7) 결과 반영
-    await db.set_video_result(output_video_id, edited_url, thumbnail_url)
+    await db.set_video_result(
+        output_video_id,
+        edited_url,
+        edited_key,
+        thumbnail_url,
+        thumb_key,
+    )
     await db.mark_done(job_id)
-    await _publish(job_id, {"progress": 100, "step": "완료", "outputUrl": edited_url})
+    output_url = storage.download_url(edited_key)
+    await _publish(job_id, {"progress": 100, "step": "완료", "outputUrl": output_url})
     logger.info("편집 완료 job_id={} url={}", job_id, edited_url)
 
 

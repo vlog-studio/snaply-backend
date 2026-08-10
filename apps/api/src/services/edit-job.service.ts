@@ -192,7 +192,7 @@ export async function createEditJob(params: {
       kind: 'source',
       status: 'ready',
     },
-    select: { id: true, originalUrls: true },
+    select: { id: true, originalUrls: true, originalS3Keys: true, s3Key: true },
   });
   if (sources.length !== uniqueVideoIds.length) {
     throw AppError.forbidden('편집할 수 없는 영상이 포함되어 있습니다. (소유권 또는 상태 확인)');
@@ -213,6 +213,17 @@ export async function createEditJob(params: {
   // 3) 결과물 video 레코드 생성 (원본 클립 URL 취합)
   const sourcesById = new Map(sources.map((source) => [source.id, source]));
   const originalUrls = uniqueVideoIds.flatMap((id) => sourcesById.get(id)?.originalUrls ?? []);
+  const originalS3Keys = uniqueVideoIds.flatMap((id) => {
+    const source = sourcesById.get(id);
+    if (!source) {
+      return [];
+    }
+    return source.originalS3Keys.length > 0
+      ? source.originalS3Keys
+      : source.s3Key
+        ? [source.s3Key]
+        : [];
+  });
   const outputVideo = await prisma.video.create({
     data: {
       userId: params.userId,
@@ -220,6 +231,7 @@ export async function createEditJob(params: {
       status: 'processing',
       stylePreset: params.stylePreset,
       originalUrls,
+      originalS3Keys,
     },
     select: { id: true },
   });
