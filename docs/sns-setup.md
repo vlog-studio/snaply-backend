@@ -349,7 +349,7 @@ sns_uploads: status=success, uploaded_at 기록
 **해결된 것 — `client_key` 에러의 원인**
 
 **Sandbox 는 자체 client_key/secret 을 가진다.** Production 키로는 authorize 가 계속 거부된다.
-Sandbox 키는 **`sb` 접두사**가 붙는다(예: `sbaw6r2lmvaihvh97j`). 문서에 명시돼 있지 않아
+Sandbox 키는 **`sb` 접두사**가 붙는다(예: `sbxxxxxxxxxxxxxxxx`). 문서에 명시돼 있지 않아
 콘솔에서 직접 확인해야 한다: Manage apps → 앱 → 이름 옆 스위치를 **Sandbox** 로 → 그 상태의 Client key.
 
 Sandbox 키로 바꾸자 에러가 `client_key` → **`non_sandbox_target`** 으로 바뀌었다.
