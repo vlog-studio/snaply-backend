@@ -57,9 +57,9 @@ def _contain_scale(spec: RenderSpec) -> str:
     )
 
 
-def build_video_filter(spec: RenderSpec, eq: str) -> str:
+def build_video_filter(spec: RenderSpec, eq: str, *, input_label: str = "[0:v:0]") -> str:
     """Build a labelled filter graph whose video output is always named ``[v]``."""
-    prefix = "[0:v:0]setpts=PTS-STARTPTS"
+    prefix = f"{input_label}setpts=PTS-STARTPTS"
     if eq:
         prefix += f",{eq}"
 

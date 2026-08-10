@@ -9,6 +9,17 @@ from loguru import logger
 from pipeline.render_spec import RenderSpec, build_video_filter
 
 
+MIN_CLIP_DURATION_SECONDS = 0.1
+CLIP_END_TOLERANCE_SECONDS = 0.05
+
+
+@dataclass(frozen=True)
+class ClipSource:
+    path: str
+    start_ms: int = 0
+    end_ms: int | None = None
+
+
 @dataclass(frozen=True)
 class StylePreset:
     name: str
@@ -60,19 +71,54 @@ def _has_audio(path: str) -> bool:
     return bool(json.loads(out.stdout).get("streams"))
 
 
-def normalize_clip(src: str, dst: str, eq: str, render_spec: RenderSpec) -> None:
-    """Normalize one clip to the selected canvas without truncating it to audio length."""
+def _resolve_clip_window(
+    source_duration: float, start_ms: int, end_ms: int | None
+) -> tuple[float, float, float]:
+    start = start_ms / 1000
+    requested_end = source_duration if end_ms is None else end_ms / 1000
+    if start >= source_duration:
+        raise ValueError("클립 시작 시간이 원본 영상 길이를 벗어났습니다.")
+    if requested_end > source_duration + CLIP_END_TOLERANCE_SECONDS:
+        raise ValueError("클립 종료 시간이 원본 영상 길이를 벗어났습니다.")
+    end = min(requested_end, source_duration)
+    duration = end - start
+    if duration < MIN_CLIP_DURATION_SECONDS:
+        raise ValueError("클립 길이는 최소 100ms여야 합니다.")
+    return start, end, duration
+
+
+def normalize_clip(
+    src: str,
+    dst: str,
+    eq: str,
+    render_spec: RenderSpec,
+    start_ms: int = 0,
+    end_ms: int | None = None,
+) -> None:
+    """Trim and normalize one clip while keeping its audio aligned."""
     cmd = ["ffmpeg", "-y"]
     has_audio = _has_audio(src)
-    duration = probe_duration(src)
+    source_duration = probe_duration(src)
+    start, end, duration = _resolve_clip_window(source_duration, start_ms, end_ms)
     cmd += ["-i", src]
     if not has_audio:
         cmd += ["-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=48000"]
     audio_input = "[0:a:0]" if has_audio else "[1:a:0]"
+    video_trim = f"[0:v:0]trim=start={start:.3f}:end={end:.3f}[trimmed_v]"
+    if has_audio:
+        audio_filter = (
+            f"{audio_input}aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo,"
+            f"apad,atrim=start={start:.3f}:end={end:.3f},asetpts=PTS-STARTPTS[a]"
+        )
+    else:
+        audio_filter = (
+            f"{audio_input}aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo,"
+            f"atrim=duration={duration:.3f},asetpts=PTS-STARTPTS[a]"
+        )
     filter_graph = (
-        f"{build_video_filter(render_spec, eq)};"
-        f"{audio_input}aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo,"
-        f"apad,atrim=duration={duration:.3f},asetpts=PTS-STARTPTS[a]"
+        f"{video_trim};"
+        f"{build_video_filter(render_spec, eq, input_label='[trimmed_v]')};"
+        f"{audio_filter}"
     )
     cmd += [
         "-filter_complex", filter_graph,
@@ -104,6 +150,7 @@ def _crossfade(normalized: list[str], durations: list[float], t: float, out: str
     for path in normalized:
         inputs += ["-i", path]
 
+    t = min(t, min(durations) / 2)
     vparts, aparts = [], []
     v_prev, a_prev = "[0:v:0]", "[0:a:0]"
     running = durations[0]
@@ -136,13 +183,20 @@ def extract_thumbnail(video: str, out: str, at_seconds: float = 1.0) -> None:
 
 
 def edit(
-    clips: list[str], preset: StylePreset, render_spec: RenderSpec, work_dir: str
+    clips: list[ClipSource], preset: StylePreset, render_spec: RenderSpec, work_dir: str
 ) -> str:
     """원본 클립들을 편집해 편집본(BGM/자막 전) 경로를 반환."""
     normalized: list[str] = []
     for i, clip in enumerate(clips):
         dst = f"{work_dir}/norm_{i}.mp4"
-        normalize_clip(clip, dst, preset.eq, render_spec)
+        normalize_clip(
+            clip.path,
+            dst,
+            preset.eq,
+            render_spec,
+            start_ms=clip.start_ms,
+            end_ms=clip.end_ms,
+        )
         normalized.append(dst)
 
     out = f"{work_dir}/edited_base.mp4"

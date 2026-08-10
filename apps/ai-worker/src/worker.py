@@ -19,6 +19,7 @@ import config
 import db
 import storage
 from pipeline import editor, music, subtitle
+from pipeline.edit_spec import parse_job_clips
 from pipeline.editor import get_preset
 from pipeline.render_spec import parse_render_spec
 
@@ -56,7 +57,7 @@ async def _progress(job_id: str, progress: int, step: str, extra: dict | None = 
 
 async def _run_pipeline(job_id: str, data: dict, work_dir: str) -> None:
     user_id = data["userId"]
-    video_ids = data["videoIds"]
+    clip_specs = parse_job_clips(data)
     edit_spec = data.get("editSpec") or {"stylePreset": data.get("stylePreset", "일상")}
     preset = get_preset(edit_spec["stylePreset"])
     render_spec = parse_render_spec(data.get("renderSpec"))
@@ -70,14 +71,20 @@ async def _run_pipeline(job_id: str, data: dict, work_dir: str) -> None:
     await _publish(job_id, {"progress": 0, "step": "시작"})
 
     # 1) 원본 클립 다운로드
-    source_keys = await db.fetch_source_keys(video_ids)
-    if not source_keys:
+    video_ids = list(dict.fromkeys(clip.video_id for clip in clip_specs))
+    source_keys = await db.fetch_source_keys(user_id, video_ids)
+    if len(source_keys) != len(video_ids):
         raise RuntimeError("원본 클립을 찾을 수 없습니다.")
-    clips: list[str] = []
-    for i, key in enumerate(source_keys):
+    local_sources: dict[str, str] = {}
+    for i, video_id in enumerate(video_ids):
+        key = source_keys[video_id]
         local = os.path.join(work_dir, f"src_{i}{os.path.splitext(key)[1] or '.mp4'}")
         await asyncio.to_thread(storage.download, key, local)
-        clips.append(local)
+        local_sources[video_id] = local
+    clips = [
+        editor.ClipSource(local_sources[clip.video_id], clip.start_ms, clip.end_ms)
+        for clip in clip_specs
+    ]
     await _progress(job_id, 10, "원본 다운로드 완료")
 
     # 2) 컷편집
@@ -99,9 +106,10 @@ async def _run_pipeline(job_id: str, data: dict, work_dir: str) -> None:
     )
     await _progress(job_id, 85, "자막 생성 중...")
 
-    # 5) 썸네일 추출 (1초 시점)
+    # 5) 썸네일 추출 (기본 1초, 짧은 결과물은 중간 시점)
     thumb_path = os.path.join(work_dir, "thumb.jpg")
-    await asyncio.to_thread(editor.extract_thumbnail, current, thumb_path, 1.0)
+    thumbnail_at = min(1.0, duration / 2)
+    await asyncio.to_thread(editor.extract_thumbnail, current, thumb_path, thumbnail_at)
 
     # 6) S3 업로드
     edited_key = storage.edited_key(user_id, job_id)
@@ -119,7 +127,11 @@ async def _run_pipeline(job_id: str, data: dict, work_dir: str) -> None:
 
 async def process_edit_job(job, _job_token) -> dict:
     job_id = job.data["jobId"]
-    logger.info("편집 작업 수신 job_id={} videos={}", job_id, job.data.get("videoIds"))
+    logger.info(
+        "편집 작업 수신 job_id={} clips={}",
+        job_id,
+        job.data.get("clips") or job.data.get("videoIds"),
+    )
     work_dir = tempfile.mkdtemp(prefix=f"edit_{job_id}_")
     try:
         await asyncio.wait_for(

@@ -1,11 +1,14 @@
 import { Queue } from 'bullmq';
-import type { EditSpec, RenderSpec, StylePreset } from '@vlog-studio/shared-types';
+import type { ClipSpec, EditSpec, RenderSpec, StylePreset } from '@vlog-studio/shared-types';
 import { createRedisConnection } from '../lib/redis.js';
 
 export interface EditJobData {
   jobId: string; // edit_jobs.id
   userId: string;
-  videoIds: string[];
+  /** pipeline v3 구간 편집 명세. */
+  clips?: ClipSpec[];
+  /** pipeline v1/v2에서 생성된 대기 작업과의 호환용. */
+  videoIds?: string[];
   /** 이전 워커가 순차 배포 중에도 작업을 소비할 수 있도록 유지한다. */
   stylePreset: StylePreset;
   editSpec: EditSpec;

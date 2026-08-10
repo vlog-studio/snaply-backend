@@ -45,14 +45,17 @@ async def fetch_job_context(job_id: str) -> dict | None:
         return {"user_id": str(row["user_id"]), "video_id": str(row["video_id"])}
 
 
-async def fetch_source_keys(video_ids: list[str]) -> list[str]:
-    """주어진 video_ids 순서대로 s3_key 반환 (없는 항목은 제외)."""
+async def fetch_source_keys(user_id: str, video_ids: list[str]) -> dict[str, str]:
+    """Return owned, ready source keys keyed by video id."""
     async with _pool_or_raise().acquire() as conn:
         rows = await conn.fetch(
-            "SELECT id, s3_key FROM videos WHERE id = ANY($1::uuid[])", video_ids
+            "SELECT id, s3_key FROM videos "
+            "WHERE id = ANY($1::uuid[]) AND user_id=$2 AND kind='source' "
+            "AND status='ready' AND deleted_at IS NULL",
+            video_ids,
+            user_id,
         )
-    by_id = {str(r["id"]): r["s3_key"] for r in rows if r["s3_key"]}
-    return [by_id[vid] for vid in video_ids if vid in by_id]
+    return {str(row["id"]): row["s3_key"] for row in rows if row["s3_key"]}
 
 
 async def set_video_result(video_id: str, edited_url: str, thumbnail_url: str) -> None:

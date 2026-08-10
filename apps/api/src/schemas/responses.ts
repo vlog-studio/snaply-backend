@@ -155,7 +155,7 @@ export const JOB_CREATED_SCHEMA = {
   properties: { jobId: { type: 'string', format: 'uuid' } },
 } as const;
 
-const EDIT_SPEC_SCHEMA = {
+const EDIT_SPEC_V1_SCHEMA = {
   type: 'object',
   additionalProperties: false,
   required: ['version', 'stylePreset'],
@@ -163,6 +163,32 @@ const EDIT_SPEC_SCHEMA = {
     version: { type: 'integer', enum: [1] },
     stylePreset: { type: 'string', enum: ['감성', '여행', '일상'] },
   },
+} as const;
+
+const CLIP_SPEC_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['videoId', 'startMs'],
+  properties: {
+    videoId: { type: 'string', format: 'uuid' },
+    startMs: { type: 'integer', minimum: 0 },
+    endMs: { type: 'integer', minimum: 1 },
+  },
+} as const;
+
+const EDIT_SPEC_V2_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['version', 'stylePreset', 'clips'],
+  properties: {
+    version: { type: 'integer', enum: [2] },
+    stylePreset: { type: 'string', enum: ['감성', '여행', '일상'] },
+    clips: { type: 'array', items: CLIP_SPEC_SCHEMA, minItems: 1, maxItems: 10 },
+  },
+} as const;
+
+const EDIT_SPEC_SCHEMA = {
+  oneOf: [EDIT_SPEC_V1_SCHEMA, EDIT_SPEC_V2_SCHEMA],
 } as const;
 
 const RENDER_SPEC_SCHEMA = {
