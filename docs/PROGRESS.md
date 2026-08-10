@@ -369,9 +369,11 @@ Content Posting 형태(`{error:{code,message}}`) 둘 다 검사하고, `access_t
 
 회귀 테스트 7개 추가(`test/sns-realkey.test.ts`). **남은 것은 브라우저 로그인 1회뿐이다.**
 
-### 틱톡 실업로드 성공 — Phase 7 완결 (2026-08-10)
+### 틱톡 — API 는 성공, **실물 미확인** (2026-08-10, 진행 중)
 
-Sandbox 앱 + `video.upload`(받은함) 스코프로 실제 업로드까지 통과.
+⚠️ **주의**: 아래는 "틱톡 API 가 업로드를 수락하고 성공을 반환했다"는 것까지다.
+**사용자 계정에 실제로 도착했는지는 확인되지 않았다** — 받은함 알림이 오지 않았다.
+API 응답만으로 "검증 완료"라고 판단하면 안 되는 사례다.
 
 ```
 POST /sns/tiktok/upload → 200 (16.8초)
@@ -389,7 +391,27 @@ Target users 미등록 → 영상 URL 호스트의 prefix 소유권 미검증.
 - 스코프 기반 엔드포인트 자동 분기(`video.upload` → `/inbox/video/init/`)와
   `requiresUserAction` 이 실제 응답에서 의도대로 동작했다.
 
-**Phase 7 은 이제 인스타(직접 게시)·틱톡(받은함) 양쪽 모두 실검증 완료.**
+**미해결 — 받은함 알림 미도착**
+
+틱톡 상태 API 는 `SEND_TO_USER_INBOX` / `error.code=ok` 를 계속 반환하는데 앱에는 아무것도 오지 않았다.
+문서상 Sandbox 에서도 받은함 도착이 정상 동작(privacy=SELF_ONLY)이므로 제약이 아니라 설정 문제로 보인다.
+
+**중요한 단서**: `user.info.basic` 스코프가 실제로는 부여되지 않았다.
+```
+GET /v2/user/info/                    → scope_not_authorized
+POST /v2/post/publish/creator_info/query/ → scope_not_authorized
+```
+`video.upload` 는 동작했는데(업로드 수락됨) `user.info.basic` 은 거부된다. 즉 **동의가 부분적으로만
+이루어진 상태**다. 이 때문에 어느 계정에 전달됐는지 우리 쪽에서 확인할 수단이 없다 —
+진단의 가장 큰 사각지대.
+
+다음 확인 순서:
+1. Sandbox → Scopes 에 `user.info.basic` 이 실제로 켜져 있는지
+2. 재인증 시 동의 화면에 **두 권한이 모두** 표시되는지
+3. 부여되면 `/v2/user/info/` 로 **어느 계정에 연동됐는지 확정** 후 그 계정의 받은함 확인
+4. TikTok 앱 받은 편지함은 초안(Drafts)이 아니라 **알림** 탭이다
+
+**Phase 7 상태: 인스타(직접 게시) 실검증 완료 / 틱톡은 API 수락까지만 확인.**
 
 ### 인스타그램 실업로드 성공 — Phase 7 end-to-end 완료 (2026-08-04)
 
@@ -486,7 +508,7 @@ stripe trigger customer.subscription.created --api-key $STRIPE_SECRET_KEY
 |---|---|
 | **Stripe 상품/가격 생성** | 미완 — `sk_test_` 키는 확보·검증 완료(2026-08-04)했고 계정에 상품이 0개다.<br>Standard(₩9,900/월)·Premium(₩24,900/월) 상품을 만들고 Price ID 2개를 `STRIPE_PRICE_STANDARD`/`STRIPE_PRICE_PREMIUM` 에 넣어야<br>실제 Checkout Session 생성·결제 플로우 검증이 가능하다. (대시보드 Product catalog 또는 `stripe products create` + `stripe prices create --currency krw`) |
 | ~~Sentry 실수집~~ | **완료** (2026-08-04) — DSN 설정·수집 경로 검증. 워커도 같은 DSN 사용 |
-| ~~인스타/틱톡 실업로드~~ **양쪽 완료** (2026-08-10). 상세: [sns-setup.md](./sns-setup.md) | 앱 등록만 남음 — 공개 URL 준비는 완료([sns-setup.md](./sns-setup.md)).<br>틱톡은 PULL_FROM_URL 도메인 검증이 추가 관문(터널 주소로는 막힐 수 있음 → FILE_UPLOAD 대안 검토) |
+| ~~인스타 실업로드~~ **완료** / 틱톡 — API 수락까지만 확인, 받은함 실물 미도착 (조사 중) | 앱 등록만 남음 — 공개 URL 준비는 완료([sns-setup.md](./sns-setup.md)).<br>틱톡은 PULL_FROM_URL 도메인 검증이 추가 관문(터널 주소로는 막힐 수 있음 → FILE_UPLOAD 대안 검토) |
 | FCM 실기기 수신 | **크리덴셜 검증 완료** (2026-08-04). 남은 것은 실기기 FCM 토큰 = FE 앱 필요 |
 | 멀티 디바이스 푸시 | `users.fcm_token` 단일 컬럼 → 기기 교체 시 이전 토큰 덮어씀. users 는 공통 소유라 합의 필요 |
 | notification_logs 보존 정책 | 무한 증가. 정리 주기 미정 |

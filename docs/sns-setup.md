@@ -301,9 +301,10 @@ TIKTOK_CLIENT_SECRET=...
 
 ---
 
-### 틱톡 실업로드 성공 — Phase 7 end-to-end 완료 (2026-08-10)
+### 틱톡 — API 수락 확인, 받은함 실물 미도착 (2026-08-10, 미해결)
 
-Sandbox 앱 + `video.upload`(받은함) 스코프로 실제 업로드까지 통과했다.
+⚠️ 아래 지표는 **틱톡 API 가 업로드를 수락했다**는 뜻이다. 사용자 계정 받은함에는
+아무것도 도착하지 않았다. API 성공 응답을 실검증으로 오해하면 안 된다.
 
 ```
 POST /sns/tiktok/upload → 200 (16.8초)
@@ -421,5 +422,5 @@ curl -X POST -H "Authorization: Bearer <토큰>" -H 'content-type: application/j
 | 공개 콜백 URL | cloudflared 터널로 확보 |
 | 공개 영상 URL + 버킷 익명 읽기 | 확보 (`npm run dev:public-bucket`) |
 | 인스타 앱 등록·연동·게시 파이프라인 | **완료** — 컨테이너 FINISHED 까지 실검증. 남은 건 실제 게시 1회 |
-| 틱톡 앱 등록·연동·업로드 | **완료** (2026-08-10) — Sandbox + video.upload 받은함 업로드 실검증 |
+| 틱톡 앱 등록·연동 | 완료 / **업로드는 API 수락까지만** — 받은함 실물 미도착, 조사 중 |
 | 틱톡 FILE_UPLOAD 대안 | 미구현 (필요 시) |
