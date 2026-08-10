@@ -9,7 +9,7 @@
     "start": "node dist/index.js",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
     "lint": "eslint src",
-    "test": "vitest run && tsc -p tsconfig.json && node --test --experimental-test-isolation=none test/storage.service.test.mjs",
+    "test": "vitest run && tsc -p tsconfig.json && node --test test/storage.service.test.mjs",
     "test:watch": "vitest",
     "auth:stub": "tsx scripts/auth-stub.ts",
     "dev:public-bucket": "node --env-file=.env --import tsx scripts/dev-public-bucket.ts",

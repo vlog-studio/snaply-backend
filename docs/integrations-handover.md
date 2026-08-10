@@ -163,6 +163,25 @@ POST /me/media                  → 200
 - `npm test -w apps/api` 로 실행한다(§2 의 이유로 위치가 중요하다).
 - `.env` 없이·MinIO 없이 **148/148 + node:test 1/1** 통과를 로컬에서 재현 검증했다.
 
+**CI 를 켜자마자 드러난 잠재 문제 — Node 22+ 전용 플래그**
+
+`test` 스크립트에 `--experimental-test-isolation=none` 이 있었는데, 이 플래그는 **Node 22 부터** 지원된다.
+CI 는 Node 20 이고 `engines` 도 `>=20` 이라 **Node 20 에서는 실행 자체가 불가능했다**:
+
+```
+$ docker run --rm node:20-alpine node --experimental-test-isolation=none -e "..."
+node: bad option: --experimental-test-isolation=none      # Node 20 → 실패
+$ docker run --rm node:22-alpine node --experimental-test-isolation=none -e "..."
+OK v22.23.2                                              # Node 22 → 정상
+```
+
+CI 가 테스트를 돌리지 않았기 때문에 드러나지 않았을 뿐이다(로컬은 Node 22+ 였을 것).
+→ 테스트 파일이 한 개라 `isolation=none` 과 기본 동작이 사실상 같으므로 **플래그를 제거**했다.
+Node 20 에서 `node --test <file>` 은 정상 동작한다(도커로 확인).
+
+`engines` 를 `>=22` 로 올리는 선택지도 있지만, Dev A 가 CI Node 를 20 으로 고정한 의도가 있을 것 같아
+플래그 제거 쪽을 택했다. Node 22+ 로 올리고 싶으면 `ci.yml` 과 `engines` 를 함께 바꾸면 된다.
+
 **확인 부탁**: `ci.yml` 은 TEAM.md 상 Dev A 영역이다. 서비스 컨테이너 구성과
 잡 분리 방식(별도 잡 vs 기존 node 잡에 통합)에 대한 의견을 주시면 맞추겠다.
 실행 시간은 로컬 기준 테스트만 ~20초, 전체 잡은 npm ci 포함 2~3분 예상.
