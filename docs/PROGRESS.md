@@ -5,6 +5,9 @@
 
 **레포**: https://github.com/vlog-studio/snaply-backend
 
+> 연동/수익화 트랙: Dev A 확인 사항은 [integrations-handover.md](./integrations-handover.md),
+> 남은 작업·재도입 체크리스트는 [integrations-backlog.md](./integrations-backlog.md).
+
 ---
 
 ## 개발 인프라 (로컬 Docker, `.env`는 git 제외)
