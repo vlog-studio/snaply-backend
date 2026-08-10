@@ -3,7 +3,27 @@ import type { SnsProviderConfig } from '../../config.js';
 import { AppError } from '../../lib/errors.js';
 import type { TokenExchangeResult, UploadResult } from './types.js';
 
-const SCOPE = 'user.info.basic,video.publish';
+/**
+ * 요청 스코프. 앱 심사 상태에 따라 쓸 수 있는 게 다르다.
+ *
+ * - `video.publish` — **직접 게시**. 심사(audit) 통과가 필요하다.
+ * - `video.upload`  — **받은함 업로드**. 심사 없이 쓸 수 있지만, 영상이 사용자의 TikTok
+ *                     받은함(초안)에 들어가고 **사용자가 앱에서 직접 마무리**해야 게시된다.
+ *
+ * 심사 전에는 콘솔에 `video.upload` 만 나오므로 그걸로 검증하고, 심사 통과 후
+ * TIKTOK_SCOPES 를 바꾸면 직접 게시로 전환된다. 엔드포인트는 스코프에서 자동으로 결정된다.
+ */
+function scopes(): string {
+  return process.env.TIKTOK_SCOPES ?? 'user.info.basic,video.publish';
+}
+
+/** 직접 게시(direct post) 모드인지. 아니면 받은함(inbox) 모드. */
+function isDirectPost(): boolean {
+  return scopes()
+    .split(',')
+    .map((s) => s.trim())
+    .includes('video.publish');
+}
 
 /**
  * 틱톡은 실패를 **HTTP 200 + 에러 본문**으로 돌려준다. 그래서 res.ok 만 보면 안 된다.
@@ -34,7 +54,7 @@ export function authorizeUrl(config: SnsProviderConfig, state: string): string {
   const params = new URLSearchParams({
     client_key: config.clientId ?? '',
     redirect_uri: config.redirectUri ?? '',
-    scope: SCOPE,
+    scope: scopes(),
     response_type: 'code',
     state,
   });
@@ -142,18 +162,28 @@ export async function uploadVideo(
   if (config.mock) {
     return { postId: `tt-post-${randomBytes(6).toString('hex')}` };
   }
-  // 운영: Content Posting API v2 (PULL_FROM_URL)
-  // ※ 심사를 통과하지 않은 앱은 어떤 privacy_level 을 줘도 비공개로만 게시된다.
-  const res = await fetch('https://open.tiktokapis.com/v2/post/publish/video/init/', {
+  // Content Posting API v2 (PULL_FROM_URL). 스코프에 따라 엔드포인트가 갈린다.
+  //  - 직접 게시: /post/publish/video/init/        (video.publish, 심사 필요)
+  //  - 받은함    : /post/publish/inbox/video/init/  (video.upload, 심사 불필요)
+  // 받은함 모드에는 post_info(제목·공개범위)를 넣지 않는다 — 사용자가 앱에서 직접 정한다.
+  const direct = isDirectPost();
+  const endpoint = direct
+    ? 'https://open.tiktokapis.com/v2/post/publish/video/init/'
+    : 'https://open.tiktokapis.com/v2/post/publish/inbox/video/init/';
+  const source_info = { source: 'PULL_FROM_URL', video_url: params.videoUrl };
+
+  const res = await fetch(endpoint, {
     method: 'POST',
     headers: {
       authorization: `Bearer ${params.accessToken}`,
       'content-type': 'application/json',
     },
-    body: JSON.stringify({
-      post_info: { title: params.caption, privacy_level: 'SELF_ONLY' },
-      source_info: { source: 'PULL_FROM_URL', video_url: params.videoUrl },
-    }),
+    body: JSON.stringify(
+      direct
+        ? // ※ 심사를 통과하지 않은 앱은 어떤 privacy_level 을 줘도 비공개로만 게시된다.
+          { post_info: { title: params.caption, privacy_level: 'SELF_ONLY' }, source_info }
+        : { source_info },
+    ),
   });
   if (!res.ok) {
     throw AppError.badRequest(`TikTok 업로드에 실패했습니다. ${await errorDetail(res)}`);
@@ -165,9 +195,11 @@ export async function uploadVideo(
     throw AppError.badRequest('TikTok 이 publish_id 를 반환하지 않았습니다.');
   }
 
-  // init 은 "접수" 일 뿐이다. 실제 게시 완료까지 확인해야 이력의 status 가 사실과 맞는다.
+  // init 은 "접수" 일 뿐이다. 실제 완료까지 확인해야 이력의 status 가 사실과 맞는다.
   const status = await waitForPublish(params.accessToken, publishId);
-  return { postId: publishId, status };
+  // 받은함 모드는 우리 쪽 전달이 끝나도 게시되지 않는다 — 사용자가 앱에서 마무리해야 한다.
+  // (직접 게시일 땐 필드를 아예 넣지 않는다 — 응답에 의미 없는 false 를 남기지 않기 위해)
+  return { postId: publishId, status, ...(direct ? {} : { requiresUserAction: true }) };
 }
 
 /**

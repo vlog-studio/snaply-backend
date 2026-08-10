@@ -22,4 +22,9 @@ export interface UploadResult {
    * 미지정이면 'success' 로 본다.
    */
   status?: 'success' | 'pending';
+  /**
+   * 우리 쪽 전달은 끝났지만 **사용자가 플랫폼 앱에서 마무리해야** 실제로 게시되는 경우 true.
+   * (틱톡 `video.upload` 받은함 모드 — 심사 통과 전에는 이 방식만 쓸 수 있다.)
+   */
+  requiresUserAction?: boolean;
 }

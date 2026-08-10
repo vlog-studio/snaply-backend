@@ -219,7 +219,39 @@ POST /me/media                  → 200
    ```
    https://<A>.trycloudflare.com/sns/tiktok/callback
    ```
-4. 스코프: `user.info.basic`(Login Kit), `video.publish`(Content Posting API)
+4. 스코프: `user.info.basic`(Login Kit), `video.upload` 또는 `video.publish`(Content Posting API)
+
+### 틱톡 스코프 — 심사 전/후로 게시 방식이 다르다
+
+| 스코프 | 엔드포인트 | 동작 | 심사 |
+|---|---|---|---|
+| `video.upload` | `/v2/post/publish/inbox/video/init/` | 사용자 **받은함(초안)** 에 전달. 사용자가 틱톡 앱에서 마무리해야 게시 | 불필요 |
+| `video.publish` | `/v2/post/publish/video/init/` | **직접 게시** | **필요** |
+
+심사 전 콘솔에는 `video.upload` 만 나온다. `TIKTOK_SCOPES` 로 전환하며, **엔드포인트는 코드가 자동 선택**한다.
+
+```bash
+# 심사 전 (지금)
+TIKTOK_SCOPES=user.info.basic,video.upload
+# 심사 통과 후
+TIKTOK_SCOPES=user.info.basic,video.publish   # 기본값
+```
+
+받은함 모드에서는 업로드 응답에 `requiresUserAction: true` 가 실린다(FE 안내용).
+제목·공개범위는 사용자가 틱톡 앱에서 직접 정하므로 `post_info` 를 보내지 않는다.
+
+### 콘솔 저장에 필요한 필수 항목
+
+틱톡은 앱 설정을 **저장**하는 것만으로도 아래를 요구한다(심사 제출 전에도).
+그래서 API 가 필요한 페이지를 직접 서빙한다(`routes/legal.ts`):
+
+| 필드 | 값 |
+|---|---|
+| Web/Desktop URL | `https://<A>.trycloudflare.com/` |
+| Terms of Service URL | `https://<A>.trycloudflare.com/legal/terms` |
+| Privacy Policy URL | `https://<A>.trycloudflare.com/legal/privacy` |
+
+> 법률 문서는 **출시 전 초안**이다(페이지 상단에도 표기). 심사 제출·출시 전 정식 문서로 교체할 것.
 
 > ⚠️ **틱톡 크리덴셜은 사전 검증이 불가능하다.** 토큰 엔드포인트
 > (`/v2/oauth/token/`)는 `code` 를 먼저 검사해서, **존재하지 않는 client_key 로도**

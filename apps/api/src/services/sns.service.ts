@@ -227,6 +227,11 @@ export interface UploadDto {
   platform: SnsPlatform;
   status: SnsUploadStatus;
   platformPostId: string | null;
+  /**
+   * true 면 업로드는 끝났지만 **사용자가 플랫폼 앱에서 마무리해야** 게시된다.
+   * (틱톡 받은함 모드) 앱은 이 경우 "틱톡 앱에서 마무리하세요" 를 안내해야 한다.
+   */
+  requiresUserAction?: boolean;
 }
 
 export async function upload(params: {
@@ -297,6 +302,7 @@ export async function upload(params: {
       platform: params.platform,
       status,
       platformPostId: record.platformPostId,
+      ...(result.requiresUserAction ? { requiresUserAction: true } : {}),
     };
   } catch (err) {
     await prisma.snsUpload.create({

@@ -521,6 +521,88 @@ describe('user_id 정밀도 (2^53 초과)', () => {
   });
 });
 
+describe('틱톡 스코프에 따른 게시 방식 전환', () => {
+  // video.publish 는 앱 심사 통과가 필요하다. 심사 전에는 video.upload(받은함)만 쓸 수 있고,
+  // 이때는 영상이 사용자 초안함에 들어가 사용자가 앱에서 마무리해야 게시된다.
+  const originalScopes = process.env.TIKTOK_SCOPES;
+  afterEach(() => {
+    if (originalScopes === undefined) delete process.env.TIKTOK_SCOPES;
+    else process.env.TIKTOK_SCOPES = originalScopes;
+  });
+
+  function stubPublishFlow() {
+    return stubFetch((url) => {
+      if (url.includes('/video/init/')) return { body: { data: { publish_id: 'p1' } } };
+      if (url.includes('/status/fetch/')) {
+        return { body: { data: { status: 'PUBLISH_COMPLETE' } } };
+      }
+      return undefined;
+    });
+  }
+
+  it('video.publish 면 직접 게시 엔드포인트를 쓰고 post_info 를 보낸다', async () => {
+    process.env.TIKTOK_SCOPES = 'user.info.basic,video.publish';
+    let sentBody = '';
+    stubFetch((url, init) => {
+      if (url.includes('/post/publish/video/init/')) {
+        sentBody = String(init?.body ?? '');
+        return { body: { data: { publish_id: 'p1' } } };
+      }
+      if (url.includes('/status/fetch/')) return { body: { data: { status: 'PUBLISH_COMPLETE' } } };
+      return undefined;
+    });
+
+    const result = await tiktok.uploadVideo(ttConfig, ttUploadParams);
+
+    expect(sentBody).toContain('post_info');
+    expect(sentBody).toContain('SELF_ONLY');
+    expect(result.requiresUserAction).toBeFalsy();
+    expect(result.status).toBe('success');
+  });
+
+  it('video.upload 면 받은함 엔드포인트를 쓰고 post_info 를 보내지 않는다', async () => {
+    process.env.TIKTOK_SCOPES = 'user.info.basic,video.upload';
+    let sentUrl = '';
+    let sentBody = '';
+    stubFetch((url, init) => {
+      if (url.includes('/video/init/')) {
+        sentUrl = url;
+        sentBody = String(init?.body ?? '');
+        return { body: { data: { publish_id: 'p2' } } };
+      }
+      if (url.includes('/status/fetch/')) {
+        return { body: { data: { status: 'SEND_TO_USER_INBOX' } } };
+      }
+      return undefined;
+    });
+
+    const result = await tiktok.uploadVideo(ttConfig, ttUploadParams);
+
+    expect(sentUrl).toContain('/post/publish/inbox/video/init/');
+    // 제목·공개범위는 사용자가 틱톡 앱에서 직접 정한다
+    expect(sentBody).not.toContain('post_info');
+    expect(sentBody).toContain('PULL_FROM_URL');
+    // 우리 전달은 끝났지만 게시는 사용자가 마무리해야 한다
+    expect(result.requiresUserAction).toBe(true);
+    expect(result.status).toBe('success');
+  });
+
+  it('authorize URL 이 설정된 스코프를 그대로 요청한다', async () => {
+    process.env.TIKTOK_SCOPES = 'user.info.basic,video.upload';
+    const url = new URL(tiktok.authorizeUrl(ttConfig, 'state-x'));
+    expect(url.searchParams.get('scope')).toBe('user.info.basic,video.upload');
+  });
+
+  it('기본값은 직접 게시(video.publish)다', async () => {
+    delete process.env.TIKTOK_SCOPES;
+    const url = new URL(tiktok.authorizeUrl(ttConfig, 'state-x'));
+    expect(url.searchParams.get('scope')).toBe('user.info.basic,video.publish');
+    stubPublishFlow();
+    const result = await tiktok.uploadVideo(ttConfig, ttUploadParams);
+    expect(result.requiresUserAction).toBeFalsy();
+  });
+});
+
 describe('인스타그램 웹훅 (콘솔 등록용 검증)', () => {
   const VERIFY_TOKEN = REAL_KEYS.INSTAGRAM_WEBHOOK_VERIFY_TOKEN;
 
