@@ -14,7 +14,7 @@
 | PostgreSQL + Auth | Supabase (클라우드) | — | 리전 ap-southeast-1(싱가포르) |
 | 오브젝트 스토리지 | `snaply-minio-dev` (MinIO) | 9100 / 9101 | 9000은 타 프로젝트(skillhub-minio) 점유 |
 | 큐 | `snaply-redis-dev` (Redis 7) | 6379 | |
-| API 서버 | `npm run dev:api` (Node 20) | **3002** | 3000/3001은 타 프로젝트 점유 |
+| API 서버 | `npm run dev:api` (Node 20) | 3000 | 점유 시 각자 `.env`의 `API_PORT`로 변경 |
 | AI 워커 | `apps/ai-worker/.venv` (Python 3.11) | 8000 | `python src/worker.py` |
 
 **개발/운영 전환 원칙**: 스토리지·큐는 endpoint/URL만 교체하면 운영으로 전환된다 (코드 분기 없음).
@@ -260,7 +260,7 @@
 - `npm run media:cleanup` — TEST_EMAIL 계정 테스트 데이터 정리 (free 월 3편 한도 초기화)
 
 **특이사항**
-- 개발 API 포트 3000 → **3002** (3000/3001 타 프로젝트 점유. MinIO 9100과 같은 사례)
+- 개발 API 포트는 3000 유지 — 로컬에서 점유된 경우 각자 `.env`의 `API_PORT`로 변경 (개인 환경 설정, 레포 기본값 아님)
 - 테스트 계정: `dayeon-test@dweax.com` (Supabase admin API로 생성, 비밀번호는 각자 관리)
 - whisper 자막은 BGM 합성 후 음원에서도 정상 인식됨 (dev BGM 기준. 실BGM은 재확인 필요)
 
