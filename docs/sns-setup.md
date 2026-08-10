@@ -301,6 +301,45 @@ TIKTOK_CLIENT_SECRET=...
 
 ---
 
+### 틱톡 진행 상황 (2026-08-10 기준) — authorize 에서 막힘
+
+**통과한 것**
+- 앱 등록, Login Kit + Content Posting API 제품 추가
+- 콘솔 저장 필수 항목: 서비스 URL / 이용약관 / 개인정보처리방침 (API 가 서빙 — `routes/legal.ts`)
+- **URL prefix 소유권 검증 통과** — `https://<터널>/legal/` 로 성공.
+  즉 **`trycloudflare.com` 같은 공유 도메인도 URL prefix 검증이 된다**(파일 서빙 방식).
+  검증 파일명은 generic 이 아니라 `tiktok<CODE>.txt` 형태이고, 내용은
+  `tiktok-developers-site-verification=<CODE>` 였다.
+- Sandbox 생성, 제품 추가, 리디렉션 URI 등록, Apply changes, Target users 추가
+
+**막힌 것**
+```
+authorize 요청 → "TikTok으로 로그인할 수 없습니다 … client_key"
+```
+
+**진단 한계 (중요)**: 틱톡 크리덴셜은 **사전 검증이 불가능하다.**
+`/v2/oauth/token/` 은 `code` 를 먼저 검사해서 **존재하지 않는 client_key 로도**
+`invalid_grant: Authorization code is expired` 를 반환한다(실측). 따라서
+client_key 유효성은 **authorize 를 통과해봐야만** 알 수 있고, 실패 시 원인을 코드 쪽에서
+좁힐 수단이 없다.
+
+**남은 가설 (콘솔 확인 필요)**
+1. **Sandbox 는 자체 client_key/secret 을 가진다** — 가장 유력. 현재 쓰는 값은 Production 앱의 키다.
+   문서에 명시돼 있지 않아 콘솔에서 직접 확인해야 한다.
+   (Manage apps → 앱 → 이름 옆 스위치를 Sandbox 로 → 그 상태의 Client key)
+2. Target users 반영 지연 — 문서상 최대 1시간.
+3. `Apply changes` 미반영 — 필수 필드 때문에 저장이 막혔던 이력이 있다.
+
+**재개 방법**: 위 1번 값을 확보해 `TIKTOK_CLIENT_KEY`/`TIKTOK_CLIENT_SECRET` 교체 →
+`GET /sns/tiktok/connect` 로 새 authorize URL 발급 → 승인.
+코드는 양쪽 스코프(`video.upload` 받은함 / `video.publish` 직접 게시)를 모두 지원하며
+테스트로 고정돼 있어, 크리덴셜만 맞으면 바로 진행된다.
+
+**게시 단계에 남은 관문**: `PULL_FROM_URL` 이 **영상 URL prefix** 소유권 검증을 요구한다.
+그건 API 호스트가 아니라 MinIO 호스트(`<터널>/snaply-dev/`)라 따로 통과해야 한다.
+위에서 확인한 대로 파일 서빙 방식이 통하므로, 검증 파일을 MinIO 버킷에 올리면 된다
+(버킷 익명 읽기는 `npm run dev:public-bucket` 으로 이미 열려 있다).
+
 ## 4. 키를 넣은 뒤 검증 순서
 
 ```bash
@@ -341,5 +380,5 @@ curl -X POST -H "Authorization: Bearer <토큰>" -H 'content-type: application/j
 | 공개 콜백 URL | cloudflared 터널로 확보 |
 | 공개 영상 URL + 버킷 익명 읽기 | 확보 (`npm run dev:public-bucket`) |
 | 인스타 앱 등록·연동·게시 파이프라인 | **완료** — 컨테이너 FINISHED 까지 실검증. 남은 건 실제 게시 1회 |
-| 틱톡 앱 등록 | **진행 중** — Login Kit 제품 추가 필요(누락 시 client_key 에러). 이후 도메인 검증 관문 |
+| 틱톡 앱 등록 | **authorize 에서 막힘** — Sandbox client_key 확인 필요. 위 "틱톡 진행 상황" 참고 |
 | 틱톡 FILE_UPLOAD 대안 | 미구현 (필요 시) |

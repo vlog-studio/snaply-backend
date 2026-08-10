@@ -464,7 +464,7 @@ stripe trigger customer.subscription.created --api-key $STRIPE_SECRET_KEY
 |---|---|
 | **Stripe 상품/가격 생성** | 미완 — `sk_test_` 키는 확보·검증 완료(2026-08-04)했고 계정에 상품이 0개다.<br>Standard(₩9,900/월)·Premium(₩24,900/월) 상품을 만들고 Price ID 2개를 `STRIPE_PRICE_STANDARD`/`STRIPE_PRICE_PREMIUM` 에 넣어야<br>실제 Checkout Session 생성·결제 플로우 검증이 가능하다. (대시보드 Product catalog 또는 `stripe products create` + `stripe prices create --currency krw`) |
 | ~~Sentry 실수집~~ | **완료** (2026-08-04) — DSN 설정·수집 경로 검증. 워커도 같은 DSN 사용 |
-| ~~인스타 실업로드~~ **완료** / 틱톡 실업로드 | 앱 등록만 남음 — 공개 URL 준비는 완료([sns-setup.md](./sns-setup.md)).<br>틱톡은 PULL_FROM_URL 도메인 검증이 추가 관문(터널 주소로는 막힐 수 있음 → FILE_UPLOAD 대안 검토) |
+| ~~인스타 실업로드~~ **완료** / 틱톡 실업로드 (authorize 막힘 — [sns-setup.md](./sns-setup.md) 참고) | 앱 등록만 남음 — 공개 URL 준비는 완료([sns-setup.md](./sns-setup.md)).<br>틱톡은 PULL_FROM_URL 도메인 검증이 추가 관문(터널 주소로는 막힐 수 있음 → FILE_UPLOAD 대안 검토) |
 | FCM 실기기 수신 | **크리덴셜 검증 완료** (2026-08-04). 남은 것은 실기기 FCM 토큰 = FE 앱 필요 |
 | 멀티 디바이스 푸시 | `users.fcm_token` 단일 컬럼 → 기기 교체 시 이전 토큰 덮어씀. users 는 공통 소유라 합의 필요 |
 | notification_logs 보존 정책 | 무한 증가. 정리 주기 미정 |
