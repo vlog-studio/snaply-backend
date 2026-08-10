@@ -223,6 +223,12 @@ function assertPubliclyFetchable(videoUrl: string, platform: SnsPlatform): void 
   }
 }
 
+/** 실패 사유를 컬럼에 넣을 수 있는 길이로 정리. 토큰이 섞일 여지가 없는 메시지만 담는다. */
+function errorSummary(err: unknown): string {
+  const message = err instanceof Error ? err.message : String(err);
+  return message.slice(0, 500);
+}
+
 export interface UploadDto {
   uploadId: string;
   platform: SnsPlatform;
@@ -316,12 +322,15 @@ export async function upload(params: {
       ...(result.requiresUserAction ? { requiresUserAction: true } : {}),
     };
   } catch (err) {
+    // 실패 사유를 남긴다. 플랫폼 에러는 원인이 응답 본문에만 있어서(예: 인스타 컨테이너
+    // ERROR 사유, 틱톡 URL 소유권 미검증) 이걸 저장하지 않으면 사후 추적이 불가능하다.
     await prisma.snsUpload.create({
       data: {
         videoId: video.id,
         userId: params.userId,
         platform: params.platform,
         status: 'failed',
+        errorMessage: errorSummary(err),
       },
     });
     if (err instanceof AppError) {

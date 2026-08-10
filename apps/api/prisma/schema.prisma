@@ -146,6 +146,8 @@ model SnsUpload {
   platform       String    @db.VarChar(20)
   platformPostId String?   @map("platform_post_id") @db.VarChar(100)
   status         String    @default("pending") @db.VarChar(20)
+  /// 실패 시 플랫폼이 준 사유. 운영에서 업로드 실패를 추적할 유일한 단서다.
+  errorMessage   String?   @map("error_message")
   uploadedAt     DateTime? @map("uploaded_at") @db.Timestamptz(6)
   createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
 

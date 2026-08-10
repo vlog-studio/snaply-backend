@@ -2,7 +2,7 @@
 
 > 2026-08-10, Dev B. `feat/integrations/hardening` 을 `main` 에 머지하면서
 > **Dev A 의 코드·전제를 건드린 부분**만 모았다. TEAM.md 의 리뷰 절차를 거치지 않고
-> 머지했으므로, 아래 3건은 확인이 필요하다.
+> 머지했으므로, 아래 4건은 확인이 필요하다.
 >
 > 전체 변경 내역은 [PROGRESS.md](./PROGRESS.md), 남은 작업은 [integrations-backlog.md](./integrations-backlog.md).
 
@@ -94,7 +94,7 @@ setupFiles 에서 한 번 지우는 것으로는 개인 `.env` 오염을 막을 
 "test": "vitest run && tsc -p tsconfig.json && node --test --experimental-test-isolation=none test/storage.service.test.mjs"
 ```
 
-vitest(통합 146개)와 Dev A 의 node:test 를 모두 실행한다.
+vitest(통합 148개)와 Dev A 의 node:test 를 모두 실행한다.
 node:test 가 `dist/` 를 import 하므로 **그 앞의 `tsc` 빌드 단계를 지워선 안 된다**
 (병합 때 한 번 빠뜨려 깨졌다).
 
@@ -151,6 +151,22 @@ POST /me/media                  → 200
 
 ---
 
+## 4. CI 에 통합 테스트 잡을 추가했다 (Dev A 영역)
+
+`ci.yml` 이 build/typecheck/lint 만 돌리고 있어서 **통합 테스트 148개가 PR 에서
+한 번도 실행되지 않았다.** 안전망을 만들어도 CI 가 안 돌리면 회귀를 못 잡는다.
+
+`api-tests` 잡을 추가했다:
+- Postgres·Redis **서비스 컨테이너만** 띄운다. MinIO 는 불필요하다 —
+  S3 를 실제 호출하는 테스트가 없고, Dev A 의 `storage.service.test.mjs` 도
+  presign URL 문자열만 검증한다(네트워크 미사용).
+- `npm test -w apps/api` 로 실행한다(§2 의 이유로 위치가 중요하다).
+- `.env` 없이·MinIO 없이 **148/148 + node:test 1/1** 통과를 로컬에서 재현 검증했다.
+
+**확인 부탁**: `ci.yml` 은 TEAM.md 상 Dev A 영역이다. 서비스 컨테이너 구성과
+잡 분리 방식(별도 잡 vs 기존 node 잡에 통합)에 대한 의견을 주시면 맞추겠다.
+실행 시간은 로컬 기준 테스트만 ~20초, 전체 잡은 npm ci 포함 2~3분 예상.
+
 ## 그 외 공유 surface 변경
 
 | 파일 | 변경 |
@@ -160,7 +176,7 @@ POST /me/media                  → 200
 | `apps/api/package.json` | 테스트 러너 공존 (위 §2), 진단 스크립트 5개 추가 |
 | `.gitignore` | 크리덴셜 파일 패턴 (`*firebase-adminsdk*.json`, `*service-account*.json`, `*.pem`, `*.p8`, `*.p12`) |
 | `docker-compose.dev.yml` | 로컬 Postgres 추가 (TEAM.md §4 옵션 A) |
-| `prisma/schema.prisma` | `subscriptions.last_stripe_event_at` (웹훅 순서 보정) |
+| `prisma/schema.prisma` | `subscriptions.last_stripe_event_at` (웹훅 순서 보정), `sns_uploads.error_message` (업로드 실패 사유) |
 
 ## 새로 생긴 명령
 

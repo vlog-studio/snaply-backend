@@ -349,6 +349,88 @@ describe('틱톡 게시 결과 확인', () => {
   });
 });
 
+describe('업로드 실패 사유 기록', () => {
+  // 플랫폼 에러는 원인이 응답 본문에만 있다. 저장하지 않으면 사후 추적이 불가능하다.
+  it('실패 시 sns_uploads 에 플랫폼이 준 사유를 남긴다', async () => {
+    const user = await h.createUser();
+    await h.prisma.snsConnection.create({
+      data: {
+        userId: user.id,
+        platform: 'tiktok',
+        platformUserId: 'tt-1',
+        accessToken: encrypt('token'),
+        tokenExpiresAt: new Date(Date.now() + 20 * 60 * 60 * 1000),
+      },
+    });
+    const video = await h.prisma.video.create({
+      data: {
+        userId: user.id,
+        originalUrls: [],
+        editedUrl: 'https://cdn.example.com/v.mp4',
+        status: 'completed',
+      },
+      select: { id: true },
+    });
+    stubFetch((url) =>
+      url.includes('/publish/inbox/video/init/') || url.includes('/publish/video/init/')
+        ? {
+            status: 403,
+            body: { error: { code: 'url_ownership_unverified', message: 'verify your URL prefix' } },
+          }
+        : undefined,
+    );
+
+    const res = await h.app.inject({
+      method: 'POST',
+      url: '/sns/tiktok/upload',
+      headers: user.auth,
+      payload: { videoId: video.id },
+    });
+
+    expect(res.statusCode).toBe(400);
+    const upload = await h.prisma.snsUpload.findFirstOrThrow({ where: { userId: user.id } });
+    expect(upload.status).toBe('failed');
+    expect(upload.errorMessage).toContain('verify your URL prefix');
+  });
+
+  it('사유가 아주 길어도 컬럼 길이를 넘기지 않는다', async () => {
+    const user = await h.createUser();
+    await h.prisma.snsConnection.create({
+      data: {
+        userId: user.id,
+        platform: 'tiktok',
+        platformUserId: 'tt-2',
+        accessToken: encrypt('token'),
+        tokenExpiresAt: new Date(Date.now() + 20 * 60 * 60 * 1000),
+      },
+    });
+    const video = await h.prisma.video.create({
+      data: {
+        userId: user.id,
+        originalUrls: [],
+        editedUrl: 'https://cdn.example.com/v.mp4',
+        status: 'completed',
+      },
+      select: { id: true },
+    });
+    stubFetch((url) =>
+      url.includes('/video/init/')
+        ? { status: 500, body: { error: { code: 'oops', message: 'x'.repeat(3000) } } }
+        : undefined,
+    );
+
+    await h.app.inject({
+      method: 'POST',
+      url: '/sns/tiktok/upload',
+      headers: user.auth,
+      payload: { videoId: video.id },
+    });
+
+    const upload = await h.prisma.snsUpload.findFirstOrThrow({ where: { userId: user.id } });
+    expect(upload.errorMessage!.length).toBeLessThanOrEqual(500);
+  });
+});
+
 describe('틱톡은 실패를 HTTP 200 + 에러 본문으로 준다', () => {
   // 실측: 만료된 code 로 토큰 교환 시 200 { error: "invalid_grant", ... } 가 온다.
   // res.ok 만 보면 undefined 토큰을 암호화하려다 500(ERR_INVALID_ARG_TYPE)이 났다.

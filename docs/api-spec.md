@@ -151,6 +151,9 @@ Body: `{ "videoId": "uuid", "caption": "문구(선택)" }`
 ```
 편집 완료(`editedUrl` 존재) 영상만 업로드 가능. 미연동 시 400.
 
+실패 시 `sns_uploads.error_message` 에 플랫폼이 준 사유가 저장된다(최대 500자).
+운영에서 업로드 실패를 추적하는 단서다.
+
 400이 나는 경우:
 - 미연동 / 편집 미완료 / 남의 영상(404)
 - **영상이 공개 URL이 아님** — 인스타·틱톡이 URL을 직접 내려받으므로 `https` 공개 주소여야 한다. 로컬 MinIO 주소는 호출 전에 차단된다.
@@ -195,3 +198,27 @@ Stripe에서 호출. `customer.subscription.created/updated/deleted`, `invoice.p
 
 ### GET /health  (인증 불필요)
 `{ "success": true, "data": { "status":"ok","uptimeSeconds":123,"db":"connected" } }`
+
+### 공개 페이지 (HTML, 인증 불필요)
+
+플랫폼 콘솔(틱톡 Login Kit, Meta 앱 검수)이 앱 설정 **저장** 단계에서 요구하는 페이지들.
+FE가 호출할 일은 없지만, 앱 내 링크로 노출할 수 있다.
+
+| 경로 | 내용 |
+|---|---|
+| `GET /` | 서비스 소개 |
+| `GET /legal/terms` | 이용약관 |
+| `GET /legal/privacy` | 개인정보처리방침 |
+
+> ⚠️ 약관·개인정보처리방침은 **법률 검토를 받지 않은 출시 전 초안**이다(페이지 상단에도 표기).
+> 앱 심사 제출·서비스 출시 전 정식 문서로 교체해야 한다.
+
+### 인스타그램 웹훅 (Meta 전용)
+
+| 경로 | 용도 |
+|---|---|
+| `GET /sns/instagram/webhook` | 콘솔 등록 시 검증 핸드셰이크 (`hub.challenge` 를 평문 반환) |
+| `POST /sns/instagram/webhook` | 이벤트 수신. `X-Hub-Signature-256` 검증 후 200 (현재 처리하는 이벤트 없음) |
+
+릴스 게시 자체에는 웹훅이 필요 없다. 콘솔이 등록을 요구할 때 통과시키기 위한 것이다.
+`INSTAGRAM_WEBHOOK_VERIFY_TOKEN` 미설정 시 403.
