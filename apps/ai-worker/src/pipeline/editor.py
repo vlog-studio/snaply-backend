@@ -2,11 +2,22 @@
 
 import json
 import subprocess
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from loguru import logger
 
-WIDTH, HEIGHT, FPS = 1920, 1080, 30
+from pipeline.render_spec import RenderSpec, build_video_filter
+
+
+MIN_CLIP_DURATION_SECONDS = 0.1
+CLIP_END_TOLERANCE_SECONDS = 0.05
+
+
+@dataclass(frozen=True)
+class ClipSource:
+    path: str
+    start_ms: int = 0
+    end_ms: int | None = None
 
 
 @dataclass(frozen=True)
@@ -60,27 +71,62 @@ def _has_audio(path: str) -> bool:
     return bool(json.loads(out.stdout).get("streams"))
 
 
-def normalize_clip(src: str, dst: str, eq: str) -> None:
-    """모든 클립을 1080p/30fps/오디오 포함의 동일 포맷으로 정규화."""
-    vf = (
-        f"scale={WIDTH}:{HEIGHT}:force_original_aspect_ratio=decrease,"
-        f"pad={WIDTH}:{HEIGHT}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps={FPS}"
-    )
-    if eq:
-        vf += f",{eq}"
+def _resolve_clip_window(
+    source_duration: float, start_ms: int, end_ms: int | None
+) -> tuple[float, float, float]:
+    start = start_ms / 1000
+    requested_end = source_duration if end_ms is None else end_ms / 1000
+    if start >= source_duration:
+        raise ValueError("클립 시작 시간이 원본 영상 길이를 벗어났습니다.")
+    if requested_end > source_duration + CLIP_END_TOLERANCE_SECONDS:
+        raise ValueError("클립 종료 시간이 원본 영상 길이를 벗어났습니다.")
+    end = min(requested_end, source_duration)
+    duration = end - start
+    if duration < MIN_CLIP_DURATION_SECONDS:
+        raise ValueError("클립 길이는 최소 100ms여야 합니다.")
+    return start, end, duration
 
+
+def normalize_clip(
+    src: str,
+    dst: str,
+    eq: str,
+    render_spec: RenderSpec,
+    start_ms: int = 0,
+    end_ms: int | None = None,
+) -> None:
+    """Trim and normalize one clip while keeping its audio aligned."""
     cmd = ["ffmpeg", "-y"]
     has_audio = _has_audio(src)
+    source_duration = probe_duration(src)
+    start, end, duration = _resolve_clip_window(source_duration, start_ms, end_ms)
     cmd += ["-i", src]
     if not has_audio:
         cmd += ["-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=48000"]
+    audio_input = "[0:a:0]" if has_audio else "[1:a:0]"
+    video_trim = f"[0:v:0]trim=start={start:.3f}:end={end:.3f}[trimmed_v]"
+    if has_audio:
+        audio_filter = (
+            f"{audio_input}aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo,"
+            f"apad,atrim=start={start:.3f}:end={end:.3f},asetpts=PTS-STARTPTS[a]"
+        )
+    else:
+        audio_filter = (
+            f"{audio_input}aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo,"
+            f"atrim=duration={duration:.3f},asetpts=PTS-STARTPTS[a]"
+        )
+    filter_graph = (
+        f"{video_trim};"
+        f"{build_video_filter(render_spec, eq, input_label='[trimmed_v]')};"
+        f"{audio_filter}"
+    )
     cmd += [
-        "-map", "0:v:0",
-        "-map", ("0:a:0" if has_audio else "1:a:0"),
-        "-vf", vf,
+        "-filter_complex", filter_graph,
+        "-map", "[v]",
+        "-map", "[a]",
         "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p",
         "-c:a", "aac", "-ar", "48000", "-ac", "2",
-        "-shortest", dst,
+        dst,
     ]
     _run(cmd)
 
@@ -104,6 +150,7 @@ def _crossfade(normalized: list[str], durations: list[float], t: float, out: str
     for path in normalized:
         inputs += ["-i", path]
 
+    t = min(t, min(durations) / 2)
     vparts, aparts = [], []
     v_prev, a_prev = "[0:v:0]", "[0:a:0]"
     running = durations[0]
@@ -135,12 +182,21 @@ def extract_thumbnail(video: str, out: str, at_seconds: float = 1.0) -> None:
     ])
 
 
-def edit(clips: list[str], preset: StylePreset, work_dir: str) -> str:
+def edit(
+    clips: list[ClipSource], preset: StylePreset, render_spec: RenderSpec, work_dir: str
+) -> str:
     """원본 클립들을 편집해 편집본(BGM/자막 전) 경로를 반환."""
     normalized: list[str] = []
     for i, clip in enumerate(clips):
         dst = f"{work_dir}/norm_{i}.mp4"
-        normalize_clip(clip, dst, preset.eq)
+        normalize_clip(
+            clip.path,
+            dst,
+            preset.eq,
+            render_spec,
+            start_ms=clip.start_ms,
+            end_ms=clip.end_ms,
+        )
         normalized.append(dst)
 
     out = f"{work_dir}/edited_base.mp4"
@@ -155,5 +211,11 @@ def edit(clips: list[str], preset: StylePreset, work_dir: str) -> str:
     else:
         _concat(normalized, out)
 
-    logger.info("컷편집 완료 preset={} clips={}", preset.name, len(clips))
+    logger.info(
+        "컷편집 완료 preset={} profile={} fit={} clips={}",
+        preset.name,
+        render_spec.output_profile,
+        render_spec.fit_mode,
+        len(clips),
+    )
     return out

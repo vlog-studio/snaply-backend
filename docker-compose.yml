@@ -3,6 +3,10 @@
 # 최초 1회 마이그레이션: docker compose exec api npx prisma migrate deploy --schema prisma/schema.prisma
 # 주의: SUPABASE_URL 등 일부 값은 실제 인증/기능에 필요 — .env 또는 환경변수로 주입 권장.
 
+# 프로젝트 이름을 dev 인프라(docker-compose.dev.yml=snaply-dev)와 분리 —
+# 같으면 `docker compose down`이 dev 인프라 컨테이너/볼륨까지 지운다.
+name: snaply-stack
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -61,6 +65,9 @@ services:
       DIRECT_URL: postgresql://postgres:postgres@postgres:5432/snaply
       REDIS_URL: redis://redis:6379
       S3_ENDPOINT: http://minio:9000
+      S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-http://localhost:9200}
+      CLOUDFRONT_DOMAIN: ${CLOUDFRONT_DOMAIN:-}
+      S3_DOWNLOAD_URL_EXPIRY_SECONDS: ${S3_DOWNLOAD_URL_EXPIRY_SECONDS:-3600}
       S3_BUCKET_NAME: snaply
       AWS_ACCESS_KEY_ID: minioadmin
       AWS_SECRET_ACCESS_KEY: minioadmin123
@@ -71,12 +78,13 @@ services:
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-dev-webhook-secret}
       SENTRY_DSN: ${SENTRY_DSN:-}
     ports:
-      - "3000:3000"
+      - "3002:3000"   # 호스트 3002 → 컨테이너 3000 (호스트 3000/3001 점유 회피)
 
   ai-worker:
     build:
       context: ./apps/ai-worker
     depends_on:
+      postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
       minio: { condition: service_healthy }
     command: ["python", "worker.py"]
@@ -85,6 +93,9 @@ services:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/snaply
       EDIT_QUEUE_NAME: edit-jobs
       S3_ENDPOINT: http://minio:9000
+      S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-http://localhost:9200}
+      CLOUDFRONT_DOMAIN: ${CLOUDFRONT_DOMAIN:-}
+      S3_DOWNLOAD_URL_EXPIRY_SECONDS: ${S3_DOWNLOAD_URL_EXPIRY_SECONDS:-3600}
       S3_BUCKET_NAME: snaply
       AWS_ACCESS_KEY_ID: minioadmin
       AWS_SECRET_ACCESS_KEY: minioadmin123

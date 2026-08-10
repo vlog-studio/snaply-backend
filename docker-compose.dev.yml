@@ -3,6 +3,10 @@
 # ※ 앱(api/worker)은 네이티브로 실행(npm run dev:api, npm run worker).
 #    전체 스택을 이미지로 빌드해 돌리려면 docker-compose.yml 을 사용.
 
+# 프로젝트 이름을 풀스택(docker-compose.yml=snaply-stack)과 분리 —
+# 같으면 저쪽 `docker compose down`이 이 인프라까지 지운다.
+name: snaply-dev
+
 services:
   # 로컬 Postgres (TEAM.md §4 옵션 A) — 마이그레이션을 각자 로컬에서 자유롭게 돌리기 위함.
   # 공유 Supabase로 전환하려면 .env 의 DATABASE_URL/DIRECT_URL 만 교체하면 된다.

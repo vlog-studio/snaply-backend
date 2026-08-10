@@ -23,7 +23,7 @@
 ## 2. 아키텍처 한눈에
 
 ```
-apps/api/          Fastify + TypeScript API 서버 (:3000)
+apps/api/          Fastify + TypeScript API 서버 (:3002)
 apps/ai-worker/    Python 워커 — BullMQ 큐 구독, FFmpeg/faster-whisper (:8000)
 packages/shared-types/  FE와 공유하는 API 타입
 
@@ -52,9 +52,12 @@ cp .env.example apps/api/.env
 |---|---|
 | `DATABASE_URL`, `DIRECT_URL` | Supabase → Connect → ORMs(Prisma) |
 | `SUPABASE_URL` | Supabase → Settings → API (Project URL) |
-| `SUPABASE_ANON_KEY` | Settings → API (Publishable key) |
+| `SUPABASE_PUBLISHABLE_KEY` | Settings → API Keys (Publishable key, Swagger 개발 로그인용) |
+| `SUPABASE_ANON_KEY` | Legacy API Keys의 anon key (레거시 fallback, 신규 설정에는 불필요) |
 | `SUPABASE_SERVICE_ROLE_KEY` | Settings → API (Secret key) |
+| `API_PORT` | `3002` (3000/3001은 타 프로젝트 점유 가능) |
 | `S3_ENDPOINT` | `http://localhost:9100` (로컬 MinIO) |
+| `S3_PUBLIC_ENDPOINT` | 클라이언트 접근 주소. PC만 테스트하면 `http://localhost:9100`, 휴대폰은 `http://<PC의 LAN IP>:9100` |
 | `S3_BUCKET_NAME` | `snaply-dev` |
 | `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | `minioadmin` / `minioadmin123` |
 | `REDIS_URL` | `redis://localhost:6379` |
@@ -78,10 +81,17 @@ RLS 정책은 최초 1회 Supabase SQL Editor에 `apps/api/prisma/rls-policies.s
 
 ### 3-5. 서버 실행
 ```bash
-npm run dev:api       # http://localhost:3000
-curl http://localhost:3000/health        # {"data":{"status":"ok","db":"connected"}}
-open http://localhost:3000/docs          # Swagger UI (인터랙티브 테스트)
+npm run dev:api       # http://localhost:3002
+curl http://localhost:3002/health        # {"data":{"status":"ok","db":"connected"}}
+open http://localhost:3002/docs          # Swagger UI (인터랙티브 테스트)
 ```
+
+`SUPABASE_PUBLISHABLE_KEY`가 설정되어 있으면 Swagger의 `Authorize`에 `devLogin`
+항목이 나타난다. Username에는 Supabase 테스트 이메일을, Password에는 비밀번호를
+입력하고 `Authorize`를 누르면 발급된 access token이 이후 요청의 Bearer 토큰으로
+자동 주입된다. Client ID/Secret은 비워둔다. 키가 없으면 기존 `bearerAuth`에 JWT를
+직접 입력하는 방식만 제공된다.
+운영 환경에서는 `ENABLE_DOCS=true`로 문서를 열더라도 `devLogin`은 등록되지 않는다.
 
 ### 3-6. AI 워커 (미디어 트랙만)
 ```bash
@@ -122,6 +132,8 @@ curl -H "Authorization: Bearer <출력된 토큰>" http://localhost:3000/auth/me
 ## 5. 트러블슈팅
 
 - **포트 충돌(MinIO 9000)**: 다른 프로젝트가 9000을 쓰는 경우가 있어 snaply는 **9100/9101**을 쓴다. `.env`의 `S3_ENDPOINT`도 9100.
+- **포트 충돌(API 3000/3001)**: 같은 이유로 개발 API는 **3002**(`.env`의 `API_PORT=3002`). compose도 호스트 3002→컨테이너 3000 매핑. 컨테이너/운영 내부 포트는 그대로 3000.
+- **휴대폰에서 MinIO 접근 실패**: `S3_PUBLIC_ENDPOINT`를 `http://<PC의 LAN IP>:9100`으로 설정하고 OS/WSL 방화벽에서 MinIO API 포트를 허용한다. 관리 콘솔 포트(9101)는 필요한 관리자 대역에만 연다.
 - **`db: not_configured`**: `DATABASE_URL` 미설정. Supabase 값 확인.
 - **워커 DB 연결 실패**: `DATABASE_URL`에 pgbouncer 파라미터가 있으면 asyncpg가 실패 → DIRECT_URL(5432) 사용.
 - **Supabase 무료 프로젝트 일시정지**: 1주일 미사용 시 자동 정지. 대시보드에서 재개.

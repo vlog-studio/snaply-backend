@@ -3,6 +3,7 @@ import type { SnsConfig, SnsProviderConfig } from '../config.js';
 import { getPrisma } from '../db/client.js';
 import { AppError } from '../lib/errors.js';
 import { encrypt, decrypt, encodeState, decodeState } from '../lib/crypto.js';
+import { createDownloadUrl } from './storage.service.js';
 import * as instagram from './sns/instagram.client.js';
 import * as tiktok from './sns/tiktok.client.js';
 import type { SnsLogger, TokenExchangeResult } from './sns/types.js';
@@ -251,15 +252,23 @@ export async function upload(params: {
 
   const video = await prisma.video.findFirst({
     where: { id: params.videoId, userId: params.userId, deletedAt: null },
-    select: { id: true, editedUrl: true },
+    select: { id: true, editedUrl: true, editedS3Key: true },
   });
   if (!video) {
     throw AppError.notFound('영상을 찾을 수 없습니다.');
   }
-  if (!video.editedUrl) {
+  if (!video.editedS3Key && !video.editedUrl) {
     throw AppError.badRequest('편집이 완료된 영상만 업로드할 수 있습니다.');
   }
-  assertPubliclyFetchable(video.editedUrl, params.platform);
+  // 우선순위: s3Key 가 있으면 presigned URL(비공개 버킷 대응), 없으면 저장된 공개 URL.
+  const videoUrl = video.editedS3Key
+    ? await createDownloadUrl(video.editedS3Key)
+    : (video.editedUrl as string);
+
+  // 최종적으로 플랫폼에 넘길 URL 을 검사한다. presigned 든 공개 URL 이든
+  // 인스타·틱톡 서버가 실제로 도달할 수 있어야 한다.
+  // (dev 에서 presigned 가 localhost 로 생성되면 여기서 걸린다 → S3_PUBLIC_ENDPOINT 필요)
+  assertPubliclyFetchable(videoUrl, params.platform);
 
   const accessToken = await ensureFreshToken({
     connectionId: connection.id,
@@ -275,12 +284,14 @@ export async function upload(params: {
       params.platform === 'instagram'
         ? await instagram.uploadReel(pc, {
             accessToken,
-            videoUrl: video.editedUrl,
+            // platformUserId 는 넘기지 않는다 — 게시 경로가 /me 로 바뀌었다.
+            // (Instagram user_id 는 2^53 을 넘어 JSON 왕복 시 값이 틀어질 수 있다)
+            videoUrl,
             caption: params.caption,
           })
         : await tiktok.uploadVideo(pc, {
             accessToken,
-            videoUrl: video.editedUrl,
+            videoUrl,
             caption: params.caption,
           });
 

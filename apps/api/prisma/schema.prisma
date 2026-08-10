@@ -67,12 +67,21 @@ model NotificationLog {
 }
 
 // 영상 원본 및 편집 결과
+enum VideoKind {
+  source
+  result
+}
+
 model Video {
   id              String    @id @default(uuid()) @db.Uuid
   userId          String    @map("user_id") @db.Uuid
+  kind            VideoKind @default(source)
   originalUrls    String[]  @default([]) @map("original_urls")
+  originalS3Keys  String[]  @default([]) @map("original_s3_keys")
   editedUrl       String?   @map("edited_url")
+  editedS3Key     String?   @map("edited_s3_key")
   thumbnailUrl    String?   @map("thumbnail_url")
+  thumbnailS3Key  String?   @map("thumbnail_s3_key")
   durationSeconds Int?      @map("duration_seconds")
   stylePreset     String?   @map("style_preset") @db.VarChar(20)
   status          String    @default("pending") @db.VarChar(20)
@@ -85,20 +94,24 @@ model Video {
   snsUploads SnsUpload[]
 
   @@index([userId, createdAt])
+  @@index([userId, kind, createdAt])
   @@map("videos")
 }
 
 // AI 편집 작업 상태 추적
 model EditJob {
-  id           String    @id @default(uuid()) @db.Uuid
-  videoId      String    @map("video_id") @db.Uuid
-  userId       String    @map("user_id") @db.Uuid
-  status       String    @default("queued") @db.VarChar(20)
-  progress     Int       @default(0)
-  errorMessage String?   @map("error_message")
-  startedAt    DateTime? @map("started_at") @db.Timestamptz(6)
-  completedAt  DateTime? @map("completed_at") @db.Timestamptz(6)
-  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  id              String    @id @default(uuid()) @db.Uuid
+  videoId         String    @map("video_id") @db.Uuid
+  userId          String    @map("user_id") @db.Uuid
+  pipelineVersion String    @default("2") @map("pipeline_version") @db.VarChar(20)
+  editSpec        Json      @default("{}") @map("edit_spec")
+  renderSpec      Json      @default("{}") @map("render_spec")
+  status          String    @default("queued") @db.VarChar(20)
+  progress        Int       @default(0)
+  errorMessage    String?   @map("error_message")
+  startedAt       DateTime? @map("started_at") @db.Timestamptz(6)
+  completedAt     DateTime? @map("completed_at") @db.Timestamptz(6)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
 
   video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)

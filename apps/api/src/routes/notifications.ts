@@ -1,5 +1,11 @@
 import type { FastifyInstance } from 'fastify';
 import type { ApiSuccess } from '@vlog-studio/shared-types';
+import {
+  API_ERROR_SCHEMA,
+  AUTHENTICATED_ERROR_RESPONSES,
+  GEOFENCE_RESULT_SCHEMA,
+  successResponseSchema,
+} from '../schemas/responses.js';
 import { handleGeofenceEnter, type GeofenceResult } from '../services/location.service.js';
 
 interface GeofenceBody {
@@ -30,6 +36,12 @@ export async function notificationRoutes(app: FastifyInstance): Promise<void> {
           properties: {
             locationId: { type: 'string', format: 'uuid' },
           },
+        },
+        response: {
+          200: successResponseSchema(GEOFENCE_RESULT_SCHEMA),
+          400: API_ERROR_SCHEMA,
+          404: API_ERROR_SCHEMA,
+          ...AUTHENTICATED_ERROR_RESPONSES,
         },
       },
     },

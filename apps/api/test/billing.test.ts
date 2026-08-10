@@ -394,27 +394,40 @@ describe('플랜별 편집 제한', () => {
     });
   }
 
-  it('Free 플랜은 월 3편까지, 4편째는 403', async () => {
+  // ⚠️ 플랜별 편집 횟수 제한은 **의도적으로 미적용** 상태다(2026-08-05, Dev A).
+  // 기획 미확정으로 `FREE_MONTHLY_LIMIT` 이 로직에서 제거됐다 — docs/plan-limits.md 참고.
+  // 아래 테스트는 "현재 계약"을 고정한다. 제한을 재도입하면 여기가 깨지므로,
+  // 그때 이 블록을 원래 기대값(4편째 403 + '무료 플랜' 메시지)으로 되돌릴 것.
+  it('현재는 Free 플랜도 편집 횟수 제한이 없다 (기획 확정까지 유예)', async () => {
     const user = await h.createUser();
-    const video = await createReadyVideo(user.id);
-
-    for (let i = 0; i < 3; i += 1) {
-      expect((await requestEdit(user, video.id)).statusCode).toBe(202);
-    }
-    const fourth = await requestEdit(user, video.id);
-
-    expect(fourth.statusCode).toBe(403);
-    expect(fourth.json().error.message).toContain('무료 플랜');
-  });
-
-  it('결제 웹훅으로 standard 가 되면 4편째도 통과한다', async () => {
-    const user = await h.createUser();
-    const { customerId } = await startCheckout(user);
-    await postWebhook(subscriptionEvent({ type: 'customer.subscription.created', customerId }));
     const video = await createReadyVideo(user.id);
 
     for (let i = 0; i < 4; i += 1) {
       expect((await requestEdit(user, video.id)).statusCode).toBe(202);
     }
+  });
+
+  it('구독 플랜은 편집 요청에 영향을 주지 않는다 (제한 미적용이므로)', async () => {
+    const user = await h.createUser();
+    const { customerId } = await startCheckout(user);
+    await postWebhook(subscriptionEvent({ type: 'customer.subscription.created', customerId }));
+    const sub = await h.app.inject({
+      method: 'GET',
+      url: '/billing/subscription',
+      headers: user.auth,
+    });
+    expect(sub.json().data.plan).toBe('standard');
+    const video = await createReadyVideo(user.id);
+
+    for (let i = 0; i < 4; i += 1) {
+      expect((await requestEdit(user, video.id)).statusCode).toBe(202);
+    }
+  });
+
+  it('GET /billing/plans 의 features 문구는 FE 표시용이며 백엔드가 집행하지 않는다', async () => {
+    // docs/plan-limits.md 가 명시한 사실. 문구와 실제 동작이 다르다는 점을 테스트로 남겨둔다.
+    const res = await h.app.inject({ method: 'GET', url: '/billing/plans' });
+    const free = res.json().data.find((p: { plan: string }) => p.plan === 'free');
+    expect(free.features).toContain('월 3편 편집');
   });
 });

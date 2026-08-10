@@ -26,11 +26,15 @@ EDIT_QUEUE_NAME = os.environ.get("EDIT_QUEUE_NAME", "edit-jobs")
 
 # S3 / MinIO
 S3_ENDPOINT = os.environ.get("S3_ENDPOINT") or None
+S3_PUBLIC_ENDPOINT = (os.environ.get("S3_PUBLIC_ENDPOINT") or "").rstrip("/") or None
 S3_BUCKET_NAME = os.environ.get("S3_BUCKET_NAME", "")
 AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID", "")
 AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY", "")
 AWS_REGION = os.environ.get("AWS_REGION", "ap-northeast-2")
 CLOUDFRONT_DOMAIN = (os.environ.get("CLOUDFRONT_DOMAIN") or "").rstrip("/") or None
+S3_DOWNLOAD_URL_EXPIRY_SECONDS = int(
+    os.environ.get("S3_DOWNLOAD_URL_EXPIRY_SECONDS", "3600")
+)
 
 # 편집 엔진
 WHISPER_MODEL = os.environ.get("WHISPER_MODEL", "small")
@@ -45,6 +49,8 @@ def edit_progress_channel(job_id: str) -> str:
 def public_url(s3_key: str) -> str:
     if CLOUDFRONT_DOMAIN:
         return f"{CLOUDFRONT_DOMAIN}/{s3_key}"
+    if S3_PUBLIC_ENDPOINT:
+        return f"{S3_PUBLIC_ENDPOINT}/{S3_BUCKET_NAME}/{s3_key}"
     if S3_ENDPOINT:
         return f"{S3_ENDPOINT.rstrip('/')}/{S3_BUCKET_NAME}/{s3_key}"
     return f"https://{S3_BUCKET_NAME}.s3.amazonaws.com/{s3_key}"

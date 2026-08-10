@@ -1,6 +1,13 @@
 import type { FastifyInstance } from 'fastify';
 import type { ApiSuccess, UserProfile } from '@vlog-studio/shared-types';
 import { AppError } from '../lib/errors.js';
+import {
+  API_ERROR_SCHEMA,
+  AUTHENTICATED_ERROR_RESPONSES,
+  UPDATED_DATA_SCHEMA,
+  USER_PROFILE_SCHEMA,
+  successResponseSchema,
+} from '../schemas/responses.js';
 import { getProfile, updateProfile, updateFcmToken } from '../services/user.service.js';
 
 interface PatchMeBody {
@@ -17,7 +24,18 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
   // GET /auth/me — 내 프로필 조회 (미들웨어에서 첫 로그인 시 자동 생성됨)
   app.get(
     '/auth/me',
-    { preHandler: app.authenticate, schema: { tags: ['auth'], summary: '내 프로필 조회' } },
+    {
+      preHandler: app.authenticate,
+      schema: {
+        tags: ['auth'],
+        summary: '내 프로필 조회',
+        response: {
+          200: successResponseSchema(USER_PROFILE_SCHEMA),
+          404: API_ERROR_SCHEMA,
+          ...AUTHENTICATED_ERROR_RESPONSES,
+        },
+      },
+    },
     async (request): Promise<ApiSuccess<UserProfile>> => {
       const profile = await getProfile(request.user.id);
       if (!profile) {
@@ -48,6 +66,11 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
             },
           },
         },
+        response: {
+          200: successResponseSchema(USER_PROFILE_SCHEMA),
+          400: API_ERROR_SCHEMA,
+          ...AUTHENTICATED_ERROR_RESPONSES,
+        },
       },
     },
     async (request): Promise<ApiSuccess<UserProfile>> => {
@@ -71,6 +94,11 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
           properties: {
             fcmToken: { type: 'string', minLength: 1, maxLength: 4096 },
           },
+        },
+        response: {
+          200: successResponseSchema(UPDATED_DATA_SCHEMA),
+          400: API_ERROR_SCHEMA,
+          ...AUTHENTICATED_ERROR_RESPONSES,
         },
       },
     },

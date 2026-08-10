@@ -1,8 +1,15 @@
 import { randomUUID } from 'node:crypto';
-import type { CursorPaginated, StylePreset, Video, VideoStatus } from '@vlog-studio/shared-types';
+import type {
+  CursorPaginated,
+  StylePreset,
+  Video,
+  VideoKind,
+  VideoStatus,
+} from '@vlog-studio/shared-types';
 import { getPrisma } from '../db/client.js';
 import { AppError } from '../lib/errors.js';
 import {
+  createDownloadUrl,
   createUploadUrl,
   deleteObject,
   getObjectSize,
@@ -12,21 +19,39 @@ import {
 
 interface VideoRow {
   id: string;
+  kind: string;
   originalUrls: string[];
+  originalS3Keys: string[];
   editedUrl: string | null;
+  editedS3Key: string | null;
   thumbnailUrl: string | null;
+  thumbnailS3Key: string | null;
+  s3Key: string | null;
   durationSeconds: number | null;
   stylePreset: string | null;
   status: string;
   createdAt: Date;
 }
 
-function toDto(row: VideoRow): Video {
+async function toDto(row: VideoRow): Promise<Video> {
+  const originalS3Keys =
+    row.originalS3Keys.length > 0
+      ? row.originalS3Keys
+      : row.s3Key
+        ? [row.s3Key]
+        : [];
+
   return {
     id: row.id,
-    originalUrls: row.originalUrls,
-    editedUrl: row.editedUrl,
-    thumbnailUrl: row.thumbnailUrl,
+    kind: row.kind as VideoKind,
+    originalUrls:
+      originalS3Keys.length > 0
+        ? await Promise.all(originalS3Keys.map(createDownloadUrl))
+        : row.originalUrls,
+    editedUrl: row.editedS3Key ? await createDownloadUrl(row.editedS3Key) : row.editedUrl,
+    thumbnailUrl: row.thumbnailS3Key
+      ? await createDownloadUrl(row.thumbnailS3Key)
+      : row.thumbnailUrl,
     durationSeconds: row.durationSeconds,
     stylePreset: row.stylePreset as StylePreset | null,
     status: row.status as VideoStatus,
@@ -36,9 +61,14 @@ function toDto(row: VideoRow): Video {
 
 const SELECT = {
   id: true,
+  kind: true,
   originalUrls: true,
+  originalS3Keys: true,
   editedUrl: true,
+  editedS3Key: true,
   thumbnailUrl: true,
+  thumbnailS3Key: true,
+  s3Key: true,
   durationSeconds: true,
   stylePreset: true,
   status: true,
@@ -69,6 +99,7 @@ export async function createUploadTarget(params: {
     data: {
       id: videoId,
       userId: params.userId,
+      kind: 'source',
       status: 'pending',
       s3Key,
       originalUrls: [],
@@ -108,20 +139,26 @@ export async function confirmUpload(params: {
     data: {
       status: 'ready',
       originalUrls: [publicUrl(video.s3Key)],
+      originalS3Keys: [video.s3Key],
       ...(params.durationSeconds !== undefined ? { durationSeconds: params.durationSeconds } : {}),
     },
     select: SELECT,
   });
-  return toDto(updated);
+  return await toDto(updated);
 }
 
 export async function listVideos(params: {
   userId: string;
+  kind?: VideoKind;
   cursor?: string;
   limit: number;
 }): Promise<CursorPaginated<Video>> {
   const rows = await getPrisma().video.findMany({
-    where: { userId: params.userId, deletedAt: null },
+    where: {
+      userId: params.userId,
+      deletedAt: null,
+      ...(params.kind ? { kind: params.kind } : {}),
+    },
     orderBy: { createdAt: 'desc' },
     take: params.limit + 1,
     ...(params.cursor ? { cursor: { id: params.cursor }, skip: 1 } : {}),
@@ -131,7 +168,7 @@ export async function listVideos(params: {
   const hasMore = rows.length > params.limit;
   const items = hasMore ? rows.slice(0, params.limit) : rows;
   return {
-    items: items.map(toDto),
+    items: await Promise.all(items.map(toDto)),
     nextCursor: hasMore ? (items[items.length - 1]?.id ?? null) : null,
   };
 }
@@ -144,7 +181,7 @@ export async function getVideo(params: { userId: string; videoId: string }): Pro
   if (!row) {
     throw AppError.notFound('영상을 찾을 수 없습니다.');
   }
-  return toDto(row);
+  return await toDto(row);
 }
 
 /** S3 원본 삭제 + DB 소프트 삭제 */
@@ -152,15 +189,18 @@ export async function deleteVideo(params: { userId: string; videoId: string }): 
   const prisma = getPrisma();
   const video = await prisma.video.findFirst({
     where: { id: params.videoId, userId: params.userId, deletedAt: null },
-    select: { id: true, s3Key: true },
+    select: { id: true, s3Key: true, editedS3Key: true, thumbnailS3Key: true },
   });
   if (!video) {
     throw AppError.notFound('영상을 찾을 수 없습니다.');
   }
 
-  if (video.s3Key) {
+  const ownedObjectKeys = [video.s3Key, video.editedS3Key, video.thumbnailS3Key].filter(
+    (key): key is string => key !== null,
+  );
+  for (const key of new Set(ownedObjectKeys)) {
     try {
-      await deleteObject(video.s3Key);
+      await deleteObject(key);
     } catch {
       // 스토리지 삭제 실패해도 소프트 삭제는 진행 (원본은 정리 배치로 처리)
     }

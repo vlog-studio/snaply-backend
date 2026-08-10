@@ -19,7 +19,9 @@ import config
 import db
 import storage
 from pipeline import editor, music, subtitle
+from pipeline.edit_spec import parse_job_clips
 from pipeline.editor import get_preset
+from pipeline.render_spec import parse_render_spec
 
 _publisher: aioredis.Redis | None = None
 
@@ -55,8 +57,10 @@ async def _progress(job_id: str, progress: int, step: str, extra: dict | None = 
 
 async def _run_pipeline(job_id: str, data: dict, work_dir: str) -> None:
     user_id = data["userId"]
-    video_ids = data["videoIds"]
-    preset = get_preset(data["stylePreset"])
+    clip_specs = parse_job_clips(data)
+    edit_spec = data.get("editSpec") or {"stylePreset": data.get("stylePreset", "일상")}
+    preset = get_preset(edit_spec["stylePreset"])
+    render_spec = parse_render_spec(data.get("renderSpec"))
 
     ctx = await db.fetch_job_context(job_id)
     if ctx is None:
@@ -67,18 +71,24 @@ async def _run_pipeline(job_id: str, data: dict, work_dir: str) -> None:
     await _publish(job_id, {"progress": 0, "step": "시작"})
 
     # 1) 원본 클립 다운로드
-    source_keys = await db.fetch_source_keys(video_ids)
-    if not source_keys:
+    video_ids = list(dict.fromkeys(clip.video_id for clip in clip_specs))
+    source_keys = await db.fetch_source_keys(user_id, video_ids)
+    if len(source_keys) != len(video_ids):
         raise RuntimeError("원본 클립을 찾을 수 없습니다.")
-    clips: list[str] = []
-    for i, key in enumerate(source_keys):
+    local_sources: dict[str, str] = {}
+    for i, video_id in enumerate(video_ids):
+        key = source_keys[video_id]
         local = os.path.join(work_dir, f"src_{i}{os.path.splitext(key)[1] or '.mp4'}")
         await asyncio.to_thread(storage.download, key, local)
-        clips.append(local)
+        local_sources[video_id] = local
+    clips = [
+        editor.ClipSource(local_sources[clip.video_id], clip.start_ms, clip.end_ms)
+        for clip in clip_specs
+    ]
     await _progress(job_id, 10, "원본 다운로드 완료")
 
     # 2) 컷편집
-    base = await asyncio.to_thread(editor.edit, clips, preset, work_dir)
+    base = await asyncio.to_thread(editor.edit, clips, preset, render_spec, work_dir)
     duration = await asyncio.to_thread(editor.probe_duration, base)
     await _progress(job_id, 35, "컷편집 완료")
 
@@ -89,16 +99,20 @@ async def _run_pipeline(job_id: str, data: dict, work_dir: str) -> None:
     )
     await _progress(job_id, 60, "음악 매칭 중...")
 
-    # 4) 자막 생성/삽입
-    with_sub_path = os.path.join(work_dir, "with_sub.mp4")
-    current, _sub_ok = await asyncio.to_thread(
-        subtitle.apply_subtitles, current, work_dir, with_sub_path
-    )
-    await _progress(job_id, 85, "자막 생성 중...")
+    # 4) 자막 생성/삽입 — 요청 시에만 (쇼츠용이 기본이라 디폴트는 건너뜀 → whisper 추론 비용 절약)
+    if data.get("subtitles", False):
+        with_sub_path = os.path.join(work_dir, "with_sub.mp4")
+        current, _sub_ok = await asyncio.to_thread(
+            subtitle.apply_subtitles, current, work_dir, with_sub_path
+        )
+        await _progress(job_id, 85, "자막 생성 중...")
+    else:
+        await _progress(job_id, 85, "자막 건너뜀")
 
-    # 5) 썸네일 추출 (1초 시점)
+    # 5) 썸네일 추출 (기본 1초, 짧은 결과물은 중간 시점)
     thumb_path = os.path.join(work_dir, "thumb.jpg")
-    await asyncio.to_thread(editor.extract_thumbnail, current, thumb_path, 1.0)
+    thumbnail_at = min(1.0, duration / 2)
+    await asyncio.to_thread(editor.extract_thumbnail, current, thumb_path, thumbnail_at)
 
     # 6) S3 업로드
     edited_key = storage.edited_key(user_id, job_id)
@@ -108,15 +122,26 @@ async def _run_pipeline(job_id: str, data: dict, work_dir: str) -> None:
     await _progress(job_id, 95, "업로드 중...")
 
     # 7) 결과 반영
-    await db.set_video_result(output_video_id, edited_url, thumbnail_url)
+    await db.set_video_result(
+        output_video_id,
+        edited_url,
+        edited_key,
+        thumbnail_url,
+        thumb_key,
+    )
     await db.mark_done(job_id)
-    await _publish(job_id, {"progress": 100, "step": "완료", "outputUrl": edited_url})
+    output_url = storage.download_url(edited_key)
+    await _publish(job_id, {"progress": 100, "step": "완료", "outputUrl": output_url})
     logger.info("편집 완료 job_id={} url={}", job_id, edited_url)
 
 
 async def process_edit_job(job, _job_token) -> dict:
     job_id = job.data["jobId"]
-    logger.info("편집 작업 수신 job_id={} videos={}", job_id, job.data.get("videoIds"))
+    logger.info(
+        "편집 작업 수신 job_id={} clips={}",
+        job_id,
+        job.data.get("clips") or job.data.get("videoIds"),
+    )
     work_dir = tempfile.mkdtemp(prefix=f"edit_{job_id}_")
     try:
         await asyncio.wait_for(
@@ -144,7 +169,8 @@ async def main() -> None:
     _init_sentry()
     await db.init_pool()
     _publisher = aioredis.from_url(config.REDIS_URL, decode_responses=True)
-    subtitle.load_model()  # 시작 시 1회 로드
+    # whisper 모델은 자막 요청(subtitles=true)이 처음 올 때 lazy 로드한다.
+    # 기본 플로우(자막 없음)에서는 로드하지 않아 기동이 빠르고 메모리를 아낀다.
 
     worker = Worker(config.EDIT_QUEUE_NAME, process_edit_job, {"connection": config.REDIS_URL})
     logger.info("edit-jobs 워커 시작 (queue={})", config.EDIT_QUEUE_NAME)

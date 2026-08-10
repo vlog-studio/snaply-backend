@@ -122,6 +122,7 @@ notification_logs (
 videos (
   id               UUID PK
   user_id          UUID FK → users
+  kind             VideoKind -- source | result
   original_urls    TEXT[]     -- S3 원본 클립 URL 배열
   edited_url       TEXT       -- 편집 완료 영상 URL
   thumbnail_url    TEXT
@@ -210,7 +211,7 @@ subscriptions (
 |--------|------|------|------|
 | GET | /videos/upload-url | ✅ | S3 presigned URL 발급 |
 | POST | /videos | ✅ | 영상 메타데이터 등록 (S3 업로드 완료 후 호출) |
-| GET | /videos | ✅ | 내 영상 목록 (페이지네이션) |
+| GET | /videos | ✅ | 내 영상 목록 (`kind=source|result`, 페이지네이션) |
 | GET | /videos/:id | ✅ | 영상 상세 |
 | DELETE | /videos/:id | ✅ | 영상 삭제 (S3 파일 + DB 동시 삭제) |
 
@@ -223,12 +224,20 @@ subscriptions (
 | GET | /edit-jobs/:id/progress | ✅ | **WebSocket** — 실시간 진행률 스트리밍 |
 
 **POST /edit-jobs 요청 바디**
-```
+```ts
 {
-  videoIds: string[]     // 편집할 클립 video.id 배열 (최대 10개)
+  clips: Array<{
+    videoId: string
+    startMs?: number     // 기본 0
+    endMs?: number       // 생략하면 영상 끝까지
+  }>                     // 합성 순서, 최대 10개, 동일 영상 반복 가능
   stylePreset: string    // 감성 | 여행 | 일상
+  outputProfile?: string
+  fitMode?: string
 }
 ```
+
+기존 `videoIds` 요청도 하위 호환되지만 각 원본의 전체 구간을 사용합니다. `clips`와 `videoIds`는 동시에 보낼 수 없습니다.
 
 **WebSocket /edit-jobs/:id/progress 이벤트**
 ```
@@ -351,7 +360,7 @@ subscriptions (
    - 반환: `{ uploadUrl, videoId, s3Key }`
    - DB에 status='pending'으로 video 레코드 미리 생성
 3. `POST /videos` 구현 — S3 업로드 완료 후 클라이언트가 호출, status를 'ready'로 업데이트
-4. `GET /videos` 구현 — 내 영상 목록, 커서 기반 페이지네이션 (limit 20)
+4. `GET /videos` 구현 — `kind=source|result` 필터, 커서 기반 페이지네이션 (limit 20)
 5. `GET /videos/:id` 구현
 6. `DELETE /videos/:id` 구현 — S3 파일 삭제 + DB 소프트 삭제
 
@@ -375,9 +384,9 @@ subscriptions (
 **[API 서버]**
 1. BullMQ Queue 초기화 — `edit-jobs` 큐, Redis 연결
 2. `POST /edit-jobs` 구현
-   - videoIds, stylePreset 검증 (소유권 확인 필수)
+   - clips, stylePreset 검증 (고유 videoId의 소유권 및 `kind='source'`, `status='ready'` 확인 필수)
    - edit_jobs 테이블에 status='queued' 레코드 생성
-   - BullMQ에 job 추가 — `{ jobId, userId, videoIds, stylePreset }`
+   - BullMQ에 job 추가 — `{ jobId, userId, clips, stylePreset, editSpec, renderSpec }`
    - 반환: `{ jobId }`
 3. `GET /edit-jobs/:id` 구현 — edit_jobs 테이블 상태 조회
 4. WebSocket `GET /edit-jobs/:id/progress` 구현
@@ -395,7 +404,7 @@ subscriptions (
    - 실패 시 status → 'failed', error_message 저장
 
 **주의사항**
-- `POST /edit-jobs`에서 videoIds 소유권 반드시 검증 (다른 유저 영상 편집 요청 차단)
+- `POST /edit-jobs`에서 clips의 고유 videoId 소유권을 반드시 검증 (다른 유저 영상 편집 요청 차단)
 - Free 플랜은 월 3편 제한 — subscriptions 테이블에서 이번 달 편집 횟수 체크
 - BullMQ job 재시도 설정: `attempts: 3`, `backoff: { type: 'exponential', delay: 5000 }`
 - WebSocket 연결은 인증 미들웨어 적용 (쿼리 파라미터로 토큰 전달 허용)
@@ -414,6 +423,7 @@ subscriptions (
 
 1. S3에서 원본 클립 다운로드 (boto3) — `/tmp/{jobId}/` 임시 디렉토리에 저장
 2. FFmpeg 컷편집 파이프라인 구현
+   - `startMs`/`endMs` 구간을 영상 `trim`과 오디오 `atrim`에 동일하게 적용
    - 스타일 프리셋별 편집 파라미터 정의
      - `감성`: crossfade 0.8s, 저채도 필터(saturation 0.8)
      - `여행`: 빠른 컷 0.3s, 밝은 색감(brightness +0.1)
@@ -619,7 +629,8 @@ subscriptions (
 ```bash
 # Supabase
 SUPABASE_URL=
-SUPABASE_ANON_KEY=
+SUPABASE_PUBLISHABLE_KEY=         # sb_publishable_... (Swagger 개발 로그인/클라이언트용)
+SUPABASE_ANON_KEY=                # 레거시 fallback
 SUPABASE_SERVICE_ROLE_KEY=        # 서버 전용, 클라이언트 노출 금지
 
 # AWS

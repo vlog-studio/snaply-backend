@@ -1,6 +1,7 @@
 import {
   S3Client,
   PutObjectCommand,
+  GetObjectCommand,
   DeleteObjectCommand,
   HeadObjectCommand,
   HeadBucketCommand,
@@ -10,26 +11,31 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import type { StorageConfig } from '../config.js';
 
 let client: S3Client | null = null;
+let presignClient: S3Client | null = null;
 let cfg: StorageConfig | null = null;
 
 export function initStorage(config: StorageConfig): void {
   cfg = config;
-  client = new S3Client({
+  const clientOptions = {
     region: config.region,
-    endpoint: config.endpoint,
     forcePathStyle: config.forcePathStyle,
     credentials: {
       accessKeyId: config.accessKeyId,
       secretAccessKey: config.secretAccessKey,
     },
+  };
+  client = new S3Client({ ...clientOptions, endpoint: config.endpoint });
+  presignClient = new S3Client({
+    ...clientOptions,
+    endpoint: config.publicEndpoint ?? config.endpoint,
   });
 }
 
-function ensureInit(): { client: S3Client; cfg: StorageConfig } {
-  if (!client || !cfg) {
+function ensureInit(): { client: S3Client; presignClient: S3Client; cfg: StorageConfig } {
+  if (!client || !presignClient || !cfg) {
     throw new Error('storage가 초기화되지 않았습니다. initStorage(config)를 먼저 호출하세요.');
   }
-  return { client, cfg };
+  return { client, presignClient, cfg };
 }
 
 const EXT_RE = /\.[a-z0-9]{1,8}$/i;
@@ -52,7 +58,7 @@ export async function createUploadUrl(params: {
   filename: string;
   contentType: string;
 }): Promise<PresignedUpload> {
-  const { client, cfg } = ensureInit();
+  const { presignClient, cfg } = ensureInit();
   const s3Key = buildUploadKey(params.userId, params.videoId, params.filename);
 
   const command = new PutObjectCommand({
@@ -60,11 +66,20 @@ export async function createUploadUrl(params: {
     Key: s3Key,
     ContentType: params.contentType,
   });
-  const uploadUrl = await getSignedUrl(client, command, {
+  const uploadUrl = await getSignedUrl(presignClient, command, {
     expiresIn: cfg.presignExpirySeconds,
   });
 
   return { uploadUrl, s3Key };
+}
+
+/** Issue a client-reachable, time-limited URL for private object playback/download. */
+export async function createDownloadUrl(s3Key: string): Promise<string> {
+  const { presignClient, cfg } = ensureInit();
+  const command = new GetObjectCommand({ Bucket: cfg.bucket, Key: s3Key });
+  return getSignedUrl(presignClient, command, {
+    expiresIn: cfg.downloadUrlExpirySeconds,
+  });
 }
 
 /** 업로드 완료 확인용: 객체 크기 반환. 객체가 없으면 null. */
@@ -92,7 +107,10 @@ export function maxUploadBytes(): number {
   return ensureInit().cfg.maxUploadBytes;
 }
 
-/** 개발 편의: 커스텀 endpoint(MinIO)일 때 버킷이 없으면 생성. */
+/**
+ * 개발 편의: 커스텀 endpoint(MinIO)일 때 버킷이 없으면 생성.
+ * 객체 접근은 presigned GET URL로 하므로 버킷은 개발에서도 비공개를 유지한다.
+ */
 export async function ensureBucketForDev(): Promise<void> {
   const { client, cfg } = ensureInit();
   if (!cfg.endpoint) {
