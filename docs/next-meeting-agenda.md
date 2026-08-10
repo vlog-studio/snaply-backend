@@ -23,8 +23,9 @@
 
 ### 1-2. 인수인계 상호 확인
 
-- **A**: [integrations-handover.md](./integrations-handover.md) 확인 — `S3_PUBLIC_ENDPOINT` .env 반영,
-  CI 통합 테스트 잡(A 영역) 인지, 인스타 `platformUserId` 제거 인지
+- **A**: ✅ 완료 (2026-08-10) — 회신은 [integrations-handover.md](./integrations-handover.md)
+  "Dev A 확인 결과" 참고. 전체 테스트 148/148 + node:test 통과 재현, CI 잡 구성 동의,
+  신규 마이그레이션 2건 Supabase deploy 완료
 - **B**: main pull 후 `npm run db:generate` (완료 여부 확인), [plan-limits.md](./plan-limits.md) 확인
 
 ---

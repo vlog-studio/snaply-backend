@@ -207,6 +207,28 @@ Node 20 에서 `node --test <file>` 은 정상 동작한다(도커로 확인).
 | `docker-compose.dev.yml` | 로컬 Postgres 추가 (TEAM.md §4 옵션 A) |
 | `prisma/schema.prisma` | `subscriptions.last_stripe_event_at` (웹훅 순서 보정), `sns_uploads.error_message` (업로드 실패 사유) |
 
+## Dev A 확인 결과 (2026-08-10)
+
+> 아래는 위 4건에 대한 Dev A 의 회신이다.
+
+- **§1 (S3_PUBLIC_ENDPOINT)**: 가드 위치 이동(최종 URL 검사)이 맞다 — 동의.
+  미설정 동작은 "SNS 업로드 비활성 + 400"으로 두되, **기동 시 경고 로그 한 줄**
+  (`S3_PUBLIC_ENDPOINT 미설정 — SNS 실업로드 불가`)을 추가하면 원인 추적이 빨라질 것.
+  구현은 B 트랙 파일이라 판단에 맡김. 내 로컬은 SNS 실업로드 예정이 없어 미설정 유지.
+- **§2 (테스트 실행 위치)**: 루트 `npm test` 로 148/148 + node:test 1/1 통과 재현 확인.
+  단, **turbo 2.x 는 strict env mode 가 기본**이라 `TEST_PG_BASE_URL` 등 오버라이드가
+  루트 실행에서 무시되는 문제가 있어 `turbo.json` 의 test 태스크에 `passThroughEnv` 를
+  추가했다 (CI 는 기본 5432 라 영향 없음). 로컬 5432 가 다른 프로젝트에 점유된 환경
+  대응으로 `docker-compose.dev.yml` 의 postgres 호스트 포트도 `POSTGRES_HOST_PORT` 로
+  오버라이드 가능하게 했다 (기본값 5432 그대로).
+- **§3 (platformUserId 제거)**: 확인. `/me/media` + 문자열 추출 방식 동의. A 코드 영향 없음.
+- **§4 (CI 통합 테스트 잡)**: 구성 동의 — **별도 잡 유지가 맞다** (build/lint 와 병렬 실행,
+  실패 원인 분리). 서비스 컨테이너 구성·MinIO 생략 판단도 타당. 그대로 두자.
+- **부수 발견**: pull 후 `db:generate` 누락 시 웹훅 테스트 13개가 500 으로 실패하는 것을
+  직접 겪었다 (`lastStripeEventAt` 를 모르는 낡은 클라이언트). 스키마 변경 pull 후
+  `db:generate` 는 필수. 신규 마이그레이션 2건(last_stripe_event, sns_upload_error_message)은
+  공유 Supabase 에 deploy 완료했다.
+
 ## 새로 생긴 명령
 
 | 명령 | 용도 |
