@@ -11,6 +11,15 @@ dist/
 .env.*
 !.env.example
 
+# 크리덴셜 — 절대 커밋 금지
+# Firebase 서비스 계정 키 (예: snaply-xxxxx-firebase-adminsdk-xxxxx.json)
+*firebase-adminsdk*.json
+*service-account*.json
+*serviceAccount*.json
+*.pem
+*.p8
+*.p12
+
 # python
 __pycache__/
 *.pyc

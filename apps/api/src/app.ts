@@ -14,12 +14,14 @@ import { initCrypto } from './lib/crypto.js';
 import { initSns } from './services/sns.service.js';
 import { initBilling } from './services/billing.service.js';
 import { healthRoutes } from './routes/health.js';
+import { legalRoutes } from './routes/legal.js';
 import { authRoutes } from './routes/auth.js';
 import { videoRoutes } from './routes/videos.js';
 import { editJobRoutes } from './routes/edit-jobs.js';
 import { locationRoutes } from './routes/locations.js';
 import { notificationRoutes } from './routes/notifications.js';
 import { snsRoutes } from './routes/sns.js';
+import { snsWebhookRoutes } from './routes/sns-webhook.js';
 import { billingRoutes } from './routes/billing.js';
 import { billingWebhookRoutes } from './routes/billing-webhook.js';
 
@@ -101,9 +103,12 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   // 전역 rate limit: IP당 분당 60 (라우트별로 override 가능)
   await app.register(rateLimit, {
     global: true,
-    max: 60,
+    max: Number(process.env.RATE_LIMIT_GLOBAL_MAX ?? 60),
     timeWindow: '1 minute',
     keyGenerator: (req) => req.ip,
+    // Stripe 웹훅은 소수의 발신 IP에서 몰려 오므로 IP 기준 제한에 걸리면 안 된다.
+    // (429를 주면 Stripe가 재시도를 쌓고, 서명 검증으로 이미 위조는 막힌다.)
+    allowList: (req) => req.url.startsWith('/billing/webhook'),
   });
 
   // OpenAPI 문서(개발 환경에서만) — 라우트 등록 전에 등록해야 스키마가 수집된다.
@@ -119,12 +124,14 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   await app.register(websocket);
   await app.register(authPlugin, config);
   await app.register(healthRoutes);
+  await app.register(legalRoutes);
   await app.register(authRoutes);
   await app.register(videoRoutes);
   await app.register(editJobRoutes);
   await app.register(locationRoutes);
   await app.register(notificationRoutes);
   await app.register(snsRoutes);
+  await app.register(snsWebhookRoutes);
   await app.register(billingRoutes);
   await app.register(billingWebhookRoutes);
 

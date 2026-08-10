@@ -5,18 +5,30 @@ import { getPrisma } from '../db/client.js';
 let app: admin.app.App | null = null;
 let dryRun = true;
 
+/**
+ * 기본('[DEFAULT]') 앱을 쓰지 않고 이름을 붙인다.
+ * 이름 없이 initializeApp 을 두 번 호출하면 firebase-admin 이 `app/duplicate-app` 을 던지는데,
+ * 그러면 buildApp 이 실패해 서버가 아예 뜨지 않는다. (한 프로세스에서 앱을 두 번 구성하는 경우)
+ */
+const APP_NAME = 'snaply';
+
 export function initFcm(config: FirebaseConfig): void {
-  if (config.serviceAccountJson) {
-    try {
-      const credentials = JSON.parse(config.serviceAccountJson) as admin.ServiceAccount;
-      app = admin.initializeApp({ credential: admin.credential.cert(credentials) });
-      dryRun = false;
-      return;
-    } catch {
-      // 파싱 실패 시 dry-run으로 폴백
-    }
-  }
+  app = null;
   dryRun = true;
+
+  if (!config.serviceAccountJson) {
+    return;
+  }
+  try {
+    const credentials = JSON.parse(config.serviceAccountJson) as admin.ServiceAccount;
+    const existing = admin.apps.find((a) => a?.name === APP_NAME) ?? null;
+    app = existing ?? admin.initializeApp({ credential: admin.credential.cert(credentials) }, APP_NAME);
+    dryRun = false;
+  } catch {
+    // 서비스 계정이 깨졌으면 발송을 막는 대신 dry-run 으로 떨어뜨린다 (알림은 부가 기능).
+    app = null;
+    dryRun = true;
+  }
 }
 
 export interface PushMessage {

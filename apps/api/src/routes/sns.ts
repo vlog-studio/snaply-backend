@@ -102,7 +102,15 @@ export async function snsRoutes(app: FastifyInstance): Promise<void> {
         if (error || !code || !state) {
           return reply.redirect(snsErrorDeepLink(platform, error ?? 'missing_params'));
         }
-        const target = await handleCallback({ platform, code, state });
+        // 콜백은 사용자의 브라우저가 도착하는 지점이다. 여기서 JSON 에러를 반환하면
+        // 사용자가 앱으로 돌아갈 방법이 없어 OAuth 도중에 갇힌다. 무슨 일이 있어도 딥링크로 보낸다.
+        let target: string;
+        try {
+          target = await handleCallback({ platform, code, state, logger: request.log });
+        } catch (err) {
+          request.log.error({ err, platform }, 'SNS 콜백 처리 실패');
+          target = snsErrorDeepLink(platform, 'exchange_failed');
+        }
         return reply.redirect(target);
       },
     );

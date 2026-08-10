@@ -93,12 +93,13 @@ export async function handleGeofenceEnter(params: {
   }
 
   // 30분 쿨다운: 같은 위치 최근 발송 이력 확인 (클라이언트 중복 호출 방지)
-  const since = new Date(now.getTime() - COOLDOWN_MINUTES * 60_000);
-  const recent = await prisma.notificationLog.findFirst({
-    where: { userId: params.userId, locationId: location.id, sentAt: { gte: since } },
-    select: { id: true },
-  });
-  if (recent) {
+  //
+  // "조회 후 기록"을 그냥 이어 쓰면 동시 요청이 모두 조회를 통과해 중복 발송된다.
+  // (READ COMMITTED 라 INSERT ... WHERE NOT EXISTS 로도 막히지 않는다.)
+  // 그래서 advisory lock 으로 (user, location) 단위 임계구역을 만들어 "선점 → 발송" 순서로 바꾼다.
+  // xact 변종이라 커밋 시 자동 해제되고, Supabase 의 transaction-mode pgbouncer 와도 호환된다.
+  const claim = await claimCooldownSlot(params.userId, location.id, now);
+  if (!claim) {
     return { notified: false, reason: 'cooldown' };
   }
 
@@ -114,13 +115,40 @@ export async function handleGeofenceEnter(params: {
 
   const result = await sendToUser(params.logger, params.userId, message);
   if (!result.sent) {
+    // 발송이 안 됐으면 선점한 슬롯을 되돌린다 → 쿨다운을 소모하지 않는다.
+    await prisma.notificationLog.delete({ where: { id: claim.id } }).catch(() => undefined);
     // 발송 실패해도 예외 없이 결과만 반환 (라우트에서 200 유지)
     return { notified: false, reason: result.reason === 'no_token' ? 'no_token' : 'send_failed' };
   }
 
-  // 실제 발송된 경우에만 로그 기록 → 쿨다운 기준이 됨
-  await prisma.notificationLog.create({
-    data: { userId: params.userId, locationId: location.id, sentAt: now },
-  });
   return { notified: true };
+}
+
+/**
+ * 쿨다운 슬롯을 원자적으로 선점한다.
+ * 이미 최근 발송 이력이 있으면 null, 없으면 새로 만든 notification_logs 행을 반환.
+ */
+async function claimCooldownSlot(
+  userId: string,
+  locationId: string,
+  now: Date,
+): Promise<{ id: string } | null> {
+  const since = new Date(now.getTime() - COOLDOWN_MINUTES * 60_000);
+  const lockKey = `geofence:${userId}:${locationId}`;
+
+  return getPrisma().$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))`;
+
+    const recent = await tx.notificationLog.findFirst({
+      where: { userId, locationId, sentAt: { gte: since } },
+      select: { id: true },
+    });
+    if (recent) {
+      return null;
+    }
+    return tx.notificationLog.create({
+      data: { userId, locationId, sentAt: now },
+      select: { id: true },
+    });
+  });
 }

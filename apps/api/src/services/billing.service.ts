@@ -126,50 +126,81 @@ export async function parseWebhook(rawBody: Buffer, signature: string | undefine
   return constructEvent(config(), rawBody, signature);
 }
 
+/**
+ * 구독 기간 종료 시각을 읽는다.
+ * Stripe 는 2025년 API 버전에서 current_period_end 를 subscription 최상위에서
+ * subscription item 아래로 옮겼다. 계정의 API 버전에 따라 둘 중 하나에만 값이 있으므로 모두 확인한다.
+ */
+function readPeriodEnd(obj: Record<string, unknown>): Date | null {
+  const top = obj.current_period_end;
+  if (top) {
+    return new Date(Number(top) * 1000);
+  }
+  const item = (obj as { items?: { data?: { current_period_end?: number }[] } }).items?.data?.[0];
+  return item?.current_period_end ? new Date(item.current_period_end * 1000) : null;
+}
+
 export async function handleWebhookEvent(event: StripeEvent): Promise<void> {
   const obj = event.data.object;
   const prisma = getPrisma();
+  const handled = [
+    'customer.subscription.created',
+    'customer.subscription.updated',
+    'customer.subscription.deleted',
+    'invoice.payment_failed',
+  ];
+  if (!handled.includes(event.type)) {
+    return; // 처리하지 않는 이벤트는 무시(200)
+  }
+
+  const customerId = String(obj.customer ?? '');
+  const sub = await prisma.subscription.findFirst({ where: { stripeCustomerId: customerId } });
+  if (!sub) {
+    return; // 우리가 모르는 고객 — 조용히 200
+  }
+
+  // 웹훅은 순서를 보장하지 않는다. 이미 반영한 것보다 오래된 이벤트면 무시해
+  // 최신 상태가 과거 상태로 덮이는 것을 막는다. (중복 전달은 재적용해도 결과가 같다.)
+  const eventAt = event.created ? new Date(event.created * 1000) : new Date();
+  if (sub.lastStripeEventAt && eventAt < sub.lastStripeEventAt) {
+    return;
+  }
 
   switch (event.type) {
     case 'customer.subscription.created':
     case 'customer.subscription.updated': {
-      const customerId = String(obj.customer ?? '');
       const priceId = (obj as { items?: { data?: { price?: { id?: string } }[] } }).items?.data?.[0]
         ?.price?.id;
-      const periodEnd = obj.current_period_end
-        ? new Date(Number(obj.current_period_end) * 1000)
-        : null;
-      const sub = await prisma.subscription.findFirst({ where: { stripeCustomerId: customerId } });
-      if (!sub) return;
       await prisma.subscription.update({
         where: { id: sub.id },
         data: {
           plan: planForPrice(priceId),
           stripeSubscriptionId: String(obj.id ?? sub.stripeSubscriptionId ?? ''),
           status: String(obj.status ?? 'active'),
-          currentPeriodEnd: periodEnd,
+          currentPeriodEnd: readPeriodEnd(obj),
+          lastStripeEventAt: eventAt,
         },
       });
       return;
     }
     case 'customer.subscription.deleted': {
-      const customerId = String(obj.customer ?? '');
-      const sub = await prisma.subscription.findFirst({ where: { stripeCustomerId: customerId } });
-      if (!sub) return;
       await prisma.subscription.update({
         where: { id: sub.id },
-        data: { plan: 'free', status: 'canceled', stripeSubscriptionId: null },
+        data: {
+          plan: 'free',
+          status: 'canceled',
+          stripeSubscriptionId: null,
+          lastStripeEventAt: eventAt,
+        },
       });
       return;
     }
     case 'invoice.payment_failed': {
-      const customerId = String(obj.customer ?? '');
-      const sub = await prisma.subscription.findFirst({ where: { stripeCustomerId: customerId } });
-      if (!sub) return;
-      await prisma.subscription.update({ where: { id: sub.id }, data: { status: 'past_due' } });
+      await prisma.subscription.update({
+        where: { id: sub.id },
+        data: { status: 'past_due', lastStripeEventAt: eventAt },
+      });
       return;
     }
-    default:
-      return; // 처리하지 않는 이벤트는 무시(200)
   }
 }
