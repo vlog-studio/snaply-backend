@@ -58,13 +58,22 @@ async def fetch_source_keys(user_id: str, video_ids: list[str]) -> dict[str, str
     return {str(row["id"]): row["s3_key"] for row in rows if row["s3_key"]}
 
 
-async def set_video_result(video_id: str, edited_url: str, thumbnail_url: str) -> None:
+async def set_video_result(
+    video_id: str,
+    edited_url: str,
+    edited_s3_key: str,
+    thumbnail_url: str,
+    thumbnail_s3_key: str,
+) -> None:
     async with _pool_or_raise().acquire() as conn:
         await conn.execute(
-            "UPDATE videos SET edited_url=$2, thumbnail_url=$3, status='done' WHERE id=$1",
+            "UPDATE videos SET edited_url=$2, edited_s3_key=$3, "
+            "thumbnail_url=$4, thumbnail_s3_key=$5, status='done' WHERE id=$1",
             video_id,
             edited_url,
+            edited_s3_key,
             thumbnail_url,
+            thumbnail_s3_key,
         )
 
 

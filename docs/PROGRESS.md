@@ -71,10 +71,10 @@
 **완료 조건 검증** (MinIO 대상 통합 테스트 14/14)
 - presigned URL로 실제 PUT 업로드 성공 ✅
 - `POST /videos` 후 status 'ready' ✅
-- 공개 URL 반환 (개발은 MinIO URL, 운영은 CloudFront) ✅
+- private 객체용 presigned GET URL 반환 (기본 1시간) ✅
 
 **구현 내용**
-- `services/storage.service.ts`: endpoint-aware S3 (MinIO/AWS 코드 분기 없음). presigned PUT 발급(만료 15분), HEAD 크기 확인, 삭제, 공개 URL, 개발용 버킷 자동 생성
+- `services/storage.service.ts`: endpoint-aware S3 (MinIO/AWS 코드 분기 없음). presigned PUT/GET 발급, HEAD 크기 확인, 삭제, 개발용 버킷 자동 생성
 - `services/video.service.ts` + `routes/videos.ts`: 5개 엔드포인트
   - `GET /videos/upload-url`(presigned + pending 레코드 선생성), `POST /videos`(업로드 확인 후 ready), `GET /videos`(커서 페이지네이션), `GET/DELETE /videos/:id`
 - 소유자 UUID 경로 격리(`uploads/{userId}/{videoId}.mp4`), 소유권 격리(타 유저 404), S3 삭제 + 소프트 삭제

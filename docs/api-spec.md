@@ -51,6 +51,7 @@ Query: `kind`(`source | result`, 선택), `cursor`(선택), `limit`(기본 20, �
 상세 조회 / 삭제(S3 원본 삭제 + 소프트 삭제). 타 유저 리소스는 404.
 
 **Video 객체**: `{ id, kind, originalUrls[], editedUrl, thumbnailUrl, durationSeconds, stylePreset, status, createdAt }`
+`originalUrls`, `editedUrl`, `thumbnailUrl`은 private S3/MinIO 객체에 대한 presigned GET URL이며 기본 1시간 동안 유효합니다. 만료된 URL은 목록 또는 상세 API를 다시 호출해 갱신합니다.
 `kind`: `source`(직접 업로드한 편집 원본) | `result`(합성·편집 결과물)
 `status`: `pending | ready | processing | done | failed`
 

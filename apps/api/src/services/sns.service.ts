@@ -3,6 +3,7 @@ import type { SnsConfig, SnsProviderConfig } from '../config.js';
 import { getPrisma } from '../db/client.js';
 import { AppError } from '../lib/errors.js';
 import { encrypt, decrypt, encodeState, decodeState } from '../lib/crypto.js';
+import { createDownloadUrl } from './storage.service.js';
 import * as instagram from './sns/instagram.client.js';
 import * as tiktok from './sns/tiktok.client.js';
 import type { TokenExchangeResult } from './sns/types.js';
@@ -168,14 +169,18 @@ export async function upload(params: {
 
   const video = await prisma.video.findFirst({
     where: { id: params.videoId, userId: params.userId, deletedAt: null },
-    select: { id: true, editedUrl: true },
+    select: { id: true, editedUrl: true, editedS3Key: true },
   });
   if (!video) {
     throw AppError.notFound('영상을 찾을 수 없습니다.');
   }
-  if (!video.editedUrl) {
+  if (!video.editedS3Key && !video.editedUrl) {
     throw AppError.badRequest('편집이 완료된 영상만 업로드할 수 있습니다.');
   }
+
+  const videoUrl = video.editedS3Key
+    ? await createDownloadUrl(video.editedS3Key)
+    : (video.editedUrl as string);
 
   const accessToken = await ensureFreshToken({
     connectionId: connection.id,
@@ -192,12 +197,12 @@ export async function upload(params: {
         ? await instagram.uploadReel(pc, {
             accessToken,
             platformUserId: connection.platformUserId ?? '',
-            videoUrl: video.editedUrl,
+            videoUrl,
             caption: params.caption,
           })
         : await tiktok.uploadVideo(pc, {
             accessToken,
-            videoUrl: video.editedUrl,
+            videoUrl,
             caption: params.caption,
           });
 
