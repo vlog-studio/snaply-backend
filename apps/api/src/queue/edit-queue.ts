@@ -13,6 +13,8 @@ export interface EditJobData {
   stylePreset: StylePreset;
   editSpec: EditSpec;
   renderSpec: RenderSpec;
+  /** 소프트 자막(mov_text) 생성 여부. 쇼츠용이 기본이라 false가 디폴트. */
+  subtitles: boolean;
 }
 
 let queue: Queue<EditJobData> | null = null;

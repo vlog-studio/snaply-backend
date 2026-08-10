@@ -6,7 +6,6 @@ import {
   type EditSpec,
   type FitMode,
   type OutputProfile,
-  type Plan,
   type RenderSpec,
   type StylePreset,
 } from '@vlog-studio/shared-types';
@@ -14,7 +13,6 @@ import { getPrisma } from '../db/client.js';
 import { AppError } from '../lib/errors.js';
 import { enqueueEditJob } from '../queue/edit-queue.js';
 
-const FREE_MONTHLY_LIMIT = 3;
 const MAX_CLIPS = 10;
 const MIN_CLIP_DURATION_MS = 100;
 
@@ -159,18 +157,14 @@ function toDto(row: EditJobRow): EditJob {
   };
 }
 
-function startOfMonth(): Date {
-  const now = new Date();
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-}
-
 export async function createEditJob(params: {
   userId: string;
-  plan: Plan;
   clips: ClipSpec[];
   stylePreset: StylePreset;
   outputProfile: OutputProfile;
   fitMode: FitMode;
+  /** 소프트 자막 생성 여부 (기본 false — 쇼츠용) */
+  subtitles: boolean;
 }): Promise<{ jobId: string }> {
   const prisma = getPrisma();
   validateClips(params.clips);
@@ -198,19 +192,9 @@ export async function createEditJob(params: {
     throw AppError.forbidden('편집할 수 없는 영상이 포함되어 있습니다. (소유권 또는 상태 확인)');
   }
 
-  // 2) Free 플랜 월 3편 제한
-  if (params.plan === 'free') {
-    const usedThisMonth = await prisma.editJob.count({
-      where: { userId: params.userId, createdAt: { gte: startOfMonth() } },
-    });
-    if (usedThisMonth >= FREE_MONTHLY_LIMIT) {
-      throw AppError.forbidden(
-        `무료 플랜은 월 ${FREE_MONTHLY_LIMIT}편까지 편집할 수 있습니다. 플랜을 업그레이드하세요.`,
-      );
-    }
-  }
+  // 플랜별 편집 횟수 제한은 기획 확정 시까지 미적용 — docs/plan-limits.md 참고
 
-  // 3) 결과물 video 레코드 생성 (원본 클립 URL 취합)
+  // 2) 결과물 video 레코드 생성 (원본 클립 URL 취합)
   const sourcesById = new Map(sources.map((source) => [source.id, source]));
   const originalUrls = uniqueVideoIds.flatMap((id) => sourcesById.get(id)?.originalUrls ?? []);
   const originalS3Keys = uniqueVideoIds.flatMap((id) => {
@@ -236,7 +220,7 @@ export async function createEditJob(params: {
     select: { id: true },
   });
 
-  // 4) edit_jobs 레코드 생성
+  // 3) edit_jobs 레코드 생성
   const job = await prisma.editJob.create({
     data: {
       videoId: outputVideo.id,
@@ -265,7 +249,7 @@ export async function createEditJob(params: {
     select: { id: true },
   });
 
-  // 5) 큐 적재. 실패 시 job/video를 failed 처리하고 에러 전파.
+  // 4) 큐 적재. 실패 시 job/video를 failed 처리하고 에러 전파.
   try {
     await enqueueEditJob({
       jobId: job.id,
@@ -274,6 +258,7 @@ export async function createEditJob(params: {
       stylePreset: params.stylePreset,
       editSpec,
       renderSpec,
+      subtitles: params.subtitles,
     });
   } catch (err) {
     await prisma.editJob.update({

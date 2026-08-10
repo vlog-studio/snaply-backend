@@ -177,8 +177,16 @@ export async function registerDocs(app: FastifyInstance, config: DocsConfig): Pr
       ],
       tags: [
         { name: 'auth', description: '인증/프로필' },
-        { name: 'videos', description: '영상 업로드' },
-        { name: 'edit-jobs', description: 'AI 편집' },
+        {
+          name: 'videos',
+          description:
+            '영상 업로드. 업로드는 2단계다 — ① `GET /videos/upload-url`로 presigned URL 발급 → ② 그 URL에 파일 직접 PUT(S3, Swagger 밖) → ③ `POST /videos`로 등록해 `ready` 전이.',
+        },
+        {
+          name: 'edit-jobs',
+          description:
+            'AI 편집. `ready` 영상들로 `POST /edit-jobs` → 202 `jobId` → `GET /edit-jobs/{id}` 폴링(또는 WS)으로 진행률 → 완료 시 결과물 영상의 `editedUrl`. **AI 워커(`npm run worker`)가 떠 있어야 처리된다.**',
+        },
         { name: 'locations', description: '위치 알림' },
         { name: 'sns', description: 'SNS 연동' },
         { name: 'billing', description: '결제' },
