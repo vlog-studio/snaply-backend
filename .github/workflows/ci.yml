@@ -77,11 +77,13 @@ jobs:
         run: npx prisma generate
         working-directory: apps/api
 
-      # 테스트는 apps/api 기준으로 실행해야 vitest.config.ts 가 적용된다.
-      # (다른 위치에서 실행하면 DATABASE_URL 이 테스트 DB를 가리키지 않는다 —
-      #  docs/integrations-handover.md §2 참고)
+      # 루트에서 turbo 로 실행한다. turbo.json 의 test 태스크가 dependsOn: ["^build"] 이므로
+      # 의존 패키지(@vlog-studio/shared-types)가 먼저 빌드된다.
+      # `npm test -w apps/api` 로 turbo 를 우회하면 shared-types 의 dist 가 없어
+      # "Failed to resolve entry for package" 로 실패한다(실제로 CI 에서 발생).
+      # turbo 는 스크립트를 패키지 디렉터리에서 실행하므로 apps/api/vitest.config.ts 도 정상 적용된다.
       - name: Integration tests
-        run: npm test -w apps/api
+        run: npm test
 
   python:
     name: Syntax check (AI Worker)

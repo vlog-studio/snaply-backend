@@ -57,10 +57,20 @@ S3_PUBLIC_ENDPOINT=https://<B>.trycloudflare.com
 ## 2. 테스트는 반드시 `apps/api` 기준으로 실행한다
 
 ```bash
-npm test -w apps/api        # ✅
-cd apps/api && npm test     # ✅
-npx vitest                  # ❌ 레포 루트에서 실행하면 위험
+npm test                    # ✅ 권장 — 루트에서 turbo 경유
+npm test -w apps/api        # ✅ 단, shared-types 가 먼저 빌드돼 있어야 한다
+cd apps/api && npm test     # ✅ 〃
+npx vitest                  # ❌ 레포 루트에서 직접 실행하면 위험 (아래)
 ```
+
+**루트 `npm test` 를 권하는 이유**: `turbo.json` 의 `test` 태스크가 `dependsOn: ["^build"]` 라
+의존 패키지(`@vlog-studio/shared-types`)를 먼저 빌드한다. turbo 는 스크립트를 패키지
+디렉터리에서 실행하므로 `apps/api/vitest.config.ts` 도 정상 적용된다.
+
+`-w apps/api` 로 turbo 를 우회하면 `shared-types` 의 `dist` 가 없을 때
+`Failed to resolve entry for package "@vlog-studio/shared-types"` 로 11개 스위트가 전부 실패한다.
+**CI 에서 실제로 발생했다** — 로컬은 이전 빌드 산물이 남아 있어 통과했다.
+(shared-types 는 `main`/`exports` 가 `./dist/*` 를 가리킨다)
 
 **왜 위험한가**
 
