@@ -62,7 +62,7 @@ export async function editJobRoutes(app: FastifyInstance): Promise<void> {
           '',
           '**진행 상황 확인** — 둘 중 하나:',
           '- `GET /edit-jobs/{id}` 폴링 (Swagger에서 가능)',
-          '- WebSocket `ws://localhost:3002/edit-jobs/{id}/progress?token={jwt}` (실시간, Swagger 미지원)',
+          '- WebSocket `ws://localhost:3000/edit-jobs/{id}/progress?token={jwt}` (실시간, Swagger 미지원)',
           '',
           '워커가 끝내면 3번에서 만든 결과물 영상의 `status`가 `done`, `editedUrl`이 채워진다. `GET /videos/{id}`로 확인.',
           '',

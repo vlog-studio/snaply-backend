@@ -33,7 +33,7 @@ npm run prisma:migrate -w apps/api
 
 # 6. 개발 서버 실행
 npm run dev -w apps/api
-curl http://localhost:3002/health
+curl http://localhost:3000/health
 ```
 
 ### AI 워커 (Python 3.11)

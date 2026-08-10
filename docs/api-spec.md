@@ -1,8 +1,8 @@
 # Snaply API 명세 (FE 전달용)
 
-> **인터랙티브 문서(Swagger UI)**: 개발 서버 실행 후 **`http://localhost:3002/docs`** 에서 직접 호출·테스트할 수 있습니다. OpenAPI 스펙 JSON은 `http://localhost:3002/docs/json` (Postman/코드 생성용). 운영에서는 비활성(필요 시 `ENABLE_DOCS=true`). WebSocket은 OpenAPI로 표현되지 않아 아래 문서를 참고하세요.
+> **인터랙티브 문서(Swagger UI)**: 개발 서버 실행 후 **`http://localhost:3000/docs`** 에서 직접 호출·테스트할 수 있습니다. OpenAPI 스펙 JSON은 `http://localhost:3000/docs/json` (Postman/코드 생성용). 운영에서는 비활성(필요 시 `ENABLE_DOCS=true`). WebSocket은 OpenAPI로 표현되지 않아 아래 문서를 참고하세요.
 
-- **Base URL**: `{API_BASE_URL}` (개발: `http://localhost:3002`)
+- **Base URL**: `{API_BASE_URL}` (개발: `http://localhost:3000`)
 - **인증**: 인증 필요 엔드포인트는 `Authorization: Bearer {supabase_jwt}` 헤더 필수. 토큰은 Supabase Auth 로그인으로 발급.
 - **응답 형식(공통)**
   - 성공: `{ "success": true, "data": ... }`

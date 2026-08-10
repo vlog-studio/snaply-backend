@@ -95,7 +95,7 @@ DB가 하나라 두 명이 각자 `prisma migrate dev`를 돌리면 히스토리
 docker start snaply-minio-dev snaply-redis-dev   # 최초엔 ONBOARDING.md의 run 명령
 
 # 2. API 서버
-npm run dev -w apps/api            # http://localhost:3002, 문서 /docs
+npm run dev -w apps/api            # http://localhost:3000, 문서 /docs
 
 # 3. AI 워커 (Dev A 주로)
 cd apps/ai-worker && .venv/bin/python src/worker.py
