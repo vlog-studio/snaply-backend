@@ -107,7 +107,10 @@ export function maxUploadBytes(): number {
   return ensureInit().cfg.maxUploadBytes;
 }
 
-/** 개발 편의: 커스텀 endpoint(MinIO)일 때 버킷이 없으면 생성. */
+/**
+ * 개발 편의: 커스텀 endpoint(MinIO)일 때 버킷이 없으면 생성.
+ * 객체 접근은 presigned GET URL로 하므로 버킷은 개발에서도 비공개를 유지한다.
+ */
 export async function ensureBucketForDev(): Promise<void> {
   const { client, cfg } = ensureInit();
   if (!cfg.endpoint) {

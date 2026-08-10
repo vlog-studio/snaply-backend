@@ -1,8 +1,8 @@
 # Snaply API 명세 (FE 전달용)
 
-> **인터랙티브 문서(Swagger UI)**: 개발 서버 실행 후 **`http://localhost:3000/docs`** 에서 직접 호출·테스트할 수 있습니다. OpenAPI 스펙 JSON은 `http://localhost:3000/docs/json` (Postman/코드 생성용). 운영에서는 비활성(필요 시 `ENABLE_DOCS=true`). WebSocket은 OpenAPI로 표현되지 않아 아래 문서를 참고하세요.
+> **인터랙티브 문서(Swagger UI)**: 개발 서버 실행 후 **`http://localhost:3002/docs`** 에서 직접 호출·테스트할 수 있습니다. OpenAPI 스펙 JSON은 `http://localhost:3002/docs/json` (Postman/코드 생성용). 운영에서는 비활성(필요 시 `ENABLE_DOCS=true`). WebSocket은 OpenAPI로 표현되지 않아 아래 문서를 참고하세요.
 
-- **Base URL**: `{API_BASE_URL}` (개발: `http://localhost:3000`)
+- **Base URL**: `{API_BASE_URL}` (개발: `http://localhost:3002`)
 - **인증**: 인증 필요 엔드포인트는 `Authorization: Bearer {supabase_jwt}` 헤더 필수. 토큰은 Supabase Auth 로그인으로 발급.
 - **응답 형식(공통)**
   - 성공: `{ "success": true, "data": ... }`
@@ -69,7 +69,8 @@ Query: `kind`(`source | result`, 선택), `cursor`(선택), `limit`(기본 20, �
   ],
   "stylePreset": "일상",
   "outputProfile": "short_vertical",
-  "fitMode": "blur_background"
+  "fitMode": "blur_background",
+  "subtitles": false
 }
 ```
 → 202 `{ "data": { "jobId": "uuid" } }`
@@ -77,9 +78,11 @@ Query: `kind`(`source | result`, 선택), `cursor`(선택), `limit`(기본 20, �
 - `clips`는 최종 합성 순서이며 최대 10개입니다. 같은 영상을 서로 다른 구간으로 반복 사용할 수 있습니다.
 - `startMs`는 생략하면 0, `endMs`는 생략하면 실제 영상 끝까지 사용합니다. 지정한 구간은 최소 100ms여야 합니다.
 - 이전 클라이언트의 `{ "videoIds": [...] }` 요청도 지원하지만 전체 영상을 사용하며, `clips`와 동시에 보낼 수 없습니다.
+- `subtitles`(선택, 기본 false): true면 한국어 음성 인식으로 소프트 자막(mov_text 트랙) 삽입. 영상에 굽지 않으므로 플레이어에서 켜야 보이며, 처리 시간이 늘어난다.
 
 `outputProfile` 기본값은 `short_vertical`(1080×1920), `fitMode` 기본값은 `blur_background`입니다. 작업 상태 응답에는 재현 가능한 `pipelineVersion`, `editSpec`, `renderSpec` 스냅샷이 포함됩니다.
-- 소유·`source`·`ready` 상태 영상만 허용(아니면 403). Free 플랜 월 3편 초과 시 403.
+- 소유·`source`·`ready` 상태 영상만 허용(아니면 403).
+- 플랜별 편집 횟수 제한(Free 월 3편)은 **기획 확정 시까지 미적용** — [plan-limits.md](./plan-limits.md) 참고.
 
 ### GET /edit-jobs/:id  🔒
 ```json

@@ -99,12 +99,15 @@ async def _run_pipeline(job_id: str, data: dict, work_dir: str) -> None:
     )
     await _progress(job_id, 60, "음악 매칭 중...")
 
-    # 4) 자막 생성/삽입
-    with_sub_path = os.path.join(work_dir, "with_sub.mp4")
-    current, _sub_ok = await asyncio.to_thread(
-        subtitle.apply_subtitles, current, work_dir, with_sub_path
-    )
-    await _progress(job_id, 85, "자막 생성 중...")
+    # 4) 자막 생성/삽입 — 요청 시에만 (쇼츠용이 기본이라 디폴트는 건너뜀 → whisper 추론 비용 절약)
+    if data.get("subtitles", False):
+        with_sub_path = os.path.join(work_dir, "with_sub.mp4")
+        current, _sub_ok = await asyncio.to_thread(
+            subtitle.apply_subtitles, current, work_dir, with_sub_path
+        )
+        await _progress(job_id, 85, "자막 생성 중...")
+    else:
+        await _progress(job_id, 85, "자막 건너뜀")
 
     # 5) 썸네일 추출 (기본 1초, 짧은 결과물은 중간 시점)
     thumb_path = os.path.join(work_dir, "thumb.jpg")
@@ -166,7 +169,8 @@ async def main() -> None:
     _init_sentry()
     await db.init_pool()
     _publisher = aioredis.from_url(config.REDIS_URL, decode_responses=True)
-    subtitle.load_model()  # 시작 시 1회 로드
+    # whisper 모델은 자막 요청(subtitles=true)이 처음 올 때 lazy 로드한다.
+    # 기본 플로우(자막 없음)에서는 로드하지 않아 기동이 빠르고 메모리를 아낀다.
 
     worker = Worker(config.EDIT_QUEUE_NAME, process_edit_job, {"connection": config.REDIS_URL})
     logger.info("edit-jobs 워커 시작 (queue={})", config.EDIT_QUEUE_NAME)
