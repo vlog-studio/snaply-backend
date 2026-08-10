@@ -16,7 +16,8 @@
       "dependsOn": ["^build"]
     },
     "test": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build"],
+      "passThroughEnv": ["TEST_PG_BASE_URL", "TEST_DB_NAME", "TEST_REDIS_URL"]
     }
   }
 }
