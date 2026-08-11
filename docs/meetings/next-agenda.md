@@ -25,10 +25,10 @@
 
 | # | 안건 | 근거 | 왜 지금 |
 |---|---|---|---|
-| 1 ★ | 영상 묶음(프로젝트) 구조 | [BACKLOG](../backlog.md) A-1 · [decisions/video-grouping-proposals.md](../decisions/video-grouping-proposals.md) | **A 트랙 개발 전체가 여기서 막혀 있다.** 촬영 메타데이터 수집은 소급 불가라 특히 시급 |
+| 1 ★ | Movie 세부 정책 | [BACKLOG](../backlog.md) A-1 · [decisions/video-grouping-proposals.md](../decisions/video-grouping-proposals.md) | 엔티티는 `Movie`로 결정됨. 클립 순서·재내보내기·삭제 연동을 확정해야 구현 가능 |
 | 2 | 플랜 차등 정책 일괄 확정 | [BACKLOG](../backlog.md) A-2 · [decisions/plan-limits.md](../decisions/plan-limits.md) | 부분 구현이 어긋남의 원인이었으므로 한 번에 확정해 한 번에 반영 |
 | 3 | 영상 분석(하이라이트 추천) 승인 | [BACKLOG](../backlog.md) A-3 · [plans/video-analysis-implementation-plan.md](../plans/video-analysis-implementation-plan.md) | 안건 1의 export 순서와 얽힘 |
-| 4 | FE 앱 일정 확인 | [BACKLOG](../backlog.md) A-5 | FCM 실기기·SNS 검수 URL·촬영 메타데이터가 전부 FE 의존 |
+| 4 | FE 앱 일정 확인 | [BACKLOG](../backlog.md) A-5 | FCM 실기기·SNS 검수 URL·결정된 `capturedAt` 전달이 전부 FE 의존 |
 | 5 | 스냅 서버 원천 전환의 미결 판단 | [BACKLOG](../backlog.md) A-4 · [decisions/snap-source-of-truth.md](../decisions/snap-source-of-truth.md) | 위치 저장 여부는 프라이버시/약관 검토 선행 |
 
 ## 3. 개발 회의 안건 (A·B 합의)
@@ -45,19 +45,19 @@
 
 ```
 즉시     §1 (보안 정리 · 인스타 재연동 · 인수인계 확인)
-회의     안건 1·2 확정 (기획) / 안건 6 확정 (개발)
+회의     안건 1의 Movie 세부 정책·안건 2 확정 (기획) / 안건 6 확정 (개발)
    ↓
-A 트랙   묶음 구조 구현: 스키마 PR → CRUD → export → e2e 실검증
-         + 촬영 메타데이터 수집 (POST /videos 확장 — 스냅 서버 원천화 1단계와 같은 작업)
+A 트랙   Movie 구현: 스키마 PR → CRUD → export → e2e 실검증
+         + 결정된 capturedAt 수집 (POST /videos 확장 — 스냅 서버 원천화 1단계와 같은 작업)
          + 플랜 제한 재도입 (확정분 — 워커 해상도/워터마크 포함)
 B 트랙   영상 분석 구현 (안건 3 승인 시) / Stripe 실결제 검증
 병행     배포: 인프라 결정 → 스테이징 1회 배포 → 고정 도메인 확보
    ↓
-FE 합류  FCM 실기기 · SNS 검수/실업로드 · 촬영 메타데이터 전달
+FE 합류  FCM 실기기 · SNS 검수/실업로드 · capturedAt 등 결정된 촬영 메타데이터 전달
 잔여     스트레스 케이스 (BACKLOG §F) · 운영 전환 항목 (BACKLOG §D)
 ```
 
-**요약**: 병목은 두 개다 — **묶음 구조 결정(A 트랙 막힘)** 과 **배포+도메인(B 트랙 잔여 검증 막힘)**.
+**요약**: 병목은 두 개다 — **Movie 세부 정책 결정(A 트랙 막힘)** 과 **배포+도메인(B 트랙 잔여 검증 막힘)**.
 이 둘을 이번 회의에서 확정하면 나머지는 순차적으로 풀린다.
 
 ---
@@ -67,7 +67,7 @@ FE 합류  FCM 실기기 · SNS 검수/실업로드 · 촬영 메타데이터 �
 > 회의 후 아래에 결정 사항을 기록한다. 미결 안건은 다음 회의로 이월하고 사유를 남긴다.
 > 결정된 내용은 해당 [decisions/](../decisions/) 문서와 [backlog.md](../backlog.md)에 반영한다.
 
-- 안건 1 (묶음 구조):
+- 안건 1 (Movie 세부 정책):
 - 안건 2 (플랜 정책):
 - 안건 3 (영상 분석):
 - 안건 4 (FE 일정):
