@@ -66,7 +66,9 @@ DB가 하나라 두 명이 각자 `prisma migrate dev`를 돌리면 히스토리
 **채택: 옵션 A — 로컬 Postgres로 격리**
 - `docker-compose.dev.yml`의 로컬 Postgres(`npm run infra:up`에 포함)로 개발·마이그레이션하고,
   Supabase는 **인증(Auth)만** 사용. 통합 테스트도 이 Postgres를 쓴다(`snaply_test` 자동 생성).
-- 호스트 5432가 점유돼 있으면 `POSTGRES_HOST_PORT`로 바꾼다.
+- 호스트 5432가 점유돼 있으면 **`apps/api/.env` 의 `POSTGRES_HOST_PORT`** 로 바꾼다.
+  `DATABASE_URL`/`DIRECT_URL` 의 포트도 같이 바꿔야 한다. 5433 은 스택(`docker-compose.yml`)의
+  postgres 가 쓰므로 피한다.
 - 스키마를 자유롭게 실험 → 확정되면 한 명이 Supabase에 `prisma migrate deploy`.
 - 스키마 변경을 pull한 뒤에는 **`npm run db:generate` 필수** (누락 시 낡은 클라이언트로 테스트가 500 실패).
 

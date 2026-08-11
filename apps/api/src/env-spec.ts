@@ -47,6 +47,13 @@ export const ENV_VARS = [
     origin: 'shared',
     description: 'Prisma 마이그레이션용 직접 연결(5432). Prisma CLI 전용',
   },
+  {
+    key: 'POSTGRES_HOST_PORT',
+    required: false,
+    origin: 'local',
+    description:
+      'docker-compose.dev.yml 의 postgres 호스트 포트. 기본 5432. 코드가 아니라 compose 가 읽는다',
+  },
 
   // ── Supabase ─────────────────────────────────────────
   {
