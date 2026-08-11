@@ -1,7 +1,13 @@
 # 로컬 개발용 전체 스택 (api + ai-worker + redis + postgres + minio)
-# 실행: docker compose up --build
-# 최초 1회 마이그레이션: docker compose exec api npx prisma migrate deploy --schema prisma/schema.prisma
-# 주의: SUPABASE_URL 등 일부 값은 실제 인증/기능에 필요 — .env 또는 환경변수로 주입 권장.
+# 컨테이너로 테스트 서버를 잠깐 띄울 때 쓴다. 상시 개발은 docker-compose.dev.yml + 네이티브 실행.
+#
+# 실행: npm run stack:up          (= docker compose up --build api — 인프라는 depends_on 으로 따라온다)
+# 최초 1회 마이그레이션: npm run stack:migrate
+#
+# 환경변수는 `apps/api/.env` 를 env_file 로 읽어 베이스로 깔고, 아래 environment 로 덮는다.
+# compose 규격상 environment 가 env_file 보다 우선한다 — 개인 .env 의 로컬 주소(localhost:9100 등)가
+# 컨테이너 네트워크 주소를 덮지 않는 이유가 이것이다.
+# 이미지에는 .env 가 들어가지 않는다(.dockerignore) — 운영과 같은 "주입" 경로를 그대로 쓴다.
 
 # 프로젝트 이름을 dev 인프라(docker-compose.dev.yml=snaply-dev)와 분리 —
 # 같으면 `docker compose down`이 dev 인프라 컨테이너/볼륨까지 지운다.
@@ -59,24 +65,29 @@ services:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
       minio: { condition: service_healthy }
+    # Supabase·Stripe·SNS 자격증명은 여기서 온다. 없으면 뜨긴 하지만 인증이 동작하지 않는다.
+    env_file:
+      - path: apps/api/.env
+        required: false
     environment:
+      NODE_ENV: development
       API_PORT: "3000"
+      # 인프라는 컨테이너 네트워크 기준으로 덮는다 (.env 의 localhost:* 를 무시)
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/snaply
       DIRECT_URL: postgresql://postgres:postgres@postgres:5432/snaply
       REDIS_URL: redis://redis:6379
       S3_ENDPOINT: http://minio:9000
       S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-http://localhost:9200}
-      CLOUDFRONT_DOMAIN: ${CLOUDFRONT_DOMAIN:-}
-      S3_DOWNLOAD_URL_EXPIRY_SECONDS: ${S3_DOWNLOAD_URL_EXPIRY_SECONDS:-3600}
       S3_BUCKET_NAME: snaply
       AWS_ACCESS_KEY_ID: minioadmin
       AWS_SECRET_ACCESS_KEY: minioadmin123
       AWS_REGION: ap-northeast-2
-      # 아래는 실제 값으로 교체 필요 (없으면 인증/외부연동 비활성)
-      SUPABASE_URL: ${SUPABASE_URL:-https://example.supabase.co}
-      SNS_TOKEN_ENCRYPTION_KEY: ${SNS_TOKEN_ENCRYPTION_KEY:-dev-insecure-sns-key}
-      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-dev-webhook-secret}
-      SENTRY_DSN: ${SENTRY_DSN:-}
+      # 미디어 공개 URL 은 이 스택의 MinIO 를 가리켜야 한다 — .env 의 CloudFront 도메인을 지운다.
+      CLOUDFRONT_DOMAIN: ""
+      # 외부 연동은 기본 mock. 실키 경로를 확인해야 할 때만 해당 줄을 지운다.
+      SNS_MOCK: "true"
+      STRIPE_MOCK: "true"
+      SENTRY_DSN: ""
     ports:
       - "${API_HOST_PORT:-3000}:3000"   # 호스트 포트가 점유됐다면 API_HOST_PORT로 변경
 
@@ -94,14 +105,14 @@ services:
       EDIT_QUEUE_NAME: edit-jobs
       S3_ENDPOINT: http://minio:9000
       S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-http://localhost:9200}
-      CLOUDFRONT_DOMAIN: ${CLOUDFRONT_DOMAIN:-}
-      S3_DOWNLOAD_URL_EXPIRY_SECONDS: ${S3_DOWNLOAD_URL_EXPIRY_SECONDS:-3600}
       S3_BUCKET_NAME: snaply
       AWS_ACCESS_KEY_ID: minioadmin
       AWS_SECRET_ACCESS_KEY: minioadmin123
       AWS_REGION: ap-northeast-2
+      # api 와 같은 이유로 CloudFront 를 비운다 — 미디어는 이 스택의 MinIO 에 있다.
+      CLOUDFRONT_DOMAIN: ""
       WHISPER_MODEL: ${WHISPER_MODEL:-small}
-      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_DSN: ""
 
 volumes:
   pgdata:
