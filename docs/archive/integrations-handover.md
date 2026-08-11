@@ -1,10 +1,14 @@
-# 연동/수익화 트랙 인수인계 — Dev A 확인 필요 사항
+# 연동/수익화 트랙 인수인계 — Dev A 확인 필요 사항 (완료·보관)
 
-> 2026-08-10, Dev B. `feat/integrations/hardening` 을 `main` 에 머지하면서
-> **Dev A 의 코드·전제를 건드린 부분**만 모았다. TEAM.md 의 리뷰 절차를 거치지 않고
-> 머지했으므로, 아래 4건은 확인이 필요하다.
+> ✅ **4건 모두 Dev A 확인이 끝났다(2026-08-10, 아래 "Dev A 확인 결과").
+> 남은 액션은 없다.** 회신에서 나온 후속 작업 1건은
+> [backlog.md](../backlog.md) E-2 로 옮겼다.
 >
-> 전체 변경 내역은 [PROGRESS.md](./PROGRESS.md), 남은 작업은 [integrations-backlog.md](./integrations-backlog.md).
+> 2026-08-10, Dev B. `feat/integrations/hardening` 을 `main` 에 머지하면서
+> **Dev A 의 코드·전제를 건드린 부분**만 모았다. team.md 의 리뷰 절차를 거치지 않고
+> 머지했으므로 확인이 필요했다.
+>
+> 전체 변경 내역은 [progress.md](../progress.md), 미결 작업은 [backlog.md](../backlog.md).
 
 ---
 
@@ -192,7 +196,7 @@ Node 20 에서 `node --test <file>` 은 정상 동작한다(도커로 확인).
 `engines` 를 `>=22` 로 올리는 선택지도 있지만, Dev A 가 CI Node 를 20 으로 고정한 의도가 있을 것 같아
 플래그 제거 쪽을 택했다. Node 22+ 로 올리고 싶으면 `ci.yml` 과 `engines` 를 함께 바꾸면 된다.
 
-**확인 부탁**: `ci.yml` 은 TEAM.md 상 Dev A 영역이다. 서비스 컨테이너 구성과
+**확인 부탁**: `ci.yml` 은 team.md 상 Dev A 영역이다. 서비스 컨테이너 구성과
 잡 분리 방식(별도 잡 vs 기존 node 잡에 통합)에 대한 의견을 주시면 맞추겠다.
 실행 시간은 로컬 기준 테스트만 ~20초, 전체 잡은 npm ci 포함 2~3분 예상.
 
@@ -204,7 +208,7 @@ Node 20 에서 `node --test <file>` 은 정상 동작한다(도커로 확인).
 | `src/config.ts` | `STRIPE_MOCK` 을 `SNS_MOCK` 에서 분리 (기존엔 하나로 묶여 "SNS 는 mock, Stripe 만 실키" 조합이 불가능했다) / `INSTAGRAM_WEBHOOK_VERIFY_TOKEN` |
 | `apps/api/package.json` | 테스트 러너 공존 (위 §2), 진단 스크립트 5개 추가 |
 | `.gitignore` | 크리덴셜 파일 패턴 (`*firebase-adminsdk*.json`, `*service-account*.json`, `*.pem`, `*.p8`, `*.p12`) |
-| `docker-compose.dev.yml` | 로컬 Postgres 추가 (TEAM.md §4 옵션 A) |
+| `docker-compose.dev.yml` | 로컬 Postgres 추가 (team.md §4 옵션 A) |
 | `prisma/schema.prisma` | `subscriptions.last_stripe_event_at` (웹훅 순서 보정), `sns_uploads.error_message` (업로드 실패 사유) |
 
 ## Dev A 확인 결과 (2026-08-10)

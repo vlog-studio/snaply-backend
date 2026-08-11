@@ -1,7 +1,8 @@
 # 팀 작업 분담 (2인)
 
 개발자 2명이 실제 구동·검증·수정을 나눠서 진행하기 위한 가이드.
-전체 진행 기록은 [PROGRESS.md](./PROGRESS.md), API 명세는 [api-spec.md](./api-spec.md) 참고.
+**소유권과 협업 규칙의 원천 문서다.** 진행 기록은 [progress.md](./progress.md),
+미결 작업은 [backlog.md](./backlog.md), API 명세는 [api-spec.md](./api-spec.md) 참고.
 
 > 분담 축: **기능 도메인(수직)** 기준. 레이어(API vs 워커)로 나누지 않고, 각자 end-to-end로 책임진다.
 > 이유: 두 트랙이 서로 다른 파일을 건드려 병합 충돌이 적고, 각자 자기 기능을 실제로 돌려보며 검증할 수 있다.
@@ -35,20 +36,14 @@
 
 ---
 
-## 2. 실제 검증 우선순위 (mock → 실제)
+## 2. 실검증 현황
 
-지금까지는 개발 환경에서 mock/dry-run으로 검증됨. 실제 크리덴셜로 재검증이 필요한 항목:
+Phase 1~9의 mock/dry-run 검증과 양 트랙 실키 검증은 완료됐다 —
+어떤 항목이 어떻게 통과했는지는 [progress.md](./progress.md).
 
-| 항목 | 담당 | 필요한 것 | 지금 가능? |
-|---|---|---|---|
-| Stripe 실제 결제 (P8) | B | Stripe 테스트 키 + Price ID | ✅ 바로 가능 (앱/기기 불필요) |
-| Sentry 실제 수집 (P9) | B | Sentry DSN | ✅ 바로 가능 |
-| 영상 편집 파이프라인 (P3~5) | A | (로컬 MinIO/Redis/ffmpeg) | ✅ 로컬로 대부분 가능 |
-| FCM 실제 푸시 (P6) | B | Firebase 서비스계정 + **실기기 FCM 토큰(FE 앱)** | ⏳ FE 앱 필요 |
-| 인스타/틱톡 업로드 (P7) | B | 앱 등록 + **비즈니스 계정** + 실키 | ⏳ 계정·심사 필요 |
-| 배포 (P9) | A | 배포 인프라(Fly/Render/ECS 등) 확정 | ⏳ 인프라 결정 필요 |
-
-→ **바로 착수 권장**: A는 영상 편집 end-to-end 실검증, B는 Stripe 실키 결제부터.
+**아직 닫히지 않은 항목과 각각이 막힌 이유는 [backlog.md](./backlog.md)에만 둔다**
+(여기에 중복 표를 만들면 하나를 닫아도 나머지가 낡는다).
+트랙별로는 A가 F(남은 실검증), B가 C(외부 크리덴셜)를 주로 본다.
 
 ---
 
@@ -66,7 +61,7 @@
 
 ## 4. Supabase / 마이그레이션 규칙 (제일 조심)
 
-DB가 하나라 두 명이 각자 `prisma migrate dev`를 돌리면 히스토리가 꼬인다. 둘 중 하나 선택:
+DB가 하나라 두 명이 각자 `prisma migrate dev`를 돌리면 히스토리가 꼬인다.
 
 **옵션 A (추천): 로컬 Postgres로 격리**
 - `docker-compose.yml`의 로컬 Postgres로 개발·마이그레이션하고, Supabase는 **인증(Auth)만** 사용.

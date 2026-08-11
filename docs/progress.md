@@ -1,12 +1,13 @@
 # Snaply 백엔드 개발 진행 기록
 
 각 Phase 완료 시점의 구현 내용, 완료 조건 검증 결과, 특이사항을 기록합니다.
-전체 계획은 [SNAPVLOG_BACKEND_GUIDE.md](../SNAPVLOG_BACKEND_GUIDE.md) 참고.
+**이 문서는 완료된 것만 담는다** — 아직 닫히지 않은 작업은 [backlog.md](./backlog.md)에 있다.
 
 **레포**: https://github.com/vlog-studio/snaply-backend
 
-> 연동/수익화 트랙: Dev A 확인 사항은 [integrations-handover.md](./integrations-handover.md),
-> 남은 작업·재도입 체크리스트는 [integrations-backlog.md](./integrations-backlog.md).
+> Phase 1~9의 착수 전 계획서는 [archive/snapvlog-backend-guide.md](./archive/snapvlog-backend-guide.md)에
+> 보관돼 있다(현행 사실과 다름 — 판단 근거로 쓰지 말 것).
+> Dev B → Dev A 인수인계 기록은 [archive/integrations-handover.md](./archive/integrations-handover.md)(확인 완료).
 
 ---
 
@@ -245,7 +246,7 @@ mock이 가려주던 실키 경로 결함이 남아 있었다. 회귀 안전망�
   `plugins/auth.ts` 는 한 줄도 안 고치고 `SUPABASE_URL` 만 바꿔 붙인다. 실 Supabase 전환은 env 원복이 전부.
   수동 테스트용 CLI 겸용: `npm run auth:stub -w apps/api`
 - 개발 DB(`snaply`)와 분리된 `snaply_test` DB를 globalSetup에서 생성·마이그레이션.
-- `docker-compose.dev.yml` 에 로컬 Postgres 추가 (TEAM.md §4 옵션 A) — 공유 Supabase 마이그레이션 충돌 회피.
+- `docker-compose.dev.yml` 에 로컬 Postgres 추가 (team.md §4 옵션 A) — 공유 Supabase 마이그레이션 충돌 회피.
 
 ### Phase 6 — 위치/FCM
 
@@ -506,20 +507,15 @@ stripe trigger customer.subscription.created --api-key $STRIPE_SECRET_KEY
 `process.exit(0)` 를 바로 호출해서, 5xx 발생 직후 재시작·배포되면 그 이벤트가 유실됐다.
 `flushSentry()` 를 추가해 종료 전에 전송을 기다린다. (`SENTRY_DEBUG=true` 로 SDK 전송 로그 확인 가능)
 
-### 남은 것 (외부 크리덴셜/합의 필요)
+### 남은 것
 
-| 항목 | 막는 요소 |
-|---|---|
-| **Stripe 상품/가격 생성** | 미완 — `sk_test_` 키는 확보·검증 완료(2026-08-04)했고 계정에 상품이 0개다.<br>Standard(₩9,900/월)·Premium(₩24,900/월) 상품을 만들고 Price ID 2개를 `STRIPE_PRICE_STANDARD`/`STRIPE_PRICE_PREMIUM` 에 넣어야<br>실제 Checkout Session 생성·결제 플로우 검증이 가능하다. (대시보드 Product catalog 또는 `stripe products create` + `stripe prices create --currency krw`) |
-| ~~Sentry 실수집~~ | **완료** (2026-08-04) — DSN 설정·수집 경로 검증. 워커도 같은 DSN 사용 |
-| ~~인스타 실업로드~~ **완료** / 틱톡 — API 수락까지만 확인, 받은함 실물 미도착 (조사 중) | 앱 등록만 남음 — 공개 URL 준비는 완료([sns-setup.md](./sns-setup.md)).<br>틱톡은 PULL_FROM_URL 도메인 검증이 추가 관문(터널 주소로는 막힐 수 있음 → FILE_UPLOAD 대안 검토) |
-| FCM 실기기 수신 | **크리덴셜 검증 완료** (2026-08-04). 남은 것은 실기기 FCM 토큰 = FE 앱 필요 |
-| 멀티 디바이스 푸시 | `users.fcm_token` 단일 컬럼 → 기기 교체 시 이전 토큰 덮어씀. users 는 공통 소유라 합의 필요 |
-| notification_logs 보존 정책 | 무한 증가. 정리 주기 미정 |
-| ~~틱톡 게시 결과 확인~~ | **완료** (2026-08-04) — 상태 폴링 구현, 미완료는 `pending` 으로 기록 |
+이 시점에 닫히지 않았던 항목(Stripe 상품·가격 생성, 틱톡 받은함, FCM 실기기, 멀티 디바이스 푸시,
+`notification_logs` 보관 정책)은 [backlog.md](./backlog.md) C·B 절로 옮겼다.
+이후 완료된 것 — Sentry 실수집(2026-08-04), 인스타 실업로드(2026-08-04),
+틱톡 게시 결과 폴링(2026-08-04) — 은 아래 각 절에 기록돼 있다.
 ## 실검증 라운드 1 — 미디어/편집 트랙 (Dev A, 2026-08-04) ✅
 
-**목표**: Phase 3~5를 mock/합성 클립이 아닌 **아이폰 실촬영 영상(HEVC/.MOV)** 으로 end-to-end 재검증 (TEAM.md §2 "바로 착수" 항목).
+**목표**: Phase 3~5를 mock/합성 클립이 아닌 **아이폰 실촬영 영상(HEVC/.MOV)** 으로 end-to-end 재검증 (team.md §2 "바로 착수" 항목).
 
 **검증 결과** (아이폰 세로 MOV 3클립, `npm run media:e2e`)
 - 업로드: presigned PUT → `POST /videos` → `ready`, HEVC/quicktime 그대로 통과 ✅
@@ -553,8 +549,8 @@ stripe trigger customer.subscription.created --api-key $STRIPE_SECRET_KEY
 
 **남은 실검증 (A 트랙)**
 - [x] AI 워커 Docker 이미지 빌드 + compose 풀스택에서 편집 1건 → **라운드 2에서 완료**
-- [ ] 배포 인프라 확정(Fly/Render/ECS) 후 deploy.yml 활성화 — B와 합의 필요
-- [ ] HDR(돌비비전)·장시간(수분)·10클립 상한 등 스트레스 케이스
+- 나머지(배포 인프라 확정 후 `deploy.yml` 활성화, HDR·장시간·10클립 스트레스 케이스)는
+  [backlog.md](./backlog.md) B-1·F 로 이관
 
 ---
 
