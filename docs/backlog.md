@@ -251,6 +251,10 @@ cloudflared tunnel login                        # 브라우저 인증, 1회
 그대로 반환한다. 즉 **이 토큰은 조용히 만료되고, 만료 후 업로드는 플랫폼 에러로 실패한다**
 (우리 쪽 "재연동 안내" 경로를 타지 않는다).
 
+**확인 방법**: `sns_connections` 의 `platform` · `token_expires_at` 을 보면 된다.
+(2026-08-11 재판정 시점에는 로컬 인프라가 내려가 있어 DB 실상태를 재확인하지 못했다 —
+`ensureFreshToken()` 의 `null` 취급이 위와 같다는 것만 코드로 확인했다.)
+
 **해결**: 계정이 이제 프로페셔널이므로 **재연동하면** 장기 토큰 교환이 성공해
 `expires_in`(60일)이 채워진다. `GET /sns/instagram/connect` → 승인 한 번.
 
@@ -300,14 +304,24 @@ api 만 스모크하고 워커는 빌드 성공까지만 볼지 판단이 필요
 
 ---
 
-## G. 정리 필요 (일회성 — 지연될수록 위험)
+## G. 정리 필요 (일회성)
+
+> 2026-08-11 재판정. 원래 4건이었으나 실제 상태를 확인해 2건으로 줄였다 —
+> 루트 키 파일은 이미 없고, 틱톡 `client_key` 는 제거하지 않기로 판정했다(아래 "닫은 항목").
 
 - [ ] **Firebase 서비스 계정 키 로테이션** — 대화 로그에 private key 전문이 노출됐다.
-      Firebase Console → 프로젝트 설정 → 서비스 계정 → 키 관리에서 기존 키 삭제 후 재발급.
-      `.env` 의 `FIREBASE_SERVICE_ACCOUNT_KEY`(base64) 만 교체하면 된다.
-- [ ] **레포 루트의 `snaply-66f8c-firebase-adminsdk-*.json` 삭제** —
-      `.gitignore` 로 커밋은 막혀 있고 `.env` 에 base64 로 들어가 있어 원본 파일은 불필요하다.
-- [ ] **테스트 게시물 정리** — 인스타 릴스(API 로는 삭제 불가하므로 앱에서 수동), 틱톡 받은함 초안 3건.
-- [ ] **틱톡 Sandbox client_key** — 커밋 `49d0d1a` 이력에 실제 값이 남아 있다.
-      authorize URL 에 실려 사용자에게도 보이는 준공개 값이라 위험도는 낮지만,
-      완전 제거를 원하면 history rewrite + force push 가 필요하다(양 트랙 영향 있음).
+      서비스 계정 키는 FCM 발송을 포함한 프로젝트 권한이고, 노출된 키는 **회수 외에 무효화 수단이 없다.**
+      Firebase Console → 프로젝트 설정 → 서비스 계정 → 키 관리에서 **새 키를 먼저 발급하고,
+      `.env` 의 `FIREBASE_SERVICE_ACCOUNT_KEY`(base64)를 교체해 발송이 되는 것을 확인한 뒤** 기존 키를 삭제한다.
+- [ ] **테스트 게시물 정리** — 인스타 릴스는 API 로 삭제할 수 없으므로 앱에서 수동으로 지운다.
+      **틱톡 받은함 초안 3건은 지우지 않는다** — C-2("API 는 ok 인데 알림 미도착")의 유일한 증거물이라
+      C-2 가 닫힌 뒤에 정리한다.
+
+### 닫은 항목 (다시 올리지 않기 위한 기록)
+
+- **레포 루트의 `snaply-66f8c-firebase-adminsdk-*.json` 삭제** — 이미 완료. 파일은 없고
+  git 이 추적한 적도, 이력에 들어온 적도 없다(`git log --all -- '*adminsdk*'` 가 비어 있다).
+  `.gitignore` 에 `*firebase-adminsdk*.json` 패턴도 있다. 키 자체의 로테이션은 위 항목으로 남는다.
+- **틱톡 Sandbox `client_key` 이력 노출** — 제거하지 않기로 판정했다. 준공개 식별자이고
+  짝이 되는 secret 은 이력에 없어 위험이 낮은 데 비해 history rewrite 비용이 크다.
+  근거와 판정이 달라지는 조건은 [sns-setup.md](./sns-setup.md) §3.
