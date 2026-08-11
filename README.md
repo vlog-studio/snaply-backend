@@ -1,64 +1,77 @@
 # vlog-studio (Snaply)
 
 20~30대를 위한 숏폼 브이로그 AI 자동 편집 앱 — 백엔드 모노레포.
-전체 개발 가이드는 [SNAPVLOG_BACKEND_GUIDE.md](./SNAPVLOG_BACKEND_GUIDE.md) 참고.
+
+**처음 왔다면 [ONBOARDING.md](ONBOARDING.md)** — clone부터 `GET /health` 200 + Swagger `/docs`까지.
 
 ## 구조
 
 ```
 apps/
-  api/          # Fastify + TypeScript API 서버
-  ai-worker/    # Python BullMQ AI 편집 워커
+  api/          # Fastify + TypeScript API 서버 (:3000)
+  ai-worker/    # Python 워커 — edit-jobs 큐 구독 (HTTP 포트 없음)
 packages/
   shared-types/ # FE와 공유하는 API 요청/응답 타입
 ```
 
-## 시작하기
+인프라: Supabase(DB+Auth) · MinIO(S3 호환, :9100) · Redis(:6379).
+개발/운영 전환은 endpoint/URL만 교체하고 코드 분기는 없다.
+
+## 어디를 봐야 하는가 (원천 문서)
+
+각 항목의 **사실은 아래 한 곳에만 있다.** 다른 문서가 같은 내용을 말하면 그쪽이 낡은 것이다.
+
+| 알고 싶은 것 | 원천 | 비고 |
+|---|---|---|
+| DB 스키마 | `apps/api/prisma/schema.prisma` | 마이그레이션 `prisma/migrations/`, RLS `prisma/rls-policies.sql` |
+| API 계약 | `/docs` (Swagger, 코드에서 생성) | [docs/api-spec.md](docs/api-spec.md)는 FE 전달용 요약 + WebSocket — **라우트를 바꾸면 같이 갱신** |
+| 로컬 셋업·명령·트러블슈팅 | [ONBOARDING.md](ONBOARDING.md) | |
+| 환경변수 | `.env.example` | |
+| 커밋·PR·코드 규칙 | [AGENTS.md](AGENTS.md) | 상세: [docs/commit-guidelines.md](docs/commit-guidelines.md) · [docs/pull-request-guidelines.md](docs/pull-request-guidelines.md) |
+| 미결 작업·막힌 이유 | [docs/backlog.md](docs/backlog.md) | 미결 항목은 여기에만 둔다 |
+| 완료된 구현·검증 내역 | [docs/progress.md](docs/progress.md) | 완료된 것만 |
+| 작업 분담·공유 파일 규칙 | [docs/team.md](docs/team.md) | |
+| 확정된 정책·설계 결정 | [docs/decisions/](docs/decisions/) | 배경·논점·기각한 대안 포함 |
+| 착수 전 구현 계획 | [docs/plans/](docs/plans/) | |
+| 외부 연동 셋업 절차 | [docs/sns-setup.md](docs/sns-setup.md) | 인스타·틱톡 앱 등록 |
+| 회의 안건·결과 | [docs/meetings/](docs/meetings/) | |
+| 지난 기록 | [docs/archive/](docs/archive/) | **현행 사실과 다를 수 있음 — 판단 근거로 쓰지 말 것** |
+
+문서를 새로 만들거나 옮길 때의 위치·이름 규칙은 [AGENTS.md](AGENTS.md) §문서 컨벤션에 있다.
+요약: `docs/` 직하는 계속 갱신되는 문서, 한 시점에 굳는 문서는 `decisions/`·`plans/`·`meetings/`,
+수명이 끝나면 `archive/`. 파일명은 kebab-case 소문자(루트 진입점 4개와 `README.md`만 예외).
+
+### 결정 문서
+
+| 문서 | 내용 |
+|---|---|
+| [decisions/snap-source-of-truth.md](docs/decisions/snap-source-of-truth.md) | 스냅 원천을 서버로 전환 + 스토리지 용량 정책(Free 5GB) — 결정, 미구현 |
+| [decisions/plan-limits.md](docs/decisions/plan-limits.md) | 기능적 제한 vs 플랜 제한의 현황과 재도입 논점 |
+| [decisions/video-grouping-proposals.md](docs/decisions/video-grouping-proposals.md) | 영상 묶음(프로젝트) 구조 3안 비교 — 미결정 |
+
+## 빠른 시작
+
+전체 절차와 환경변수는 [ONBOARDING.md](ONBOARDING.md)에 있다. 요약:
 
 ```bash
-# 1. 의존성 설치
 npm install
-
-# 2. 환경 변수 설정 — .env는 apps/api/ 아래에 둡니다 (Prisma CLI와 서버가 여기서 읽음)
-cp .env.example apps/api/.env   # 값 채우기 (Supabase Dashboard → Settings → Database)
-
-# 3. Prisma 클라이언트 생성
-npm run prisma:generate -w apps/api
-
-# 4. DB 마이그레이션 적용 (Supabase 연결 후)
-npm run prisma:migrate -w apps/api
-
-# 5. RLS 정책 적용
-#    apps/api/prisma/rls-policies.sql 내용을 Supabase SQL Editor에서 실행
-
-# 6. 개발 서버 실행
-npm run dev -w apps/api
-curl http://localhost:3000/health
+cp .env.example apps/api/.env   # .env는 apps/api/ 아래 — Prisma CLI와 서버가 여기서 읽는다
+npm run infra:up                # MinIO(:9100/:9101) + Redis(:6379) + 로컬 Postgres
+npm run db:generate && npm run db:migrate && npm run db:seed
+npm run dev:api                 # http://localhost:3000 · /docs
 ```
 
-### AI 워커 (Python 3.11)
-
-```bash
-cd apps/ai-worker
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-python src/worker.py
-```
-
-워커는 `edit-jobs` Redis 큐를 구독하는 백그라운드 프로세스입니다. 별도의 HTTP 포트를 열지 않습니다.
+RLS 정책은 최초 1회 `apps/api/prisma/rls-policies.sql`을 Supabase SQL Editor에서 실행한다.
+AI 워커(미디어 트랙)는 `npm run worker:install` 후 `npm run worker`.
 
 ## 스크립트 (루트)
 
 | 명령 | 설명 |
-|------|------|
-| `npm run build` | 전체 빌드 (turbo) |
-| `npm run dev` | 개발 서버 |
-| `npm run typecheck` | 타입 체크 |
-| `npm run lint` | ESLint |
-
-## DB 스키마 관리
-
-- 스키마 원본: `apps/api/prisma/schema.prisma`
-- 마이그레이션: `apps/api/prisma/migrations/` — `prisma migrate deploy`로 적용
-- RLS 정책: `apps/api/prisma/rls-policies.sql` — Supabase SQL Editor에서 직접 적용
-- Prisma schema와 Supabase SQL은 항상 동기화 상태 유지할 것
+|---|---|
+| `npm run infra:up` / `infra:down` / `infra:logs` | 개발 인프라 |
+| `npm run dev:api` | API 서버(watch) |
+| `npm run worker` / `worker:install` | AI 워커 |
+| `npm run build` / `typecheck` / `lint` | 전체 빌드·검사 |
+| `npm run db:generate` / `db:migrate` / `db:seed` / `db:studio` | Prisma |
+| `npm test -w apps/api` | 통합 테스트 — **반드시 `-w apps/api`로 실행** ([이유](AGENTS.md)) |
+| `npm run media:e2e` / `media:cleanup` | 업로드→편집→결과 e2e / 테스트 데이터 정리 |

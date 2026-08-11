@@ -15,7 +15,7 @@
 
 ## 2. 제목
 
-제목은 [`COMMIT_GUIDELINES.md`](COMMIT_GUIDELINES.md)의 Conventional Commits 형식을
+제목은 [`commit-guidelines.md`](commit-guidelines.md)의 Conventional Commits 형식을
 사용하고 PR 전체의 대표 변경을 설명한다.
 
 ```text

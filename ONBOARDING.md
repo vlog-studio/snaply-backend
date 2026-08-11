@@ -1,7 +1,11 @@
 # Snaply 백엔드 온보딩
 
 새 개발자가 clone부터 `GET /health` 200 + Swagger `/docs`까지 도달하기 위한 가이드.
-작업 분담은 [docs/TEAM.md](./docs/TEAM.md), 진행 기록은 [docs/PROGRESS.md](./docs/PROGRESS.md), API 명세는 [docs/api-spec.md](./docs/api-spec.md).
+**로컬 셋업·명령·트러블슈팅의 원천 문서다** — 다른 문서가 셋업 절차를 말하면 그쪽이 낡은 것이다.
+
+문서 지도는 [README.md](./README.md), 작업 분담은 [docs/team.md](./docs/team.md),
+미결 작업은 [docs/backlog.md](./docs/backlog.md), 진행 기록은 [docs/progress.md](./docs/progress.md),
+API 명세는 [docs/api-spec.md](./docs/api-spec.md).
 
 ---
 
@@ -149,6 +153,9 @@ curl -H "Authorization: Bearer <출력된 토큰>" http://localhost:3000/auth/me
 
 ## 6. 다음 단계
 
-- 담당 트랙과 규칙: [docs/TEAM.md](./docs/TEAM.md)
-- 기능별 구현·검증 내역: [docs/PROGRESS.md](./docs/PROGRESS.md)
+- 담당 트랙과 공유 파일 규칙: [docs/team.md](./docs/team.md)
+- 커밋·PR·코드 규칙: [AGENTS.md](./AGENTS.md)
+- 지금 막혀 있는 것: [docs/backlog.md](./docs/backlog.md)
+- 기능별 구현·검증 내역: [docs/progress.md](./docs/progress.md)
 - API 레퍼런스: `/docs`(Swagger) + [docs/api-spec.md](./docs/api-spec.md)
+- 확정된 정책·설계 결정: [docs/decisions/](./docs/decisions/)

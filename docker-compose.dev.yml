@@ -8,7 +8,7 @@
 name: snaply-dev
 
 services:
-  # 로컬 Postgres (TEAM.md §4 옵션 A) — 마이그레이션을 각자 로컬에서 자유롭게 돌리기 위함.
+  # 로컬 Postgres (team.md §4 옵션 A) — 마이그레이션을 각자 로컬에서 자유롭게 돌리기 위함.
   # 공유 Supabase로 전환하려면 .env 의 DATABASE_URL/DIRECT_URL 만 교체하면 된다.
   postgres:
     image: postgres:16-alpine
