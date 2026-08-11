@@ -2,7 +2,9 @@
 
 **작성일**: 2026-08-11
 **상태**: 결정 (구현 완료)
+**범위**: 환경변수 파일의 위치, 운영 주입 방식, 변수 목록의 관리 원칙을 기록한다.
 **원천**: 환경변수의 위치·주입 경로·목록 관리 방식은 이 문서가 원천이다.
+**후속 작업의 원천**: [backlog.md](../backlog.md) B-1(배포 플랫폼·시크릿 연결)
 변수 하나하나의 목록은 [`apps/api/src/env-spec.ts`](../../apps/api/src/env-spec.ts),
 사람이 복사해 쓰는 표현은 [`.env.example`](../../.env.example).
 
@@ -154,4 +156,4 @@ compose 가 읽으면 `LEGAL_CONTACT_EMAIL`·`SITE_VERIFICATION_META`·`STRIPE_P
 ## 후속 연계
 
 이 결정은 배포 플랫폼을 고르지 않는다. Fly / Render / ECS 어느 쪽이든 위 구조는 유지하며,
-플랫폼 선택과 시크릿·Deploy 스텝 연결의 미결 상태는 [backlog.md](../backlog.md) B-1에서만 관리한다.
+플랫폼 선택과 시크릿·Deploy 스텝 연결 작업은 [backlog.md](../backlog.md) B-1에서만 관리한다.
