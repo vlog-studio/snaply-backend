@@ -90,7 +90,9 @@ function loadStorageConfig(): StorageConfig {
   const endpoint = process.env.S3_ENDPOINT?.replace(/\/$/, '') || undefined;
   const publicEndpoint = process.env.S3_PUBLIC_ENDPOINT?.replace(/\/$/, '') || undefined;
   const bucket = requireEnv('S3_BUCKET_NAME');
-  const cloudfront = process.env.CLOUDFRONT_DOMAIN?.replace(/\/$/, '');
+  // `|| undefined` — 빈 문자열도 "미설정"으로 본다. compose가 CLOUDFRONT_DOMAIN=""을 주입하는데
+  // `??`로 두면 빈 문자열이 그대로 통과해 publicBaseUrl이 ''이 된다.
+  const cloudfront = process.env.CLOUDFRONT_DOMAIN?.replace(/\/$/, '') || undefined;
 
   // 공개 URL: CloudFront가 있으면 우선(운영), 없으면 MinIO 등 endpoint의 path-style URL(개발)
   const publicBaseUrl =
