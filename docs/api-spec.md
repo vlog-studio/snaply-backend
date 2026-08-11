@@ -1,5 +1,9 @@
 # Snaply API 명세 (FE 전달용)
 
+> 이 문서는 **FE 전달용 요약 + WebSocket 계약**이다. 스키마의 원천은 코드에서 생성되는
+> Swagger(`/docs`)이므로, 라우트나 요청/응답을 바꾸면 **같은 커밋에서 이 문서도 갱신한다.**
+> 제한·플랜 정책의 원천은 [decisions/plan-limits.md](./decisions/plan-limits.md).
+
 > **인터랙티브 문서(Swagger UI)**: 개발 서버 실행 후 **`http://localhost:3000/docs`** 에서 직접 호출·테스트할 수 있습니다. OpenAPI 스펙 JSON은 `http://localhost:3000/docs/json` (Postman/코드 생성용). 운영에서는 비활성(필요 시 `ENABLE_DOCS=true`). WebSocket은 OpenAPI로 표현되지 않아 아래 문서를 참고하세요.
 
 - **Base URL**: `{API_BASE_URL}` (개발: `http://localhost:3000`)
@@ -82,7 +86,7 @@ Query: `kind`(`source | result`, 선택), `cursor`(선택), `limit`(기본 20, �
 
 `outputProfile` 기본값은 `short_vertical`(1080×1920), `fitMode` 기본값은 `blur_background`입니다. 작업 상태 응답에는 재현 가능한 `pipelineVersion`, `editSpec`, `renderSpec` 스냅샷이 포함됩니다.
 - 소유·`source`·`ready` 상태 영상만 허용(아니면 403).
-- 플랜별 편집 횟수 제한(Free 월 3편)은 **기획 확정 시까지 미적용** — [plan-limits.md](./plan-limits.md) 참고.
+- 플랜별 편집 횟수 제한(Free 월 3편)은 **기획 확정 시까지 미적용** — [decisions/plan-limits.md](./decisions/plan-limits.md) 참고.
 
 ### GET /edit-jobs/:id  🔒
 ```json

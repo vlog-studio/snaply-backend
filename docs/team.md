@@ -83,21 +83,7 @@ DB가 하나라 두 명이 각자 `prisma migrate dev`를 돌리면 히스토리
 
 ---
 
-## 6. 로컬 실행 체크리스트 (각자)
+## 6. 로컬 실행
 
-```bash
-# 1. 인프라
-docker start snaply-minio-dev snaply-redis-dev   # 최초엔 ONBOARDING.md의 run 명령
-
-# 2. API 서버
-npm run dev -w apps/api            # http://localhost:3000, 문서 /docs
-
-# 3. AI 워커 (Dev A 주로)
-cd apps/ai-worker && .venv/bin/python src/worker.py
-
-# 4. 마이그레이션 / 시드 (필요 시)
-npm run prisma:migrate -w apps/api
-npm run seed:locations -w apps/api
-```
-
-세부 설치·환경변수는 `ONBOARDING.md` 참고.
+셋업·명령·트러블슈팅은 [ONBOARDING.md](../ONBOARDING.md)가 원천이다 —
+이 문서는 명령을 중복해 적지 않는다(루트 스크립트가 바뀔 때마다 어긋났다).
