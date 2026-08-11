@@ -306,22 +306,21 @@ api 만 스모크하고 워커는 빌드 성공까지만 볼지 판단이 필요
 
 ## G. 정리 필요 (일회성)
 
-> 2026-08-11 재판정. 원래 4건이었으나 실제 상태를 확인해 2건으로 줄였다 —
-> 루트 키 파일은 이미 없고, 틱톡 `client_key` 는 제거하지 않기로 판정했다(아래 "닫은 항목").
+> 2026-08-11 재판정. 원래 4건이었으나 실제 상태를 확인해 1건으로 줄였다 —
+> Firebase 키는 로테이션 완료, 루트 키 파일은 이미 없고,
+> 틱톡 `client_key` 는 제거하지 않기로 판정했다(아래 "닫은 항목").
 
-- [ ] **Firebase 서비스 계정 키 로테이션** — 대화 로그에 private key 전문이 노출됐다.
-      서비스 계정 키는 FCM 발송을 포함한 프로젝트 권한이고, 노출된 키는 **회수 외에 무효화 수단이 없다.**
-      Firebase Console → 프로젝트 설정 → 서비스 계정 → 키 관리에서 **새 키를 먼저 발급하고,
-      `.env` 의 `FIREBASE_SERVICE_ACCOUNT_KEY`(base64)를 교체해 발송이 되는 것을 확인한 뒤** 기존 키를 삭제한다.
 - [ ] **테스트 게시물 정리** — 인스타 릴스는 API 로 삭제할 수 없으므로 앱에서 수동으로 지운다.
       **틱톡 받은함 초안 3건은 지우지 않는다** — C-2("API 는 ok 인데 알림 미도착")의 유일한 증거물이라
       C-2 가 닫힌 뒤에 정리한다.
 
 ### 닫은 항목 (다시 올리지 않기 위한 기록)
 
-- **레포 루트의 `snaply-66f8c-firebase-adminsdk-*.json` 삭제** — 이미 완료. 파일은 없고
-  git 이 추적한 적도, 이력에 들어온 적도 없다(`git log --all -- '*adminsdk*'` 가 비어 있다).
-  `.gitignore` 에 `*firebase-adminsdk*.json` 패턴도 있다. 키 자체의 로테이션은 위 항목으로 남는다.
+- **Firebase 서비스 계정 키** — 2026-08-11 로테이션 완료(새 키 발급 → `.env` 교체 → 기존 키 삭제).
+  키가 저장소에 들어온 적은 없다 — 이력 전체를 훑어도 private key 재료가 걸리는 곳은
+  [apps/api/test/fcm.test.ts](../apps/api/test/fcm.test.ts) 의 `fake` 픽스처뿐이고, `.env` 는 추적된 적이 없다.
+  레포 루트의 `snaply-66f8c-firebase-adminsdk-*.json` 도 이미 없으며 `.gitignore` 에
+  `*firebase-adminsdk*.json` 패턴이 있다.
 - **틱톡 Sandbox `client_key` 이력 노출** — 제거하지 않기로 판정했다. 준공개 식별자이고
   짝이 되는 secret 은 이력에 없어 위험이 낮은 데 비해 history rewrite 비용이 크다.
   근거와 판정이 달라지는 조건은 [sns-setup.md](./sns-setup.md) §3.
