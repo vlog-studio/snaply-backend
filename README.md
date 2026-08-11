@@ -26,7 +26,8 @@ packages/
 | DB 스키마 | `apps/api/prisma/schema.prisma` | 마이그레이션 `prisma/migrations/`, RLS `prisma/rls-policies.sql` |
 | API 계약 | `/docs` (Swagger, 코드에서 생성) | [docs/api-spec.md](docs/api-spec.md)는 FE 전달용 요약 + WebSocket — **라우트를 바꾸면 같이 갱신** |
 | 로컬 셋업·명령·트러블슈팅 | [ONBOARDING.md](ONBOARDING.md) | |
-| 환경변수 | `.env.example` | |
+| 환경변수 — 변수 목록 | `apps/api/src/env-spec.ts` | `.env.example`은 이 목록의 복사용 표현. 어긋나면 테스트가 실패 |
+| 환경변수 — 배치·주입 방식 | [docs/decisions/env-management.md](docs/decisions/env-management.md) | 로컬은 `apps/api/.env` 파일 하나, 운영은 주입 |
 | 커밋·PR·코드 규칙 | [AGENTS.md](AGENTS.md) | 상세: [docs/commit-guidelines.md](docs/commit-guidelines.md) · [docs/pull-request-guidelines.md](docs/pull-request-guidelines.md) |
 | 미결 작업·막힌 이유 | [docs/backlog.md](docs/backlog.md) | 미결 항목은 여기에만 둔다 |
 | 완료된 구현·검증 내역 | [docs/progress.md](docs/progress.md) | 완료된 것만 |
@@ -46,6 +47,7 @@ packages/
 | 문서 | 내용 |
 |---|---|
 | [decisions/snap-source-of-truth.md](docs/decisions/snap-source-of-truth.md) | 스냅 원천을 서버로 전환 + 스토리지 용량 정책(Free 5GB) — 결정, 미구현 |
+| [decisions/env-management.md](docs/decisions/env-management.md) | 환경변수 — 파일은 로컬만, 운영은 주입. 목록의 단일 원천 |
 | [decisions/plan-limits.md](docs/decisions/plan-limits.md) | 기능적 제한 vs 플랜 제한의 현황과 재도입 논점 |
 | [decisions/video-grouping-proposals.md](docs/decisions/video-grouping-proposals.md) | 영상 묶음(프로젝트) 구조 3안 비교 — 미결정 |
 
@@ -55,7 +57,7 @@ packages/
 
 ```bash
 npm install
-cp .env.example apps/api/.env   # .env는 apps/api/ 아래 — Prisma CLI와 서버가 여기서 읽는다
+cp .env.example apps/api/.env   # .env는 저장소에 이 하나뿐 — 루트에 두지 않는다
 npm run infra:up                # MinIO(:9100/:9101) + Redis(:6379) + 로컬 Postgres
 npm run db:generate && npm run db:migrate && npm run db:seed
 npm run dev:api                 # http://localhost:3000 · /docs
@@ -69,6 +71,7 @@ AI 워커(미디어 트랙)는 `npm run worker:install` 후 `npm run worker`.
 | 명령 | 설명 |
 |---|---|
 | `npm run infra:up` / `infra:down` / `infra:logs` | 개발 인프라 |
+| `npm run stack:up` / `stack:migrate` / `stack:down` | 컨테이너로 테스트 서버 잠깐 띄우기 (기본 mock) |
 | `npm run dev:api` | API 서버(watch) |
 | `npm run worker` / `worker:install` | AI 워커 |
 | `npm run build` / `typecheck` / `lint` | 전체 빌드·검사 |

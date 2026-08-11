@@ -581,3 +581,61 @@ stripe trigger customer.subscription.created --api-key $STRIPE_SECRET_KEY
 - 이미지에 fontconfig/한글 폰트 없음 — 자막 burn-in 도입 시 Noto Sans KR 등 추가 필요
 - 컨테이너 안 `editedUrl`은 `http://minio:9000/...`(네트워크 내부 주소). 운영은 CloudFront라
   무관하지만, compose를 FE 대상 데모로 쓰려면 S3_ENDPOINT/publicBaseUrl 조정 필요
+
+---
+
+## 환경변수 관리 정리 (2026-08-11)
+
+**배경**: `.env` 가 세 곳(루트 · `apps/api` · `apps/ai-worker`)으로 갈라져 있었다. 루트 사본은
+어느 문서에도 없었지만 `docker compose` 의 `${VAR}` 보간을 떠받치고 있었고, `apps/api/.env` 와
+바이트 단위로 동일했다. 결정과 기각한 대안은 [decisions/env-management.md](./decisions/env-management.md).
+
+**구현**
+- `.env` 를 `apps/api/.env` 하나로 통일. compose 는 그 파일을 `env_file` 로 읽고 인프라 주소만
+  `environment` 로 덮는다(compose 규격상 `environment` 가 우선).
+- 컨테이너 테스트 서버를 1급 시나리오로 지원 — `npm run stack:up` / `stack:migrate` / `stack:down`.
+  외부 연동은 기본 mock(`SNS_MOCK`/`STRIPE_MOCK`), `CLOUDFRONT_DOMAIN=""` 로 미디어 URL 을
+  스택 MinIO 로 고정.
+- 워커가 `apps/ai-worker/.env` → 없으면 `apps/api/.env` 순으로 찾는다. `cp` 지시 삭제.
+- 변수 목록의 단일 원천 `apps/api/src/env-spec.ts` 신설. `requireEnv` 의 인자 타입이 스펙에서
+  파생돼(`RequiredEnvKey`) 강제 목록과 스펙이 어긋나면 타입체크에서 걸린다.
+- `test/env-spec.test.ts` 가 스펙 ↔ `.env.example` ↔ 실제 코드 사용처를 대조한다.
+
+**발견·수정한 것**
+1. `CLOUDFRONT_DOMAIN` 이 빈 문자열이면 `publicBaseUrl` 이 `''` 가 됐다 — `config.ts` 가 `??` 를
+   써서 빈 문자열이 통과했다. compose 가 `${CLOUDFRONT_DOMAIN:-}` 로 정확히 빈 문자열을 주입하고
+   있었으므로, 루트 `.env` 에 실제 값이 있어서 가려져 있던 버그다. `|| undefined` 로 수정.
+2. **Swagger·개발 로그인 판정을 `NODE_ENV !== 'production'` → `=== 'development'` 로 반전.**
+   운영은 주입 모델이라 `NODE_ENV` 를 빠뜨려도 배포가 성공한다. 기존 조건이면 그 사고가
+   "개발 로그인이 열린 채 운영 기동"으로 끝났다.
+3. **파서 3종의 인라인 주석 처리가 달랐다.** `KEY=   # 설명` 을 Node 는 빈 값으로, compose 와
+   워커 자체 파서는 **주석 문자열을 값으로** 읽는다. `.env.example` 이 이 형식이었으므로
+   컨테이너에서만 `LEGAL_CONTACT_EMAIL` 등에 주석이 들어갔다. `.env.example` 의 설명을 줄 위로
+   옮기고, 워커 파서를 Node 규칙에 맞췄다(`_parse_value` + `tests/test_config.py`).
+4. `.env.example` 의 `S3_ENDPOINT` 예시가 `localhost:9000` 이었다 — snaply 는 9100 을 쓴다.
+5. 코드가 읽지만 `.env.example` 에 없던 변수 12개를 채웠다(`NODE_ENV`, `API_HOST`, `ENABLE_DOCS`,
+   `LOG_LEVEL`, `EDIT_QUEUE_NAME`, `SUPABASE_JWT_AUDIENCE`, `SENTRY_DEBUG`, `WHISPER_MODEL`,
+   `EDIT_TIMEOUT_SECONDS`, `BGM_DIR`, `TEST_EMAIL`, `TEST_PASSWORD`).
+
+**검증**
+- `npm run typecheck` / `npm run lint` 통과
+- `npm test -w apps/api` — 12 파일 154 테스트 통과 (env-spec 6개 신규)
+- 워커 `python -m unittest tests.test_config` — 5개 통과
+- `docker compose --env-file /dev/null config` 로 **루트 `.env` 가 없는 상태**를 렌더해,
+  `env_file` 이 Supabase 자격증명을 공급하고 `environment` 가 인프라 주소를 덮는 것을 확인
+- 드리프트 감지 확인 — `.env.example` 에 미선언 키와 `KEY=   #` 형식을 넣으면 테스트가 실패한다
+
+**컨테이너 실기동 검증** (루트 `.env` 를 지운 상태에서 `docker compose up --build -d api`)
+- `/health` 200, `db: connected` ✅ / `stack:migrate` 로 마이그레이션 전량 적용 ✅
+- **`/health` 만 보지 않았다.** 컨테이너 안에서 JWKS(`$SUPABASE_URL/auth/v1/.well-known/jwks.json`)를
+  직접 호출해 **200 + 키 1개** 확인 — `env_file` 이 `SUPABASE_URL` 을 제대로 공급했고 인증 경로가
+  살아 있다는 뜻이다. 잘못된 토큰으로 `/auth/me` → `UNAUTHORIZED`(토큰 검증 실패), 토큰 없이 →
+  `UNAUTHORIZED`(토큰 없음)로 분기도 정상 ✅
+- `NODE_ENV=development` 가 주입돼 `/docs` 200, `securitySchemes` 에 `devLogin` 등록 확인 ✅
+- 컨테이너 안 `SNS_MOCK=true` / `STRIPE_MOCK=true` / `CLOUDFRONT_DOMAIN=""` 확인 ✅
+- 주석 유입 회귀 확인 — `LEGAL_CONTACT_EMAIL`·`SITE_VERIFICATION_META`·`STRIPE_PRICE_*` 가 모두
+  빈 값이고, `/legal/terms` 의 `<head>` 에 검증 메타 태그가 들어가지 않는다 ✅
+
+**남은 것**: 배포 플랫폼(B-1) 확정 후 `origin !== 'local'` 목록을 시크릿에 넣고 `deploy.yml` 의
+Deploy 스텝 연결. 실제 Supabase JWT 로 인증된 요청을 컨테이너에서 통과시키는 것(자격증명 필요)은
+미실시 — JWKS 도달까지만 확인했다.
