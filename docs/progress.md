@@ -93,6 +93,9 @@
 
 ## Phase 4 — AI 편집 큐 시스템 ✅
 
+> 아래 월 3편 제한은 당시 구현·검증 기록이다. 2026-08-05 로직에서 제거됐으며,
+> 현재 정책은 [decisions/plan-limits.md](./decisions/plan-limits.md)를 따른다.
+
 **목표**: 편집 요청을 큐에 넣고 Python 워커가 처리하는 비동기 파이프라인.
 
 **완료 조건 검증** (워커 실제 구동, 통합 테스트 11/11)
@@ -185,6 +188,9 @@
 ## Phase 8 — 결제 시스템 ✅
 
 **목표**: Stripe 구독 결제 완성 및 플랜별 기능 제한 적용.
+
+> 아래 월 3편 연동은 당시 구현·검증 기록이다. 2026-08-05 제거됐고 현재는 집행하지 않는다.
+> 크레딧 기반 재설계 상태는 [decisions/plan-limits.md](./decisions/plan-limits.md)를 따른다.
 
 **완료 조건 검증** (mock 모드 통합 테스트 13/13)
 - 결제 완료(webhook created) → `subscriptions.plan='standard'` ✅

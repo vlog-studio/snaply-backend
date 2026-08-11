@@ -15,6 +15,7 @@
 |---|---|
 | 원천 모델 | **서버가 원천, 디바이스 로컬은 캐시** (현행: 로컬 원천 + 파일만 백그라운드 업로드) |
 | 업로드 원칙 | 촬영/추출 즉시 자동 업로드 (현행 유지) + **메타데이터 동봉** (신규) |
+| 촬영 시각 | **`capturedAt` 수집** — 위치 정보와 분리해 결정 완료 |
 | 멱등성 | 클라이언트 생성 UUID(`clientId`)를 `(userId, clientId)` unique로 집행 |
 | 삭제 | soft delete + **유예 기간 후 실삭제** (현행 즉시 실삭제에서 변경) |
 | 크로스 플랫폼 재생 | ingest에서 H.264/SDR 배포 렌디션 생성, **원본은 무변형 보존** |
@@ -104,7 +105,7 @@ model Video {
   clientId            String?   @map("client_id") @db.VarChar(64)   // 클라이언트 생성 멱등키
   capturedAt          DateTime? @map("captured_at") @db.Timestamptz(6) // 앱 시계 기준(파일 메타데이터 아님)
   capturedTzOffsetMin Int?      @map("captured_tz_offset_min")      // 로컬 시간 의미 복원용 (KST=540)
-  durationMs          Int?      @map("duration_ms")                 // 3~5초 클립이라 초 단위는 부족
+  durationMs          Int?      @map("duration_ms")                 // 최초엔 클라이언트 값, FFprobe 후 서버 측 실측값으로 교정
   width               Int?                                          // 표시 기준(회전 적용 후)
   height              Int?
   orientation         String?   @db.VarChar(20)                     // portrait|landscape|square
@@ -120,7 +121,9 @@ model Video {
 
 - `@@unique([userId, clientId])`: Postgres에서 NULL은 충돌하지 않으므로 기존 행·result 행과 공존.
 - `orientation`/`snapSource`는 이 스키마의 `status` 관례에 맞춰 varchar (enum 아님).
-- `durationSeconds`는 하위호환용 유지, `durationMs`에서 파생 저장.
+- `durationMs`는 업로드 등록 시 클라이언트 값을 초기값으로 받되, 최초 서버 측 미디어 처리
+  (영상 분석 또는 ingest)에서 FFprobe 실측값으로 교정한다. 교정 후 `durationMs`가 길이의
+  서버 원천이며, `durationSeconds`는 하위호환용으로 이 값에서 파생 저장한다.
 - `sizeBytes`: `confirmUpload`의 기존 HEAD 검사 결과를 저장만 하면 됨. §6 쿼터 집행의 근거.
 - **위치(`place`)는 제외** — 앱의 명시적 프라이버시 설계("서버로 안 나감")를 뒤집는 제품
   결정 선행 필요. 결정 시 `capturedLat/Lng` 컬럼 추가.
@@ -131,9 +134,11 @@ API 계약:
   `{ videoId, alreadyUploaded: true }` 반환(PUT 생략), `pending`이면 **행 재사용 + URL
   재발급**(재시도마다 쌓이던 pending 고아 억제), 없으면 생성.
 - `POST /videos` 바디 확장(전부 optional — 구버전 앱 호환): `clientId`, `durationMs`,
-  `capturedAt`, `capturedTzOffsetMin`, `width`, `height`, `orientation`, `source`,
+  `capturedAt`, `capturedTzOffsetMin`, `width`, `height`, `orientation`, `snapSource`,
   `platform`, `captureMeta`(8KB 상한). 이미 `ready`면 400이 아니라 200 + 기존 행(멱등).
-- 검증하되 신뢰: 범위 체크만. 파일 대조 검증(ffprobe)은 렌디션 파이프라인(2단계)에서.
+- 등록 시 클라이언트 메타데이터는 범위 체크 후 초기값으로 신뢰한다. 파일에서 확인 가능한
+  길이는 최초 서버 측 미디어 처리에서 FFprobe로 교정하고, 나머지 파일 대조 검증은 ingest
+  렌디션 파이프라인(2단계)에서 수행한다.
 
 앱 대응: `snap.id`를 UUID로 전환(현행 파일명 기반은 기기 간 충돌 가능), register 페이로드
 확장, **촬영 스냅 해상도 하드코딩(1080×1920) 해소가 선행 과제로 승격**(틀린 값이 서버
@@ -144,9 +149,9 @@ API 계약:
 | 단계 | 내용 | 비고 |
 |---|---|---|
 | **1. 스키마+업로드** | §4 마이그레이션(순수 additive), upload-url/confirm 확장, 앱 메타데이터 전송, **쿼터 집행(§6)** | 기존 업로드분은 메타데이터 백필 불가 — `capturedAt IS NULL`이면 `createdAt` 폴백 |
-| **2. ingest 렌디션** | confirm 후 워커가 H.264/SDR 배포본 + 썸네일 생성(원본 보존), `Video`에 렌디션 키 컬럼 추가 | 크로스 플랫폼 재생의 전제 — reconcile보다 먼저 |
+| **2. ingest 렌디션** | confirm 후 워커가 FFprobe로 `durationMs`를 교정하고 H.264/SDR 배포본 + 썸네일 생성(원본 보존), `Video`에 렌디션 키 컬럼 추가 | 분석 워커가 먼저 실측했다면 같은 값을 재사용. 크로스 플랫폼 재생의 전제 — reconcile보다 먼저 |
 | **3. 복구/동기화** | 앱 reconcile(서버 목록 대조, 파일 온디맨드), 삭제 유예·전파 규칙 | Google Photos 모델 |
-| **4. 무비 동기화** | `Movie` 엔티티 + CRUD, 앱 `snaply.movies` 전환 | 앱 문서가 `PATCH /movies/:id`를 예정 계약으로 언급 |
+| **4. 무비 동기화** | 평면 `Video`를 참조하는 `Movie` 엔티티 + CRUD, 앱 `snaply.movies` 전환 | 엔티티는 `Movie`로 결정. 재내보내기·삭제 연동 등 세부 정책은 [backlog.md](../backlog.md) A-1 |
 | **병행** | GC 배치: ① pending TTL(예: 24h) 회수 ② 삭제 유예 만료분 S3 실삭제 ③ S3 삭제 실패분 정리(`video.service.ts:205` 주석의 미구현 배치) | finalize 안전망(S3 이벤트)은 선택적 후속 |
 
 ## 6. 스토리지 용량 정책

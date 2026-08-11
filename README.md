@@ -49,7 +49,7 @@ packages/
 | [decisions/snap-source-of-truth.md](docs/decisions/snap-source-of-truth.md) | 스냅 원천을 서버로 전환 + 스토리지 용량 정책(Free 5GB) — 결정, 미구현 |
 | [decisions/env-management.md](docs/decisions/env-management.md) | 환경변수 — 파일은 로컬만, 운영은 주입. 목록의 단일 원천 |
 | [decisions/plan-limits.md](docs/decisions/plan-limits.md) | 기능적 제한 vs 플랜 제한의 현황과 재도입 논점 |
-| [decisions/video-grouping-proposals.md](docs/decisions/video-grouping-proposals.md) | 영상 묶음(프로젝트) 구조 3안 비교 — 미결정 |
+| [decisions/video-grouping-proposals.md](docs/decisions/video-grouping-proposals.md) | 영상 묶음 구조 3안 비교 — `Movie` 엔티티 채택, 세부 정책 미결 |
 
 ## 빠른 시작
 

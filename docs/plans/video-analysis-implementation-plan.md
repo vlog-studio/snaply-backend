@@ -149,7 +149,7 @@ model VideoAnalysis {
   analysisVersion    Int       @default(1) @map("analysis_version")
   status             String    @default("queued") @db.VarChar(20)
 
-  durationMs         Int?      @map("duration_ms")
+  durationMs         Int?      @map("duration_ms") // 이 분석에 사용한 FFprobe 실측값 스냅샷
   frameTimestampsMs  Int[]     @default([]) @map("frame_timestamps_ms")
 
   summary            String?
@@ -190,6 +190,11 @@ model VideoAnalysis {
 ```
 
 `analysisVersion`은 모델이나 프롬프트 변경 시 기존 결과를 덮어쓰지 않고 비교하기 위한 값이다.
+
+영상 길이의 원천은 `Video.durationMs`다. 업로드 등록에서는 클라이언트 값을 초기값으로 받고,
+분석 worker가 FFprobe를 처음 수행하면 `Video.durationMs`와 하위호환용 `durationSeconds`를
+실측값으로 교정한다. `VideoAnalysis.durationMs`는 해당 분석 버전이 사용한 실측값의 스냅샷이며
+별도의 원천이 아니다. ingest worker가 먼저 실측한 경우에는 이미 교정된 값을 재사용한다.
 
 - 동일 버전 재시도: 기존 레코드의 `attempts` 증가
 - 새 모델·프롬프트 재분석: 새 `analysisVersion` 생성
@@ -254,7 +259,8 @@ timestamps = [
 
 추출 규칙은 다음과 같다.
 
-- 클라이언트가 전달한 `durationSeconds` 대신 FFprobe 결과를 기준으로 사용한다.
+- 프레임 추출은 클라이언트가 전달한 초기 길이가 아니라 FFprobe 결과를 기준으로 사용한다.
+  같은 실측값으로 `Video.durationMs`와 `durationSeconds`도 교정한다.
 - 촬영 시작·종료 흔들림을 피하도록 첫 프레임과 마지막 프레임은 사용하지 않는다.
 - 4장을 하나의 FFmpeg 작업으로 추출한다.
 - JPEG로 변환하고 최대 해상도를 제한한다.
@@ -325,12 +331,12 @@ worker의 한 작업은 다음 순서로 수행한다.
 1. 분석 레코드와 source 영상의 소유권·삭제 상태 확인
 2. 분석 상태를 `processing`으로 변경
 3. S3 원본을 임시 디렉터리로 다운로드
-4. FFprobe로 실제 영상 길이 확인
+4. FFprobe로 실제 영상 길이를 확인하고 `Video.durationMs`·`durationSeconds` 교정
 5. 최대 4개 프레임 추출 및 중복 제거
 6. 프레임을 Base64 data URL로 변환
 7. 4장을 시간순으로 OpenAI에 단일 요청
 8. Structured Output 및 Pydantic 스키마 검증
-9. 분석 결과와 토큰 사용량 저장
+9. 분석 결과·토큰 사용량과 `VideoAnalysis.durationMs` 실측 스냅샷 저장
 10. 임시 파일 제거
 
 ## 10. 환경 변수
