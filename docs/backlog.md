@@ -21,7 +21,8 @@
 3안 비교와 채택 방향은 [decisions/video-grouping-proposals.md](./decisions/video-grouping-proposals.md).
 
 **남은 판단**: ① 내보내기 시 클립 순서 기본값 ② 재내보내기 정책(누적 vs 교체)
-③ Movie 삭제 시 참조 영상 처리 ④ 날짜 기반 자동 그룹핑의 도입 범위.
+③ Movie 삭제 시 참조 영상 처리 ④ 날짜 기반 자동 그룹핑의 도입 범위
+⑤ 기존 `POST /edit-jobs` 직접 편집 API의 공존·폐기 시점.
 `capturedAt` 수집은 결정 완료이며 스냅 서버 원천화 1단계에서 구현한다. 위치 정보 저장
 여부는 이 항목과 분리해 A-4에서만 관리한다.
 
@@ -35,8 +36,9 @@
 현재 상태: 편집 횟수 제한 **미적용**, 해상도 차등·워터마크 **미구현**,
 스토리지 한도 Free 5GB는 [decisions/snap-source-of-truth.md](./decisions/snap-source-of-truth.md) §6에서 **결정됨(미구현)**.
 
-**결정할 것**: 무비 생성 과금 모델(크레딧 기반 재설계 예정) · 해상도 차등 · 워터마크 ·
-Standard/Premium 스토리지 한도 · `GET /billing/plans` 의 `features` 문구 정합.
+**결정할 것**: 무비 생성 과금 모델(크레딧 기반 재설계 예정) · Movie/영상 개수 제한 여부 ·
+해상도 차등 · 워터마크 · Standard/Premium 스토리지 한도 · `GET /billing/plans` 의
+`features` 문구 정합.
 
 **완료 조건**: 크레딧 기반 과금 정책 확정 → plan-limits §5의 코드·문서 변경 지점 반영 →
 `test/billing.test.ts` 의 `플랜별 편집 제한` 블록을 **확정된 크레딧 차감·차단·환급 규칙에

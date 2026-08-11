@@ -341,7 +341,10 @@ worker의 한 작업은 다음 순서로 수행한다.
 
 ## 10. 환경 변수
 
-`.env.example`에 다음 설정을 추가한다.
+구현할 때는 환경변수 목록의 단일 원천인
+[`apps/api/src/env-spec.ts`](../../apps/api/src/env-spec.ts)에 아래 키를 먼저 선언하고,
+같은 변경에서 `.env.example`의 복사용 표현을 추가한다. 모두 로컬과 운영에서 의미가 있으므로
+`origin: 'shared'`로 두며, 실제 소비 프로세스와 기본값을 각 `description`에 명시한다.
 
 ```dotenv
 # OpenAI video analysis
@@ -356,7 +359,10 @@ VIDEO_ANALYSIS_AUTO_ENQUEUE=false
 VIDEO_ANALYSIS_PROMPT_VERSION=v1
 ```
 
-`OPENAI_API_KEY`는 API 서버가 아니라 analysis worker에만 전달한다.
+`OPENAI_API_KEY`는 API 서버가 아니라 analysis worker만 소비한다. `.env.example`에는 값을
+비워 두고, 로컬은 `apps/api/.env`, 운영은 배포 플랫폼의 시크릿으로 analysis worker에 주입한다.
+`VIDEO_ANALYSIS_AUTO_ENQUEUE=false`인 동안에는 키가 없어도 기존 API가 기동할 수 있게 하되,
+분석 기능을 활성화한 worker는 키가 없으면 시작 단계에서 명확히 실패해야 한다.
 
 `VIDEO_ANALYSIS_AUTO_ENQUEUE`는 점진적 출시를 위한 feature flag로 사용한다. 초기 배포에서는 비활성화하고 worker, DB, API 검증이 끝난 후 활성화한다.
 
@@ -782,17 +788,20 @@ POST /edit-recommendations
 
 ## 19. 완료 조건
 
-- [ ] 업로드 완료 후 분석 작업이 정확히 한 번 생성된다.
-- [ ] 3초 영상에서 대표 프레임이 최대 4장 추출된다.
-- [ ] 최대 4장이 하나의 OpenAI 요청으로 전달된다.
-- [ ] 오디오가 OpenAI에 전달되거나 평가되지 않는다.
-- [ ] 분석 결과가 정해진 JSON 계약으로 저장된다.
-- [ ] 분석 실패에도 원본 영상은 `ready` 상태를 유지한다.
-- [ ] 사용자가 분석 상태와 결과를 조회할 수 있다.
-- [ ] 실패한 작업을 멱등하게 재시도할 수 있다.
-- [ ] 삭제된 영상에는 분석 결과가 반영되지 않는다.
-- [ ] 기존 영상·편집 API의 응답 계약이 깨지지 않는다.
-- [ ] 실제 평가 영상으로 처리시간, 실패율, 토큰 사용량 기준선을 확보한다.
+아래는 구현의 승인 기준이며 진행 상태를 표시하는 체크리스트가 아니다. 진행 여부와 막힌 이유는
+[backlog.md](../backlog.md) A-3에서만 관리한다.
+
+- 업로드 완료 후 분석 작업이 정확히 한 번 생성된다.
+- 3초 영상에서 대표 프레임이 최대 4장 추출된다.
+- 최대 4장이 하나의 OpenAI 요청으로 전달된다.
+- 오디오가 OpenAI에 전달되거나 평가되지 않는다.
+- 분석 결과가 정해진 JSON 계약으로 저장된다.
+- 분석 실패에도 원본 영상은 `ready` 상태를 유지한다.
+- 사용자가 분석 상태와 결과를 조회할 수 있다.
+- 실패한 작업을 멱등하게 재시도할 수 있다.
+- 삭제된 영상에는 분석 결과가 반영되지 않는다.
+- 기존 영상·편집 API의 응답 계약이 깨지지 않는다.
+- 실제 평가 영상으로 처리시간, 실패율, 토큰 사용량 기준선을 확보한다.
 
 ## 20. API 계약 변경 요약
 
