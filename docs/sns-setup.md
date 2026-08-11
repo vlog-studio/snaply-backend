@@ -236,6 +236,21 @@ POST /me/media                  → 200
    ```
 4. 스코프: `user.info.basic`(Login Kit), `video.upload` 또는 `video.publish`(Content Posting API)
 
+### Sandbox client_key 의 이력 노출 — 수용된 위험 (2026-08-11 판정)
+
+Sandbox 는 Production 과 **별도의 `client_key`/`secret`** 을 가지며 `sb` 접두사가 붙는다.
+이 값이 문서 예시에 실값으로 들어갔다가 커밋 `9174295` 에서 플레이스홀더로 교체됐다.
+현재 트리·HEAD 에는 없지만 **커밋 `49d0d1a` 의 diff 와 커밋 메시지에는 남아 있다.**
+
+**제거하지 않기로 판정했다.** 근거:
+
+- `client_key` 는 authorize URL 에 실려 사용자 브라우저에도 노출되는 **준공개 식별자**다.
+- 짝이 되는 `client_secret` 은 이력에 없다. `.env` 는 추적된 적이 없고(`.env.example` 만),
+  코드의 `client_secret=${secret}` 은 변수 보간이다. secret 없이 `client_key` 만으로는 할 수 있는 것이 없다.
+- 완전 제거에는 history rewrite + force push 가 필요해 양 트랙에 영향이 간다 — 위험보다 비용이 크다.
+
+Production 앱의 키가 같은 방식으로 새면 판정이 달라진다. 그때는 콘솔에서 secret 재발급이 먼저다.
+
 ### 틱톡 스코프 — 심사 전/후로 게시 방식이 다르다
 
 | 스코프 | 엔드포인트 | 동작 | 심사 |
