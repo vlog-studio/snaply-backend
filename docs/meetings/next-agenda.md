@@ -29,7 +29,7 @@ Firebase 키는 로테이션 완료, 루트 키 파일은 이미 없고, 틱톡 
 
 | # | 안건 | 근거 | 왜 지금 |
 |---|---|---|---|
-| 1 ★ | Movie 세부 정책 | [BACKLOG](../backlog.md) A-1 · [decisions/video-grouping-proposals.md](../decisions/video-grouping-proposals.md) | 엔티티는 `Movie`로 결정됨. 클립 순서·재내보내기·삭제 연동을 확정해야 구현 가능 |
+| 1 ★ | Movie 세부 정책 | [BACKLOG](../backlog.md) A-1 · [decisions/movie-model.md](../decisions/movie-model.md) | 엔티티는 `Movie`로 결정됨. 클립 순서·재내보내기·삭제 연동을 확정해야 구현 가능 |
 | 2 | 플랜 차등 정책 일괄 확정 | [BACKLOG](../backlog.md) A-2 · [decisions/plan-limits.md](../decisions/plan-limits.md) | 부분 구현이 어긋남의 원인이었으므로 한 번에 확정해 한 번에 반영 |
 | 3 | 영상 분석(하이라이트 추천) 승인 | [BACKLOG](../backlog.md) A-3 · [plans/video-analysis-implementation-plan.md](../plans/video-analysis-implementation-plan.md) | 안건 1의 export 순서와 얽힘 |
 | 4 | FE 앱 일정 확인 | [BACKLOG](../backlog.md) A-5 | FCM 실기기·SNS 검수 URL·결정된 `capturedAt` 전달이 전부 FE 의존 |

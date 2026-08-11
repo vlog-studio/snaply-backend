@@ -29,7 +29,7 @@ packages/
 | 환경변수 — 변수 목록 | `apps/api/src/env-spec.ts` | `.env.example`은 이 목록의 복사용 표현. 어긋나면 테스트가 실패 |
 | 환경변수 — 배치·주입 방식 | [docs/decisions/env-management.md](docs/decisions/env-management.md) | 로컬은 `apps/api/.env` 파일 하나, 운영은 주입 |
 | 커밋·PR·코드 규칙 | [AGENTS.md](AGENTS.md) | 상세: [docs/commit-guidelines.md](docs/commit-guidelines.md) · [docs/pull-request-guidelines.md](docs/pull-request-guidelines.md) |
-| 미결 작업·막힌 이유 | [docs/backlog.md](docs/backlog.md) | 미결 항목은 여기에만 둔다 |
+| 다음에 결정·구현할 일 | [docs/backlog.md](docs/backlog.md) | 닫히지 않은 작업은 여기에만 둔다. `decisions/` 전체를 훑지 않는다 |
 | 완료된 구현·검증 내역 | [docs/progress.md](docs/progress.md) | 완료된 것만 |
 | 작업 분담·공유 파일 규칙 | [docs/team.md](docs/team.md) | |
 | 확정된 정책·설계 결정 | [docs/decisions/](docs/decisions/) | 배경·논점·기각한 대안 포함 |
@@ -46,10 +46,14 @@ packages/
 
 | 문서 | 내용 |
 |---|---|
-| [decisions/snap-source-of-truth.md](docs/decisions/snap-source-of-truth.md) | 스냅 원천을 서버로 전환 + 스토리지 용량 정책(Free 5GB) — 결정, 미구현 |
+| [decisions/snap-source-of-truth.md](docs/decisions/snap-source-of-truth.md) | 스냅 원천을 서버로 전환 + 스토리지 용량 정책(Free 5GB) 결정 |
 | [decisions/env-management.md](docs/decisions/env-management.md) | 환경변수 — 파일은 로컬만, 운영은 주입. 목록의 단일 원천 |
-| [decisions/plan-limits.md](docs/decisions/plan-limits.md) | 기능적 제한 vs 플랜 제한의 현황과 재도입 논점 |
-| [decisions/video-grouping-proposals.md](docs/decisions/video-grouping-proposals.md) | 영상 묶음 구조 3안 비교 — `Movie` 엔티티 채택, 세부 정책 미결 |
+| [decisions/plan-limits.md](docs/decisions/plan-limits.md) | 플랜 차등을 기획 확정 전까지 집행하지 않기로 한 결정과 근거 |
+| [decisions/movie-model.md](docs/decisions/movie-model.md) | 영상 묶음 구조 3안 비교와 `Movie` 엔티티 채택 결정 |
+
+작업을 고를 때는 [docs/backlog.md](docs/backlog.md)에서 시작한다. 결정 문서는 선택한 항목의
+배경과 제약을 확인할 때만 따라간다. 구현을 마치면 백로그에서 닫고
+[docs/progress.md](docs/progress.md)에 검증 결과를 기록하되, 결정 문서는 근거 기록으로 남긴다.
 
 ## 빠른 시작
 
