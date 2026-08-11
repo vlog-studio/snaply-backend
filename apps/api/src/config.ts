@@ -1,3 +1,5 @@
+import type { RequiredEnvKey } from './env-spec.js';
+
 export interface AppConfig {
   port: number;
   host: string;
@@ -78,7 +80,11 @@ export interface StorageConfig {
   maxUploadBytes: number;
 }
 
-function requireEnv(key: string): string {
+/**
+ * 키 타입이 `RequiredEnvKey` 라서, env-spec 에 `required: true` 로 선언하지 않은 변수는
+ * 여기에 넘길 수 없다. 강제 목록과 스펙이 어긋나면 타입체크에서 걸린다.
+ */
+function requireEnv(key: RequiredEnvKey): string {
   const value = process.env[key];
   if (!value) {
     throw new Error(`환경 변수 ${key}가 설정되지 않았습니다.`);
