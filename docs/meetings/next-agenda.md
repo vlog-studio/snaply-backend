@@ -15,13 +15,13 @@
 
 | 항목 | 근거 | 담당 |
 |---|---|---|
-| **Firebase 서비스 계정 키 로테이션** | [BACKLOG](../backlog.md) §G — 노출된 키는 회수 외에 무효화 수단이 없다 | B |
 | **인스타 재연동** (토큰 만료 시각이 `null` → 조용히 만료됨) | [BACKLOG](../backlog.md) E-1 — 승인 한 번 | B |
 | 테스트 게시물 정리 (인스타 릴스만. **틱톡 초안 3건은 C-2 증거물이라 보류**) | [BACKLOG](../backlog.md) §G | B |
-
-원래 "보안 정리 4건"이었으나 2026-08-11 실제 상태를 확인해 위 3건으로 줄였다 —
-루트 키 파일은 이미 없고, 틱톡 `client_key` 는 제거하지 않기로 판정했다([BACKLOG](../backlog.md) §G "닫은 항목").
 | 인수인계 상호 확인 | A ✅ 완료(2026-08-10, [archive/integrations-handover.md](../archive/integrations-handover.md)) / B: main pull 후 `npm run db:generate` + [decisions/plan-limits.md](../decisions/plan-limits.md) 확인 | A·B |
+
+원래 "보안 정리 4건"이었으나 2026-08-11 실제 상태를 확인해 위 2건으로 줄였다 —
+Firebase 키는 로테이션 완료, 루트 키 파일은 이미 없고, 틱톡 `client_key` 는 제거하지 않기로
+판정했다([BACKLOG](../backlog.md) §G "닫은 항목").
 
 ---
 
