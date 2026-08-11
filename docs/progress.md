@@ -513,12 +513,13 @@ stripe trigger customer.subscription.created --api-key $STRIPE_SECRET_KEY
 `process.exit(0)` 를 바로 호출해서, 5xx 발생 직후 재시작·배포되면 그 이벤트가 유실됐다.
 `flushSentry()` 를 추가해 종료 전에 전송을 기다린다. (`SENTRY_DEBUG=true` 로 SDK 전송 로그 확인 가능)
 
-### 남은 것
+### 후속 항목의 현행 위치
 
 이 시점에 닫히지 않았던 항목(Stripe 상품·가격 생성, 틱톡 받은함, FCM 실기기, 멀티 디바이스 푸시,
 `notification_logs` 보관 정책)은 [backlog.md](./backlog.md) C·B 절로 옮겼다.
 이후 완료된 것 — Sentry 실수집(2026-08-04), 인스타 실업로드(2026-08-04),
 틱톡 게시 결과 폴링(2026-08-04) — 은 아래 각 절에 기록돼 있다.
+
 ## 실검증 라운드 1 — 미디어/편집 트랙 (Dev A, 2026-08-04) ✅
 
 **목표**: Phase 3~5를 mock/합성 클립이 아닌 **아이폰 실촬영 영상(HEVC/.MOV)** 으로 end-to-end 재검증 (team.md §2 "바로 착수" 항목).
@@ -546,7 +547,7 @@ stripe trigger customer.subscription.created --api-key $STRIPE_SECRET_KEY
 
 **개발 도구 추가**
 - `npm run media:e2e` — 로그인→업로드→편집→결과 URL 원커맨드 (--style/--subtitles/--upload-only)
-- `npm run media:cleanup` — TEST_EMAIL 계정 테스트 데이터 정리 (free 월 3편 한도 초기화)
+- `npm run media:cleanup` — TEST_EMAIL 계정의 업로드·편집 테스트 데이터 정리
 
 **특이사항**
 - 개발 API 포트는 3000 유지 — 로컬에서 점유된 경우 각자 `.env`의 `API_PORT`로 변경 (개인 환경 설정, 레포 기본값 아님)
@@ -642,6 +643,6 @@ stripe trigger customer.subscription.created --api-key $STRIPE_SECRET_KEY
 - 주석 유입 회귀 확인 — `LEGAL_CONTACT_EMAIL`·`SITE_VERIFICATION_META`·`STRIPE_PRICE_*` 가 모두
   빈 값이고, `/legal/terms` 의 `<head>` 에 검증 메타 태그가 들어가지 않는다 ✅
 
-**남은 것**: 배포 플랫폼(B-1) 확정 후 `origin !== 'local'` 목록을 시크릿에 넣고 `deploy.yml` 의
-Deploy 스텝 연결. 실제 Supabase JWT 로 인증된 요청을 컨테이너에서 통과시키는 것(자격증명 필요)은
-미실시 — JWKS 도달까지만 확인했다.
+**후속 작업의 현행 위치**: 배포 플랫폼 시크릿과 Deploy 스텝 연결은
+[backlog.md](./backlog.md) B-1에서 관리한다. 이번 환경변수 정리 라운드에서는 JWKS 도달까지만
+재확인했지만, 실제 Supabase JWT를 사용한 컨테이너 인증은 위 "실검증 라운드 2"에서 이미 완료했다.

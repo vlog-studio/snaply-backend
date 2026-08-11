@@ -87,15 +87,15 @@
 6. **전달 경로** — 해상도/워터마크를 강제하려면 큐 페이로드(`EditJobData`)에 plan을 실어
    워커에 전달해야 한다 (`subtitles` 옵션과 같은 패턴, 2026-08-04 커밋 참조).
 
-## 5. 크레딧 정책 확정 후 코드 변경 지점 체크리스트
+## 5. 크레딧 정책이 영향을 주는 코드·문서
 
-> 아래는 **정책이 확정된 뒤 손댈 코드 지점**이다. 진행 관리는 [backlog.md](../backlog.md) A-2 에서 한다.
+> 아래는 영향 범위를 설명하기 위한 목록이며 완료 상태를 관리하지 않는다.
+> 미결 판단과 구현 진행의 원천은 [backlog.md](../backlog.md) A-2다.
 
-- [ ] `apps/api/src/services/edit-job.service.ts` — 확정된 크레딧 차감·차단·실패 시 환급 규칙 구현
-      (`FREE_MONTHLY_LIMIT` 기반 월 3편 로직을 기계적으로 복원하지 않음)
-- [ ] `apps/api/src/queue/edit-queue.ts` — `EditJobData`에 plan(또는 해상도/워터마크 파라미터) 추가
-- [ ] `apps/ai-worker/src/worker.py` + `pipeline/editor.py` — 플랜별 해상도·워터마크 적용
-- [ ] `apps/api/src/routes/edit-jobs.ts` — Swagger 설명 갱신
-- [ ] `docs/api-spec.md` — 명세 갱신
-- [ ] `apps/api/src/services/billing.service.ts` `features` 문구 실동작과 일치시키기 (**B 트랙 소유** — 합의)
-- [ ] 통합 테스트: 확정된 크레딧 기대값, 잔액 부족 시 차단, 구매/플랜 변경 후 해제, 실패 시 차감·환급 여부
+- `apps/api/src/services/edit-job.service.ts` — 크레딧 차감·차단·실패 시 환급 규칙
+  (`FREE_MONTHLY_LIMIT` 기반 월 3편 로직을 기계적으로 복원하지 않음)
+- `apps/api/src/queue/edit-queue.ts` — `EditJobData`에 plan 또는 해상도·워터마크 파라미터 전달
+- `apps/ai-worker/src/worker.py` + `pipeline/editor.py` — 플랜별 해상도·워터마크
+- `apps/api/src/routes/edit-jobs.ts` + `docs/api-spec.md` — Swagger와 FE 전달용 계약
+- `apps/api/src/services/billing.service.ts` — `features` 문구를 실동작과 일치 (**B 트랙 소유**)
+- 통합 테스트 — 크레딧 기대값, 잔액 부족 차단, 구매·플랜 변경 후 해제, 실패 시 차감·환급

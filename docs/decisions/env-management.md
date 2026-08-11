@@ -151,8 +151,7 @@ compose 가 읽으면 `LEGAL_CONTACT_EMAIL`·`SITE_VERIFICATION_META`·`STRIPE_P
   `LOG_LEVEL`, `EDIT_QUEUE_NAME`, `SUPABASE_JWT_AUDIENCE`, `SENTRY_DEBUG`, `WHISPER_MODEL`,
   `EDIT_TIMEOUT_SECONDS`, `BGM_DIR`, `TEST_EMAIL`, `TEST_PASSWORD`).
 
-## 남은 것
+## 후속 연계
 
-배포 플랫폼(B-1)이 정해지면 `origin !== 'local'` 목록을 그 플랫폼의 시크릿에 넣고
-`deploy.yml` 의 Deploy 스텝을 연결한다. 이 결정은 플랫폼을 고르지 않는다 —
-Fly / Render / ECS 어느 쪽이든 위 구조는 그대로 쓴다.
+이 결정은 배포 플랫폼을 고르지 않는다. Fly / Render / ECS 어느 쪽이든 위 구조는 유지하며,
+플랫폼 선택과 시크릿·Deploy 스텝 연결의 미결 상태는 [backlog.md](../backlog.md) B-1에서만 관리한다.
