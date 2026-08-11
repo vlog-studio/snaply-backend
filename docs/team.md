@@ -63,14 +63,16 @@ Phase 1~9의 mock/dry-run 검증과 양 트랙 실키 검증은 완료됐다 —
 
 DB가 하나라 두 명이 각자 `prisma migrate dev`를 돌리면 히스토리가 꼬인다.
 
-**옵션 A (추천): 로컬 Postgres로 격리**
-- `docker-compose.yml`의 로컬 Postgres로 개발·마이그레이션하고, Supabase는 **인증(Auth)만** 사용.
-- 스키마를 자유롭게 실험 → 확정되면 한 명이 Supabase에 반영.
+**채택: 옵션 A — 로컬 Postgres로 격리**
+- `docker-compose.dev.yml`의 로컬 Postgres(`npm run infra:up`에 포함)로 개발·마이그레이션하고,
+  Supabase는 **인증(Auth)만** 사용. 통합 테스트도 이 Postgres를 쓴다(`snaply_test` 자동 생성).
+- 호스트 5432가 점유돼 있으면 `POSTGRES_HOST_PORT`로 바꾼다.
+- 스키마를 자유롭게 실험 → 확정되면 한 명이 Supabase에 `prisma migrate deploy`.
+- 스키마 변경을 pull한 뒤에는 **`npm run db:generate` 필수** (누락 시 낡은 클라이언트로 테스트가 500 실패).
 
-**옵션 B: 공유 Supabase 계속 사용**
-- 마이그레이션은 **PR로만**, 머지 순서대로 **한 명이** `prisma migrate deploy`.
-- 각 dev는 테스트 데이터에 고유 접두사(닉네임/이메일)를 써서 서로 안 섞이게.
-- 통합 테스트는 실행 후 반드시 자기 데이터 정리.
+> 참고 — 검토했던 옵션 B(공유 Supabase 계속 사용): 마이그레이션은 PR로만 + 머지 순서대로
+> 한 명이 `deploy`, 테스트 데이터에 고유 접두사, 통합 테스트 후 자기 데이터 정리.
+> 공유 Supabase를 직접 쓰는 경우에는 이 규칙을 따른다.
 
 ---
 

@@ -86,7 +86,9 @@ Query: `kind`(`source | result`, 선택), `cursor`(선택), `limit`(기본 20, �
 
 `outputProfile` 기본값은 `short_vertical`(1080×1920), `fitMode` 기본값은 `blur_background`입니다. 작업 상태 응답에는 재현 가능한 `pipelineVersion`, `editSpec`, `renderSpec` 스냅샷이 포함됩니다.
 - 소유·`source`·`ready` 상태 영상만 허용(아니면 403).
-- 플랜별 편집 횟수 제한(Free 월 3편)은 **기획 확정 시까지 미적용** — [decisions/plan-limits.md](./decisions/plan-limits.md) 참고.
+- **플랜 차등은 현재 전혀 집행되지 않는다** — 편집 횟수 제한 미적용, 해상도·워터마크 미구현.
+  즉 무료 플랜과 유료 플랜의 편집 동작이 같다. 현행 상태와 재도입 계획은
+  [decisions/plan-limits.md](./decisions/plan-limits.md).
 
 ### GET /edit-jobs/:id  🔒
 ```json
@@ -179,6 +181,10 @@ Body: `{ "videoId": "uuid", "caption": "문구(선택)" }`
 
 ### GET /billing/plans  (인증 불필요)
 `[{ "plan":"free","name":"Free","priceKrw":0,"features":[...] }, ...]` (standard ₩9,900 / premium ₩24,900)
+
+> ⚠️ `features` 는 **FE 표시용 문구일 뿐 백엔드가 집행하지 않는다.** 현재 실동작과 불일치하므로
+> (편집 횟수·해상도·워터마크 전부 미적용) 그대로 화면에 노출하면 실제와 다른 약속이 된다.
+> 정책 확정 시 문구와 집행을 함께 맞춘다 — [decisions/plan-limits.md](./decisions/plan-limits.md).
 
 ### GET /billing/subscription  🔒
 `{ "data": { "plan":"standard","status":"active","currentPeriodEnd":"..." } }`

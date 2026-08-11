@@ -28,11 +28,13 @@ API 명세는 [docs/api-spec.md](./docs/api-spec.md).
 
 ```
 apps/api/          Fastify + TypeScript API 서버 (:3000)
-apps/ai-worker/    Python 워커 — BullMQ 큐 구독, FFmpeg/faster-whisper (:8000)
+apps/ai-worker/    Python 워커 — BullMQ 큐 구독, FFmpeg/faster-whisper (HTTP 포트 없음)
 packages/shared-types/  FE와 공유하는 API 타입
 
 인프라: Supabase(DB+Auth) · MinIO(S3 호환, :9100) · Redis(:6379)
 ```
+> 워커는 `edit-jobs` Redis 큐를 구독하는 백그라운드 프로세스(`src/worker.py`)이고 HTTP 포트를 열지 않는다.
+> `src/main.py`의 FastAPI(:8000)는 Phase 1 뼈대의 잔재로, compose·npm 스크립트 어디에서도 실행하지 않는다.
 개발/운영 전환은 endpoint/URL만 교체(코드 분기 없음): S3_ENDPOINT 비우면 실제 AWS S3, REDIS_URL만 바꾸면 Upstash.
 
 ---
