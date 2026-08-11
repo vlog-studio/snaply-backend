@@ -112,12 +112,17 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   });
 
   // OpenAPI 문서(개발 환경에서만) — 라우트 등록 전에 등록해야 스키마가 수집된다.
-  const docsEnabled = process.env.NODE_ENV !== 'production' || process.env.ENABLE_DOCS === 'true';
+  //
+  // 판정은 `!== 'production'` 이 아니라 `=== 'development'` 다. 운영은 .env 파일이 아니라
+  // 주입으로 값을 받는데, NODE_ENV 주입을 빠뜨리거나 오타를 내도 배포는 성공한다.
+  // `!==` 로 두면 그 경우 문서와 개발 로그인이 열린 채로 뜬다 — 닫히는 쪽으로 떨어뜨린다.
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  const docsEnabled = isDevelopment || process.env.ENABLE_DOCS === 'true';
   if (docsEnabled) {
     await registerDocs(app, {
       supabaseUrl: config.supabaseUrl,
       supabasePublishableKey: config.supabasePublishableKey,
-      allowDevLogin: process.env.NODE_ENV !== 'production',
+      allowDevLogin: isDevelopment,
     });
   }
 
