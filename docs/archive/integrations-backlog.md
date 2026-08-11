@@ -1,9 +1,12 @@
-# 연동/수익화 트랙 — 남은 작업 및 재도입 체크리스트
+# 연동/수익화 트랙 — 남은 작업 및 재도입 체크리스트 (보관)
 
+> 📦 **이 문서의 내용은 [backlog.md](../backlog.md) 로 통합됐다(2026-08-11).
+> 미결 항목은 그쪽을 보고, 여기는 수정하지 말 것** — 미결 목록이 두 곳에 있으면 다시 어긋난다.
+>
 > 2026-08-10, Dev B 기준. Phase 6~9 하드닝을 `main` 에 머지한 시점에 **아직 닫히지 않은 것**들.
 > 각 항목에 **왜 막혀 있는지**와 **무엇이 있으면 닫히는지(완료 조건)** 를 적었다.
 >
-> 완료된 검증 내역은 [PROGRESS.md](./PROGRESS.md), Dev A 확인 사항은 [integrations-handover.md](./integrations-handover.md).
+> 완료된 검증 내역은 [progress.md](../progress.md), Dev A 확인 사항은 [integrations-handover.md](./integrations-handover.md).
 
 ---
 
@@ -11,7 +14,7 @@
 
 ### A-1. 플랜별 제한 (Dev A 유예 결정)
 
-[plan-limits.md](./plan-limits.md) 에 배경과 재도입 시 결정사항이 정리돼 있다. 기획 확정이 선행.
+[plan-limits.md](../decisions/plan-limits.md) 에 배경과 재도입 시 결정사항이 정리돼 있다. 기획 확정이 선행.
 
 | 제한 | 현재 | 재도입 시 손댈 곳 |
 |---|---|---|
@@ -70,7 +73,7 @@ stripe prices create --product prod_xxx --currency krw --unit-amount 9900 \
    (초안/Drafts 가 아니다 — 알림을 탭해야 편집 화면으로 들어간다)
 
 계정이 확정되면 "계정 불일치"인지 "Sandbox 가 실제 전달을 하지 않음"인지 갈린다.
-상세 기록은 [sns-setup.md](./sns-setup.md).
+상세 기록은 [sns-setup.md](../sns-setup.md).
 
 **완료 조건**: 받은함 알림 도착 확인. 또는 Sandbox 제약임이 확인되면 심사 통과 후 재검증.
 
@@ -85,7 +88,7 @@ TIKTOK_SCOPES=user.info.basic,video.publish
 ```
 엔드포인트는 코드가 자동 분기한다(`/inbox/video/init/` → `/video/init/`).
 `requiresUserAction` 이 응답에서 사라지므로 **FE 안내 문구도 함께 정리**해야 한다
-([api-spec.md](./api-spec.md) 의 SNS 업로드 절 참고).
+([api-spec.md](../api-spec.md) 의 SNS 업로드 절 참고).
 
 ### B-4. FCM 실기기 수신
 
@@ -116,7 +119,7 @@ geofence 진입 → 기기에서 푸시 수신 확인.
 `users.fcm_token` 이 **단일 컬럼**이라 기기 하나만 등록된다. 새 기기로 로그인하면
 이전 기기 토큰을 덮어쓴다(`POST /auth/fcm-token` 이 항상 덮어쓰기).
 
-`users` 테이블은 TEAM.md 상 **공동 소유**라 스키마 변경에 양쪽 합의가 필요하다.
+`users` 테이블은 team.md 상 **공동 소유**라 스키마 변경에 양쪽 합의가 필요하다.
 별도 `user_devices` 테이블로 빼는 것이 자연스럽다.
 
 **결정할 것**: 멀티 디바이스를 지원할지, 지원 시 발송을 어떻게 팬아웃할지(`sendEachForMulticast`),
@@ -225,7 +228,7 @@ cloudflared tunnel login                        # 브라우저 인증, 1회
 S3 를 실제 호출하는 테스트가 없고 Dev A 의 storage 테스트도 URL 문자열만 검증한다).
 `.env` 없이·MinIO 없이 148/148 + 1/1 통과를 로컬에서 재현 검증했다.
 
-> `ci.yml` 은 TEAM.md 상 Dev A 영역이라 **리뷰가 필요한 변경**이다.
+> `ci.yml` 은 team.md 상 Dev A 영역이라 **리뷰가 필요한 변경**이다.
 
 ---
 
