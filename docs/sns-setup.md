@@ -3,7 +3,7 @@
 실제 업로드를 로컬에서 검증하기 위한 준비 절차. 코드는 이미 실키를 받을 준비가 끝나 있고,
 `INSTAGRAM_APP_ID` / `TIKTOK_CLIENT_KEY` 가 채워지면 자동으로 mock → 실호출로 전환된다.
 
-> 진행 기록은 [PROGRESS.md](./PROGRESS.md), API 계약은 [api-spec.md](./api-spec.md) 참고.
+> 진행 기록은 [progress.md](./progress.md), API 계약은 [api-spec.md](./api-spec.md) 참고.
 
 ---
 
@@ -415,6 +415,9 @@ curl -X POST -H "Authorization: Bearer <토큰>" -H 'content-type: application/j
 ---
 
 ## 5. 상태 요약
+
+> 닫히지 않은 항목의 완료 조건은 [backlog.md](./backlog.md) C-2·C-3·C-5·D-1·D-3 에 있다.
+> 이 표는 셋업 절차의 진척만 나타낸다.
 
 | 항목 | 상태 |
 |---|---|

@@ -1,8 +1,20 @@
-# vlog-studio — 백엔드 개발 가이드
+# vlog-studio — 백엔드 개발 가이드 (보관 문서)
 
-> **문서 용도**: 바이브 코딩(Claude Code / Cursor) 세션에서 LLM에게 컨텍스트로 제공하는 백엔드 전용 개발 가이드입니다.
-> 소스코드는 작성하지 않습니다. 기능 정의, 작업 순서, 주의사항만 기술합니다.
-> **각 Phase 시작 시 이 문서 전체를 컨텍스트로 첨부하세요.**
+> ⛔ **이 문서는 Phase 1~9 착수 전(2026-07)에 작성한 계획 문서다. Phase는 전부 완료됐고,
+> 아래 내용은 현행 사실과 어긋난다. 컨텍스트로 첨부하지 말 것.**
+>
+> 확인된 불일치: 환경변수 9개 누락(`DATABASE_URL`·`DIRECT_URL`·`S3_ENDPOINT`·`S3_PUBLIC_ENDPOINT` 등) ·
+> 미설치 패키지 4개 등재(`@turf/turf`·`resend`·`ffmpeg-python`·`moviepy`) ·
+> DB 스키마 SQL이 `schema.prisma` 와 불일치(`videos.status` 의 `ready` 누락 등) ·
+> API 명세가 clips 계약·`subtitles`·`outputProfile` 도입 이전 상태.
+>
+> **현행 원천**: 스키마 `apps/api/prisma/schema.prisma` · API `/docs`(Swagger) +
+> [api-spec.md](../api-spec.md) · 셋업 [ONBOARDING.md](../../ONBOARDING.md) ·
+> 규칙 [AGENTS.md](../../AGENTS.md) · 미결 작업 [backlog.md](../backlog.md) ·
+> 진행 기록 [progress.md](../progress.md)
+>
+> 원래 용도: 바이브 코딩 세션에서 LLM에게 제공하던 백엔드 개발 가이드.
+> 기능 정의, 작업 순서, 주의사항만 기술하고 소스코드는 담지 않았다.
 
 ---
 
