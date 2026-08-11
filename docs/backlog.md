@@ -74,6 +74,12 @@ FE 일정이 없으면 해당 항목의 목표 시점을 정할 수 없다.
 `.github/workflows/deploy.yml` 은 `DEPLOY_ENABLED` 게이트로 준비돼 있고,
 워커 이미지는 검증 완료([progress.md](./progress.md) 실검증 라운드 2)라 결정만 되면 배포 가능하다.
 
+**결정 후 할 일**: [`apps/api/src/env-spec.ts`](../apps/api/src/env-spec.ts) 에서
+`origin !== 'local'` 인 항목을 그 플랫폼의 시크릿에 넣고 `deploy.yml` 의 Deploy 스텝을 연결한다.
+현재 deploy.yml 이 정의하는 시크릿은 마이그레이션용 `DATABASE_URL`/`DIRECT_URL` 2개뿐이다.
+`NODE_ENV=production` 주입을 빠뜨리지 말 것 — 빠뜨려도 배포는 성공한다
+([decisions/env-management.md](./decisions/env-management.md)).
+
 **연결된 병목**: **고정 도메인**(D-1)이 SNS 콜백·Stripe webhook·Meta 검수의 전제 —
 B 트랙 잔여 검증이 전부 여기서 막힌다.
 
@@ -260,6 +266,26 @@ Dev A 가 인수인계 회신에서 요청한 항목. 미설정 동작은 "SNS �
 `video.service.ts` 의 주석이 가리키는 미구현 배치. 스냅 서버 원천 전환의 GC 배치
 (pending TTL 회수 / 삭제 유예 만료분 실삭제)와 함께 설계하는 것이 자연스럽다 —
 [decisions/snap-source-of-truth.md](./decisions/snap-source-of-truth.md) §5 병행 항목.
+
+### E-4. 빌드한 이미지가 실제로 뜨는지 아무도 확인하지 않는다
+
+`.github/workflows/ci.yml` 은 Postgres·Redis 를 GitHub Actions 의 service container 로 직접 띄우고,
+`deploy.yml` 은 이미지를 **빌드해서 GHCR 에 푸시만** 한다. 두 워크플로 어디에서도
+`docker-compose.yml` 을 참조하지 않는다.
+
+**영향**: Dockerfile 이 깨져도 CI 는 초록이고, 실행되지 않는 이미지가 `:latest` 로 올라간다.
+이 종류의 결함은 실제로 두 번 나왔다 — Dockerfile 이 `assets/`(BGM)를 복사하지 않은 것과
+`BGM_DIR` 상대경로가 컨테이너 CWD 와 어긋난 것([progress.md](./progress.md) 실검증 라운드 2).
+둘 다 네이티브 실행으로는 재현되지 않는다. 현재 이미지 실행을 검증하는 경로는
+사람이 수동으로 `npm run stack:up` 을 칠 때뿐이다.
+
+**선택지**: ① `deploy.yml` 에 빌드한 이미지를 띄워 `/health` 를 찌르는 스모크 스텝 추가
+② `ci.yml` 에 compose 기동 잡 추가. ①이 더 정확하다 — 실제로 배포될 그 이미지를 검사한다.
+다만 ai-worker 이미지는 torch/faster-whisper 로 커서(1.38GB) 매 푸시 기동은 비싸다.
+api 만 스모크하고 워커는 빌드 성공까지만 볼지 판단이 필요하다.
+
+**연결**: B-1(배포 인프라 결정)과 함께 보는 것이 자연스럽다 — Deploy 스텝을 연결할 때
+같은 워크플로에 넣게 된다.
 
 ---
 

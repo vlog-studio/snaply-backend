@@ -52,6 +52,10 @@ npm install
 ```bash
 cp .env.example apps/api/.env
 ```
+> **`.env` 는 저장소에 이 하나뿐이다.** 루트나 `apps/ai-worker/` 에 사본을 만들지 않는다 —
+> API·워커·Prisma·compose·e2e 스크립트가 전부 이 파일을 본다.
+> 운영에는 이 파일이 가지 않는다(값은 배포 플랫폼에서 주입). 배경은
+> [docs/decisions/env-management.md](docs/decisions/env-management.md).
 개발에 **최소로 필요한 값** (나머지는 비워도 mock/dry-run으로 동작):
 
 | 변수 | 얻는 곳 |
@@ -103,10 +107,13 @@ open http://localhost:3000/docs          # Swagger UI (인터랙티브 테스트
 ```bash
 brew install ffmpeg
 npm run worker:install                   # python3.11 venv + requirements
-cp apps/api/.env apps/ai-worker/.env     # REDIS_URL/DATABASE_URL(=DIRECT_URL)/S3 값 맞추기
 npm run worker                           # edit-jobs 큐 구독 시작
 ```
-> 워커의 `DATABASE_URL`은 asyncpg 호환을 위해 **DIRECT_URL(세션 풀러, 5432)** 값을 사용.
+> 워커는 `apps/api/.env` 를 그대로 읽는다 — 사본을 만들지 않는다.
+> 워커만 다른 값을 써야 할 때만 `apps/ai-worker/.env` 를 두면 그쪽이 우선한다.
+> 워커의 `DATABASE_URL`은 asyncpg 호환을 위해 **DIRECT_URL(세션 풀러, 5432)** 값이어야 한다.
+> 공유 `.env` 의 `DATABASE_URL` 에 pgbouncer 파라미터가 붙어 있다면, 그때가 바로
+> `apps/ai-worker/.env` 에 `DATABASE_URL` 한 줄만 두어 덮을 상황이다.
 
 ---
 
@@ -115,12 +122,34 @@ npm run worker                           # edit-jobs 큐 구독 시작
 | 명령 | 설명 |
 |---|---|
 | `npm run infra:up` / `infra:down` | 개발 인프라 기동/중지 |
+| `npm run stack:up` / `stack:migrate` / `stack:down` | 컨테이너 테스트 서버 (아래 참조) |
 | `npm run dev:api` | API 서버(watch) |
 | `npm run worker` | AI 워커 |
 | `npm run build` / `typecheck` / `lint` | 전체 빌드/검사 |
 | `npm run db:migrate` / `db:seed` / `db:studio` | 마이그레이션 / 시드 / Prisma Studio |
 | `npm test -w apps/api` | 통합 테스트 (실제 Postgres/Redis/MinIO 사용, `snaply_test` DB 자동 생성) |
 | `npm run auth:stub -w apps/api` | 로컬 Supabase Auth 스텁 — 수동 테스트용 JWT 발급 |
+
+### 컨테이너로 테스트 서버 잠깐 띄우기
+
+평소 개발은 "인프라만 컨테이너 + 앱은 네이티브"(`infra:up` + `dev:api`)다.
+빌드된 이미지로 서버를 통째로 확인해야 할 때만 아래를 쓴다.
+
+```bash
+npm run stack:up        # api + postgres/redis/minio. Ctrl+C 로 중지
+npm run stack:migrate   # 최초 1회 (스택 DB는 비어 있다)
+npm run stack:down
+```
+
+- 인프라 포트가 개발용과 다르다(**5433 / 6380 / 9200**). 프로젝트 이름도 `snaply-dev` 와
+  분리돼 있어 **개발 인프라를 켜둔 채로 동시에 띄울 수 있다.**
+- 자격증명은 `apps/api/.env` 를 읽어 오지만, **외부 연동은 기본 mock 이다**
+  (`SNS_MOCK`/`STRIPE_MOCK`). 잠깐 띄운 서버가 실제 Stripe·Instagram 을 호출하지 않게 하려는 것.
+  실키 경로를 봐야 하면 `docker-compose.yml` 의 해당 줄을 지운다.
+- AI 워커는 이미지가 커서(torch/faster-whisper) `stack:up` 에 포함하지 않았다.
+  필요하면 `docker compose up --build ai-worker`.
+- 확인은 `/health` 만 보지 말 것 — `SUPABASE_URL` 이 비면 `/health` 는 200 인데 인증은 전부 실패한다.
+  인증이 필요한 엔드포인트를 하나 찔러 봐야 한다.
 
 ### 인증 없이 로컬에서 API 찔러보기
 

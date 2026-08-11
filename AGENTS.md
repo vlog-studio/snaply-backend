@@ -4,8 +4,14 @@
 
 ## 작업 환경
 
-- `.env`는 **`apps/api/.env`** 에 둔다. Prisma CLI와 API 서버가 이 위치에서 읽는다. 루트에 두면 동작하지 않는다.
-- 환경변수의 원천은 [`.env.example`](.env.example)이다. 새 변수를 추가하면 여기에도 공개 가능한 예시를 넣는다.
+- `.env`는 **`apps/api/.env`** 하나뿐이다. API 서버·Prisma CLI·AI 워커·compose·e2e 스크립트가
+  전부 이 파일을 읽는다. 루트나 `apps/ai-worker/`에 사본을 만들지 않는다.
+- **운영에는 `.env` 파일이 가지 않는다.** 값은 배포 플랫폼의 시크릿에서 주입된다
+  ([`docs/decisions/env-management.md`](docs/decisions/env-management.md)). 그래서 새 변수를 쓸 때
+  "로컬에서 되니까 됐다"가 아니라 운영에서 누가 주입하는지를 같이 정해야 한다.
+- 환경변수의 원천은 [`apps/api/src/env-spec.ts`](apps/api/src/env-spec.ts)다. 새 변수를 읽기
+  시작하면 **여기부터** 선언하고 [`.env.example`](.env.example)에도 공개 가능한 예시를 넣는다.
+  빠뜨리면 `test/env-spec.test.ts`가 실패한다.
 - 로컬 인프라·명령·트러블슈팅은 [`ONBOARDING.md`](ONBOARDING.md)를 본다.
 - 스키마 변경을 pull한 뒤에는 `npm run db:generate`가 필수다. 빼먹으면 낡은 Prisma 클라이언트가
   새 컬럼을 몰라 테스트가 500으로 실패한다(실제로 웹훅 테스트 13개가 이 이유로 실패한 적 있다).
