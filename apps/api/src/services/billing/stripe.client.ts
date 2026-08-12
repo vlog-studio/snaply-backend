@@ -60,6 +60,15 @@ export async function cancelAtPeriodEnd(cfg: StripeConfig, subscriptionId: strin
   await stripe.subscriptions.update(subscriptionId, { cancel_at_period_end: true });
 }
 
+/** 즉시 해지 — 계정 삭제 전용. 남은 기간 환불은 하지 않는다(Stripe 기본 동작). */
+export async function cancelImmediately(cfg: StripeConfig, subscriptionId: string): Promise<void> {
+  if (cfg.mock) {
+    return;
+  }
+  const stripe = await getStripe(cfg);
+  await stripe.subscriptions.cancel(subscriptionId);
+}
+
 export interface StripeEvent {
   id?: string;
   type: string;

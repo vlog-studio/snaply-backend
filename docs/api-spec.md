@@ -11,7 +11,7 @@
 - **응답 형식(공통)**
   - 성공: `{ "success": true, "data": ... }`
   - 실패: `{ "success": false, "error": { "code": "STRING", "message": "..." } }`
-- **에러 코드**: `UNAUTHORIZED`(401), `FORBIDDEN`(403), `NOT_FOUND`(404), `BAD_REQUEST`/`VALIDATION_ERROR`(400), `RATE_LIMITED`(429), `INTERNAL_SERVER_ERROR`(500)
+- **에러 코드**: `UNAUTHORIZED`(401), `FORBIDDEN`(403), `ACCOUNT_PENDING_DELETION`(403, 삭제 대기 계정 — 복구는 `POST /auth/me/restore`), `NOT_FOUND`(404), `BAD_REQUEST`/`VALIDATION_ERROR`(400), `RATE_LIMITED`(429), `INTERNAL_SERVER_ERROR`(500)
 - **Rate limit**: 기본 IP당 60req/분. `POST /edit-jobs` 유저당 5req/분, `POST /notifications/geofence-enter` 유저당 10req/분. 초과 시 429.
 
 ---
@@ -30,6 +30,19 @@
 
 ### PATCH /auth/me  🔒
 프로필 수정. Body(모두 선택): `{ "nickname": "다연", "avatarUrl": "https://...", "interests": ["여행"] }` → 수정된 프로필 반환.
+
+### DELETE /auth/me  🔒
+계정 삭제 요청. 즉시: 구독 해지(Stripe 즉시 취소), SNS 연동·FCM 토큰 삭제, 진행 중 편집 작업 취소.
+이후 30일 유예 기간 동안은 복구 가능하고, 유예가 지나면 배치가 모든 데이터(S3 원본 포함)를 영구 삭제한다.
+```json
+{ "success": true, "data": { "deleted": true, "purgeAfter": "2026-09-11T00:00:00.000Z" }}
+```
+삭제 대기 중에 다른 인증 API 를 호출하면 `403 ACCOUNT_PENDING_DELETION`.
+
+### POST /auth/me/restore  🔒
+유예 기간 내 계정 복구 → `{ "success": true, "data": { "restored": true } }`.
+FCM 토큰·SNS 연동·구독은 삭제 시점에 이미 정리됐으므로 되살아나지 않는다(재등록 필요).
+삭제 대기 상태가 아니면 `400`.
 
 ### POST /auth/fcm-token  🔒
 Body: `{ "fcmToken": "..." }` → `{ "success": true, "data": { "updated": true } }`

@@ -7,6 +7,8 @@ export interface AppConfig {
   supabaseUrl: string;
   /** Swagger 개발 로그인에서 사용하는 공개 API 키. */
   supabasePublishableKey: string | undefined;
+  /** Auth Admin API 용 service role key. 계정 실삭제(purge)에서만 사용, 클라이언트 노출 금지. */
+  supabaseServiceRoleKey: string | undefined;
   /** Supabase Auth JWKS 엔드포인트 (ES256 비대칭 키) */
   jwksUrl: string;
   /** JWT 발급자(iss) — Supabase Auth */
@@ -136,6 +138,7 @@ export function loadConfig(): AppConfig {
     supabaseUrl,
     supabasePublishableKey:
       process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || undefined,
+    supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || undefined,
     jwksUrl: `${supabaseUrl}/auth/v1/.well-known/jwks.json`,
     jwtIssuer: `${supabaseUrl}/auth/v1`,
     jwtAudience: process.env.SUPABASE_JWT_AUDIENCE ?? 'authenticated',

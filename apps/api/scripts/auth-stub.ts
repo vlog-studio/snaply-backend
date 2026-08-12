@@ -6,8 +6,9 @@
  * 실제 Supabase로 전환할 땐 SUPABASE_URL을 원래 값으로 되돌리면 끝이다.
  *
  * 제공 엔드포인트 (Supabase 경로와 동일):
- *   GET  /auth/v1/.well-known/jwks.json   공개키(JWKS)
- *   POST /token?sub=<uuid>&email=<...>    토큰 발급 (스텁 전용 편의 엔드포인트)
+ *   GET    /auth/v1/.well-known/jwks.json   공개키(JWKS)
+ *   DELETE /auth/v1/admin/users/{uid}       Admin 계정 삭제 (기록만 하고 200)
+ *   POST   /token?sub=<uuid>&email=<...>    토큰 발급 (스텁 전용 편의 엔드포인트)
  *
  * 사용:
  *   npm run auth:stub -w apps/api        # :54321 기동 + 샘플 토큰 출력
@@ -36,6 +37,8 @@ export interface AuthStub {
   mint: (claims?: MintClaims) => Promise<string>;
   /** 이미 만료된 토큰 — 401 검증용. */
   mintExpired: (sub?: string) => Promise<string>;
+  /** Admin API 로 삭제된 supabase_uid 목록 — purge 테스트 검증용. */
+  adminDeletedUids: string[];
   close: () => Promise<void>;
 }
 
@@ -77,8 +80,18 @@ export async function startAuthStub(options: { port?: number } = {}): Promise<Au
       .sign(privateKey);
   }
 
+  const adminDeletedUids: string[] = [];
+
   const server = createServer((req, res) => {
     const url = new URL(req.url ?? '/', 'http://localhost');
+
+    if (req.method === 'DELETE' && url.pathname.startsWith('/auth/v1/admin/users/')) {
+      const uid = url.pathname.slice('/auth/v1/admin/users/'.length);
+      adminDeletedUids.push(uid);
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end('{}');
+      return;
+    }
 
     if (url.pathname === '/auth/v1/.well-known/jwks.json') {
       res.writeHead(200, { 'content-type': 'application/json' });
@@ -119,6 +132,7 @@ export async function startAuthStub(options: { port?: number } = {}): Promise<Au
     port: address.port,
     mint,
     mintExpired,
+    adminDeletedUids,
     close: () => new Promise<void>((resolve) => void server.close(() => resolve())),
   };
 }

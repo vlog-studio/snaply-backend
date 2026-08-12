@@ -46,6 +46,19 @@ export async function enqueueEditJob(data: EditJobData): Promise<void> {
   await getQueue().add('edit', data, { jobId: data.jobId });
 }
 
+/**
+ * 대기 중인 작업을 큐에서 제거한다(최선 노력). 워커가 이미 잡은(active) 작업은
+ * BullMQ 가 제거를 거부하므로 조용히 넘어간다 — DB 상태 변경이 원천이다.
+ */
+export async function removeEditJob(jobId: string): Promise<void> {
+  try {
+    const job = await getQueue().getJob(jobId);
+    await job?.remove();
+  } catch {
+    // active 작업 제거 실패 등 — 무시
+  }
+}
+
 export async function closeEditQueue(): Promise<void> {
   if (queue) {
     await queue.close();

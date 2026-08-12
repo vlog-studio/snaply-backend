@@ -6,11 +6,14 @@ export interface AuthUser {
   id: string;
   supabaseUid: string;
   plan: Plan;
+  /** 계정 삭제 요청 시각. 유예 기간 중이면 값이 있고, 인증 미들웨어가 접근을 차단한다. */
+  deletedAt: Date | null;
 }
 
 /**
  * Supabase UID로 앱 유저를 조회하고, 없으면 생성한다(첫 로그인 처리).
  * plan은 subscriptions 테이블 기준이며, 구독이 없으면 'free'.
+ * update: {} 이므로 삭제 대기(deletedAt) 상태를 되살리지 않는다 — 복구는 restoreAccount 로만.
  */
 export async function resolveUser(supabaseUid: string): Promise<AuthUser> {
   const user = await getPrisma().user.upsert({
@@ -20,6 +23,7 @@ export async function resolveUser(supabaseUid: string): Promise<AuthUser> {
     select: {
       id: true,
       supabaseUid: true,
+      deletedAt: true,
       subscription: { select: { plan: true } },
     },
   });
@@ -28,6 +32,7 @@ export async function resolveUser(supabaseUid: string): Promise<AuthUser> {
     id: user.id,
     supabaseUid: user.supabaseUid,
     plan: (user.subscription?.plan as Plan | undefined) ?? 'free',
+    deletedAt: user.deletedAt,
   };
 }
 

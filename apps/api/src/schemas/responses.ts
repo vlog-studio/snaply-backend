@@ -86,6 +86,24 @@ export const UPDATED_DATA_SCHEMA = {
   properties: { updated: TRUE_SCHEMA },
 } as const;
 
+export const ACCOUNT_DELETED_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['deleted', 'purgeAfter'],
+  properties: {
+    deleted: TRUE_SCHEMA,
+    /** 이 시각 이후 배치가 실삭제한다 — 그 전에는 복구 가능 */
+    purgeAfter: { type: 'string', format: 'date-time' },
+  },
+} as const;
+
+export const ACCOUNT_RESTORED_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['restored'],
+  properties: { restored: TRUE_SCHEMA },
+} as const;
+
 export const UPLOAD_TARGET_SCHEMA = {
   type: 'object',
   additionalProperties: false,

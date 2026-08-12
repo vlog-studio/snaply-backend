@@ -13,6 +13,7 @@ import { initFcm } from './services/fcm.service.js';
 import { initCrypto } from './lib/crypto.js';
 import { initSns } from './services/sns.service.js';
 import { initBilling } from './services/billing.service.js';
+import { initSupabaseAdmin } from './services/supabase-admin.service.js';
 import { healthRoutes } from './routes/health.js';
 import { legalRoutes } from './routes/legal.js';
 import { authRoutes } from './routes/auth.js';
@@ -99,6 +100,7 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   initCrypto(config.sns.tokenEncryptionKey);
   initSns(config.sns);
   initBilling(config.stripe, config.sns.appDeepLinkScheme);
+  initSupabaseAdmin({ url: config.supabaseUrl, serviceRoleKey: config.supabaseServiceRoleKey });
 
   // 전역 rate limit: IP당 분당 60 (라우트별로 override 가능)
   await app.register(rateLimit, {
