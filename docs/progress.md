@@ -718,3 +718,32 @@ stripe trigger customer.subscription.created --api-key $STRIPE_SECRET_KEY
 - `npm test -w apps/api` — 14 파일 162 테스트 통과 (pending-video-purge 2개 신규:
   TTL·상태·kind 필터 판정, 미확정 S3 객체 동반 삭제 — 실제 MinIO 에 presigned PUT 후 확인)
 - `npm run typecheck` / `npm run lint` 통과
+
+---
+
+## 삭제 대기 403 에 유예 만료 시각 동봉 (2026-08-12)
+
+**배경**: `DELETE /auth/me` 는 `purgeAfter` 를 반환하지만, 앱이 그 값을 놓치거나 다른 기기에서
+로그인하면 남은 유예 기간을 알 방법이 없었다. 삭제 대기 계정이 받는
+`403 ACCOUNT_PENDING_DELETION` 에 같은 값을 실어, 복구 안내 화면이 별도 조회 없이
+기한을 표시할 수 있게 했다.
+
+**구현 내용**
+- `account.service.ts` — `purgeAfterFor(deletedAt)` export. 30일 규칙 계산을 한 곳으로 모으고
+  `deleteAccount` 도 이 함수를 쓴다. 삭제 응답과 403 이 같은 `deletedAt` 에서 계산되므로
+  두 값이 문자열까지 일치한다
+- `AppError` 에 optional `details?: Record<string, unknown>` 추가. 에러 핸들러(`app.ts`)가
+  `error` 객체에 병합하되 `{ ...details, code, message }` 순서 — 부가 정보가 `code`/`message` 를
+  덮지 못하게 한다
+- `schemas/responses.ts` — `FORBIDDEN_ERROR_SCHEMA` 신설, `AUTHENTICATED_ERROR_RESPONSES` 에
+  `403` 으로 등록. **Fastify 는 선언되지 않은 상태 코드에 직렬화 스키마를 적용하지 않으므로**
+  선언 없이도 런타임에는 값이 나가지만, OpenAPI 에 안 잡혀 앱 `schema.d.ts` 가 필드를 모르고,
+  나중에 누가 403 을 선언하는 순간 `additionalProperties: false` 로 조용히 사라진다.
+  `purgeAfter` 는 optional — `AppError.forbidden()` 의 일반 403 도 같은 스키마를 쓴다
+- `routes/edit-jobs.ts` 의 `403: API_ERROR_SCHEMA` 제거 — 뒤따르는
+  `...AUTHENTICATED_ERROR_RESPONSES` 스프레드에 덮여 이미 죽은 선언이었다(동작 변화 없음)
+
+**검증**
+- `npm test -w apps/api` — 14 파일 163 테스트 통과 (account-deletion 1개 신규:
+  유예 중 요청의 403 `purgeAfter` 가 삭제 응답과 동일)
+- `npm run typecheck` / `npm run lint` 통과
