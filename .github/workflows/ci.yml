@@ -36,9 +36,10 @@ jobs:
   api-tests:
     name: Integration tests (API)
     runs-on: ubuntu-latest
-    # 통합 테스트는 실제 Postgres/Redis 를 그대로 쓴다(mock 아님).
-    # MinIO 는 필요 없다 — S3 를 실제로 호출하는 테스트가 없고, Dev A 의 storage 테스트도
-    # presign URL 문자열만 검증한다(네트워크 미사용).
+    # 통합 테스트는 실제 Postgres/Redis/MinIO 를 그대로 쓴다(mock 아님).
+    # MinIO 는 service container 가 아니라 아래 step 에서 docker run 으로 띄운다 —
+    # service container 는 command 를 지정할 수 없는데 minio/minio 는 `server /data` 가 필요하다.
+    # (계정 삭제 purge 테스트가 S3 prefix 삭제를 실제로 호출한다 — test/account-deletion.test.ts)
     services:
       postgres:
         image: postgres:16-alpine
@@ -64,6 +65,20 @@ jobs:
           --health-retries 15
     steps:
       - uses: actions/checkout@v4
+
+      # 포트·크리덴셜은 docker-compose.dev.yml / test/setup 과 동일 (9100 → 컨테이너 9000)
+      - name: Start MinIO
+        run: |
+          docker run -d --name minio -p 9100:9000 \
+            -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=minioadmin123 \
+            minio/minio server /data
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:9100/minio/health/live -o /dev/null && exit 0
+            sleep 1
+          done
+          echo "MinIO 가 기동되지 않았습니다" >&2
+          docker logs minio >&2
+          exit 1
 
       - uses: actions/setup-node@v4
         with:
