@@ -8,7 +8,7 @@
 > 진행 기록([progress.md](./progress.md))은 **완료된 것**만 담는다.
 >
 > 각 항목은 `왜 막혀 있는지` + `무엇이 있으면 닫히는지(완료 조건)` 형식이다.
-> 마지막 정리: 2026-08-11 (출처: 구 `integrations-backlog.md`, `plan-limits.md` §5,
+> 마지막 정리: 2026-08-12 (출처: 구 `integrations-backlog.md`, `plan-limits.md` §5,
 > `snap-source-of-truth.md` §7, `progress.md` 남은 것, `meetings/next-agenda.md`)
 
 ---
@@ -30,21 +30,23 @@
 
 **완료 조건**: 남은 세부 정책 확정 → `Movie` 스키마 PR → CRUD → export → e2e 실검증.
 
-### A-2. 플랜 차등 정책 일괄 확정
+### A-2. 크레딧 결제 세부 정책 확정
 
-**막힌 이유**: 부분 구현이 어긋남의 원인이었으므로 한 번에 확정해 한 번에 반영해야 한다.
-배경·논점·재도입 시 코드 변경 지점은 [decisions/plan-limits.md](./decisions/plan-limits.md).
+**결정됨**: 정기 구독과 Free/Standard/Premium 플랜을 제거하고, 무비 생성을 크레딧으로
+과금한다. 근거와 전환 원칙은
+[decisions/credit-payment-model.md](./decisions/credit-payment-model.md).
 
-현재 상태: 편집 횟수 제한 **미적용**, 해상도 차등·워터마크 **미구현**,
-스토리지 한도 Free 5GB는 [decisions/snap-source-of-truth.md](./decisions/snap-source-of-truth.md) §6에서 **결정됨(미구현)**.
+현재 구독 Checkout·조회·해지, `subscriptions` 테이블, `past_due`, 플랜 카탈로그는
+레거시 코드로 남아 있다. 편집 횟수 제한은 미적용이고 해상도 차등·워터마크는 미구현이다.
+Free 스토리지 5GB는
+[decisions/snap-source-of-truth.md](./decisions/snap-source-of-truth.md) §6에서 결정됐다.
 
-**결정할 것**: 무비 생성 과금 모델(크레딧 기반 재설계 예정) · Movie/영상 개수 제한 여부 ·
-해상도 차등 · 워터마크 · Standard/Premium 스토리지 한도 · `GET /billing/plans` 의
-`features` 문구 정합.
+**결정할 것**: 크레딧 묶음별 수량·가격·유효기간 · 최초/프로모션 지급량 · Movie export
+차감량 · 예약/확정/환급 규칙 · 고해상도 export 추가 차감 여부 · 유료 스토리지 상품 여부.
 
-**완료 조건**: 크레딧 기반 과금 정책 확정 → plan-limits §5의 코드·문서 변경 지점 반영 →
-`test/billing.test.ts` 의 `플랜별 편집 제한` 블록을 **확정된 크레딧 차감·차단·환급 규칙에
-맞는 기대값으로 갱신**. 기존 `4편째 403` 기대값을 기계적으로 복원하지 않는다.
+**완료 조건**: 회의 워크시트 §2 확정 → 일회성 Checkout·멱등 크레딧 지급·잔액 원장·
+차감/환급 구현 → 레거시 구독 API·스키마·약관 제거 또는 이관 → 결제·편집 e2e. 기존
+`4편째 403` 기대값을 기계적으로 복원하지 않는다.
 
 ### A-3. 영상 분석(하이라이트 추천) 기능 승인
 
@@ -63,11 +65,18 @@
 - [ ] egress 비용 실측 후 렌디션 기본 다운로드 정책 재평가
 - [ ] 앱 선행 과제: 촬영 스냅 해상도 하드코딩(1080×1920) 해소 — 틀린 값이 서버 원천이 되면 백필 불가
 
-### A-5. FE 앱 일정 확인
+### A-5. FE-BE 연동 범위·일정 확정
 
-FCM 실기기 검증(C-4), SNS 앱 검수용 URL(C-5), 결정된 `capturedAt` 등 촬영 메타데이터
-전달 일정이 **전부 FE 의존**이다. 위치 정보는 A-4에서 저장이 결정된 경우에만 FE 전달 범위에 포함한다.
-FE 일정이 없으면 해당 항목의 목표 시점을 정할 수 없다.
+FE 담당 개발자가 백엔드 저장소의 문서·환경설정·API/worker 작업에도 직접 참여하기 시작했으므로,
+이 항목을 별도 외부 팀에 대한 **FE 의존**으로 취급하지 않는다. 기능별로 FE 변경, BE 변경,
+통합 검증을 나누고 같은 개발자가 양쪽 작업을 맡는 것도 허용한다.
+
+다만 FCM 실기기 검증(C-4), SNS 사용자 안내, `capturedAt`·실제 해상도 전달처럼 앱이나
+실기기가 있어야 닫히는 작업은 여전히 FE-BE 연동 순서가 필요하다. 위치 정보는 A-4에서 저장이
+결정된 경우에만 전달 범위에 포함한다.
+
+**완료 조건**: [meetings/next-agenda.md](./meetings/next-agenda.md) §4에서 기능별 FE 변경·BE 변경·
+구현 담당·통합 검증일을 확정하고, 실기기 필요 항목은 검증 기기와 담당자까지 지정한다.
 
 ---
 
@@ -99,18 +108,12 @@ B 트랙 잔여 검증이 전부 여기서 막힌다.
 
 ### B-3. `AuthUser.email` 추가
 
-`POST /billing/checkout` 이 Stripe 고객을 이메일 없이 생성하고 있었다. 현재는 검증된 JWT 의
-email 클레임을 라우트에서 읽어 넘기지만, `request.user` 에 email 을 싣는 것이 깔끔하다.
-`plugins/auth.ts` 는 **공동 소유**라 합의 필요.
+`POST /billing/checkout` 이 Stripe 고객을 이메일 없이 생성하던 문제를 현재는 검증된 JWT의
+email 클레임을 라우트에서 직접 읽어 보완한다. 크레딧 Checkout에서도 영수증 이메일을 쓸 수
+있지만, `request.user`에 싣는 것이 필요한지는 별도 판단이다. `plugins/auth.ts`는
+**공동 소유**라 변경 시 합의가 필요하다.
 
-### B-4. 미납(`past_due`) 정책
-
-웹훅으로 `status='past_due'` 는 반영되지만 `plan` 은 유지된다. 즉 **미납 상태에서 유료 기능이
-계속 열려 있다**(현재는 플랜 제한 자체가 미적용이라 무의미하지만, A-2 반영 시 정책이 필요하다).
-
-**결정할 것**: 유예 기간, 유예 후 강등, 안내 방식.
-
-### B-5. `notification_logs` 보관 정책
+### B-4. `notification_logs` 보관 정책
 
 geofence 쿨다운 판정용 이력이 무한히 쌓인다. 쿨다운은 30분 기준이라 그보다 오래된 행은
 조회에 쓰이지 않는다.
@@ -121,23 +124,18 @@ geofence 쿨다운 판정용 이력이 무한히 쌓인다. 쿨다운은 30분 �
 
 ## C. 외부 크리덴셜/승인 대기
 
-### C-1. Stripe 상품·가격 생성 → 실제 Checkout 검증
+### C-1. 크레딧 상품·가격 생성 → 일회성 Checkout 검증
 
-**막힌 이유**: 테스트 키는 확보·검증했지만 계정에 상품이 0개다. Price ID 없이는
-`POST /billing/checkout` 이 Stripe 단계에서 실패한다.
+**막힌 이유**: 테스트 키는 확보·검증했지만 크레딧 묶음의 수량·가격이 확정되지 않았고
+계정에 상품도 없다. 현재 `POST /billing/checkout`은 구독용이라 그대로 검증하면 폐기할
+흐름만 확인하게 된다.
 
-**이미 검증된 것**: 실제 웹훅 이벤트로 `plan: free → standard` 전이, 순서 보정 가드,
-실키 서명 형식(`t=,v1=` + 5분 허용 오차). 즉 **결제 후 처리는 검증돼 있고 결제 진입만 남았다.**
+**재사용 가능한 검증**: 실제 Stripe 웹훅 서명 형식(`t=,v1=` + 5분 허용 오차), raw body
+처리, 오래된 이벤트 순서 보정. 구독 플랜 전이는 현행 정책 검증으로 보지 않는다.
 
-**완료 조건**
-```bash
-stripe products create --name "Snaply Standard"
-stripe prices create --product prod_xxx --currency krw --unit-amount 9900 \
-  -d "recurring[interval]=month"
-# → Price ID 2개를 .env 의 STRIPE_PRICE_STANDARD / STRIPE_PRICE_PREMIUM 에
-```
-그 뒤 `POST /billing/checkout` 이 실제 `checkout.stripe.com` URL 을 반환하고,
-테스트 카드로 결제 → 웹훅 → `plan` 전이까지 한 번 통과하면 닫힌다.
+**완료 조건**: A-2에서 크레딧 묶음 확정 → Stripe 일회성 Price 생성 → Checkout
+`mode=payment`으로 결제 → 서명 검증된 완료 웹훅 → 크레딧 지급 → 같은 이벤트 재전송 시
+중복 지급 없음까지 한 번 통과하면 닫힌다.
 
 ### C-2. 틱톡 받은함 실물 미도착
 

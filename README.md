@@ -48,7 +48,8 @@ packages/
 |---|---|
 | [decisions/snap-source-of-truth.md](docs/decisions/snap-source-of-truth.md) | 스냅 원천을 서버로 전환 + 스토리지 용량 정책(Free 5GB) 결정 |
 | [decisions/env-management.md](docs/decisions/env-management.md) | 환경변수 — 파일은 로컬만, 운영은 주입. 목록의 단일 원천 |
-| [decisions/plan-limits.md](docs/decisions/plan-limits.md) | 플랜 차등을 기획 확정 전까지 집행하지 않기로 한 결정과 근거 |
+| [decisions/plan-limits.md](docs/decisions/plan-limits.md) | 구독 폐기 전 플랜 차등 집행을 보류했던 과거 결정과 근거 |
+| [decisions/credit-payment-model.md](docs/decisions/credit-payment-model.md) | 정기 구독 제거 + 무비 생성 크레딧 결제 전환 결정 |
 | [decisions/movie-model.md](docs/decisions/movie-model.md) | 영상 묶음 구조 3안 비교와 `Movie` 엔티티 채택 결정 |
 
 작업을 고를 때는 [docs/backlog.md](docs/backlog.md)에서 시작한다. 결정 문서는 선택한 항목의
