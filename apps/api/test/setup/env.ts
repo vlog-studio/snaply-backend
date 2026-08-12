@@ -27,6 +27,11 @@ process.env.AWS_SECRET_ACCESS_KEY = 'minioadmin123';
 process.env.AWS_REGION = 'ap-northeast-2';
 process.env.S3_BUCKET_NAME = 'snaply-test';
 process.env.S3_ENDPOINT = TEST_S3_ENDPOINT;
+// 개인 .env 의 공개 주소(LAN IP 등)가 새면 presigned URL 이 테스트에서 접속 불가능해진다.
+// 테스트는 같은 호스트의 MinIO 를 직접 친다.
+process.env.S3_PUBLIC_ENDPOINT = TEST_S3_ENDPOINT;
+// delete 는 dotenv 재로딩으로 되살아난다(위 TIKTOK 주석 참고). config 는 빈 문자열을 미설정으로 본다.
+process.env.CLOUDFRONT_DOMAIN = '';
 
 // 외부 연동은 기본적으로 mock/dry-run. 개별 테스트가 필요 시 덮어쓴다.
 process.env.SNS_TOKEN_ENCRYPTION_KEY = 'test-encryption-key-do-not-use-in-prod';
