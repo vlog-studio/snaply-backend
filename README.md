@@ -76,7 +76,8 @@ AI 워커(미디어 트랙)는 `npm run worker:install` 후 `npm run worker`.
 | 명령 | 설명 |
 |---|---|
 | `npm run infra:up` / `infra:down` / `infra:logs` | 개발 인프라 |
-| `npm run stack:up` / `stack:migrate` / `stack:down` | 컨테이너로 테스트 서버 잠깐 띄우기 (기본 mock) |
+| `npm run stack` / `stack:down` | 전체 컨테이너 스택 빌드·migration·기동 / 중지 (기본 mock) |
+| `npm run stack:up` / `stack:migrate` | API만 기동 / migration 수동 재실행 |
 | `npm run dev:api` | API 서버(watch) |
 | `npm run worker` / `worker:install` | AI 워커 |
 | `npm run build` / `typecheck` / `lint` | 전체 빌드·검사 |

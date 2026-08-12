@@ -1,10 +1,11 @@
 # 로컬 개발용 전체 스택 (api + ai-worker + redis + postgres + minio)
 # 컨테이너로 테스트 서버를 잠깐 띄울 때 쓴다. 상시 개발은 docker-compose.dev.yml + 네이티브 실행.
 #
-# 실행: npm run stack:up          (= docker compose up --build api — 인프라는 depends_on 으로 따라온다)
-# 최초 1회 마이그레이션: npm run stack:migrate
+# 전체 스택 실행·업데이트: npm run stack
+# API만 실행: npm run stack:up (의존 서비스와 migration은 자동으로 따라온다)
 #
 # 환경변수는 `apps/api/.env` 를 env_file 로 읽어 베이스로 깔고, 아래 environment 로 덮는다.
+# `${VAR}` 보간도 같은 파일을 읽도록 stack:* 스크립트가 `--env-file apps/api/.env` 를 넘긴다.
 # compose 규격상 environment 가 env_file 보다 우선한다 — 개인 .env 의 로컬 주소(localhost:9100 등)가
 # 컨테이너 네트워크 주소를 덮지 않는 이유가 이것이다.
 # 이미지에는 .env 가 들어가지 않는다(.dockerignore) — 운영과 같은 "주입" 경로를 그대로 쓴다.
@@ -57,12 +58,29 @@ services:
       timeout: 3s
       retries: 10
 
-  api:
+  # 최초 설치와 pull 후 업데이트 모두 같은 경로를 쓴다.
+  # `migrate deploy`는 이미 적용된 migration을 건너뛰며, 실패하면 API와 워커를 시작하지 않는다.
+  migrate:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
     depends_on:
       postgres: { condition: service_healthy }
+    env_file:
+      - path: apps/api/.env
+        required: false
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/snaply
+      DIRECT_URL: postgresql://postgres:postgres@postgres:5432/snaply
+    command: ["npx", "prisma", "migrate", "deploy", "--schema", "prisma/schema.prisma"]
+    restart: "no"
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    depends_on:
+      migrate: { condition: service_completed_successfully }
       redis: { condition: service_healthy }
       minio: { condition: service_healthy }
     # Supabase·Stripe·SNS 자격증명은 여기서 온다. 없으면 뜨긴 하지만 인증이 동작하지 않는다.
@@ -95,7 +113,7 @@ services:
     build:
       context: ./apps/ai-worker
     depends_on:
-      postgres: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
       redis: { condition: service_healthy }
       minio: { condition: service_healthy }
     command: ["python", "worker.py"]
