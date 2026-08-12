@@ -666,3 +666,29 @@ stripe trigger customer.subscription.created --api-key $STRIPE_SECRET_KEY
 - `migrate`는 Postgres healthcheck 통과 후 `prisma migrate deploy`를 실행한다. API와 AI 워커는
   migration 성공을 기다리며, 실패 시 시작하지 않는다.
 - 이미 적용된 migration은 Prisma가 건너뛰므로 같은 명령을 반복 실행할 수 있다.
+
+---
+
+## 계정 삭제 기능 (2026-08-12)
+
+**정책**: soft delete + 30일 유예 + 배치 실삭제 — [decisions/account-deletion.md](./decisions/account-deletion.md).
+약관이 이미 계정 삭제를 약속하고 있었으나(`routes/legal.ts`) 구현이 없던 갭을 닫았다.
+
+**구현 내용**
+- `users.deleted_at` 신설(마이그레이션 `20260812000000_add_user_deleted_at`) + 조회 인덱스
+- `DELETE /auth/me` — Stripe 즉시 해지(실패 시 삭제 중단), SNS 연동·FCM 토큰 삭제,
+  진행 중 편집 작업 실패 처리 + 큐 제거(최선 노력), soft delete. `purgeAfter` 반환
+- 삭제 대기 계정의 인증 요청은 `403 ACCOUNT_PENDING_DELETION` (`plugins/auth.ts`)
+- `POST /auth/me/restore` — 유예 내 복구 (`authenticateAllowDeleted` 경유)
+- purge 배치 `npm run accounts:purge -w apps/api` (dry-run 기본, `--yes` 실삭제):
+  S3 prefix → Supabase Auth Admin → DB Cascade 순. 개별 실패는 Sentry 기록 후 계속
+- 신규 서비스: `account.service.ts`, `supabase-admin.service.ts`.
+  스토리지에 `deleteObjectsByPrefix`, 큐에 `removeEditJob`, Stripe 클라이언트에 `cancelImmediately` 추가
+- `SUPABASE_SERVICE_ROLE_KEY` 를 서버 코드가 읽기 시작 — env-spec `origin: 'shared'` 로 변경.
+  **운영 시크릿 주입 목록에 추가 필요** (B-1 배포 작업에서 함께 처리)
+- auth 스텁에 Admin 삭제 엔드포인트 추가(테스트용), 개인정보처리방침에 30일 유예 명시
+
+**검증**
+- `npm test -w apps/api` — 13 파일 160 테스트 통과 (account-deletion 6개 신규:
+  소프트 삭제·정리, 편집 작업 취소, 403 차단, 복구 2건, purge 유예 판정)
+- `npm run typecheck` / `npm run lint` 통과
