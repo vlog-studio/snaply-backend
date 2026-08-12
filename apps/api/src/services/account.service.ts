@@ -19,6 +19,14 @@ export const ACCOUNT_DELETION_GRACE_DAYS = 30;
 const GRACE_MS = ACCOUNT_DELETION_GRACE_DAYS * 24 * 60 * 60 * 1000;
 
 /**
+ * 삭제 요청 시각(`users.deleted_at`)으로부터 실삭제 예정 시각.
+ * 삭제 응답과 삭제 대기 계정의 403 응답이 같은 값을 내려야 하므로 계산은 여기 하나뿐이다.
+ */
+export function purgeAfterFor(deletedAt: Date): Date {
+  return new Date(deletedAt.getTime() + GRACE_MS);
+}
+
+/**
  * 계정 소프트 삭제. Stripe 해지를 먼저 시도하고, 실패하면 삭제 전체를 중단한다
  * (유료 구독이 살아 있는 채로 계정만 잠기는 상태를 만들지 않는다 — 사용자는 재시도 가능).
  */
@@ -51,7 +59,7 @@ export async function deleteAccount(userId: string): Promise<{ purgeAfter: Date 
     await removeEditJob(job.id);
   }
 
-  return { purgeAfter: new Date(now.getTime() + GRACE_MS) };
+  return { purgeAfter: purgeAfterFor(now) };
 }
 
 /** 유예 기간 내 복구. FCM 토큰·SNS 연동·구독은 이미 정리됐으므로 되살아나지 않는다. */

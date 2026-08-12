@@ -11,6 +11,7 @@
 - **응답 형식(공통)**
   - 성공: `{ "success": true, "data": ... }`
   - 실패: `{ "success": false, "error": { "code": "STRING", "message": "..." } }`
+    - 일부 에러는 `error` 에 부가 필드를 더 싣는다(예: `403 ACCOUNT_PENDING_DELETION` 의 `purgeAfter`).
 - **에러 코드**: `UNAUTHORIZED`(401), `FORBIDDEN`(403), `ACCOUNT_PENDING_DELETION`(403, 삭제 대기 계정 — 복구는 `POST /auth/me/restore`), `NOT_FOUND`(404), `BAD_REQUEST`/`VALIDATION_ERROR`(400), `RATE_LIMITED`(429), `INTERNAL_SERVER_ERROR`(500)
 - **Rate limit**: 기본 IP당 60req/분. `POST /edit-jobs` 유저당 5req/분, `POST /notifications/geofence-enter` 유저당 10req/분. 초과 시 429.
 
@@ -37,7 +38,15 @@
 ```json
 { "success": true, "data": { "deleted": true, "purgeAfter": "2026-09-11T00:00:00.000Z" }}
 ```
-삭제 대기 중에 다른 인증 API 를 호출하면 `403 ACCOUNT_PENDING_DELETION`.
+삭제 대기 중에 다른 인증 API 를 호출하면 `403 ACCOUNT_PENDING_DELETION`. 이 403 은 위 삭제 응답과
+동일한 `purgeAfter` 를 에러 객체에 함께 담으므로, 앱은 삭제 응답을 저장해 두지 않아도 남은 유예 기간을 보여줄 수 있다.
+```json
+{ "success": false, "error": {
+  "code": "ACCOUNT_PENDING_DELETION",
+  "message": "삭제 대기 중인 계정입니다. 복구하려면 POST /auth/me/restore 를 호출하세요.",
+  "purgeAfter": "2026-09-11T00:00:00.000Z"
+}}
+```
 
 ### POST /auth/me/restore  🔒
 유예 기간 내 계정 복구 → `{ "success": true, "data": { "restored": true } }`.

@@ -129,7 +129,6 @@ export async function editJobRoutes(app: FastifyInstance): Promise<void> {
         response: {
           202: successResponseSchema(JOB_CREATED_SCHEMA),
           400: API_ERROR_SCHEMA,
-          403: API_ERROR_SCHEMA,
           ...AUTHENTICATED_ERROR_RESPONSES,
         },
       },

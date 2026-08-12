@@ -83,6 +83,21 @@ describe('DELETE /auth/me', () => {
     expect(res.statusCode).toBe(403);
     expect(res.json().error.code).toBe('ACCOUNT_PENDING_DELETION');
   });
+
+  it('유예 중 요청의 403 은 삭제 응답과 동일한 purgeAfter 를 담는다', async () => {
+    const user = await h.createUser();
+    const deleted = await h.app.inject({
+      method: 'DELETE',
+      url: '/auth/me',
+      headers: user.auth,
+    });
+    expect(deleted.statusCode).toBe(200);
+
+    const res = await h.app.inject({ method: 'GET', url: '/auth/me', headers: user.auth });
+    expect(res.statusCode).toBe(403);
+    // 같은 deletedAt 에서 계산되므로 문자열까지 일치해야 한다 (purgeAfterFor 단일 출처)
+    expect(res.json().error.purgeAfter).toBe(deleted.json().data.purgeAfter);
+  });
 });
 
 describe('POST /auth/me/restore', () => {
