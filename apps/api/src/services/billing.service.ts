@@ -6,6 +6,7 @@ import {
   ensureCustomer,
   createCheckoutSession,
   cancelAtPeriodEnd,
+  cancelImmediately,
   constructEvent,
   type StripeEvent,
 } from './billing/stripe.client.js';
@@ -117,6 +118,29 @@ export async function cancelSubscription(userId: string): Promise<void> {
   await getPrisma().subscription.update({
     where: { userId },
     data: { status: 'canceling' },
+  });
+}
+
+/**
+ * 계정 삭제용 즉시 해지. 구독이 없으면 조용히 넘어간다(삭제 흐름을 막지 않기 위해).
+ * Stripe 호출이 실패하면 예외를 전파해 계정 삭제 자체를 중단시킨다 — 유료 구독이
+ * 살아 있는 채로 계정만 지워지는 상태를 만들지 않는다.
+ */
+export async function cancelSubscriptionImmediately(userId: string): Promise<void> {
+  const prisma = getPrisma();
+  const sub = await prisma.subscription.findUnique({
+    where: { userId },
+    select: { id: true, stripeSubscriptionId: true },
+  });
+  if (!sub) {
+    return;
+  }
+  if (sub.stripeSubscriptionId) {
+    await cancelImmediately(config(), sub.stripeSubscriptionId);
+  }
+  await prisma.subscription.update({
+    where: { id: sub.id },
+    data: { plan: 'free', status: 'canceled', stripeSubscriptionId: null },
   });
 }
 

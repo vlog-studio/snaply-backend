@@ -3,9 +3,11 @@ import {
   PutObjectCommand,
   GetObjectCommand,
   DeleteObjectCommand,
+  DeleteObjectsCommand,
   HeadObjectCommand,
   HeadBucketCommand,
   CreateBucketCommand,
+  ListObjectsV2Command,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import type { StorageConfig } from '../config.js';
@@ -96,6 +98,39 @@ export async function getObjectSize(s3Key: string): Promise<number | null> {
 export async function deleteObject(s3Key: string): Promise<void> {
   const { client, cfg } = ensureInit();
   await client.send(new DeleteObjectCommand({ Bucket: cfg.bucket, Key: s3Key }));
+}
+
+/**
+ * prefix 아래 모든 객체를 일괄 삭제하고 삭제한 개수를 반환한다.
+ * 키가 `uploads/{userId}/` 로 유저별 격리돼 있어 계정 실삭제(purge)에 쓴다.
+ */
+export async function deleteObjectsByPrefix(prefix: string): Promise<number> {
+  const { client, cfg } = ensureInit();
+  let deleted = 0;
+  let continuationToken: string | undefined;
+  do {
+    const page = await client.send(
+      new ListObjectsV2Command({
+        Bucket: cfg.bucket,
+        Prefix: prefix,
+        ContinuationToken: continuationToken,
+      }),
+    );
+    const keys = (page.Contents ?? [])
+      .map((obj) => obj.Key)
+      .filter((key): key is string => Boolean(key));
+    if (keys.length > 0) {
+      await client.send(
+        new DeleteObjectsCommand({
+          Bucket: cfg.bucket,
+          Delete: { Objects: keys.map((Key) => ({ Key })) },
+        }),
+      );
+      deleted += keys.length;
+    }
+    continuationToken = page.IsTruncated ? page.NextContinuationToken : undefined;
+  } while (continuationToken);
+  return deleted;
 }
 
 export function publicUrl(s3Key: string): string {

@@ -12,6 +12,7 @@
     "test": "vitest run && tsc -p tsconfig.json && node --test test/storage.service.test.mjs",
     "test:watch": "vitest",
     "auth:stub": "tsx scripts/auth-stub.ts",
+    "accounts:purge": "node --env-file=.env --import tsx scripts/purge-deleted-accounts.ts",
     "dev:public-bucket": "node --env-file=.env --import tsx scripts/dev-public-bucket.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy",

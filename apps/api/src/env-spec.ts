@@ -77,8 +77,9 @@ export const ENV_VARS = [
   {
     key: 'SUPABASE_SERVICE_ROLE_KEY',
     required: false,
-    origin: 'local',
-    description: 'scripts/media-cleanup.mjs 전용. 서버 코드는 읽지 않는다',
+    origin: 'shared',
+    description:
+      '계정 실삭제 배치(accounts:purge)와 scripts/media-cleanup.mjs 가 사용. 클라이언트 노출 금지',
   },
   {
     key: 'SUPABASE_JWT_AUDIENCE',

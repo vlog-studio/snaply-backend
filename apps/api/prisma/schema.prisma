@@ -24,6 +24,8 @@ model User {
   quietEnd            Int       @default(8) @map("quiet_end")
   createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt           DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  // 계정 삭제 요청 시각. 30일 유예 후 purge 배치가 실삭제한다 (docs/decisions/account-deletion.md)
+  deletedAt           DateTime? @map("deleted_at") @db.Timestamptz(6)
 
   notificationLogs NotificationLog[]
   videos           Video[]
@@ -32,6 +34,7 @@ model User {
   snsUploads       SnsUpload[]
   subscription     Subscription?
 
+  @@index([deletedAt])
   @@map("users")
 }
 
