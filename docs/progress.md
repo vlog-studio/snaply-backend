@@ -692,3 +692,29 @@ stripe trigger customer.subscription.created --api-key $STRIPE_SECRET_KEY
 - `npm test -w apps/api` — 13 파일 160 테스트 통과 (account-deletion 6개 신규:
   소프트 삭제·정리, 편집 작업 취소, 403 차단, 복구 2건, purge 유예 판정)
 - `npm run typecheck` / `npm run lint` 통과
+
+---
+
+## 고아 pending 영상 정리 배치 (2026-08-12)
+
+**배경**: `GET /videos/upload-url` 은 presigned URL 발급과 함께 `status='pending'` 레코드를
+선생성하는데, 클라이언트가 업로드에 실패하거나 confirm(`POST /videos`)을 생략하면 pending 행이
+무한히 쌓였다(실사례: 로컬 배포에서 MinIO 공개 주소가 `localhost` 로 잘못 설정돼 모바일 업로드가
+계속 실패 → snap 20개에 Video 249행). [decisions/snap-source-of-truth.md](./decisions/snap-source-of-truth.md)
+§5 GC 병행 항목 ① 을 구현한 것.
+
+**구현 내용**
+- `video.service.ts` — `PENDING_VIDEO_TTL_HOURS`(24), `findStalePendingVideos`,
+  `purgeStalePendingVideos`. 대상은 `kind='source' AND status='pending' AND createdAt <= now-TTL`.
+  업로드만 되고 confirm 안 된 S3 객체가 있을 수 있어 S3 삭제(없으면 no-op) 후 행을 hard delete.
+  개별 실패는 Sentry 기록 후 계속 (`accounts:purge` 와 동일 구조)
+- 배치 `npm run videos:purge-pending -w apps/api` (dry-run 기본, `--yes` 실삭제).
+  운영에서는 cron 하루 1회 상정
+- 테스트 hermetic 보강: `test/setup/env.ts` 가 `S3_PUBLIC_ENDPOINT` 를 테스트 MinIO 로 고정하고
+  `CLOUDFRONT_DOMAIN` 을 비운다 — 개인 `.env` 의 공개 주소(LAN IP)가 새면 presigned URL 을 쓰는
+  테스트가 접속 불가로 실패했다
+
+**검증**
+- `npm test -w apps/api` — 14 파일 162 테스트 통과 (pending-video-purge 2개 신규:
+  TTL·상태·kind 필터 판정, 미확정 S3 객체 동반 삭제 — 실제 MinIO 에 presigned PUT 후 확인)
+- `npm run typecheck` / `npm run lint` 통과
