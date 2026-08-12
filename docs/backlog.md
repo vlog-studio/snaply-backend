@@ -279,6 +279,8 @@ Dev A 가 인수인계 회신에서 요청한 항목. 미설정 동작은 "SNS �
 계정 실삭제 배치(`accounts:purge`, [decisions/account-deletion.md](./decisions/account-deletion.md))가
 먼저 생겼으므로, 이 배치를 만들 때 같은 실행 방식(스케줄 실행 + dry-run 기본)을 따르면 된다.
 단 계정 purge 는 유저 prefix 전체를 지우므로 **영상 단건** S3 실패분 회수는 여전히 필요하다.
+GC ①(pending TTL 회수)은 `videos:purge-pending` 으로 구현 완료(2026-08-12, progress.md 참고) —
+남은 것은 ③ 이 항목뿐이다.
 
 ### E-4. 빌드한 이미지가 실제로 뜨는지 아무도 확인하지 않는다
 
