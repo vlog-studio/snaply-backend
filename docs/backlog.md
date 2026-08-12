@@ -61,7 +61,8 @@ Free 스토리지 5GB는
 
 - [ ] 위치(`place`) 정보의 서버 저장 여부 — 프라이버시/약관 검토 선행
 - [ ] 비로그인 사용자의 스냅 지위 (현행: 업로드 워커가 로그인 시에만 동작)
-- [ ] 삭제 유예 기간 값 (업계 30~60일, 30일 제안)
+- [x] 삭제 유예 기간 값 — **30일 확정**, 계정 삭제에 먼저 적용
+      ([decisions/account-deletion.md](./decisions/account-deletion.md))
 - [ ] egress 비용 실측 후 렌디션 기본 다운로드 정책 재평가
 - [ ] 앱 선행 과제: 촬영 스냅 해상도 하드코딩(1080×1920) 해소 — 틀린 값이 서버 원천이 되면 백필 불가
 
@@ -187,7 +188,9 @@ geofence 진입 → 기기에서 푸시 수신 확인.
 추가로 요구되는 두 개는 미구현이다 (OAuth 테스트에는 불필요해서 미뤘다).
 
 - **승인 취소 콜백 URL** — 사용자가 앱 연결을 해제하면 Meta 가 호출 (`signed_request` POST)
-- **데이터 삭제 요청 URL** — 개인정보 삭제 요청 처리. URL + 확인 코드를 반환해야 한다
+- **데이터 삭제 요청 URL** — 개인정보 삭제 요청 처리. URL + 확인 코드를 반환해야 한다.
+  삭제 자체는 계정 삭제 파이프라인(`account.service.ts` 의 `deleteAccount`)을 재사용한다 —
+  [decisions/account-deletion.md](./decisions/account-deletion.md)
 
 **완료 조건**: 검수 제출 전 두 엔드포인트 구현 + 콘솔 등록.
 
@@ -273,6 +276,9 @@ Dev A 가 인수인계 회신에서 요청한 항목. 미설정 동작은 "SNS �
 `video.service.ts` 의 주석이 가리키는 미구현 배치. 스냅 서버 원천 전환의 GC 배치
 (pending TTL 회수 / 삭제 유예 만료분 실삭제)와 함께 설계하는 것이 자연스럽다 —
 [decisions/snap-source-of-truth.md](./decisions/snap-source-of-truth.md) §5 병행 항목.
+계정 실삭제 배치(`accounts:purge`, [decisions/account-deletion.md](./decisions/account-deletion.md))가
+먼저 생겼으므로, 이 배치를 만들 때 같은 실행 방식(스케줄 실행 + dry-run 기본)을 따르면 된다.
+단 계정 purge 는 유저 prefix 전체를 지우므로 **영상 단건** S3 실패분 회수는 여전히 필요하다.
 
 ### E-4. 빌드한 이미지가 실제로 뜨는지 아무도 확인하지 않는다
 
