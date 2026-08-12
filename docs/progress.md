@@ -646,3 +646,23 @@ stripe trigger customer.subscription.created --api-key $STRIPE_SECRET_KEY
 **후속 작업의 현행 위치**: 배포 플랫폼 시크릿과 Deploy 스텝 연결은
 [backlog.md](./backlog.md) B-1에서 관리한다. 이번 환경변수 정리 라운드에서는 JWKS 도달까지만
 재확인했지만, 실제 Supabase JWT를 사용한 컨테이너 인증은 위 "실검증 라운드 2"에서 이미 완료했다.
+
+---
+
+## 풀스택 Compose 공개 스토리지 주소 보간 수정 (2026-08-12)
+
+- `stack:up`이 Compose 보간용 env 파일을 지정하지 않아, `apps/api/.env`에
+  `S3_PUBLIC_ENDPOINT=http://<PC의 LAN IP>:9200`을 설정해도 `docker-compose.yml`의 기본값
+  `http://localhost:9200`이 API 컨테이너에 들어가던 문제를 수정했다.
+- `stack:up`·`stack:migrate`·`stack:down`이 모두 `--env-file apps/api/.env`를 사용하도록 통일했다.
+- AI 워커를 수동 기동하는 ONBOARDING 명령도 동일한 env 파일을 사용하도록 갱신했다.
+
+---
+
+## 원커맨드 로컬 스택 migration 자동화 (2026-08-12)
+
+- `npm run stack`이 최초 로컬 설치와 pull 후 업데이트를 모두 처리하도록 Compose에 일회성
+  `migrate` 서비스를 추가했다.
+- `migrate`는 Postgres healthcheck 통과 후 `prisma migrate deploy`를 실행한다. API와 AI 워커는
+  migration 성공을 기다리며, 실패 시 시작하지 않는다.
+- 이미 적용된 migration은 Prisma가 건너뛰므로 같은 명령을 반복 실행할 수 있다.
