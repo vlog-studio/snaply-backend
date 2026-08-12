@@ -58,7 +58,8 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
     if (error instanceof AppError) {
       reply.status(error.statusCode).send({
         success: false,
-        error: { code: error.code, message: error.message },
+        // details 를 먼저 펼친다 — code/message 는 어떤 부가 정보로도 덮이지 않아야 한다.
+        error: { ...error.details, code: error.code, message: error.message },
       });
       return;
     }

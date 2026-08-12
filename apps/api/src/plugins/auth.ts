@@ -3,6 +3,7 @@ import fp from 'fastify-plugin';
 import { createRemoteJWKSet, jwtVerify, errors as joseErrors } from 'jose';
 import type { AppConfig } from '../config.js';
 import { AppError } from '../lib/errors.js';
+import { purgeAfterFor } from '../services/account.service.js';
 import { resolveUser, type AuthUser } from '../services/user.service.js';
 
 declare module 'fastify' {
@@ -73,10 +74,12 @@ async function authPluginImpl(app: FastifyInstance, config: AppConfig): Promise<
   const authenticate = async (request: FastifyRequest): Promise<void> => {
     await authenticateAllowDeleted(request);
     if (request.user.deletedAt) {
+      // 복구 가능한 기한을 앱이 그대로 보여줄 수 있게 실삭제 예정 시각을 함께 내린다.
       throw new AppError(
         403,
         'ACCOUNT_PENDING_DELETION',
         '삭제 대기 중인 계정입니다. 복구하려면 POST /auth/me/restore 를 호출하세요.',
+        { purgeAfter: purgeAfterFor(request.user.deletedAt).toISOString() },
       );
     }
   };

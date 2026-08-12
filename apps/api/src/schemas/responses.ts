@@ -21,6 +21,31 @@ export const API_ERROR_SCHEMA = {
   },
 } as const;
 
+/**
+ * 403 전용 에러 스키마. `ACCOUNT_PENDING_DELETION` 은 `AppError.details` 로 실삭제 예정 시각을
+ * 함께 내리므로 `purgeAfter` 를 여기 선언해야 직렬화에서 살아남는다.
+ * `AppError.forbidden()` 이 만드는 일반 403 도 같은 스키마를 쓰므로 optional 이다.
+ */
+export const FORBIDDEN_ERROR_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['success', 'error'],
+  properties: {
+    success: { type: 'boolean', enum: [false] },
+    error: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['code', 'message'],
+      properties: {
+        code: { type: 'string' },
+        message: { type: 'string' },
+        /** 이 시각 이전에는 POST /auth/me/restore 로 복구 가능 */
+        purgeAfter: { type: 'string', format: 'date-time' },
+      },
+    },
+  },
+} as const;
+
 export const COMMON_ERROR_RESPONSES = {
   429: API_ERROR_SCHEMA,
   500: API_ERROR_SCHEMA,
@@ -28,6 +53,7 @@ export const COMMON_ERROR_RESPONSES = {
 
 export const AUTHENTICATED_ERROR_RESPONSES = {
   401: API_ERROR_SCHEMA,
+  403: FORBIDDEN_ERROR_SCHEMA,
   ...COMMON_ERROR_RESPONSES,
 } as const;
 
