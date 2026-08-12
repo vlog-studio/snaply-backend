@@ -8,6 +8,7 @@ import type {
 } from '@vlog-studio/shared-types';
 import { getPrisma } from '../db/client.js';
 import { AppError } from '../lib/errors.js';
+import { captureException } from '../lib/sentry.js';
 import {
   createDownloadUrl,
   createUploadUrl,
@@ -182,6 +183,58 @@ export async function getVideo(params: { userId: string; videoId: string }): Pro
     throw AppError.notFound('영상을 찾을 수 없습니다.');
   }
   return await toDto(row);
+}
+
+/**
+ * presigned URL 발급 후 이 시간이 지나도록 확정(POST /videos)되지 않은 pending 영상은
+ * 고아로 간주하고 배치가 회수한다 — decisions/snap-source-of-truth.md §5 GC ①.
+ */
+export const PENDING_VIDEO_TTL_HOURS = 24;
+
+const PENDING_TTL_MS = PENDING_VIDEO_TTL_HOURS * 60 * 60 * 1000;
+
+export interface StalePendingVideo {
+  id: string;
+  s3Key: string | null;
+  createdAt: Date;
+}
+
+/** TTL 이 지난 미확정 pending 영상 목록. 편집 결과물(kind='result')은 대상이 아니다. */
+export async function findStalePendingVideos(
+  now: Date = new Date(),
+): Promise<StalePendingVideo[]> {
+  const cutoff = new Date(now.getTime() - PENDING_TTL_MS);
+  return getPrisma().video.findMany({
+    where: { kind: 'source', status: 'pending', createdAt: { lte: cutoff } },
+    select: { id: true, s3Key: true, createdAt: true },
+  });
+}
+
+/**
+ * 고아 pending 영상 회수. 업로드만 하고 confirm 을 안 한 객체가 있을 수 있으므로
+ * S3 를 먼저 지운다(없는 키 삭제는 no-op). 개별 실패는 기록하고 다음으로 넘어간다.
+ */
+export async function purgeStalePendingVideos(
+  now: Date = new Date(),
+): Promise<{ purged: string[]; failed: string[] }> {
+  const prisma = getPrisma();
+  const purged: string[] = [];
+  const failed: string[] = [];
+
+  for (const video of await findStalePendingVideos(now)) {
+    try {
+      if (video.s3Key) {
+        await deleteObject(video.s3Key);
+      }
+      await prisma.video.delete({ where: { id: video.id } });
+      purged.push(video.id);
+    } catch (err) {
+      captureException(err, { videoId: video.id, phase: 'pending-video-purge' });
+      failed.push(video.id);
+    }
+  }
+
+  return { purged, failed };
 }
 
 /** S3 원본 삭제 + DB 소프트 삭제 */
