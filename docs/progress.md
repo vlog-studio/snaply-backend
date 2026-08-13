@@ -747,3 +747,39 @@ stripe trigger customer.subscription.created --api-key $STRIPE_SECRET_KEY
 - `npm test -w apps/api` — 14 파일 163 테스트 통과 (account-deletion 1개 신규:
   유예 중 요청의 403 `purgeAfter` 가 삭제 응답과 동일)
 - `npm run typecheck` / `npm run lint` 통과
+
+---
+
+## 편집 작업 취소 API + 실패 분류 코드 (2026-08-13)
+
+**배경**: FE 안건 2건을 닫은 것. ① `generating` 상태에서 잘못 시작한 편집을 멈출 방법이
+없어 워커 타임아웃 10분이 사실상의 상한이었다 — 취소 엔드포인트와 취소된 작업의 최종 상태
+정의가 필요했다. ② 실패 시 앱이 서버 `errorMessage` 원문을 그대로 화면에 그리고 있었다 —
+앱이 사용자 문구로 분기할 수 있는 **분류 코드**가 문구 개선보다 먼저다.
+
+**구현 내용**
+- `DELETE /edit-jobs/:id` — `queued`/`processing` 작업을 취소. 최종 상태 **`canceled`** 신설
+  (`EditJobStatus`에 추가). 이미 `canceled`면 200(멱등), `done`/`failed`면 409 `CONFLICT`
+  (`AppError.conflict` 신설), 남의 작업은 404
+- 취소 시: DB 상태 변경(원천) → 결과물 video `failed`+소프트 삭제(목록에서 숨김) →
+  큐 제거(최선 노력) → 진행률 채널에 `{status:'canceled'}` 발행으로 열린 WebSocket 종료
+- **워커의 취소 인지** (`ai-worker`): `mark_processing`/`update_progress`/`mark_done`을
+  상태 조건부 UPDATE로 바꿔, 취소된 작업은 진행률 갱신 시점에 `JobCanceled`로 중단하고
+  BullMQ 재시도 없이 종료. `canceled`가 `done`/`failed`로 되살아나지 않는다
+- 계정 삭제의 편집 작업 취소도 같은 최종 상태(`canceled`)로 통일 (`account.service.ts`)
+- **실패 분류 코드**: `edit_jobs.error_code` 컬럼 추가(마이그레이션
+  `20260813000000_add_edit_job_error_code`), `EditJobErrorCode` 타입
+  (`TIMEOUT | SOURCE_UNAVAILABLE | QUEUE_FAILED | INTERNAL`, append-only).
+  워커가 실패 사유별로 기록하고, API는 큐 적재 실패에 `QUEUE_FAILED`를 기록.
+  `GET /edit-jobs/:id` 응답과 WS 실패 메시지(`code`)에 노출
+- `getRedisPublisher()` — API 쪽 Pub/Sub 발행 전용 공유 연결 (`lib/redis.ts`)
+
+**검증**
+- `npm test -w apps/api` — 15 파일 170 테스트 통과 (edit-jobs-cancel 7개 신규:
+  queued/processing 취소, 결과물 video 정리, 멱등 재취소, done/failed 409, 남의 작업 404,
+  canceled 조회, errorCode 노출) + tsc + storage 테스트 통과
+- 워커 파이썬 변경은 문법 검증만 수행(로컬 pytest 미설치, 기존 테스트는 순수 함수 대상).
+  실제 취소 중단·코드 기록은 로컬 워커 기동 시 실검증 필요
+
+**후속(미결 아님, 정책 대기)**: 크레딧 차감/환급이 확정되면(backlog A-2) 취소 시 환급을
+이 엔드포인트에 연결한다. 앱 쪽은 `errorCode`→문구 매핑과 취소 UI를 이어받는다.
