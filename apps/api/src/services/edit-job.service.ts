@@ -2,7 +2,9 @@ import {
   createRenderSpec,
   type ClipSpec,
   type EditJob,
+  type EditJobErrorCode,
   type EditJobStatus,
+  type EditProgressEvent,
   type EditSpec,
   type FitMode,
   type OutputProfile,
@@ -11,7 +13,8 @@ import {
 } from '@vlog-studio/shared-types';
 import { getPrisma } from '../db/client.js';
 import { AppError } from '../lib/errors.js';
-import { enqueueEditJob } from '../queue/edit-queue.js';
+import { editProgressChannel, getRedisPublisher } from '../lib/redis.js';
+import { enqueueEditJob, removeEditJob } from '../queue/edit-queue.js';
 
 const MAX_CLIPS = 10;
 const MIN_CLIP_DURATION_MS = 100;
@@ -25,6 +28,7 @@ interface EditJobRow {
   status: string;
   progress: number;
   errorMessage: string | null;
+  errorCode: string | null;
   startedAt: Date | null;
   completedAt: Date | null;
   createdAt: Date;
@@ -39,6 +43,7 @@ const SELECT = {
   status: true,
   progress: true,
   errorMessage: true,
+  errorCode: true,
   startedAt: true,
   completedAt: true,
   createdAt: true,
@@ -151,6 +156,7 @@ function toDto(row: EditJobRow): EditJob {
     status: row.status as EditJobStatus,
     progress: row.progress,
     errorMessage: row.errorMessage,
+    errorCode: (row.errorCode as EditJobErrorCode | null) ?? null,
     startedAt: row.startedAt?.toISOString() ?? null,
     completedAt: row.completedAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
@@ -263,7 +269,7 @@ export async function createEditJob(params: {
   } catch (err) {
     await prisma.editJob.update({
       where: { id: job.id },
-      data: { status: 'failed', errorMessage: '큐 적재에 실패했습니다.' },
+      data: { status: 'failed', errorMessage: '큐 적재에 실패했습니다.', errorCode: 'QUEUE_FAILED' },
     });
     await prisma.video.update({ where: { id: outputVideo.id }, data: { status: 'failed' } });
     throw err;
@@ -281,6 +287,65 @@ export async function getEditJob(params: { userId: string; jobId: string }): Pro
     throw AppError.notFound('편집 작업을 찾을 수 없습니다.');
   }
   return toDto(row);
+}
+
+/**
+ * 진행 중(queued/processing)인 편집 작업을 취소한다. 최종 상태는 `canceled`.
+ *
+ * - DB 상태 변경이 취소의 원천이다. 큐 제거는 최선 노력이고, 워커가 이미 잡은 작업은
+ *   진행률 갱신 시점에 `canceled`를 발견하고 스스로 중단한다 (ai-worker `JobCanceled`).
+ * - 결과물 video 레코드는 `failed` + 소프트 삭제한다 — 취소는 사용자에게 실패로
+ *   보여줄 대상이 아니므로 목록에서 사라지는 것이 맞다.
+ * - 진행률 채널에 `{status:'canceled'}`를 발행해 열려 있는 WebSocket을 종료시킨다.
+ * - 이미 `canceled`면 멱등하게 성공, `done`/`failed`면 409.
+ */
+export async function cancelEditJob(params: { userId: string; jobId: string }): Promise<void> {
+  const prisma = getPrisma();
+  const now = new Date();
+
+  const result = await prisma.editJob.updateMany({
+    where: {
+      id: params.jobId,
+      userId: params.userId,
+      status: { in: ['queued', 'processing'] },
+    },
+    data: { status: 'canceled', completedAt: now },
+  });
+
+  if (result.count === 0) {
+    const row = await prisma.editJob.findFirst({
+      where: { id: params.jobId, userId: params.userId },
+      select: { status: true },
+    });
+    if (!row) {
+      throw AppError.notFound('편집 작업을 찾을 수 없습니다.');
+    }
+    if (row.status === 'canceled') {
+      return; // 이미 취소됨 — 멱등
+    }
+    throw AppError.conflict('이미 종료된 편집 작업은 취소할 수 없습니다.');
+  }
+
+  // 결과물 video 정리 — 완성물이 생기지 않으므로 목록에서 숨긴다
+  const job = await prisma.editJob.findUnique({
+    where: { id: params.jobId },
+    select: { videoId: true },
+  });
+  if (job) {
+    await prisma.video.updateMany({
+      where: { id: job.videoId, deletedAt: null, kind: 'result' },
+      data: { status: 'failed', deletedAt: now },
+    });
+  }
+
+  await removeEditJob(params.jobId);
+
+  const event: EditProgressEvent = { progress: 0, step: '취소됨', status: 'canceled' };
+  await getRedisPublisher()
+    .publish(editProgressChannel(params.jobId), JSON.stringify(event))
+    .catch(() => undefined); // 발행 실패해도 취소 자체는 유효 — WS는 최종 상태 조회로 수렴
+
+  return;
 }
 
 /** WebSocket 연결 시 소유권 확인 + 현재 상태 반환 (없으면 null) */

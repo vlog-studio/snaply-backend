@@ -112,6 +112,7 @@ model EditJob {
   status          String    @default("queued") @db.VarChar(20)
   progress        Int       @default(0)
   errorMessage    String?   @map("error_message")
+  errorCode       String?   @map("error_code") @db.VarChar(40)
   startedAt       DateTime? @map("started_at") @db.Timestamptz(6)
   completedAt     DateTime? @map("completed_at") @db.Timestamptz(6)
   createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)

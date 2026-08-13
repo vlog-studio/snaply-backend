@@ -77,49 +77,63 @@ async def set_video_result(
         )
 
 
-async def mark_processing(job_id: str) -> None:
+async def mark_processing(job_id: str) -> bool:
+    """queued/processing일 때만 processing으로 전이. False면 취소(또는 종료)된 작업."""
     now = datetime.now(timezone.utc)
     async with _pool_or_raise().acquire() as conn:
-        await conn.execute(
-            "UPDATE edit_jobs SET status='processing', started_at=$2, progress=0 WHERE id=$1",
+        row = await conn.fetchrow(
+            "UPDATE edit_jobs SET status='processing', started_at=$2, progress=0 "
+            "WHERE id=$1 AND status IN ('queued','processing') RETURNING id",
             job_id,
             now,
         )
+        return row is not None
 
 
-async def update_progress(job_id: str, progress: int) -> None:
+async def update_progress(job_id: str, progress: int) -> bool:
+    """processing일 때만 갱신. False면 그 사이 취소된 작업 — 파이프라인을 중단해야 한다."""
     async with _pool_or_raise().acquire() as conn:
-        await conn.execute(
-            "UPDATE edit_jobs SET progress=$2 WHERE id=$1", job_id, progress
+        row = await conn.fetchrow(
+            "UPDATE edit_jobs SET progress=$2 WHERE id=$1 AND status='processing' RETURNING id",
+            job_id,
+            progress,
         )
+        return row is not None
 
 
-async def mark_done(job_id: str) -> None:
+async def mark_done(job_id: str) -> bool:
+    """processing일 때만 done으로 확정. False면 취소된 작업이 done으로 되살아나는 것을 막은 것."""
     now = datetime.now(timezone.utc)
     async with _pool_or_raise().acquire() as conn:
         row = await conn.fetchrow(
             "UPDATE edit_jobs SET status='done', progress=100, completed_at=$2 "
-            "WHERE id=$1 RETURNING video_id",
+            "WHERE id=$1 AND status='processing' RETURNING video_id",
             job_id,
             now,
         )
         if row and row["video_id"]:
             await conn.execute(
-                "UPDATE videos SET status='done' WHERE id=$1", row["video_id"]
+                "UPDATE videos SET status='done' WHERE id=$1 AND deleted_at IS NULL",
+                row["video_id"],
             )
+        return row is not None
 
 
-async def mark_failed(job_id: str, error_message: str) -> None:
+async def mark_failed(job_id: str, error_message: str, error_code: str = "INTERNAL") -> None:
+    """진행 중 작업만 failed 처리. 이미 canceled/done이면 덮어쓰지 않는다."""
     now = datetime.now(timezone.utc)
     async with _pool_or_raise().acquire() as conn:
         row = await conn.fetchrow(
-            "UPDATE edit_jobs SET status='failed', error_message=$2, completed_at=$3 "
-            "WHERE id=$1 RETURNING video_id",
+            "UPDATE edit_jobs SET status='failed', error_message=$2, error_code=$3, "
+            "completed_at=$4 "
+            "WHERE id=$1 AND status IN ('queued','processing') RETURNING video_id",
             job_id,
             error_message[:1000],
+            error_code,
             now,
         )
         if row and row["video_id"]:
             await conn.execute(
-                "UPDATE videos SET status='failed' WHERE id=$1", row["video_id"]
+                "UPDATE videos SET status='failed' WHERE id=$1 AND deleted_at IS NULL",
+                row["video_id"],
             )

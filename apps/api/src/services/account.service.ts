@@ -42,9 +42,10 @@ export async function deleteAccount(userId: string): Promise<{ purgeAfter: Date 
 
   const now = new Date();
   await prisma.$transaction([
+    // 취소의 최종 상태는 사용자 취소(DELETE /edit-jobs/:id)와 동일하게 'canceled'
     prisma.editJob.updateMany({
       where: { userId, status: { in: ['queued', 'processing'] } },
-      data: { status: 'failed', errorMessage: '계정 삭제로 취소되었습니다.', completedAt: now },
+      data: { status: 'canceled', errorMessage: '계정 삭제로 취소되었습니다.', completedAt: now },
     }),
     // 암호화 토큰이라도 보유할 이유가 없다 — 유예 기간을 기다리지 않고 즉시 삭제
     prisma.snsConnection.deleteMany({ where: { userId } }),

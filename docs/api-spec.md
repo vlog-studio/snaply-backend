@@ -116,10 +116,28 @@ Query: `kind`(`source | result`, 선택), `cursor`(선택), `limit`(기본 20, �
 ```json
 { "success": true, "data": {
   "id":"uuid","videoId":"uuid","status":"processing","progress":70,
-  "errorMessage":null,"startedAt":"...","completedAt":null,"createdAt":"..."
+  "errorMessage":null,"errorCode":null,"startedAt":"...","completedAt":null,"createdAt":"..."
 }}
 ```
-`status`: `queued | processing | done | failed`
+`status`: `queued | processing | done | failed | canceled`
+
+- `errorMessage`: `failed`일 때의 서버 진단용 원문. **사용자 노출 문구가 아니다** — 화면 문구는
+  `errorCode`로 분기해 앱이 만든다.
+- `errorCode`: `failed`일 때의 분류 코드. `TIMEOUT`(처리 시간 초과) |
+  `SOURCE_UNAVAILABLE`(원본 클립 없음) | `QUEUE_FAILED`(요청 시점 큐 적재 실패) |
+  `INTERNAL`(그 외 서버 오류). append-only — 새 코드가 추가될 수 있으므로 앱은
+  모르는 코드를 `INTERNAL`처럼 다룬다.
+
+### DELETE /edit-jobs/:id  🔒
+`queued`/`processing` 작업을 취소한다. → 200 `{ "data": { "canceled": true } }`
+
+- 최종 상태는 `canceled`. 결과물 영상 레코드는 삭제 처리되어 목록에 나타나지 않는다.
+- 대기 중 작업은 큐에서 제거되고, 처리 중 작업은 워커가 다음 진행률 갱신 시점에 감지해 중단한다.
+  업로드 직전에 취소하면 산출물이 만들어질 수 있으나 `canceled`가 `done`으로 되살아나지는 않는다.
+- 열려 있는 진행률 WebSocket에는 `{"status":"canceled"}` 후 연결 종료.
+- 이미 `canceled`인 작업의 재취소는 200(멱등). `done`/`failed`는 409 `CONFLICT`. 남의 작업은 404.
+- 크레딧 차감/환급 규칙 확정 전이므로 취소에 따른 환급 동작은 아직 없다
+  ([decisions/credit-payment-model.md](./decisions/credit-payment-model.md) 확정 후 연결).
 
 ### WebSocket /edit-jobs/:id/progress
 연결: `ws(s)://.../edit-jobs/{id}/progress?token={supabase_jwt}` (쿼리 파라미터 토큰).
@@ -127,9 +145,10 @@ Query: `kind`(`source | result`, 선택), `cursor`(선택), `limit`(기본 20, �
 ```
 { "progress": 30, "step": "음악 매칭 중..." }
 { "progress": 100, "step": "완료", "outputUrl": "https://..." }
-{ "status": "failed", "error": "편집 중 오류가 발생했습니다." }
+{ "status": "failed", "error": "편집 중 오류가 발생했습니다.", "code": "INTERNAL" }
+{ "status": "canceled" }
 ```
-완료/실패 시 서버가 연결을 종료.
+완료/실패/취소 시 서버가 연결을 종료. `code`는 GET 응답의 `errorCode`와 같은 분류 코드.
 
 ---
 

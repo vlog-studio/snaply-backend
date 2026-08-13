@@ -26,6 +26,14 @@ from pipeline.render_spec import parse_render_spec
 _publisher: aioredis.Redis | None = None
 
 
+class JobCanceled(Exception):
+    """API가 작업을 canceled로 바꿔 파이프라인을 중단해야 할 때."""
+
+
+class SourceUnavailableError(RuntimeError):
+    """원본 클립을 찾을 수 없음 — 실패 분류 코드 SOURCE_UNAVAILABLE."""
+
+
 def _init_sentry() -> None:
     """SENTRY_DSN이 있을 때만 초기화. 없으면 no-op."""
     dsn = os.environ.get("SENTRY_DSN")
@@ -51,7 +59,9 @@ async def _publish(job_id: str, payload: dict) -> None:
 
 
 async def _progress(job_id: str, progress: int, step: str, extra: dict | None = None) -> None:
-    await db.update_progress(job_id, progress)
+    # 갱신 실패 = 그 사이 취소됨(status가 processing이 아님) → 파이프라인 중단
+    if not await db.update_progress(job_id, progress):
+        raise JobCanceled(job_id)
     await _publish(job_id, {"progress": progress, "step": step, **(extra or {})})
 
 
@@ -67,14 +77,15 @@ async def _run_pipeline(job_id: str, data: dict, work_dir: str) -> None:
         raise RuntimeError("edit_jobs 레코드를 찾을 수 없습니다.")
     output_video_id = ctx["video_id"]
 
-    await db.mark_processing(job_id)
+    if not await db.mark_processing(job_id):
+        raise JobCanceled(job_id)
     await _publish(job_id, {"progress": 0, "step": "시작"})
 
     # 1) 원본 클립 다운로드
     video_ids = list(dict.fromkeys(clip.video_id for clip in clip_specs))
     source_keys = await db.fetch_source_keys(user_id, video_ids)
     if len(source_keys) != len(video_ids):
-        raise RuntimeError("원본 클립을 찾을 수 없습니다.")
+        raise SourceUnavailableError("원본 클립을 찾을 수 없습니다.")
     local_sources: dict[str, str] = {}
     for i, video_id in enumerate(video_ids):
         key = source_keys[video_id]
@@ -129,7 +140,9 @@ async def _run_pipeline(job_id: str, data: dict, work_dir: str) -> None:
         thumbnail_url,
         thumb_key,
     )
-    await db.mark_done(job_id)
+    if not await db.mark_done(job_id):
+        # 업로드까지 끝났지만 그 사이 취소됨 — done으로 되살리지 않는다 (산출물은 GC가 정리)
+        raise JobCanceled(job_id)
     output_url = storage.download_url(edited_key)
     await _publish(job_id, {"progress": 100, "step": "완료", "outputUrl": output_url})
     logger.info("편집 완료 job_id={} url={}", job_id, edited_url)
@@ -149,16 +162,35 @@ async def process_edit_job(job, _job_token) -> dict:
             timeout=config.EDIT_TIMEOUT_SECONDS,
         )
         return {"jobId": job_id, "status": "done"}
+    except JobCanceled:
+        # 취소는 실패가 아니다 — 상태 변경·WS 종료 메시지는 API의 취소 처리가 이미 수행했다.
+        # raise하지 않아 BullMQ 재시도도 일어나지 않는다.
+        logger.info("편집 취소 감지, 중단 job_id={}", job_id)
+        return {"jobId": job_id, "status": "canceled"}
     except asyncio.TimeoutError:
         logger.error("편집 타임아웃 job_id={}", job_id)
-        await db.mark_failed(job_id, "편집 시간이 초과되었습니다.")
-        await _publish(job_id, {"status": "failed", "error": "편집 시간이 초과되었습니다."})
+        await db.mark_failed(job_id, "편집 시간이 초과되었습니다.", "TIMEOUT")
+        await _publish(
+            job_id,
+            {"status": "failed", "error": "편집 시간이 초과되었습니다.", "code": "TIMEOUT"},
+        )
+        raise
+    except SourceUnavailableError as exc:
+        logger.error("원본 클립 없음 job_id={}", job_id)
+        await db.mark_failed(job_id, str(exc), "SOURCE_UNAVAILABLE")
+        await _publish(
+            job_id,
+            {"status": "failed", "error": str(exc), "code": "SOURCE_UNAVAILABLE"},
+        )
         raise
     except Exception as exc:  # noqa: BLE001
         logger.exception("편집 실패 job_id={}", job_id)
         _capture(exc)
-        await db.mark_failed(job_id, str(exc))
-        await _publish(job_id, {"status": "failed", "error": "편집 중 오류가 발생했습니다."})
+        await db.mark_failed(job_id, str(exc), "INTERNAL")
+        await _publish(
+            job_id,
+            {"status": "failed", "error": "편집 중 오류가 발생했습니다.", "code": "INTERNAL"},
+        )
         raise
     finally:
         shutil.rmtree(work_dir, ignore_errors=True)
