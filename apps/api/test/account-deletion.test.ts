@@ -58,7 +58,7 @@ describe('DELETE /auth/me', () => {
     expect(sub).toMatchObject({ plan: 'free', status: 'canceled', stripeSubscriptionId: null });
   });
 
-  it('진행 중이던 편집 작업을 실패 처리한다', async () => {
+  it('진행 중이던 편집 작업을 취소 처리한다', async () => {
     const user = await h.createUser();
     const video = await h.prisma.video.create({
       data: { userId: user.id, status: 'ready' },
@@ -71,7 +71,7 @@ describe('DELETE /auth/me', () => {
     expect(res.statusCode).toBe(200);
 
     const updated = await h.prisma.editJob.findUnique({ where: { id: job.id } });
-    expect(updated?.status).toBe('failed');
+    expect(updated?.status).toBe('canceled');
     expect(updated?.errorMessage).toContain('계정 삭제');
   });
 

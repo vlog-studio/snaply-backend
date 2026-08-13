@@ -4,7 +4,16 @@ export type VideoStatus = 'pending' | 'ready' | 'processing' | 'done' | 'failed'
 
 export type VideoKind = 'source' | 'result';
 
-export type EditJobStatus = 'queued' | 'processing' | 'done' | 'failed';
+export type EditJobStatus = 'queued' | 'processing' | 'done' | 'failed' | 'canceled';
+
+/**
+ * 편집 실패의 분류 코드. 앱이 사용자 문구로 매핑하는 키이므로 append-only.
+ * - TIMEOUT: 워커 처리 시간 초과
+ * - SOURCE_UNAVAILABLE: 원본 클립을 찾을 수 없음 (삭제·소유권 변동 등)
+ * - QUEUE_FAILED: 큐 적재 실패 (요청 시점 인프라 문제)
+ * - INTERNAL: 그 외 서버 내부 오류
+ */
+export type EditJobErrorCode = 'TIMEOUT' | 'SOURCE_UNAVAILABLE' | 'QUEUE_FAILED' | 'INTERNAL';
 
 export type StylePreset = '감성' | '여행' | '일상';
 
@@ -107,6 +116,7 @@ export interface EditJob {
   status: EditJobStatus;
   progress: number;
   errorMessage: string | null;
+  errorCode: EditJobErrorCode | null;
   startedAt: string | null;
   completedAt: string | null;
   createdAt: string;
@@ -116,8 +126,10 @@ export interface EditProgressEvent {
   progress: number;
   step: string;
   outputUrl?: string;
-  status?: 'failed';
+  status?: 'failed' | 'canceled';
   error?: string;
+  /** status가 'failed'일 때의 분류 코드. */
+  code?: EditJobErrorCode;
 }
 
 export interface NearbyLocation {

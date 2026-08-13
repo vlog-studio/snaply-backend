@@ -37,4 +37,8 @@ export class AppError extends Error {
   static badRequest(message = '잘못된 요청입니다.'): AppError {
     return new AppError(400, 'BAD_REQUEST', message);
   }
+
+  static conflict(message = '현재 상태에서는 수행할 수 없는 요청입니다.'): AppError {
+    return new AppError(409, 'CONFLICT', message);
+  }
 }
