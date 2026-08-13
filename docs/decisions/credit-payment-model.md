@@ -4,6 +4,9 @@
 **상태**: 결정 — 정기 구독을 제품 모델에서 제거하고 무비 생성을 크레딧으로 과금한다.
 **원천**: 결제 방식이 다시 변경되기 전까지 수익 모델의 원천이다.
 **후속 작업의 원천**: [backlog.md](../backlog.md) A-2, C-1
+**후속 결정**: 결제 채널은 2026-08-13에 Stripe에서 Apple/Google IAP로 변경됐다 —
+[payment-channel-iap.md](payment-channel-iap.md). 아래 "구현 전환 원칙"의 Stripe 관련
+문장은 그 결정으로 무효다.
 
 ## 결정
 
