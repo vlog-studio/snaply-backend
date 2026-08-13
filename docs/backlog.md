@@ -49,8 +49,13 @@ Free 스토리지 5GB는
 셋 다 수량·가격이 정해지기 전에는 계약을 확정할 수 없다. 또한 편집 취소 API(구현 완료,
 progress.md 2026-08-13)의 환급 동작도 예약/확정/환급 규칙 확정 후 연결한다.
 
-**완료 조건**: 회의 워크시트 §2 확정 → 일회성 Checkout·멱등 크레딧 지급·잔액 원장·
-차감/환급 구현 → 레거시 구독 API·스키마·약관 제거 또는 이관 → 결제·편집 e2e. 기존
+결제 채널은 Apple/Google IAP + RevenueCat으로 확정됐다
+([decisions/payment-channel-iap.md](./decisions/payment-channel-iap.md)) — 이 항목에서는
+크레딧 정책(수량·가격·차감·환급)만 남는다.
+
+**완료 조건**: 회의 워크시트 §2 확정 → IAP 구매 웹훅의 멱등 크레딧 지급·잔액 원장·
+차감/환급 구현([plans/iap-migration.md](./plans/iap-migration.md)) → 레거시 구독
+API·스키마·약관 제거 또는 이관 → 결제·편집 e2e. 기존
 `4편째 403` 기대값을 기계적으로 복원하지 않는다.
 
 ### A-3. 영상 분석(하이라이트 추천) 기능 승인
@@ -100,7 +105,7 @@ FE 담당 개발자가 백엔드 저장소의 문서·환경설정·API/worker �
 `NODE_ENV=production` 주입을 빠뜨리지 말 것 — 빠뜨려도 배포는 성공한다
 ([decisions/env-management.md](./decisions/env-management.md)).
 
-**연결된 병목**: **고정 도메인**(D-1)이 SNS 콜백·Stripe webhook·Meta 검수의 전제 —
+**연결된 병목**: **고정 도메인**(D-1)이 SNS 콜백·결제(RevenueCat) 웹훅·Meta 검수의 전제 —
 B 트랙 잔여 검증이 전부 여기서 막힌다.
 
 ### B-2. FCM 멀티 디바이스
@@ -114,9 +119,10 @@ B 트랙 잔여 검증이 전부 여기서 막힌다.
 
 ### B-3. `AuthUser.email` 추가
 
-`POST /billing/checkout` 이 Stripe 고객을 이메일 없이 생성하던 문제를 현재는 검증된 JWT의
-email 클레임을 라우트에서 직접 읽어 보완한다. 크레딧 Checkout에서도 영수증 이메일을 쓸 수
-있지만, `request.user`에 싣는 것이 필요한지는 별도 판단이다. `plugins/auth.ts`는
+원래 `POST /billing/checkout` 이 Stripe 고객을 이메일 없이 생성하던 문제에서 나온
+항목인데, IAP 전환으로 Checkout 자체가 제거되면 이 필요성은 사라진다
+([decisions/payment-channel-iap.md](./decisions/payment-channel-iap.md)). 결제 외 용도로
+`request.user`에 email을 싣는 것이 필요한지는 별도 판단이다. `plugins/auth.ts`는
 **공동 소유**라 변경 시 합의가 필요하다.
 
 ### B-4. `notification_logs` 보관 정책
@@ -130,18 +136,20 @@ geofence 쿨다운 판정용 이력이 무한히 쌓인다. 쿨다운은 30분 �
 
 ## C. 외부 크리덴셜/승인 대기
 
-### C-1. 크레딧 상품·가격 생성 → 일회성 Checkout 검증
+### C-1. 스토어 크레딧 상품 등록 → IAP 구매·웹훅 검증
 
-**막힌 이유**: 테스트 키는 확보·검증했지만 크레딧 묶음의 수량·가격이 확정되지 않았고
-계정에 상품도 없다. 현재 `POST /billing/checkout`은 구독용이라 그대로 검증하면 폐기할
-흐름만 확인하게 된다.
+**막힌 이유**: 결제 채널이 Stripe에서 Apple/Google IAP + RevenueCat으로 확정됐다
+([decisions/payment-channel-iap.md](./decisions/payment-channel-iap.md), 구현 계획은
+[plans/iap-migration.md](./plans/iap-migration.md)). 크레딧 묶음의 수량·가격(A-2)이
+확정되지 않아 양 스토어에 consumable 상품을 등록할 수 없고, App Store Connect /
+Play Console / RevenueCat 프로젝트 설정도 아직 없다.
 
-**재사용 가능한 검증**: 실제 Stripe 웹훅 서명 형식(`t=,v1=` + 5분 허용 오차), raw body
-처리, 오래된 이벤트 순서 보정. 구독 플랜 전이는 현행 정책 검증으로 보지 않는다.
+**폐기되는 검증**: 기존 Stripe 테스트 키로 확인한 웹훅 서명 형식·구독 플랜 전이는
+채널 폐기와 함께 효력을 잃는다. raw body 처리·이벤트 멱등 처리의 설계 경험만 재사용한다.
 
-**완료 조건**: A-2에서 크레딧 묶음 확정 → Stripe 일회성 Price 생성 → Checkout
-`mode=payment`으로 결제 → 서명 검증된 완료 웹훅 → 크레딧 지급 → 같은 이벤트 재전송 시
-중복 지급 없음까지 한 번 통과하면 닫힌다.
+**완료 조건**: A-2에서 크레딧 묶음 확정 → 양 스토어 consumable 상품 등록 →
+RevenueCat 프로젝트·웹훅 URL 설정 → sandbox 구매 → 웹훅 수신 → 크레딧 지급 →
+같은 트랜잭션 웹훅 재전송 시 중복 지급 없음까지 한 번 통과하면 닫힌다.
 
 ### C-2. 틱톡 받은함 실물 미도착
 
