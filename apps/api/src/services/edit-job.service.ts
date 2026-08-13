@@ -15,6 +15,7 @@ import { getPrisma } from '../db/client.js';
 import { AppError } from '../lib/errors.js';
 import { editProgressChannel, getRedisPublisher } from '../lib/redis.js';
 import { enqueueEditJob, removeEditJob } from '../queue/edit-queue.js';
+import { createDownloadUrl } from './storage.service.js';
 
 const MAX_CLIPS = 10;
 const MIN_CLIP_DURATION_MS = 100;
@@ -346,6 +347,22 @@ export async function cancelEditJob(params: { userId: string; jobId: string }): 
     .catch(() => undefined); // 발행 실패해도 취소 자체는 유효 — WS는 최종 상태 조회로 수렴
 
   return;
+}
+
+/**
+ * done 작업의 결과물 재생 URL. 워커가 실시간 완료 메시지에 넣는 `outputUrl`과 같은 대상 —
+ * 완료 후 (재)연결한 WebSocket 스냅샷도 동일한 계약을 지키기 위해 사용한다.
+ * 결과물이 없거나 아직 URL이 채워지지 않았으면 null.
+ */
+export async function getEditJobOutputUrl(videoId: string): Promise<string | null> {
+  const video = await getPrisma().video.findUnique({
+    where: { id: videoId },
+    select: { editedUrl: true, editedS3Key: true },
+  });
+  if (!video) {
+    return null;
+  }
+  return video.editedS3Key ? createDownloadUrl(video.editedS3Key) : video.editedUrl;
 }
 
 /** WebSocket 연결 시 소유권 확인 + 현재 상태 반환 (없으면 null) */

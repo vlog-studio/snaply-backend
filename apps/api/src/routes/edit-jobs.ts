@@ -22,6 +22,7 @@ import {
   createEditJob,
   getEditJob,
   getEditJobForOwner,
+  getEditJobOutputUrl,
 } from '../services/edit-job.service.js';
 
 interface CreateEditJobBody {
@@ -259,7 +260,11 @@ export async function editJobRoutes(app: FastifyInstance): Promise<void> {
 
       // 이미 종료된 작업이면 최종 상태만 보내고 종료
       if (job.status === 'done') {
-        ws.send(JSON.stringify({ progress: 100, step: '완료' }));
+        // 실시간 완료 메시지와 같은 계약 — outputUrl 포함 (api-spec.md)
+        const outputUrl = await getEditJobOutputUrl(job.videoId);
+        ws.send(
+          JSON.stringify({ progress: 100, step: '완료', ...(outputUrl ? { outputUrl } : {}) }),
+        );
         ws.close();
         return;
       }
