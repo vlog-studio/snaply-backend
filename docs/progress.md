@@ -844,3 +844,67 @@ stripe trigger customer.subscription.created --api-key $STRIPE_SECRET_KEY
   기동 시 실검증 필요
 - **미검증**: RevenueCat 실키 경로(`/billing/sync` REST 조회)와 실제 스토어 sandbox 구매 —
   스토어 상품 등록이 선행돼야 한다 (backlog C-1)
+
+## 보상형 광고 크레딧 (2026-08-14)
+
+앱 팀의 계약 요청을 [decisions/ad-reward-credits.md](./decisions/ad-reward-credits.md)로 확정하고
+구현했다. 초안([meetings/2026-08-12-rewarded-credit-review.md](./meetings/2026-08-12-rewarded-credit-review.md) §4)의
+출처별 버킷·만료·차감 우선순위는 **v1에서 채택하지 않았다** — 평면 델타 원장 위에
+`reason: 'ad_reward'` 한 줄을 더하는 것으로 끝낸다.
+
+**설계의 핵심**: "광고를 봤으니 지급해달라"는 엔드포인트를 두지 않았다. 지급의 유일한 트리거는
+AdMob SSV 콜백이고, 앱은 세션을 열고 상태를 조회할 뿐이다. 콜백의 `reward_amount` 도 쓰지 않고
+**세션 발급 시점에 스냅샷된 `ad_rewards.credits`** 를 지급한다.
+
+**스키마** (`20260814020000_add_ad_rewards`)
+- `ad_rewards` — 세션 왕복 상태(`pending | granted | expired | rejected`). `nonce` unique,
+  `transaction_id` unique 가 SSV 재전송의 중복 지급을 원천 차단
+- `credit_ledger.ad_reward_id` + `(ad_reward_id, reason)` unique — `edit_job_id` 와 같은 장치.
+  한 세션은 `ad_reward` 원장 행을 최대 하나만 만든다
+- `(user_id, granted_at)` 인덱스 — 한도·쿨다운을 **지급된 시각**으로 세기 때문
+
+**서비스** (`services/ad-reward.service.ts`, `services/billing/admob-ssv.ts`)
+- 서명 검증은 **수신한 raw 쿼리스트링을 `&signature=` 직전까지 잘라** ECDSA-SHA256 으로 한다.
+  파싱 후 재조립하면 인코딩 차이만으로 정상 콜백이 위조로 판정된다
+- 모르는 `key_id` 는 공개키 캐시를 1회 강제 갱신 후 재시도(키 로테이션 대응)
+- 지급은 상태 전이 + 원장 insert 를 한 트랜잭션으로 묶고, 판정은 조회가 아니라 DB 제약에 맡긴다
+- 만료된 pending 세션은 배치 없이 **조회 시점에 lazy 확정**한다 — 그 상태를 보는 사람이 곧
+  그 상태에 막히는 사람이라 타이밍이 맞는다
+- 검증 실패를 200 으로 삼키지 않는다(400). 삼키면 위조 시도와 정상 미지급이 로그에서 구분되지 않는다
+- 거절 시에도 **수신한 `ad_unit` 을 그대로 기록**한다(검증되지 않은 값이며 진단용). Google 문서가
+  `ad_unit` 형식을 못 박지 않아(설명은 "AdMob ad unit ID", 예시값은 숫자 `2747237135`) 첫 콘솔
+  설정에서 허용 목록 형식이 어긋날 수 있는데, 남기지 않으면 DB만 보고 고칠 수 없다 (backlog C-6)
+
+**API** (`routes/billing.ts`, `routes/billing-webhook.ts`)
+- `GET /billing/ad-rewards`(가용성) · `POST /billing/ad-rewards`(세션 발급) ·
+  `GET /billing/ad-rewards/{rewardId}`(상태) · `GET /billing/webhook/admob`(SSV, GET 쿼리스트링)
+- 세션 발급 거절은 409 3종(`AD_REWARD_COOLDOWN` / `LIMIT_REACHED` / `SESSION_ACTIVE`)과
+  503 `AD_REWARDS_DISABLED`. `402 INSUFFICIENT_CREDITS` 와 같은 방식으로 `error` 에
+  `nextAvailableAt`·`resetsAt`·`rewardId` 를 함께 싣는다(`CONFLICT_ERROR_SCHEMA`)
+- 남의 `rewardId` 는 404 — 403 으로 존재를 알리지 않는다
+
+**앱 팀 요청 반영**
+- `GET /billing/credits` 의 `entries[].reason` 을 OpenAPI **enum** 으로 고정
+  (`ad_reward` 포함). 값의 원천은 `CREDIT_REASON` 이며 스키마가 그 목록을 그대로 쓴다
+- `entries` 가 최대 50건이고 페이지네이션이 없다는 것을 Swagger 설명과 api-spec 에 명시
+- `402 INSUFFICIENT_CREDITS` 의 `error.code` 문자열이 실제로 `INSUFFICIENT_CREDITS` 임을 확인
+  (`credit.service.ts` `assertCreditsForExport`) — api-spec 예시와 일치한다
+
+**정책값**: `AD_REWARD_ENABLED` 기본 **false**(킬 스위치). 보상 20 / 일일 3 / 쿨다운 300초 /
+세션 TTL 900초는 잠정값이며 env 로 덮어쓴다. 일일 한도 기준 시각은 **KST 자정으로 확정**했다
+(UTC 자정은 한국 사용자에게 오전 9시, 롤링 24시간은 앱이 한 문장으로 설명할 수 없다).
+
+**신규 환경변수**: `AD_REWARD_ENABLED` · `AD_REWARD_CREDITS` · `AD_REWARD_DAILY_LIMIT` ·
+`AD_REWARD_COOLDOWN_SECONDS` · `AD_REWARD_SESSION_TTL_SECONDS` · `ADMOB_SSV_ALLOWED_AD_UNITS` ·
+`ADMOB_VERIFIER_KEYS_URL` (env-spec + `.env.example` 동기화)
+
+**검증**
+- `npm test -w apps/api` — 16 파일 **186 테스트 통과** + tsc + storage 테스트.
+  ad-reward 25개 신규. 테스트용 EC 키로 로컬 키셋(`file:` URL)을 물려 **서명 검증 경로를
+  운영과 같은 코드로** 돌린다 — 검증을 우회하는 mock 플래그는 두지 않았다
+- 커버: 정상 지급 · 같은 트랜잭션 재전송 1회 지급 · 위조 서명/만료 세션/남의 `user_id`/
+  허용 밖 광고 단위/오래된 timestamp/삭제 대기 계정 거절 · 지급 시점 한도 재확인 ·
+  일일 한도 409 · 쿨다운 409 · 세션 중복 409 · 만료 세션 lazy 정리 · 킬 스위치(enabled false + 503) ·
+  남의 rewardId 404 · 내역의 `ad_reward` 노출
+- **미검증**: 실제 AdMob 콘솔 연결(앱·광고 단위 등록, SSV 콜백 URL) — 저장소 밖 설정이
+  선행돼야 한다 (backlog C-6)
