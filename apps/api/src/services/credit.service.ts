@@ -133,24 +133,17 @@ export async function recordExportReserve(
 /**
  * export 환급. 그 작업에 걸린 순차감액을 그대로 되돌린다.
  *
- * 금액을 인자로 받지 않고 원장에서 계산하는 이유는, 차감량이 바뀌더라도 **실제로 차감된
- * 만큼만** 돌려주기 위해서다. 취소(API)·실패(워커)·큐 적재 실패 어느 경로로 몇 번
- * 호출돼도 `(edit_job_id, reason)` unique 제약 때문에 환급은 한 번만 기록된다.
+ * 실제 로직은 DB 함수 `refund_export_credits` 에 있다
+ * (마이그레이션 `20260814010000_add_refund_export_credits_function`).
+ * 환급을 실행하는 주체가 API(취소·큐 적재 실패)와 워커(실패 확정) 둘이라, 같은 문을 두
+ * 언어에 복사하면 한쪽만 고쳐질 수 있다. 두 호출자가 공유할 수 있는 유일한 장소인 DB에
+ * 정의를 두고 여기서는 호출만 한다 — **로직을 여기로 다시 옮기지 말 것.**
  *
- * ai-worker 의 `mark_failed` 도 같은 문장을 실행한다 (apps/ai-worker/src/db.py).
- * 워커가 실패를 확정하는 주체라 그쪽에서 즉시 돌려주는 편이 사용자에게 정확하고,
- * 두 경로가 겹쳐도 제약이 결과를 하나로 만든다.
+ * 어느 경로로 몇 번 호출돼도 `(edit_job_id, reason)` unique 제약 때문에 환급은 한 번만
+ * 기록된다.
  */
 export async function refundForExport(editJobId: string): Promise<void> {
-  await getPrisma().$executeRaw`
-    INSERT INTO credit_ledger (id, user_id, delta, reason, edit_job_id, created_at)
-    SELECT gen_random_uuid(), user_id, -SUM(delta), ${CREDIT_REASON.exportRefund}, ${editJobId}::uuid, now()
-    FROM credit_ledger
-    WHERE edit_job_id = ${editJobId}::uuid
-    GROUP BY user_id
-    HAVING SUM(delta) < 0
-    ON CONFLICT (edit_job_id, reason) DO NOTHING
-  `;
+  await getPrisma().$executeRaw`SELECT refund_export_credits(${editJobId}::uuid)`;
 }
 
 export interface PurchaseGrant {

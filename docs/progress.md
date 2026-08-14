@@ -820,7 +820,9 @@ stripe trigger customer.subscription.created --api-key $STRIPE_SECRET_KEY
 - **잠금 순서가 중요하다**: 유저 행 `FOR UPDATE` 가 INSERT 보다 **먼저**여야 한다. 뒤에 두면
   `videos`/`edit_jobs` INSERT 의 FK 검사가 같은 `users` 행에 share 락을 걸어 동시 요청끼리
   데드락이 난다 — 실제로 40P01 로 재현됐고 순서를 바꿔 해결했다
-- 취소·큐 적재 실패·워커 실패 모두 환급. 워커는 `mark_failed` 에서 API 와 같은 문장을 실행한다
+- 취소·큐 적재 실패·워커 실패 모두 환급. 환급 로직은 **DB 함수 `refund_export_credits` 한 곳**에
+  두고 API(TypeScript)와 워커(Python)가 호출만 한다 — 환급을 실행하는 주체가 둘이라 같은 SQL 을
+  두 언어에 복사하면 한쪽만 고쳐질 수 있다
 - BullMQ 자동 재시도로는 추가 차감이 없다 (`mark_processing` 이 `failed` 를 되살리지 않아
   첫 실패가 종료 상태다)
 
