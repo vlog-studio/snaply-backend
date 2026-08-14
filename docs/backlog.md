@@ -30,6 +30,12 @@
 
 **완료 조건**: 남은 세부 정책 확정 → `Movie` 스키마 PR → CRUD → export → e2e 실검증.
 
+무비 파일의 **30일 보관 후 만료**와 만료분의 **크레딧 없는 무료 재생성**은 이 항목에서
+함께 구현한다 —
+[decisions/storage-and-subscription-policy.md](./decisions/storage-and-subscription-policy.md) §3.
+재생성의 원천은 이미 영구 저장되는 `EditJob.editSpec`/`renderSpec`이라 추가 스키마가 필요 없다.
+S3 삭제 실패분은 E-3의 정리 배치 경로를 쓴다.
+
 ### A-2. 크레딧 결제 세부 정책 확정
 
 **결정됨**: 정기 구독과 Free/Standard/Premium 플랜을 제거하고, 무비 생성을 크레딧으로

@@ -6,6 +6,10 @@
 결정 당시 구현 초안이며 작업 상태를 관리하지 않는다.
 **후속 작업의 원천**: [backlog.md](../backlog.md) A-4(스냅 세부 정책),
 A-2(유료 플랜 한도), E-3(GC 배치)
+**후속 결정**: 2026-08-14에 Free 한도가 5GB → **2GB**로 축소됐다 —
+[storage-and-subscription-policy.md](./storage-and-subscription-policy.md). 그 결정이 §6.1의
+한도 값, §6.2에서 2GB를 기각했던 판단, §6.3의 원가 계산을 대체한다. §6.1의 **산정 범위(원본
+스냅만)와 초과 시 동작(업로드 차단 + 로컬 보관)은 유효하다.**
 
 관련: [plan-limits.md](./plan-limits.md), [api-spec.md](../api-spec.md)
 

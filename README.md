@@ -46,7 +46,8 @@ packages/
 
 | 문서 | 내용 |
 |---|---|
-| [decisions/snap-source-of-truth.md](docs/decisions/snap-source-of-truth.md) | 스냅 원천을 서버로 전환 + 스토리지 용량 정책(Free 5GB) 결정 |
+| [decisions/snap-source-of-truth.md](docs/decisions/snap-source-of-truth.md) | 스냅 원천을 서버로 전환 + 스토리지 용량 정책 결정. 한도 값은 아래 문서가 대체 |
+| [decisions/storage-and-subscription-policy.md](docs/decisions/storage-and-subscription-policy.md) | Free 한도 2GB 축소 + 무비 30일 보관 + 크레딧·구독 2축 분리 |
 | [decisions/env-management.md](docs/decisions/env-management.md) | 환경변수 — 파일은 로컬만, 운영은 주입. 목록의 단일 원천 |
 | [decisions/plan-limits.md](docs/decisions/plan-limits.md) | 구독 폐기 전 플랜 차등 집행을 보류했던 과거 결정과 근거 |
 | [decisions/credit-payment-model.md](docs/decisions/credit-payment-model.md) | 정기 구독 제거 + 무비 생성 크레딧 결제 전환 결정 |

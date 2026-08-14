@@ -7,6 +7,10 @@
 **후속 결정**: 결제 채널은 2026-08-13에 Stripe에서 Apple/Google IAP로 변경됐다 —
 [payment-channel-iap.md](payment-channel-iap.md). 아래 "구현 전환 원칙"의 Stripe 관련
 문장은 그 결정으로 무효다.
+2026-08-14에는 **보관 축의 구독 상품 도입**이 결정됐다 —
+[storage-and-subscription-policy.md](storage-and-subscription-policy.md). 아래 §"기각한
+대안 — 월 정기 구독 유지"는 **생성 축(크레딧 지급형 구독)에 한해** 유효하며, 스토리지 보관에
+대응하는 구독은 그 결정으로 도입된다. 두 축을 섞지 않는 경계 규칙은 그 문서 §4.3에 있다.
 
 ## 결정
 
@@ -54,6 +58,8 @@
 - 가입·프로모션 무료 크레딧
 - Movie export 1회의 정확한 차감량
 - 고해상도 export의 추가 크레딧 여부
-- 유료 스토리지 상품 도입 여부
+- ~~유료 스토리지 상품 도입 여부~~ → 2026-08-14 도입 결정.
+  [storage-and-subscription-policy.md](storage-and-subscription-policy.md) §4. 용량 티어와
+  가격은 여전히 미결이며 [backlog.md](../backlog.md) A-2에서 관리한다.
 
 위 항목은 [backlog.md](../backlog.md) A-2에서만 미결 상태를 관리한다.
