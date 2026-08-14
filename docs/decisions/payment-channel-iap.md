@@ -4,6 +4,11 @@
 **상태**: 결정 — 크레딧 판매 채널을 Apple StoreKit / Google Play Billing(IAP)으로 확정하고 Stripe를 제거한다.
 **관련 문서**: [credit-payment-model.md](credit-payment-model.md)(과금 모델), 구현 계획은
 [../plans/iap-migration.md](../plans/iap-migration.md), 미결 항목은 [../backlog.md](../backlog.md) A-2·C-1.
+**후속 결정**: 2026-08-14에 보관 축의 구독 상품이 추가됐다 —
+[storage-and-subscription-policy.md](storage-and-subscription-policy.md) §5.
+아래 §결정 1의 "consumable"은 크레딧 팩에 한하며, 스토리지 구독은 **auto-renewable
+subscription**(iOS StoreKit 2 / Android Play Billing)으로 양 스토어에 함께 등록한다.
+채널(IAP + RevenueCat)과 §5의 "원천은 항상 백엔드" 원칙은 그대로 적용된다.
 
 ## 결정
 
