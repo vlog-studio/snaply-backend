@@ -64,7 +64,8 @@ const TABLES = [
   'notification_logs',
   'sns_uploads',
   'sns_connections',
-  'subscriptions',
+  'credit_ledger',
+  'purchases',
   'edit_jobs',
   'videos',
   'users',
@@ -73,7 +74,7 @@ const TABLES = [
 
 /**
  * @param env 이 하네스에만 적용할 환경변수 오버라이드. close() 시 원복된다.
- *            예: 실제 Stripe 키로 검증하려면 { STRIPE_SECRET_KEY: 'sk_test_...' }
+ *            예: 실제 RevenueCat 키로 검증하려면 { REVENUECAT_API_KEY: 'sk_...' }
  */
 export async function createHarness(env: Record<string, string> = {}): Promise<Harness> {
   // src/* 를 import 하는 과정에서 @prisma/client 가 dotenv 로 .env 를 다시 읽어

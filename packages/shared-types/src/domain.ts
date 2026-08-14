@@ -1,4 +1,3 @@
-export type Plan = 'free' | 'standard' | 'premium';
 
 export type VideoStatus = 'pending' | 'ready' | 'processing' | 'done' | 'failed' | 'deleted';
 
@@ -92,7 +91,6 @@ export interface UserProfile {
   notificationEnabled: boolean;
   quietStart: number;
   quietEnd: number;
-  plan: Plan;
 }
 
 export interface Video {

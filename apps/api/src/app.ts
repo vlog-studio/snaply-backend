@@ -33,7 +33,6 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
       // 개인정보/자격증명 로그 마스킹
       redact: [
         'req.headers.authorization',
-        'req.headers["stripe-signature"]',
         'req.query.token',
         '*.accessToken',
         '*.refreshToken',
@@ -100,7 +99,7 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   initFcm(config.firebase);
   initCrypto(config.sns.tokenEncryptionKey);
   initSns(config.sns);
-  initBilling(config.stripe, config.sns.appDeepLinkScheme);
+  initBilling(config.billing);
   initSupabaseAdmin({ url: config.supabaseUrl, serviceRoleKey: config.supabaseServiceRoleKey });
 
   // 전역 rate limit: IP당 분당 60 (라우트별로 override 가능)
@@ -109,8 +108,8 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
     max: Number(process.env.RATE_LIMIT_GLOBAL_MAX ?? 60),
     timeWindow: '1 minute',
     keyGenerator: (req) => req.ip,
-    // Stripe 웹훅은 소수의 발신 IP에서 몰려 오므로 IP 기준 제한에 걸리면 안 된다.
-    // (429를 주면 Stripe가 재시도를 쌓고, 서명 검증으로 이미 위조는 막힌다.)
+    // RevenueCat 웹훅은 소수의 발신 IP에서 몰려 오므로 IP 기준 제한에 걸리면 안 된다.
+    // (429를 주면 재시도가 쌓이고, Authorization 헤더 검증으로 이미 위조는 막힌다.)
     allowList: (req) => req.url.startsWith('/billing/webhook'),
   });
 

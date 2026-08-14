@@ -178,36 +178,30 @@ export const ENV_VARS = [
     description: '편집 큐 이름. 기본 edit-jobs. API 와 워커가 일치해야 한다',
   },
 
-  // ── Stripe ───────────────────────────────────────────
+  // ── 결제 (RevenueCat + Apple/Google IAP) ─────────────
   {
-    key: 'STRIPE_SECRET_KEY',
+    key: 'REVENUECAT_API_KEY',
     required: false,
     origin: 'shared',
-    description: '비어 있으면 자동 mock 모드',
+    description: 'REST 시크릿 키. POST /billing/sync 의 구매 이력 조회용. 비어 있으면 자동 mock',
   },
   {
-    key: 'STRIPE_WEBHOOK_SECRET',
+    key: 'REVENUECAT_WEBHOOK_AUTH_TOKEN',
     required: false,
     origin: 'shared',
-    description: '`stripe listen` 이 출력하는 whsec_...',
+    description: '웹훅 Authorization 헤더에 와야 하는 값. RevenueCat 대시보드에 같은 값을 등록한다',
   },
   {
-    key: 'STRIPE_PRICE_STANDARD',
-    required: false,
-    origin: 'shared',
-    description: 'price_... (Standard)',
-  },
-  {
-    key: 'STRIPE_PRICE_PREMIUM',
-    required: false,
-    origin: 'shared',
-    description: 'price_... (Premium)',
-  },
-  {
-    key: 'STRIPE_MOCK',
+    key: 'BILLING_MOCK',
     required: false,
     origin: 'local',
-    description: 'true 면 실키가 있어도 강제 mock. SNS_MOCK 과 독립',
+    description: 'true 면 실키가 있어도 RevenueCat 호출을 모의. SNS_MOCK 과 독립',
+  },
+  {
+    key: 'CREDIT_SIGNUP_BONUS',
+    required: false,
+    origin: 'shared',
+    description: '신규 가입 지급 크레딧. 수량 미확정이라 기본 0(지급 안 함) — backlog A-2',
   },
 
   // ── Instagram ────────────────────────────────────────
