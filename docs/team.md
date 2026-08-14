@@ -25,10 +25,10 @@
 | | **Dev A — 미디어/편집 트랙** | **Dev B — 연동/수익화 트랙** |
 |---|---|---|
 | **Phase** | 3 (영상 업로드) · 4 (편집 큐/WS) · 5 (AI 편집 엔진) | 6 (위치/FCM) · 7 (SNS 연동) · 8 (결제) |
-| **핵심 스택** | S3(MinIO), Redis/BullMQ, **Python 워커**(FFmpeg·faster-whisper) | 외부 API: Firebase, Instagram/TikTok, Stripe |
+| **핵심 스택** | S3(MinIO), Redis/BullMQ, **Python 워커**(FFmpeg·faster-whisper) | 외부 API: Firebase, Instagram/TikTok, RevenueCat(IAP) |
 | **주요 파일** | `routes/videos·edit-jobs`<br>`services/video·edit-job·storage`<br>`queue/`, `apps/ai-worker/**` | `routes/locations·notifications·sns·billing`<br>`services/fcm·location·sns·billing`<br>`services/sns/*`, `services/billing/*` |
 | **DB 테이블** | videos, edit_jobs | locations, notification_logs, sns_connections, sns_uploads, subscriptions |
-| **담당 크리덴셜** | AWS S3/CloudFront (운영 전환 시) | Firebase 서비스계정, Instagram/TikTok 앱키, Stripe 키 |
+| **담당 크리덴셜** | AWS S3/CloudFront (운영 전환 시) | Firebase 서비스계정, Instagram/TikTok 앱키, RevenueCat 키 |
 | **Phase 9 분담** | Docker/Compose/배포 파이프라인, AI 워커 이미지 | Sentry, Rate limit, API 문서(Swagger/api-spec) |
 
 - **users 테이블 / 인증(`plugins/auth`, `services/user`)**은 공통 소유 — 변경 시 양쪽 합의.

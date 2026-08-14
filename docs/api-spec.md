@@ -2,7 +2,8 @@
 
 > 이 문서는 **FE 전달용 요약 + WebSocket 계약**이다. 스키마의 원천은 코드에서 생성되는
 > Swagger(`/docs`)이므로, 라우트나 요청/응답을 바꾸면 **같은 커밋에서 이 문서도 갱신한다.**
-> 제한·플랜 정책의 원천은 [decisions/plan-limits.md](./decisions/plan-limits.md).
+> 과금 정책의 원천은 [decisions/credit-payment-model.md](./decisions/credit-payment-model.md)와
+> [decisions/payment-channel-iap.md](./decisions/payment-channel-iap.md).
 
 > **인터랙티브 문서(Swagger UI)**: 개발 서버 실행 후 **`http://localhost:3000/docs`** 에서 직접 호출·테스트할 수 있습니다. OpenAPI 스펙 JSON은 `http://localhost:3000/docs/json` (Postman/코드 생성용). 운영에서는 비활성(필요 시 `ENABLE_DOCS=true`). WebSocket은 OpenAPI로 표현되지 않아 아래 문서를 참고하세요.
 
@@ -25,15 +26,18 @@
 { "success": true, "data": {
   "id": "uuid", "nickname": "다연", "avatarUrl": null,
   "interests": ["여행","카페"], "notificationEnabled": true,
-  "quietStart": 22, "quietEnd": 8, "plan": "free"
+  "quietStart": 22, "quietEnd": 8
 }}
 ```
+
+> ⚠️ **변경**: 정기 구독 제거로 `plan` 필드가 응답에서 빠졌다. 크레딧 잔액은
+> `GET /billing/credits`로 조회한다.
 
 ### PATCH /auth/me  🔒
 프로필 수정. Body(모두 선택): `{ "nickname": "다연", "avatarUrl": "https://...", "interests": ["여행"] }` → 수정된 프로필 반환.
 
 ### DELETE /auth/me  🔒
-계정 삭제 요청. 즉시: 구독 해지(Stripe 즉시 취소), SNS 연동·FCM 토큰 삭제, 진행 중 편집 작업 취소.
+계정 삭제 요청. 즉시: SNS 연동·FCM 토큰 삭제, 진행 중 편집 작업 취소(예약 크레딧 환급).
 이후 30일 유예 기간 동안은 복구 가능하고, 유예가 지나면 배치가 모든 데이터(S3 원본 포함)를 영구 삭제한다.
 ```json
 { "success": true, "data": { "deleted": true, "purgeAfter": "2026-09-11T00:00:00.000Z" }}
@@ -50,7 +54,8 @@
 
 ### POST /auth/me/restore  🔒
 유예 기간 내 계정 복구 → `{ "success": true, "data": { "restored": true } }`.
-FCM 토큰·SNS 연동·구독은 삭제 시점에 이미 정리됐으므로 되살아나지 않는다(재등록 필요).
+FCM 토큰·SNS 연동은 삭제 시점에 이미 정리됐으므로 되살아나지 않는다(재등록 필요).
+크레딧 잔액은 유예 기간 중 보존되며 복구 시 그대로 남는다.
 삭제 대기 상태가 아니면 `400`.
 
 ### POST /auth/fcm-token  🔒
@@ -108,9 +113,14 @@ Query: `kind`(`source | result`, 선택), `cursor`(선택), `limit`(기본 20, �
 
 `outputProfile` 기본값은 `short_vertical`(1080×1920), `fitMode` 기본값은 `blur_background`입니다. 작업 상태 응답에는 재현 가능한 `pipelineVersion`, `editSpec`, `renderSpec` 스냅샷이 포함됩니다.
 - 소유·`source`·`ready` 상태 영상만 허용(아니면 403).
-- **플랜 차등은 현재 전혀 집행되지 않는다** — 편집 횟수 제한 미적용, 해상도·워터마크 미구현.
-  즉 무료 플랜과 유료 플랜의 편집 동작이 같다. 현행 상태와 재도입 계획은
-  [decisions/plan-limits.md](./decisions/plan-limits.md).
+- **크레딧 100을 예약(차감)한다.** 잔액이 모자라면 `402 INSUFFICIENT_CREDITS` 이며 작업 자체가
+  만들어지지 않는다(예약과 작업 생성이 한 트랜잭션). 에러 응답에 `required`·`balance`가 함께 온다:
+  ```json
+  { "success": false, "error": { "code":"INSUFFICIENT_CREDITS","message":"크레딧이 부족합니다.",
+    "required":100, "balance":40 } }
+  ```
+- 작업이 **실패하거나 취소되면 예약분은 전액 자동 환급**된다. 자동 재시도로 추가 차감되지 않는다.
+- 해상도·워터마크 차등은 없다 — 모든 export가 동일 조건이다.
 
 ### GET /edit-jobs/:id  🔒
 ```json
@@ -227,28 +237,51 @@ Body: `{ "videoId": "uuid", "caption": "문구(선택)" }`
 
 ## 결제
 
-### GET /billing/plans  (인증 불필요)
-`[{ "plan":"free","name":"Free","priceKrw":0,"features":[...] }, ...]` (standard ₩9,900 / premium ₩24,900)
+크레딧으로 과금한다. 판매 채널은 앱 내 인앱결제(Apple StoreKit 2 / Google Play Billing)이며,
+두 스토어의 영수증 검증·통지는 RevenueCat을 경유한다. **정기 구독 상품은 없다.**
 
-> ⚠️ `features` 는 **FE 표시용 문구일 뿐 백엔드가 집행하지 않는다.** 현재 실동작과 불일치하므로
-> (편집 횟수·해상도·워터마크 전부 미적용) 그대로 화면에 노출하면 실제와 다른 약속이 된다.
-> 정책 확정 시 문구와 집행을 함께 맞춘다 — [decisions/plan-limits.md](./decisions/plan-limits.md).
+**단위**: Movie export 1회 = **100크레딧**.
 
-### GET /billing/subscription  🔒
-`{ "data": { "plan":"standard","status":"active","currentPeriodEnd":"..." } }`
+> **잔액과 사용 가능 여부의 원천은 항상 백엔드다.** 클라이언트·RevenueCat의 상태는 표시·동기화용이다.
+> 앱은 RevenueCat SDK의 `app_user_id`를 **Snaply `User.id`로 고정**해야 한다 — 웹훅이 이 값으로
+> 지급 대상을 찾는다.
 
-### POST /billing/checkout  🔒
-Body: `{ "plan": "standard|premium" }` → `{ "data": { "checkoutUrl": "https://checkout.stripe.com/..." } }`
-success/cancel 시 앱 딥링크(`snaply://billing/success|cancel`)로 복귀.
+### GET /billing/products  (인증 불필요)
+```json
+{ "success": true, "data": [
+  { "productId":"credit_pack_small","credits":500,"displayOrder":1 }
+]}
+```
+- **가격·통화는 응답에 없다.** 현지 가격의 원천은 스토어이므로 앱이 SDK `getOfferings()`로 받는다.
+- `credits` 수량은 회의 확정 전 잠정값이다 — [backlog.md](./backlog.md) A-2.
 
-### POST /billing/cancel  🔒
-기간 만료 후 해지 예약. `{ "data": { "canceling": true } }`
+### GET /billing/credits  🔒
+```json
+{ "success": true, "data": {
+  "balance": 400,
+  "entries": [{ "id":"uuid","delta":-100,"reason":"export_reserve","createdAt":"..." }]
+}}
+```
+- `entries`는 최신순 최대 50건.
+- `reason`: `purchase` | `signup_bonus` | `export_reserve` | `export_refund` | `store_refund_revoke` | `promo`
+- `balance`는 **음수가 될 수 있다** — 크레딧을 쓴 뒤 스토어 환불이 들어온 경우다. 음수면 신규
+  export만 막히고 기존 결과물은 회수하지 않는다.
 
-### POST /billing/webhook  (Stripe 전용, 서명 검증)
-Stripe에서 호출. `customer.subscription.created/updated/deleted`, `invoice.payment_failed` 처리.
-- 서명 실패 → 400 (Stripe 재시도 유도), 그 외에는 항상 200.
+### POST /billing/sync  🔒
+`{ "success": true, "data": { "granted": 1, "balance": 500 } }`
+
+웹훅 유실 보정. **앱이 구매 완료 직후 호출한다.** 스토어 구매 이력을 조회해 누락된 지급을 채운다.
+이미 반영된 거래는 건너뛰므로 몇 번 호출해도 잔액이 중복 증가하지 않는다(`granted: 0`).
+
+### POST /billing/webhook/revenuecat  (RevenueCat 전용)
+`Authorization` 헤더가 `REVENUECAT_WEBHOOK_AUTH_TOKEN`과 일치해야 한다(서명이 아니라 헤더 시크릿).
+- 헤더 불일치·누락 → **401**, 본문은 처리하지 않는다.
+- `NON_RENEWING_PURCHASE` → 크레딧 지급. 같은 `transaction_id`가 재전송돼도 **한 번만** 지급한다.
+- `REFUND` → 지급분 회수. 두 번 와도 한 번만 회수한다.
+- 카탈로그에 없는 상품 → **500**. 임의 수량을 지급하지 않고 RevenueCat이 재시도하게 둔다
+  (매핑을 배포하면 그 재시도가 지급으로 이어진다).
+- 그 밖의 이벤트는 무시하고 200.
 - 전역 rate limit 제외 — 발신 IP가 소수라 429가 나면 재시도가 쌓인다.
-- 이벤트 순서를 보장하지 않으므로, 이미 반영한 것보다 **오래된 이벤트는 무시**한다(`subscriptions.last_stripe_event_at`).
 
 ---
 

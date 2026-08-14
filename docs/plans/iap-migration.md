@@ -1,11 +1,18 @@
 # IAP 전환 구현 계획 — Stripe 제거와 RevenueCat 연동
 
-> **착수 전 계획 문서 — 아직 승인·구현되지 않았다.** 이 문서의 API·스키마는 제안이며 현행 사실이 아니다.
+> **구현 완료 (2026-08-14).** 이 계획은 실행됐다 — 결과와 계획에서 달라진 점은
+> [progress.md](../progress.md) 2026-08-14 항목에 있다. 현행 API 계약의 원천은
+> [api-spec.md](../api-spec.md)이며, 아래 본문은 **착수 시점의 제안**으로 남긴다(수정하지 않는다).
+>
+> 계획과 달라진 것: ① 크레딧 기본 단위가 **100**으로 확정돼 export 1회 = 100크레딧이다
+> (§4는 단위를 명시하지 않았다) ② §4의 `export_confirm`은 두지 않았다 — 예약이 곧 차감이고
+> 성공 시 아무 기록도 남기지 않는 쪽이 단순하다 ③ 예약 시 유저 행 잠금을 **트랜잭션의 첫
+> 문장**으로 두어야 한다(§4의 "직렬화 이상"만으로는 부족했다 — FK share 락과 데드락이 났다).
 > 결정 배경은 [payment-channel-iap.md](../decisions/payment-channel-iap.md), 과금 모델은
 > [credit-payment-model.md](../decisions/credit-payment-model.md), 미결 정책(크레딧 수량·가격)은
 > [backlog.md](../backlog.md) A-2, 현행 API 계약은 [api-spec.md](../api-spec.md).
 
-**작성일**: 2026-08-13
+**작성일**: 2026-08-13 · **상태**: 구현 완료 (2026-08-14)
 
 ## 1. 목표
 
@@ -165,5 +172,29 @@ Stripe 제거 / 문서).
 ## 9. 이 계획에서 다루지 않는 것
 
 - 크레딧 묶음 수량·가격·차감량·가입 보너스 — [backlog.md](../backlog.md) A-2
-- 웹 결제 병행 채널, 구독제 재도입 — [payment-channel-iap.md](../decisions/payment-channel-iap.md) 참조
+- 웹 결제 병행 채널 — [payment-channel-iap.md](../decisions/payment-channel-iap.md) 참조
+- **스토리지 구독의 구현 상세** — 도입은 2026-08-14에 결정됐으나
+  ([storage-and-subscription-policy.md](../decisions/storage-and-subscription-policy.md) §5)
+  이 계획은 크레딧 팩(consumable)만 다룬다. 아래 §10에 접점만 적는다.
 - React Native 앱 쪽 SDK 연동 상세 (앱 저장소 소관)
+
+## 10. 구독 상품과의 접점 (후속 단계)
+
+스토리지 구독은 이 계획 완료 후 별도 단계로 얹는다. 지금 단계에서 **미리 열어둘 것**만
+기록한다 — 나중에 구조를 뒤집지 않기 위한 최소 조치다.
+
+- **웹훅 핸들러 분기**: 구독은 `INITIAL_PURCHASE` · `RENEWAL` · `CANCELLATION` ·
+  `EXPIRATION` · `BILLING_ISSUE` · `GRACE_PERIOD` · `PRODUCT_CHANGE` · `UNCANCELLATION` ·
+  `REFUND`를 처리해야 한다. §2의 핸들러를 이벤트 타입으로 먼저 분기시키고, 크레딧 경로는
+  `NON_RENEWING_PURCHASE` / `REFUND`만 받도록 좁혀 둔다.
+- **환불 경로를 합치지 않는다**: 크레딧 환불은 소비분 회수(잔액 음수 가능), 구독 환불은
+  entitlement 소급 만료 → 한도 초과 전이다. 처리가 완전히 다르므로 하나의 함수로 묶지 않는다.
+- **`app_user_id` 고정**: 이미 `Snaply User.id`로 잡혀 있다. 구독은 entitlement가 지속돼
+  한 스토어 계정으로 여러 Snaply 계정에 복원을 시도하는 악용이 가능하므로, RevenueCat
+  transfer 정책을 구독 도입 시 함께 설정한다.
+- **잔액/자격의 원천은 백엔드**: [payment-channel-iap.md](../decisions/payment-channel-iap.md)
+  §5의 원칙을 구독 entitlement에도 동일하게 적용한다. `GET /billing/credits`와 같은 사상의
+  자격 조회를 구독 단계에서 추가한다.
+
+정책 근거와 한도 전이(30일 유예 → 읽기 전용 → 90일 후 정리)는
+[storage-and-subscription-policy.md](../decisions/storage-and-subscription-policy.md) §4.4에 있다.

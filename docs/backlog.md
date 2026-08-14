@@ -41,28 +41,45 @@ S3 삭제 실패분은 E-3의 정리 배치 경로를 쓴다.
 **결정됨**: 정기 구독과 Free/Standard/Premium 플랜을 제거하고, 무비 생성을 크레딧으로
 과금한다. 근거와 전환 원칙은
 [decisions/credit-payment-model.md](./decisions/credit-payment-model.md).
+결제 채널은 Apple/Google IAP + RevenueCat
+([decisions/payment-channel-iap.md](./decisions/payment-channel-iap.md)).
 
-현재 구독 Checkout·조회·해지, `subscriptions` 테이블, `past_due`, 플랜 카탈로그는
-레거시 코드로 남아 있다. 편집 횟수 제한은 미적용이고 해상도 차등·워터마크는 미구현이다.
-Free 스토리지 5GB는
-[decisions/snap-source-of-truth.md](./decisions/snap-source-of-truth.md) §6에서 결정됐다.
+2026-08-14에 스토리지·구독 정책이 결정됐다 —
+[decisions/storage-and-subscription-policy.md](./decisions/storage-and-subscription-policy.md).
+Free 원본 스냅 한도 **2GB**(5GB에서 축소), 무비 서버 보관 **30일**(만료 후 크레딧 없이 무료
+재생성), 보관 축의 **구독 상품 도입**과 "구독은 크레딧을 지급하지 않는다"는 경계 규칙이
+확정됐다.
 
-**결정할 것**: 크레딧 묶음별 수량·가격·유효기간 · 최초/프로모션 지급량 · Movie export
-차감량 · 예약/확정/환급 규칙 · 고해상도 export 추가 차감 여부 · 유료 스토리지 상품 여부.
+**2026-08-14 확정**: 기본 단위는 **Movie export 1회 = 100크레딧**이다. 100 단위를 쓰는 이유는
+광고 보상·가입 보너스·프로모션처럼 지급 사유가 늘어날 때 정수 단위로 조절하기 위해서다.
+**이 단위는 바꾸지 않는다** — 바꾸면 이미 지급된 잔액을 전부 리스케일해야 한다.
 
-**앱이 이 결정에 막혀 있는 것** (2026-08-13 FE 안건 확인): 생성 버튼 옆 비용 표시에
-① 잔액 조회 API ② 1회 차감량 ③ 잔액 부족 시 거절 응답 형태(에러 코드 포함)가 필요하다.
-셋 다 수량·가격이 정해지기 전에는 계약을 확정할 수 없다. 또한 편집 취소 API(구현 완료,
-progress.md 2026-08-13)의 환급 동작도 예약/확정/환급 규칙 확정 후 연결한다.
+**2026-08-14 구현 완료**: 크레딧 원장(`credit_ledger`)·스토어 거래 원장(`purchases`),
+RevenueCat 웹훅의 멱등 지급·환불 회수, `/billing/products`·`/billing/credits`·`/billing/sync`,
+export 예약/환급, 레거시 Stripe·`subscriptions` 제거가 반영됐다
+([progress.md](./progress.md) 2026-08-14). 아래 미결 항목은 **코드가 아니라 값**이며,
+`apps/api/src/services/billing/credit-policy.ts` 의 숫자만 교체하면 닫힌다.
 
-결제 채널은 Apple/Google IAP + RevenueCat으로 확정됐다
-([decisions/payment-channel-iap.md](./decisions/payment-channel-iap.md)) — 이 항목에서는
-크레딧 정책(수량·가격·차감·환급)만 남는다.
+**결정할 것 — 크레딧(생성 축)**:
+- 크레딧 팩별 **수량과 가격** (현재 500 / 1,200 / 3,000 은 잠정값이며 스토어 미등록)
+- 크레딧 유효기간 (권장: 구매 크레딧은 만료 없음)
+- **가입 보너스 수량** (현재 `CREDIT_SIGNUP_BONUS` 기본 0 = 지급 안 함)
+- 프로모션·운영 보상 지급 기준
+- 고해상도 export의 추가 차감 여부 (현재 전 export 동일 100)
 
-**완료 조건**: 회의 워크시트 §2 확정 → IAP 구매 웹훅의 멱등 크레딧 지급·잔액 원장·
-차감/환급 구현([plans/iap-migration.md](./plans/iap-migration.md)) → 레거시 구독
-API·스키마·약관 제거 또는 이관 → 결제·편집 e2e. 기존
-`4편째 403` 기대값을 기계적으로 복원하지 않는다.
+**결정할 것 — 구독(보관 축)**: 용량 티어와 가격 · 연 구독 여부 · 구독 혜택에 워터마크
+제거·고해상도 export를 포함할지 · 무비 만료 알림 발송 시점.
+경계 규칙상 **구독에 크레딧을 얹는 안은 검토 대상이 아니다**
+([decisions/storage-and-subscription-policy.md](./decisions/storage-and-subscription-policy.md) §4.3).
+
+**앱에 전달할 것** (계약은 확정됐다): 잔액 조회 `GET /billing/credits`, 1회 차감량 100,
+잔액 부족 시 `402 INSUFFICIENT_CREDITS` (+`required`·`balance`). RevenueCat SDK의
+`app_user_id`를 **Snaply `User.id`로 고정**해야 웹훅이 지급 대상을 찾는다.
+`GET /auth/me` 응답에서 `plan` 필드가 제거됐으므로 앱이 이 값을 읽고 있으면 함께 정리한다.
+
+**완료 조건**: 위 수량·가격 확정 → `credit-policy.ts` 값 교체 → 양 스토어에 동일 상품 ID로
+등록 + RevenueCat 프로젝트·웹훅 URL 연결 → 구독 entitlement 반영과 한도 집행(유예 → 읽기 전용
+전이 포함) → 결제·편집 e2e 실검증.
 
 ### A-3. 영상 분석(하이라이트 추천) 기능 승인
 
@@ -125,8 +142,8 @@ B 트랙 잔여 검증이 전부 여기서 막힌다.
 
 ### B-3. `AuthUser.email` 추가
 
-원래 `POST /billing/checkout` 이 Stripe 고객을 이메일 없이 생성하던 문제에서 나온
-항목인데, IAP 전환으로 Checkout 자체가 제거되면 이 필요성은 사라진다
+원래 `POST /billing/checkout` 이 결제 고객을 이메일 없이 생성하던 문제에서 나온
+항목인데, IAP 전환으로 Checkout 이 제거되면서(2026-08-14) 그 필요성은 사라졌다
 ([decisions/payment-channel-iap.md](./decisions/payment-channel-iap.md)). 결제 외 용도로
 `request.user`에 email을 싣는 것이 필요한지는 별도 판단이다. `plugins/auth.ts`는
 **공동 소유**라 변경 시 합의가 필요하다.
@@ -142,20 +159,28 @@ geofence 쿨다운 판정용 이력이 무한히 쌓인다. 쿨다운은 30분 �
 
 ## C. 외부 크리덴셜/승인 대기
 
-### C-1. 스토어 크레딧 상품 등록 → IAP 구매·웹훅 검증
+### C-1. 스토어 상품 등록(크레딧 팩 + 구독) → IAP 구매·웹훅 검증
 
-**막힌 이유**: 결제 채널이 Stripe에서 Apple/Google IAP + RevenueCat으로 확정됐다
-([decisions/payment-channel-iap.md](./decisions/payment-channel-iap.md), 구현 계획은
-[plans/iap-migration.md](./plans/iap-migration.md)). 크레딧 묶음의 수량·가격(A-2)이
-확정되지 않아 양 스토어에 consumable 상품을 등록할 수 없고, App Store Connect /
-Play Console / RevenueCat 프로젝트 설정도 아직 없다.
+**막힌 이유**: 백엔드 구현은 끝났다(2026-08-14, [progress.md](./progress.md)). 남은 것은
+저장소 밖 설정이다 — 크레딧 묶음의 수량·가격(A-2)이 확정되지 않아 양 스토어에 consumable
+상품을 등록할 수 없고, App Store Connect / Play Console / RevenueCat 프로젝트 설정도 아직 없다.
 
-**폐기되는 검증**: 기존 Stripe 테스트 키로 확인한 웹훅 서명 형식·구독 플랜 전이는
-채널 폐기와 함께 효력을 잃는다. raw body 처리·이벤트 멱등 처리의 설계 경험만 재사용한다.
+**등록 시 맞춰야 할 것**: 스토어 상품 ID는
+[`credit-policy.ts`](../apps/api/src/services/billing/credit-policy.ts)의 `CREDIT_PACKS.productId`와
+**글자 그대로 일치**해야 한다. 어긋나면 웹훅이 지급량을 못 찾아 500으로 떨어진다(재시도로 복구는 된다).
+RevenueCat 웹훅 URL은 `POST /billing/webhook/revenuecat`, Authorization 헤더 값은
+`REVENUECAT_WEBHOOK_AUTH_TOKEN`과 같아야 한다.
 
-**완료 조건**: A-2에서 크레딧 묶음 확정 → 양 스토어 consumable 상품 등록 →
+**완료 조건**: A-2에서 크레딧 묶음 확정 → `credit-policy.ts` 값 교체 → 양 스토어 consumable 상품 등록 →
 RevenueCat 프로젝트·웹훅 URL 설정 → sandbox 구매 → 웹훅 수신 → 크레딧 지급 →
 같은 트랜잭션 웹훅 재전송 시 중복 지급 없음까지 한 번 통과하면 닫힌다.
+
+**구독 상품이 추가된다** (2026-08-14,
+[decisions/storage-and-subscription-policy.md](./decisions/storage-and-subscription-policy.md) §5).
+크레딧 팩(consumable)과 별도로 스토리지 구독을 **auto-renewable subscription**
+(Apple Subscription Group / Google base plan)으로 등록해야 하고, A-2의 용량 티어·가격
+확정이 선행된다. sandbox 검증에 갱신·해지·만료·결제실패 전이가 추가되며, 앱 쪽에는
+**"구매 복원(Restore Purchases)" 버튼**이 필수다(Apple App Review 3.1.2(a) — 누락 시 리젝).
 
 ### C-2. 틱톡 받은함 실물 미도착
 
