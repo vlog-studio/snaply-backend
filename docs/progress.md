@@ -825,6 +825,8 @@ stripe trigger customer.subscription.created --api-key $STRIPE_SECRET_KEY
   첫 실패가 종료 상태다)
 
 **정리**
+- `rls-policies.sql`: 삭제된 `subscriptions` 정책을 `purchases`·`credit_ledger` 로 교체.
+  둘 다 **본인 SELECT 만** 허용한다 — 원장이 잔액의 원천이라 클라이언트 쓰기를 열면 안 된다
 - `plan` 개념 제거: `Plan` 타입, `UserProfile.plan`, `AuthUser.plan`, `GET /auth/me` 의 `plan` 필드.
   **FE 영향 있음** — 앱이 이 필드를 읽고 있으면 정리 필요
 - `stripe.client.ts`, `billing-realkey.test.ts`, `stripe` 의존성, `STRIPE_*` 환경변수 제거

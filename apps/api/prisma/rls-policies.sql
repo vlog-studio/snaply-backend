@@ -95,9 +95,17 @@ create policy "sns_uploads_update_own" on public.sns_uploads
 create policy "sns_uploads_delete_own" on public.sns_uploads
   for delete using (user_id = public.current_app_user_id());
 
--- ── subscriptions ──────────────────────────────────────
-alter table public.subscriptions enable row level security;
+-- ── purchases ──────────────────────────────────────────
+alter table public.purchases enable row level security;
 
-create policy "subscriptions_select_own" on public.subscriptions
+create policy "purchases_select_own" on public.purchases
   for select using (user_id = public.current_app_user_id());
--- 구독 생성/변경은 Stripe 웹훅(service_role)에서만 수행 → 유저 쓰기 정책 없음
+-- 구매 기록의 생성/변경은 RevenueCat 웹훅(service_role)에서만 수행 → 유저 쓰기 정책 없음
+
+-- ── credit_ledger ──────────────────────────────────────
+alter table public.credit_ledger enable row level security;
+
+create policy "credit_ledger_select_own" on public.credit_ledger
+  for select using (user_id = public.current_app_user_id());
+-- 원장은 append-only 이고 잔액의 원천이다. 지급·차감·환급은 전부 서버(service_role)가
+-- 수행하므로 유저 쓰기 정책을 두지 않는다 — 클라이언트가 잔액을 만들 수 있으면 안 된다.
