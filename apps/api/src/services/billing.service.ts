@@ -1,230 +1,174 @@
-import type { Plan } from '@vlog-studio/shared-types';
-import type { StripeConfig } from '../config.js';
-import { getPrisma } from '../db/client.js';
+/**
+ * 크레딧 판매(IAP) 처리.
+ *
+ * 판매 채널은 Apple StoreKit 2 / Google Play Billing 의 consumable 이고, 두 스토어의
+ * 영수증 검증·통지는 RevenueCat 을 경유해 단일 웹훅으로 받는다
+ * (docs/decisions/payment-channel-iap.md). 정기 구독은 제품 모델에 없다.
+ *
+ * 이 모듈은 "스토어 이벤트를 우리 크레딧 원장으로 옮기는 일"만 한다. 잔액 계산과
+ * 멱등성은 credit.service 가 책임진다.
+ */
+import type { BillingConfig } from '../config.js';
 import { AppError } from '../lib/errors.js';
+import { captureException } from '../lib/sentry.js';
+import { CREDIT_PACKS, creditsForProduct, type CreditPack } from './billing/credit-policy.js';
 import {
-  ensureCustomer,
-  createCheckoutSession,
-  cancelAtPeriodEnd,
-  cancelImmediately,
-  constructEvent,
-  type StripeEvent,
-} from './billing/stripe.client.js';
+  fetchNonSubscriptions,
+  toEnvironment,
+  toStore,
+  type StorePurchase,
+} from './billing/revenuecat.client.js';
+import { grantForPurchase, revokeForStoreRefund } from './credit.service.js';
 
-let cfg: StripeConfig | null = null;
-let deepLinkScheme = 'snaply://';
+let cfg: BillingConfig | null = null;
 
-export function initBilling(stripeConfig: StripeConfig, scheme: string): void {
-  cfg = stripeConfig;
-  deepLinkScheme = scheme;
+export function initBilling(billingConfig: BillingConfig): void {
+  cfg = billingConfig;
 }
 
-function config(): StripeConfig {
+function config(): BillingConfig {
   if (!cfg) {
     throw new Error('billing이 초기화되지 않았습니다. initBilling()을 먼저 호출하세요.');
   }
   return cfg;
 }
 
-export interface PlanInfo {
-  plan: Plan;
-  name: string;
-  priceKrw: number;
-  features: string[];
-}
-
-export function getPlans(): PlanInfo[] {
-  return [
-    { plan: 'free', name: 'Free', priceKrw: 0, features: ['월 3편 편집', '720p', '워터마크'] },
-    { plan: 'standard', name: 'Standard', priceKrw: 9900, features: ['무제한 편집', '1080p', '워터마크 없음'] },
-    { plan: 'premium', name: 'Premium', priceKrw: 24900, features: ['무제한 편집', '4K', '워터마크 없음', '추가 기능'] },
-  ];
-}
-
-function priceIdFor(plan: Exclude<Plan, 'free'>): string {
-  return plan === 'standard' ? config().priceStandard : config().pricePremium;
-}
-
-function planForPrice(priceId: string | undefined): Plan {
-  if (priceId === config().priceStandard) return 'standard';
-  if (priceId === config().pricePremium) return 'premium';
-  return 'free';
-}
-
-export async function createCheckout(params: {
-  userId: string;
-  email?: string;
-  plan: Exclude<Plan, 'free'>;
-}): Promise<{ checkoutUrl: string }> {
-  const prisma = getPrisma();
-  const existing = await prisma.subscription.findUnique({
-    where: { userId: params.userId },
-    select: { stripeCustomerId: true },
-  });
-
-  const customerId = await ensureCustomer(config(), {
-    userId: params.userId,
-    email: params.email,
-    existingCustomerId: existing?.stripeCustomerId,
-  });
-
-  // 고객 ID를 저장(구독 반영은 결제 성공 웹훅에서만) — 아직 plan은 그대로 free
-  await prisma.subscription.upsert({
-    where: { userId: params.userId },
-    update: { stripeCustomerId: customerId },
-    create: { userId: params.userId, plan: 'free', stripeCustomerId: customerId, status: 'active' },
-  });
-
-  const { url } = await createCheckoutSession(config(), {
-    customerId,
-    priceId: priceIdFor(params.plan),
-    successUrl: `${deepLinkScheme}billing/success`,
-    cancelUrl: `${deepLinkScheme}billing/cancel`,
-  });
-  return { checkoutUrl: url };
-}
-
-export interface SubscriptionDto {
-  plan: Plan;
-  status: string;
-  currentPeriodEnd: string | null;
-}
-
-export async function getSubscription(userId: string): Promise<SubscriptionDto> {
-  const sub = await getPrisma().subscription.findUnique({
-    where: { userId },
-    select: { plan: true, status: true, currentPeriodEnd: true },
-  });
-  if (!sub) {
-    return { plan: 'free', status: 'active', currentPeriodEnd: null };
-  }
-  return {
-    plan: sub.plan as Plan,
-    status: sub.status,
-    currentPeriodEnd: sub.currentPeriodEnd?.toISOString() ?? null,
-  };
-}
-
-export async function cancelSubscription(userId: string): Promise<void> {
-  const sub = await getPrisma().subscription.findUnique({
-    where: { userId },
-    select: { stripeSubscriptionId: true },
-  });
-  if (!sub?.stripeSubscriptionId) {
-    throw AppError.badRequest('취소할 구독이 없습니다.');
-  }
-  // 즉시 취소가 아니라 기간 만료 후 해지
-  await cancelAtPeriodEnd(config(), sub.stripeSubscriptionId);
-  await getPrisma().subscription.update({
-    where: { userId },
-    data: { status: 'canceling' },
-  });
-}
-
 /**
- * 계정 삭제용 즉시 해지. 구독이 없으면 조용히 넘어간다(삭제 흐름을 막지 않기 위해).
- * Stripe 호출이 실패하면 예외를 전파해 계정 삭제 자체를 중단시킨다 — 유료 구독이
- * 살아 있는 채로 계정만 지워지는 상태를 만들지 않는다.
+ * 크레딧 팩 메타. **가격·통화는 넣지 않는다** — 현지 가격의 원천은 스토어이고,
+ * 앱은 RevenueCat SDK 의 `getOfferings()` 로 표시 가격을 받는다. 서버가 가격을 내리면
+ * 스토어 가격과 어긋난 값이 화면에 뜰 수 있다.
  */
-export async function cancelSubscriptionImmediately(userId: string): Promise<void> {
-  const prisma = getPrisma();
-  const sub = await prisma.subscription.findUnique({
-    where: { userId },
-    select: { id: true, stripeSubscriptionId: true },
-  });
-  if (!sub) {
-    return;
-  }
-  if (sub.stripeSubscriptionId) {
-    await cancelImmediately(config(), sub.stripeSubscriptionId);
-  }
-  await prisma.subscription.update({
-    where: { id: sub.id },
-    data: { plan: 'free', status: 'canceled', stripeSubscriptionId: null },
-  });
+export function getProducts(): CreditPack[] {
+  return [...CREDIT_PACKS].sort((a, b) => a.displayOrder - b.displayOrder);
 }
 
 // ── 웹훅 ────────────────────────────────────────────────
 
-export async function parseWebhook(rawBody: Buffer, signature: string | undefined): Promise<StripeEvent> {
-  return constructEvent(config(), rawBody, signature);
+/** 웹훅 Authorization 헤더 검증. RevenueCat 은 서명이 아니라 헤더 시크릿 방식이다. */
+export function verifyWebhookAuth(header: string | undefined): void {
+  if (!header || header !== config().webhookAuthToken) {
+    throw AppError.unauthorized('웹훅 인증에 실패했습니다.');
+  }
+}
+
+export interface RevenueCatEvent {
+  type: string;
+  appUserId: string;
+  productId: string;
+  transactionId: string;
+  store: unknown;
+  environment: unknown;
+  purchasedAtMs: number | null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+export function parseWebhookEvent(body: unknown): RevenueCatEvent {
+  const event = isRecord(body) && isRecord(body.event) ? body.event : null;
+  if (!event || typeof event.type !== 'string') {
+    throw AppError.badRequest('웹훅 본문을 해석할 수 없습니다.');
+  }
+  const purchasedAtMs = Number(event.purchased_at_ms);
+  return {
+    type: event.type,
+    // app_user_id 는 앱이 Snaply User.id 로 고정한다 (payment-channel-iap.md §5).
+    appUserId: String(event.app_user_id ?? ''),
+    productId: String(event.product_id ?? ''),
+    // 스토어 거래 ID 가 지급 멱등성의 키다. 환불 이벤트는 원 거래를 가리켜야 하므로
+    // transaction_id 를 우선 쓰고 없으면 original_transaction_id 로 떨어진다.
+    transactionId: String(event.transaction_id ?? event.original_transaction_id ?? ''),
+    store: event.store,
+    environment: event.environment,
+    purchasedAtMs: Number.isFinite(purchasedAtMs) ? purchasedAtMs : null,
+  };
 }
 
 /**
- * 구독 기간 종료 시각을 읽는다.
- * Stripe 는 2025년 API 버전에서 current_period_end 를 subscription 최상위에서
- * subscription item 아래로 옮겼다. 계정의 API 버전에 따라 둘 중 하나에만 값이 있으므로 모두 확인한다.
+ * 웹훅 처리. **이벤트 타입으로 먼저 분기**한다 — 지금 크레딧이 받는 것은
+ * `NON_RENEWING_PURCHASE` / `REFUND` 둘뿐이지만, 보관 축 구독이 붙으면
+ * `RENEWAL`·`EXPIRATION` 같은 이벤트가 여기로 함께 들어온다. 그때 구조를 뒤집지 않도록
+ * 크레딧 경로를 좁게 잡아 둔다 (docs/plans/iap-migration.md §10).
+ *
+ * 처리하지 않는 이벤트는 조용히 무시한다(200). RevenueCat 에 재시도를 시켜 봐야
+ * 결과가 같기 때문이다.
  */
-function readPeriodEnd(obj: Record<string, unknown>): Date | null {
-  const top = obj.current_period_end;
-  if (top) {
-    return new Date(Number(top) * 1000);
-  }
-  const item = (obj as { items?: { data?: { current_period_end?: number }[] } }).items?.data?.[0];
-  return item?.current_period_end ? new Date(item.current_period_end * 1000) : null;
-}
-
-export async function handleWebhookEvent(event: StripeEvent): Promise<void> {
-  const obj = event.data.object;
-  const prisma = getPrisma();
-  const handled = [
-    'customer.subscription.created',
-    'customer.subscription.updated',
-    'customer.subscription.deleted',
-    'invoice.payment_failed',
-  ];
-  if (!handled.includes(event.type)) {
-    return; // 처리하지 않는 이벤트는 무시(200)
-  }
-
-  const customerId = String(obj.customer ?? '');
-  const sub = await prisma.subscription.findFirst({ where: { stripeCustomerId: customerId } });
-  if (!sub) {
-    return; // 우리가 모르는 고객 — 조용히 200
-  }
-
-  // 웹훅은 순서를 보장하지 않는다. 이미 반영한 것보다 오래된 이벤트면 무시해
-  // 최신 상태가 과거 상태로 덮이는 것을 막는다. (중복 전달은 재적용해도 결과가 같다.)
-  const eventAt = event.created ? new Date(event.created * 1000) : new Date();
-  if (sub.lastStripeEventAt && eventAt < sub.lastStripeEventAt) {
-    return;
-  }
-
+export async function handleWebhookEvent(event: RevenueCatEvent): Promise<void> {
   switch (event.type) {
-    case 'customer.subscription.created':
-    case 'customer.subscription.updated': {
-      const priceId = (obj as { items?: { data?: { price?: { id?: string } }[] } }).items?.data?.[0]
-        ?.price?.id;
-      await prisma.subscription.update({
-        where: { id: sub.id },
-        data: {
-          plan: planForPrice(priceId),
-          stripeSubscriptionId: String(obj.id ?? sub.stripeSubscriptionId ?? ''),
-          status: String(obj.status ?? 'active'),
-          currentPeriodEnd: readPeriodEnd(obj),
-          lastStripeEventAt: eventAt,
-        },
-      });
+    case 'NON_RENEWING_PURCHASE':
+      await applyPurchase(event);
       return;
-    }
-    case 'customer.subscription.deleted': {
-      await prisma.subscription.update({
-        where: { id: sub.id },
-        data: {
-          plan: 'free',
-          status: 'canceled',
-          stripeSubscriptionId: null,
-          lastStripeEventAt: eventAt,
-        },
-      });
+    case 'REFUND':
+      // 크레딧 환불은 소비분 회수(잔액 음수 허용)이고, 구독 환불은 entitlement 소급
+      // 만료다. 둘을 한 핸들러로 묶지 않는다.
+      await revokeForStoreRefund(event.transactionId);
       return;
-    }
-    case 'invoice.payment_failed': {
-      await prisma.subscription.update({
-        where: { id: sub.id },
-        data: { status: 'past_due', lastStripeEventAt: eventAt },
-      });
+    default:
       return;
-    }
   }
 }
+
+async function applyPurchase(event: RevenueCatEvent): Promise<void> {
+  if (!event.appUserId || !event.transactionId) {
+    throw AppError.badRequest('구매 이벤트에 app_user_id 또는 거래 ID가 없습니다.');
+  }
+  const store = toStore(event.store);
+  if (!store) {
+    return; // 우리가 파는 두 스토어가 아니다 — 지급 대상이 아니므로 조용히 넘어간다
+  }
+  const credits = creditsForProduct(event.productId);
+  if (credits === null) {
+    // 카탈로그에 없는 상품이 결제됐다 = 스토어 등록과 배포된 코드가 어긋났다.
+    // 임의 수량을 지급하지 말고 실패로 남겨 RevenueCat 이 재시도하게 한다.
+    // 매핑을 배포하면 그 재시도가 그대로 지급으로 이어진다.
+    captureException(new Error(`알 수 없는 크레딧 상품: ${event.productId}`), {
+      appUserId: event.appUserId,
+      transactionId: event.transactionId,
+    });
+    throw new AppError(500, 'UNKNOWN_PRODUCT', '알 수 없는 상품입니다.');
+  }
+
+  await grantForPurchase({
+    userId: event.appUserId,
+    store,
+    productId: event.productId,
+    storeTransactionId: event.transactionId,
+    credits,
+    environment: toEnvironment(event.environment),
+    purchasedAt: event.purchasedAtMs ? new Date(event.purchasedAtMs) : new Date(),
+  });
+}
+
+// ── 능동 동기화 ─────────────────────────────────────────
+
+/**
+ * 웹훅 유실 보정. 앱이 구매 완료 직후 호출한다.
+ * 이미 지급된 거래는 `store_transaction_id` unique 에 걸려 건너뛰므로,
+ * 몇 번을 호출해도 잔액은 변하지 않는다.
+ */
+export async function syncPurchases(userId: string): Promise<{ granted: number }> {
+  const purchases = await fetchNonSubscriptions(config(), userId);
+  let granted = 0;
+  for (const purchase of purchases) {
+    const credits = creditsForProduct(purchase.productId);
+    if (credits === null) {
+      continue; // 카탈로그 밖 상품은 동기화에서 조용히 건너뛴다 (웹훅 경로가 알림을 남긴다)
+    }
+    const result = await grantForPurchase({
+      userId,
+      store: purchase.store,
+      productId: purchase.productId,
+      storeTransactionId: purchase.storeTransactionId,
+      credits,
+      environment: purchase.environment,
+      purchasedAt: purchase.purchasedAt,
+    });
+    if (result.granted) {
+      granted += 1;
+    }
+  }
+  return { granted };
+}
+
+export type { StorePurchase };

@@ -4,23 +4,25 @@ import {
   COMMON_ERROR_RESPONSES,
   WEBHOOK_RECEIVED_SCHEMA,
 } from '../schemas/responses.js';
-import { parseWebhook, handleWebhookEvent } from '../services/billing.service.js';
+import {
+  handleWebhookEvent,
+  parseWebhookEvent,
+  verifyWebhookAuth,
+} from '../services/billing.service.js';
 
 /**
- * Stripe 웹훅은 서명 검증을 위해 raw body가 필요하다.
- * 이 플러그인은 캡슐화된 스코프이므로 여기 추가한 buffer 파서가 전역 JSON 파서에 영향을 주지 않는다.
+ * RevenueCat 웹훅.
+ *
+ * Stripe 와 달리 서명이 아니라 **Authorization 헤더 시크릿**으로 검증하므로 raw body 가
+ * 필요 없다. 전역 JSON 파서를 그대로 쓴다.
  */
 export async function billingWebhookRoutes(app: FastifyInstance): Promise<void> {
-  app.addContentTypeParser('application/json', { parseAs: 'buffer' }, (_req, body, done) => {
-    done(null, body);
-  });
-
   app.post(
-    '/billing/webhook',
+    '/billing/webhook/revenuecat',
     {
       schema: {
         tags: ['system'],
-        summary: 'Stripe 웹훅',
+        summary: 'RevenueCat 웹훅',
         response: {
           200: WEBHOOK_RECEIVED_SCHEMA,
           400: API_ERROR_SCHEMA,
@@ -29,11 +31,9 @@ export async function billingWebhookRoutes(app: FastifyInstance): Promise<void> 
       },
     },
     async (request, reply) => {
-      const signature = request.headers['stripe-signature'];
-      const rawBody = request.body as Buffer;
-      // 서명 검증 실패 → 400 (Stripe 재시도 트리거), 성공 → 200
-      const event = await parseWebhook(rawBody, Array.isArray(signature) ? signature[0] : signature);
-      await handleWebhookEvent(event);
+      // 인증 실패는 401 이며 본문을 아예 읽지 않는다.
+      verifyWebhookAuth(request.headers.authorization);
+      await handleWebhookEvent(parseWebhookEvent(request.body));
       reply.status(200);
       return { received: true };
     },

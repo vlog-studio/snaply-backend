@@ -25,7 +25,7 @@ afterAll(async () => {
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 describe('DELETE /auth/me', () => {
-  it('소프트 삭제하고 FCM 토큰·SNS 연동·구독을 즉시 정리한다', async () => {
+  it('소프트 삭제하고 FCM 토큰·SNS 연동을 즉시 정리한다', async () => {
     const user = await h.createUser();
     await h.prisma.user.update({
       where: { id: user.id },
@@ -34,16 +34,6 @@ describe('DELETE /auth/me', () => {
     await h.prisma.snsConnection.create({
       data: { userId: user.id, platform: 'instagram', accessToken: 'encrypted' },
     });
-    await h.prisma.subscription.create({
-      data: {
-        userId: user.id,
-        plan: 'standard',
-        status: 'active',
-        stripeCustomerId: 'cus_mock_1',
-        stripeSubscriptionId: 'sub_mock_1',
-      },
-    });
-
     const res = await h.app.inject({ method: 'DELETE', url: '/auth/me', headers: user.auth });
     expect(res.statusCode).toBe(200);
     expect(res.json().data.deleted).toBe(true);
@@ -53,9 +43,6 @@ describe('DELETE /auth/me', () => {
     expect(row?.deletedAt).not.toBeNull();
     expect(row?.fcmToken).toBeNull();
     expect(await h.prisma.snsConnection.count({ where: { userId: user.id } })).toBe(0);
-
-    const sub = await h.prisma.subscription.findUnique({ where: { userId: user.id } });
-    expect(sub).toMatchObject({ plan: 'free', status: 'canceled', stripeSubscriptionId: null });
   });
 
   it('진행 중이던 편집 작업을 취소 처리한다', async () => {

@@ -1,7 +1,6 @@
 type JsonSchema = Readonly<Record<string, unknown>>;
 
 const TRUE_SCHEMA = { type: 'boolean', enum: [true] } as const;
-const PLAN_SCHEMA = { type: 'string', enum: ['free', 'standard', 'premium'] } as const;
 
 export const API_ERROR_SCHEMA = {
   type: 'object',
@@ -91,7 +90,6 @@ export const USER_PROFILE_SCHEMA = {
     'notificationEnabled',
     'quietStart',
     'quietEnd',
-    'plan',
   ],
   properties: {
     id: { type: 'string', format: 'uuid' },
@@ -101,7 +99,6 @@ export const USER_PROFILE_SCHEMA = {
     notificationEnabled: { type: 'boolean' },
     quietStart: { type: 'integer', minimum: 0, maximum: 23 },
     quietEnd: { type: 'integer', minimum: 0, maximum: 23 },
-    plan: PLAN_SCHEMA,
   },
 } as const;
 
@@ -371,42 +368,76 @@ export const SNS_UPLOAD_SCHEMA = {
   },
 } as const;
 
-export const PLAN_INFO_SCHEMA = {
+/** 크레딧 팩. 가격·통화는 스토어가 원천이라 응답에 넣지 않는다. */
+export const CREDIT_PACK_SCHEMA = {
   type: 'object',
   additionalProperties: false,
-  required: ['plan', 'name', 'priceKrw', 'features'],
+  required: ['productId', 'credits', 'displayOrder'],
   properties: {
-    plan: PLAN_SCHEMA,
-    name: { type: 'string' },
-    priceKrw: { type: 'integer', minimum: 0 },
-    features: { type: 'array', items: { type: 'string' } },
+    productId: { type: 'string' },
+    credits: { type: 'integer', minimum: 1 },
+    displayOrder: { type: 'integer', minimum: 0 },
   },
 } as const;
 
-export const SUBSCRIPTION_SCHEMA = {
+export const CREDIT_ENTRY_SCHEMA = {
   type: 'object',
   additionalProperties: false,
-  required: ['plan', 'status', 'currentPeriodEnd'],
+  required: ['id', 'delta', 'reason', 'createdAt'],
   properties: {
-    plan: PLAN_SCHEMA,
-    // Stripe가 상태 문자열을 결정하므로 서버에서 확인 가능한 string 타입까지만 명세한다.
-    status: { type: 'string' },
-    currentPeriodEnd: { type: 'string', format: 'date-time', nullable: true },
+    id: { type: 'string', format: 'uuid' },
+    /** +지급 / -차감 */
+    delta: { type: 'integer' },
+    reason: { type: 'string' },
+    createdAt: { type: 'string', format: 'date-time' },
   },
 } as const;
 
-export const CHECKOUT_URL_SCHEMA = {
+export const CREDIT_BALANCE_SCHEMA = {
   type: 'object',
   additionalProperties: false,
-  required: ['checkoutUrl'],
-  properties: { checkoutUrl: { type: 'string' } },
+  required: ['balance', 'entries'],
+  properties: {
+    // 스토어 환불로 지급분이 회수되면 음수가 될 수 있다 — minimum 을 걸지 않는다.
+    balance: { type: 'integer' },
+    entries: { type: 'array', items: CREDIT_ENTRY_SCHEMA },
+  },
 } as const;
 
-export const CANCELING_DATA_SCHEMA = {
+export const CREDIT_SYNC_SCHEMA = {
   type: 'object',
   additionalProperties: false,
-  required: ['canceling'],
-  properties: { canceling: TRUE_SCHEMA },
+  required: ['granted', 'balance'],
+  properties: {
+    /** 이번 호출로 새로 지급된 거래 수. 0 이면 이미 모두 반영돼 있었다는 뜻이다. */
+    granted: { type: 'integer', minimum: 0 },
+    balance: { type: 'integer' },
+  },
+} as const;
+
+/**
+ * 402 전용 에러 스키마. `INSUFFICIENT_CREDITS` 는 `AppError.details` 로 필요량과 현재 잔액을
+ * 함께 내리므로 여기 선언해야 직렬화에서 살아남는다 — 앱은 이 값으로
+ * "N크레딧이 더 필요해요" 문구와 구매 유도를 그린다.
+ */
+export const PAYMENT_REQUIRED_ERROR_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['success', 'error'],
+  properties: {
+    success: { type: 'boolean', enum: [false] },
+    error: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['code', 'message'],
+      properties: {
+        code: { type: 'string' },
+        message: { type: 'string' },
+        required: { type: 'integer', minimum: 0 },
+        balance: { type: 'integer' },
+      },
+    },
+  },
 } as const;
 
 export const WEBHOOK_RECEIVED_SCHEMA = {

@@ -1,37 +1,40 @@
-import type { Plan, UserProfile } from '@vlog-studio/shared-types';
+import type { UserProfile } from '@vlog-studio/shared-types';
 import { getPrisma } from '../db/client.js';
+import { captureException } from '../lib/sentry.js';
+import { grantSignupBonus } from './credit.service.js';
 
 /** 미들웨어에서 request.user에 담는 최소 정보 */
 export interface AuthUser {
   id: string;
   supabaseUid: string;
-  plan: Plan;
   /** 계정 삭제 요청 시각. 유예 기간 중이면 값이 있고, 인증 미들웨어가 접근을 차단한다. */
   deletedAt: Date | null;
 }
 
 /**
  * Supabase UID로 앱 유저를 조회하고, 없으면 생성한다(첫 로그인 처리).
- * plan은 subscriptions 테이블 기준이며, 구독이 없으면 'free'.
  * update: {} 이므로 삭제 대기(deletedAt) 상태를 되살리지 않는다 — 복구는 restoreAccount 로만.
+ *
+ * 플랜 개념은 없다 — 정기 구독을 제품 모델에서 제거했다
+ * (docs/decisions/credit-payment-model.md).
  */
 export async function resolveUser(supabaseUid: string): Promise<AuthUser> {
   const user = await getPrisma().user.upsert({
     where: { supabaseUid },
     update: {},
     create: { supabaseUid },
-    select: {
-      id: true,
-      supabaseUid: true,
-      deletedAt: true,
-      subscription: { select: { plan: true } },
-    },
+    select: { id: true, supabaseUid: true, deletedAt: true },
+  });
+
+  // 가입 보너스는 지급 여부를 원장으로 판정하므로 여기서 매번 호출해도 한 번만 들어간다.
+  // 지급 실패가 로그인을 막아서는 안 된다 — 보고만 하고 통과시킨다.
+  await grantSignupBonus(user.id).catch((err: unknown) => {
+    captureException(err, { userId: user.id, at: 'grantSignupBonus' });
   });
 
   return {
     id: user.id,
     supabaseUid: user.supabaseUid,
-    plan: (user.subscription?.plan as Plan | undefined) ?? 'free',
     deletedAt: user.deletedAt,
   };
 }
@@ -47,7 +50,6 @@ export async function getProfile(userId: string): Promise<UserProfile | null> {
       notificationEnabled: true,
       quietStart: true,
       quietEnd: true,
-      subscription: { select: { plan: true } },
     },
   });
 
@@ -63,7 +65,6 @@ export async function getProfile(userId: string): Promise<UserProfile | null> {
     notificationEnabled: user.notificationEnabled,
     quietStart: user.quietStart,
     quietEnd: user.quietEnd,
-    plan: (user.subscription?.plan as Plan | undefined) ?? 'free',
   };
 }
 

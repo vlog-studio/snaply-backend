@@ -71,7 +71,7 @@ describe('GET /auth/me', () => {
     });
 
     expect(res.statusCode).toBe(200);
-    expect(res.json().data).toMatchObject({ plan: 'free', notificationEnabled: true });
+    expect(res.json().data).toMatchObject({ notificationEnabled: true });
     expect(await h.prisma.user.findUnique({ where: { supabaseUid: sub } })).not.toBeNull();
   });
 

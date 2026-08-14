@@ -10,8 +10,9 @@
  * 기본 상태는 "외부 연동 전부 mock/dry-run". 실키 경로를 검증하는 테스트만 harness(env)로 켠다.
  */
 const EXTERNAL_CREDENTIAL_KEYS = [
-  'STRIPE_SECRET_KEY',
-  'STRIPE_MOCK',
+  'REVENUECAT_API_KEY',
+  'BILLING_MOCK',
+  'CREDIT_SIGNUP_BONUS',
   'SNS_MOCK',
   'INSTAGRAM_APP_ID',
   'INSTAGRAM_APP_SECRET',

@@ -165,10 +165,14 @@ export async function legalRoutes(app: FastifyInstance): Promise<void> {
          <p>사용자가 명시적으로 연동을 승인한 계정에 대해서만, 사용자가 업로드를 요청한 영상에 한해
          게시합니다. 연동은 언제든지 해제할 수 있으며, 해제 시 저장된 접근 토큰은 삭제됩니다.</p>
 
-         <h2>5. 유료 구독</h2>
-         <p>일부 기능은 유료 구독으로 제공됩니다. 결제는 결제대행사(Stripe)를 통해 처리되며
-         ${SERVICE}는 카드 정보를 저장하지 않습니다. 해지는 언제든 가능하고, 해지 시 이미 결제된
-         이용 기간의 종료 시점까지 서비스가 유지됩니다.</p>
+         <h2>5. 크레딧 결제</h2>
+         <p>영상 제작에는 크레딧이 사용되며, 크레딧은 앱 내 인앱결제(App Store · Google Play)로만
+         구매할 수 있습니다. 결제와 환불은 각 스토어의 정책에 따라 처리되고 ${SERVICE}는 카드
+         정보를 저장하지 않습니다. 정기 구독 상품은 제공하지 않습니다.</p>
+         <p>제작을 요청하면 크레딧이 차감되며, 제작이 실패하거나 사용자가 취소한 경우에는 차감된
+         크레딧을 돌려드립니다. 스토어를 통해 결제가 환불되면 지급된 크레딧은 회수됩니다.
+         구매한 크레딧은 현금으로 환급하거나 타인에게 양도할 수 없으며, 계정을 삭제하면 남은
+         크레딧은 소멸합니다.</p>
 
          <h2>6. 서비스 변경 및 중단</h2>
          <p>서비스 내용은 변경될 수 있으며, 중요한 변경은 사전에 공지합니다.</p>
@@ -193,7 +197,7 @@ export async function legalRoutes(app: FastifyInstance): Promise<void> {
            <tr><td>푸시 알림 토큰</td><td>알림 발송</td></tr>
            <tr><td>알림 발송 이력(장소·시각)</td><td>중복 알림 방지</td></tr>
            <tr><td>SNS 접근 토큰</td><td>사용자가 요청한 게시 수행 (암호화 저장)</td></tr>
-           <tr><td>구독 상태, 결제대행사 고객 식별자</td><td>유료 기능 제공</td></tr>
+           <tr><td>크레딧 잔액·증감 내역, 스토어 거래 식별자</td><td>크레딧 지급·차감 및 환불 처리</td></tr>
          </table>
          <p>위치 정보는 주변 장소를 조회할 때 사용되며 서버에 저장하지 않습니다.
          알림이 실제로 발송된 경우에 한해 어느 장소에서 언제 보냈는지만 기록합니다.
@@ -213,7 +217,8 @@ export async function legalRoutes(app: FastifyInstance): Promise<void> {
            <tr><td>Google (Firebase)</td><td>푸시 알림 발송</td></tr>
            <tr><td>Meta (Instagram)</td><td>사용자가 요청한 릴스 게시</td></tr>
            <tr><td>TikTok</td><td>사용자가 요청한 영상 게시</td></tr>
-           <tr><td>Stripe</td><td>구독 결제 처리</td></tr>
+           <tr><td>RevenueCat</td><td>인앱결제 영수증 검증 및 구매 상태 통지</td></tr>
+           <tr><td>Apple · Google</td><td>인앱결제 처리</td></tr>
            <tr><td>Sentry</td><td>오류 수집 (개인정보는 마스킹)</td></tr>
          </table>
          <p>외부 플랫폼 게시는 <strong>사용자가 명시적으로 요청한 경우에만</strong> 이루어집니다.</p>

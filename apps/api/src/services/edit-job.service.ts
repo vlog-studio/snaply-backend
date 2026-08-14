@@ -15,6 +15,11 @@ import { getPrisma } from '../db/client.js';
 import { AppError } from '../lib/errors.js';
 import { editProgressChannel, getRedisPublisher } from '../lib/redis.js';
 import { enqueueEditJob, removeEditJob } from '../queue/edit-queue.js';
+import {
+  assertCreditsForExport,
+  recordExportReserve,
+  refundForExport,
+} from './credit.service.js';
 import { createDownloadUrl } from './storage.service.js';
 
 const MAX_CLIPS = 10;
@@ -199,8 +204,6 @@ export async function createEditJob(params: {
     throw AppError.forbidden('편집할 수 없는 영상이 포함되어 있습니다. (소유권 또는 상태 확인)');
   }
 
-  // 플랜별 편집 횟수 제한은 기획 확정 시까지 미적용 — docs/plan-limits.md 참고
-
   // 2) 결과물 video 레코드 생성 (원본 클립 URL 취합)
   const sourcesById = new Map(sources.map((source) => [source.id, source]));
   const originalUrls = uniqueVideoIds.flatMap((id) => sourcesById.get(id)?.originalUrls ?? []);
@@ -215,48 +218,59 @@ export async function createEditJob(params: {
         ? [source.s3Key]
         : [];
   });
-  const outputVideo = await prisma.video.create({
-    data: {
-      userId: params.userId,
-      kind: 'result',
-      status: 'processing',
-      stylePreset: params.stylePreset,
-      originalUrls,
-      originalS3Keys,
-    },
-    select: { id: true },
+  // 3) 결과물 video + edit_jobs 레코드 생성과 크레딧 예약을 한 트랜잭션에 묶는다.
+  //    예약만 남고 작업이 없거나 그 반대인 상태를 만들지 않기 위해서다.
+  //    잔액이 모자라면 여기서 402로 끊기고 video/job 레코드도 함께 롤백된다.
+  const { job, outputVideo } = await prisma.$transaction(async (tx) => {
+    // 잔액 확인 겸 유저 행 잠금이 먼저다 — 아래 INSERT 들이 FK 검사로 같은 행에 share 락을
+    // 걸기 때문에, 순서를 바꾸면 동시 요청끼리 데드락이 난다 (credit.service 주석 참고).
+    await assertCreditsForExport(tx, { userId: params.userId });
+
+    const video = await tx.video.create({
+      data: {
+        userId: params.userId,
+        kind: 'result',
+        status: 'processing',
+        stylePreset: params.stylePreset,
+        originalUrls,
+        originalS3Keys,
+      },
+      select: { id: true },
+    });
+
+    const created = await tx.editJob.create({
+      data: {
+        videoId: video.id,
+        userId: params.userId,
+        pipelineVersion: '3',
+        editSpec: {
+          version: editSpec.version,
+          stylePreset: editSpec.stylePreset,
+          clips: clips.map((clip) => ({
+            videoId: clip.videoId,
+            startMs: clip.startMs,
+            ...(clip.endMs !== undefined ? { endMs: clip.endMs } : {}),
+          })),
+        },
+        renderSpec: {
+          profileVersion: renderSpec.profileVersion,
+          outputProfile: renderSpec.outputProfile,
+          width: renderSpec.width,
+          height: renderSpec.height,
+          fps: renderSpec.fps,
+          fitMode: renderSpec.fitMode,
+        },
+        status: 'queued',
+        progress: 0,
+      },
+      select: { id: true },
+    });
+
+    await recordExportReserve(tx, { userId: params.userId, editJobId: created.id });
+    return { job: created, outputVideo: video };
   });
 
-  // 3) edit_jobs 레코드 생성
-  const job = await prisma.editJob.create({
-    data: {
-      videoId: outputVideo.id,
-      userId: params.userId,
-      pipelineVersion: '3',
-      editSpec: {
-        version: editSpec.version,
-        stylePreset: editSpec.stylePreset,
-        clips: clips.map((clip) => ({
-          videoId: clip.videoId,
-          startMs: clip.startMs,
-          ...(clip.endMs !== undefined ? { endMs: clip.endMs } : {}),
-        })),
-      },
-      renderSpec: {
-        profileVersion: renderSpec.profileVersion,
-        outputProfile: renderSpec.outputProfile,
-        width: renderSpec.width,
-        height: renderSpec.height,
-        fps: renderSpec.fps,
-        fitMode: renderSpec.fitMode,
-      },
-      status: 'queued',
-      progress: 0,
-    },
-    select: { id: true },
-  });
-
-  // 4) 큐 적재. 실패 시 job/video를 failed 처리하고 에러 전파.
+  // 4) 큐 적재. 실패 시 job/video를 failed 처리하고 예약분을 환급한 뒤 에러 전파.
   try {
     await enqueueEditJob({
       jobId: job.id,
@@ -273,6 +287,7 @@ export async function createEditJob(params: {
       data: { status: 'failed', errorMessage: '큐 적재에 실패했습니다.', errorCode: 'QUEUE_FAILED' },
     });
     await prisma.video.update({ where: { id: outputVideo.id }, data: { status: 'failed' } });
+    await refundForExport(job.id);
     throw err;
   }
 
@@ -340,6 +355,10 @@ export async function cancelEditJob(params: { userId: string; jobId: string }): 
   }
 
   await removeEditJob(params.jobId);
+
+  // 결과물이 없으므로 예약분을 돌려준다. 워커가 같은 작업을 실패로 확정해 환급을
+  // 시도하더라도 `(edit_job_id, reason)` unique 제약이 중복 환급을 막는다.
+  await refundForExport(params.jobId);
 
   const event: EditProgressEvent = { progress: 0, step: '취소됨', status: 'canceled' };
   await getRedisPublisher()

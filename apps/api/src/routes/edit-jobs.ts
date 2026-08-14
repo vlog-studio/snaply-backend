@@ -15,6 +15,7 @@ import {
   AUTHENTICATED_ERROR_RESPONSES,
   EDIT_JOB_SCHEMA,
   JOB_CREATED_SCHEMA,
+  PAYMENT_REQUIRED_ERROR_SCHEMA,
   successResponseSchema,
 } from '../schemas/responses.js';
 import {
@@ -63,8 +64,9 @@ export async function editJobRoutes(app: FastifyInstance): Promise<void> {
           '1. 참조된 영상 전부가 **내 소유 + `source` + `ready` 상태**인지 검증 (하나라도 아니면 403)',
           '2. 결과물이 담길 새 영상 레코드를 `kind: result`, `processing`으로 생성',
           '3. `edit_jobs` 레코드를 `queued`로 생성하고 (editSpec/renderSpec 스냅샷 포함) BullMQ 큐에 적재',
+          '4. 크레딧을 예약(차감)한다 — 2·3·4는 한 트랜잭션이라 잔액이 모자라면 작업 자체가 만들어지지 않는다',
           '',
-          '_플랜별 편집 횟수/해상도/워터마크 제한은 기획 확정 시까지 미적용 (docs/plan-limits.md)._',
+          '**크레딧**: export 1회에 100크레딧을 예약한다. 잔액이 모자라면 `402 INSUFFICIENT_CREDITS` 이며 응답의 `required`·`balance`로 부족분을 표시할 수 있다. 작업이 실패하거나 취소되면 예약분은 자동 환급된다.',
           '',
           '**진행 상황 확인** — 둘 중 하나:',
           '- `GET /edit-jobs/{id}` 폴링 (Swagger에서 가능)',
@@ -135,6 +137,7 @@ export async function editJobRoutes(app: FastifyInstance): Promise<void> {
         response: {
           202: successResponseSchema(JOB_CREATED_SCHEMA),
           400: API_ERROR_SCHEMA,
+          402: PAYMENT_REQUIRED_ERROR_SCHEMA,
           ...AUTHENTICATED_ERROR_RESPONSES,
         },
       },
@@ -215,7 +218,7 @@ export async function editJobRoutes(app: FastifyInstance): Promise<void> {
           '- 결과물 영상 레코드는 삭제 처리되어 목록에 나타나지 않는다.',
           '- 열려 있는 진행률 WebSocket에는 `{"status":"canceled"}` 메시지 후 연결이 종료된다.',
           '- 이미 취소된 작업의 재취소는 200(멱등). `done`/`failed`로 끝난 작업은 409.',
-          '- 크레딧 차감/환급 규칙은 크레딧 결제 정책 확정 후 이 엔드포인트에 연결된다.',
+          '- 예약된 크레딧은 전액 환급된다. 재취소해도 환급은 한 번만 기록된다.',
         ].join('\n'),
         params: {
           type: 'object',

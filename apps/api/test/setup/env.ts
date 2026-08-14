@@ -3,7 +3,7 @@
  *
  * 주의: Vitest 는 `apps/api/.env` 를 process.env 에 자동으로 주입한다.
  * 그래서 값을 채워 넣는 것만으로는 부족하고, 외부 서비스 크리덴셜은 **명시적으로 지워야** 한다.
- * (예: 개발용 .env 에 STRIPE_SECRET_KEY 를 넣는 순간 모든 결제 테스트가 실키 모드로 바뀐다.)
+ * (예: 개발용 .env 에 REVENUECAT_API_KEY 를 넣는 순간 모든 결제 테스트가 실키 모드로 바뀐다.)
  * 실키 경로를 검증하는 테스트는 harness(env) 로 그때만 주입한다.
  *
  * SUPABASE_URL 만은 auth 스텁 포트가 동적이라 harness 에서 주입한다.
@@ -45,6 +45,5 @@ process.env.TIKTOK_SCOPES = 'user.info.basic,video.publish';
 process.env.TIKTOK_POLL_INTERVAL_MS = '10';
 process.env.TIKTOK_POLL_TIMEOUT_MS = '2000';
 
-process.env.STRIPE_WEBHOOK_SECRET = 'whsec_test_secret';
-process.env.STRIPE_PRICE_STANDARD = 'price_test_standard';
-process.env.STRIPE_PRICE_PREMIUM = 'price_test_premium';
+// 웹훅 인증 값. mock 모드에서도 그대로 검증되므로 테스트는 이 값을 헤더에 실어 보낸다.
+process.env.REVENUECAT_WEBHOOK_AUTH_TOKEN = 'test-webhook-token';

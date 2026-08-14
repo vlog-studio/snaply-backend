@@ -32,7 +32,8 @@ model User {
   editJobs         EditJob[]
   snsConnections   SnsConnection[]
   snsUploads       SnsUpload[]
-  subscription     Subscription?
+  purchases        Purchase[]
+  creditEntries    CreditLedger[]
 
   @@index([deletedAt])
   @@map("users")
@@ -162,22 +163,55 @@ model SnsUpload {
   @@map("sns_uploads")
 }
 
-// Stripe 구독 상태
-model Subscription {
-  id                   String    @id @default(uuid()) @db.Uuid
-  userId               String    @unique @map("user_id") @db.Uuid
-  plan                 String    @default("free") @db.VarChar(20)
-  stripeCustomerId     String?   @map("stripe_customer_id") @db.VarChar(100)
-  stripeSubscriptionId String?   @map("stripe_subscription_id") @db.VarChar(100)
-  currentPeriodEnd     DateTime? @map("current_period_end") @db.Timestamptz(6)
-  status               String    @default("active") @db.VarChar(20)
-  /// 마지막으로 반영한 Stripe 이벤트의 생성 시각. 웹훅은 순서를 보장하지 않으므로
-  /// 이보다 오래된 이벤트는 무시해 예전 상태로 되돌아가는 것을 막는다.
-  lastStripeEventAt    DateTime? @map("last_stripe_event_at") @db.Timestamptz(6)
-  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+// 크레딧 판매 채널. 정기 구독은 제품 모델에 없다 —
+// docs/decisions/credit-payment-model.md · docs/decisions/payment-channel-iap.md
+enum Store {
+  apple
+  google
+}
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+/// 스토어 거래 원장. 웹훅 멱등성의 기준이며, 크레딧 지급 사유의 근거가 된다.
+model Purchase {
+  id                 String    @id @default(uuid()) @db.Uuid
+  userId             String    @map("user_id") @db.Uuid
+  store              Store
+  productId          String    @map("product_id") @db.VarChar(100)
+  /// 스토어 트랜잭션 ID. unique 제약이 재전송 웹훅의 중복 지급을 원천 차단한다.
+  storeTransactionId String    @unique @map("store_transaction_id") @db.VarChar(200)
+  status             String    @default("completed") @db.VarChar(20) // completed | refunded
+  creditsGranted     Int       @map("credits_granted")
+  environment        String    @default("production") @db.VarChar(20) // production | sandbox
+  purchasedAt        DateTime  @map("purchased_at") @db.Timestamptz(6)
+  refundedAt         DateTime? @map("refunded_at") @db.Timestamptz(6)
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  @@map("subscriptions")
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  creditEntries CreditLedger[]
+
+  @@index([userId, createdAt])
+  @@map("purchases")
+}
+
+/// 크레딧 증감 원장. append-only 이며 잔액은 항상 delta 합계다 — 이 표가 잔액의 원천이고
+/// 클라이언트·RevenueCat 상태는 표시·동기화용이다 (payment-channel-iap.md §5).
+model CreditLedger {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  /// +지급 / -차감. 단위는 100크레딧 = Movie export 1회 (credit-policy.ts)
+  delta      Int
+  /// purchase | signup_bonus | export_reserve | export_refund | store_refund_revoke | promo
+  reason     String   @db.VarChar(30)
+  purchaseId String?  @map("purchase_id") @db.Uuid
+  editJobId  String?  @map("edit_job_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  purchase Purchase? @relation(fields: [purchaseId], references: [id], onDelete: SetNull)
+
+  /// 한 작업의 같은 사유는 한 번뿐이다. 예약·환급이 어느 경로로 몇 번 시도되든
+  /// (API 취소 / 워커 실패 / 재시도) 결과가 같아지는 근거다. editJobId 가 NULL 인
+  /// 행(구매·프로모션)은 Postgres 가 NULL 을 서로 다르게 보므로 제약을 받지 않는다.
+  @@unique([editJobId, reason])
+  @@index([userId, createdAt])
+  @@map("credit_ledger")
 }

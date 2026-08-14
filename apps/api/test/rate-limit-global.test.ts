@@ -1,9 +1,8 @@
 /**
- * Phase 9 — 전역(IP 기준) rate limit 과 Stripe 웹훅 예외.
+ * Phase 9 — 전역(IP 기준) rate limit 과 결제 웹훅 예외.
  * 전역 제한을 낮게 잡아야 검증이 가능하므로 인증이 필요 없는 라우트만 쓴다.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { createHmac } from 'node:crypto';
 import { createHarness, type Harness } from './helpers/harness.js';
 
 let h: Harness;
@@ -20,7 +19,7 @@ describe('전역 rate limit', () => {
   it('IP당 한도를 넘기면 429 + 공통 에러 포맷', async () => {
     const codes: number[] = [];
     for (let i = 0; i < GLOBAL_MAX + 2; i += 1) {
-      const res = await h.app.inject({ method: 'GET', url: '/billing/plans' });
+      const res = await h.app.inject({ method: 'GET', url: '/billing/products' });
       codes.push(res.statusCode);
       if (res.statusCode === 429) {
         expect(res.json()).toEqual({
@@ -38,28 +37,24 @@ describe('전역 rate limit', () => {
   });
 });
 
-describe('Stripe 웹훅은 전역 제한에서 제외된다', () => {
+describe('RevenueCat 웹훅은 전역 제한에서 제외된다', () => {
   it('한도를 훨씬 넘겨도 429 가 나오지 않는다', async () => {
     const body = JSON.stringify({
-      id: 'evt_rl',
-      type: 'charge.succeeded',
-      created: Math.floor(Date.now() / 1000),
-      data: { object: {} },
+      event: { type: 'TEST', app_user_id: 'u', product_id: 'p', transaction_id: 't' },
     });
-    const signature = createHmac('sha256', 'whsec_test_secret').update(body).digest('hex');
 
     const codes: number[] = [];
     for (let i = 0; i < GLOBAL_MAX * 4; i += 1) {
       const res = await h.app.inject({
         method: 'POST',
-        url: '/billing/webhook',
-        headers: { 'content-type': 'application/json', 'stripe-signature': signature },
+        url: '/billing/webhook/revenuecat',
+        headers: { 'content-type': 'application/json', authorization: 'test-webhook-token' },
         payload: body,
       });
       codes.push(res.statusCode);
     }
 
-    // Stripe 는 2xx 가 아니면 재시도를 쌓으므로, 몰려와도 429 가 나오면 안 된다.
+    // 2xx 가 아니면 RevenueCat 이 재시도를 쌓으므로, 몰려와도 429 가 나오면 안 된다.
     expect(codes.every((c) => c === 200)).toBe(true);
   });
 });

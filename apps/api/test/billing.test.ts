@@ -1,16 +1,20 @@
 /**
- * Phase 8 — 결제 시스템 (Dev B 트랙).
- * Stripe 실키 없이도 우리 쪽 로직(서명 검증·플랜 전이·순서 보정·플랜별 제한)은 전부 검증한다.
+ * 크레딧 결제 (IAP + RevenueCat).
+ *
+ * 실키 없이도 우리 쪽 로직(웹훅 인증·멱등 지급·환불 회수·예약/환급·동시 요청)은 전부 검증한다.
+ * 지급 멱등성의 근거가 DB 제약이므로, 테스트도 "같은 이벤트를 두 번 보낸다"처럼
+ * 실제 재전송과 같은 모양으로 확인한다.
  */
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
-import { createHmac, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { createHarness, type Harness, type TestUser } from './helpers/harness.js';
+import { MOVIE_EXPORT_COST } from '../src/services/billing/credit-policy.js';
 
 let h: Harness;
 
-const WEBHOOK_SECRET = 'whsec_test_secret';
-const PRICE_STANDARD = 'price_test_standard';
-const PRICE_PREMIUM = 'price_test_premium';
+const WEBHOOK_TOKEN = 'test-webhook-token';
+const PACK_SMALL = 'credit_pack_small';
+const PACK_SMALL_CREDITS = 500;
 
 beforeAll(async () => {
   h = await createHarness();
@@ -22,412 +26,302 @@ beforeEach(async () => {
   await h.resetDb();
 });
 
-/** mock 모드의 서명 방식: HMAC-SHA256(rawBody, webhookSecret) */
-function sign(rawBody: string): string {
-  return createHmac('sha256', WEBHOOK_SECRET).update(rawBody).digest('hex');
-}
-
-function subscriptionEvent(params: {
-  type: string;
-  customerId: string;
-  priceId?: string;
-  status?: string;
-  subscriptionId?: string;
-  createdAt?: Date;
-  periodEnd?: Date;
-  /** true 면 current_period_end 를 item 하위에만 넣는다 (2025+ API 버전 형태) */
-  periodEndOnItem?: boolean;
+function purchaseEvent(params: {
+  userId: string;
+  transactionId?: string;
+  productId?: string;
+  type?: string;
+  store?: string;
 }) {
-  const periodEndUnix = Math.floor((params.periodEnd ?? new Date(Date.now() + 30 * 86_400_000)).getTime() / 1000);
-  const item: Record<string, unknown> = { price: { id: params.priceId ?? PRICE_STANDARD } };
-  const object: Record<string, unknown> = {
-    id: params.subscriptionId ?? 'sub_test_1',
-    customer: params.customerId,
-    status: params.status ?? 'active',
-    items: { data: [item] },
-  };
-  if (params.periodEndOnItem) {
-    item.current_period_end = periodEndUnix;
-  } else {
-    object.current_period_end = periodEndUnix;
-  }
   return {
-    id: `evt_${randomUUID()}`,
-    type: params.type,
-    created: Math.floor((params.createdAt ?? new Date()).getTime() / 1000),
-    data: { object },
+    api_version: '1.0',
+    event: {
+      id: `evt_${randomUUID()}`,
+      type: params.type ?? 'NON_RENEWING_PURCHASE',
+      app_user_id: params.userId,
+      product_id: params.productId ?? PACK_SMALL,
+      transaction_id: params.transactionId ?? `txn_${randomUUID()}`,
+      store: params.store ?? 'APP_STORE',
+      environment: 'SANDBOX',
+      purchased_at_ms: Date.now(),
+    },
   };
 }
 
-function postWebhook(event: unknown, signature?: string) {
-  const raw = JSON.stringify(event);
+/** token 에 null 을 주면 Authorization 헤더 자체를 보내지 않는다. */
+function postWebhook(body: unknown, token: string | null = WEBHOOK_TOKEN) {
   return h.app.inject({
     method: 'POST',
-    url: '/billing/webhook',
+    url: '/billing/webhook/revenuecat',
     headers: {
       'content-type': 'application/json',
-      ...(signature === undefined ? { 'stripe-signature': sign(raw) } : { 'stripe-signature': signature }),
+      ...(token === null ? {} : { authorization: token }),
     },
-    payload: raw,
+    payload: JSON.stringify(body),
   });
 }
 
-/** 체크아웃까지 진행해 stripeCustomerId 가 붙은 상태를 만든다. */
-async function startCheckout(user: TestUser, plan: 'standard' | 'premium' = 'standard') {
-  const res = await h.app.inject({
-    method: 'POST',
-    url: '/billing/checkout',
-    headers: user.auth,
-    payload: { plan },
-  });
+async function balanceOf(user: TestUser): Promise<number> {
+  const res = await h.app.inject({ method: 'GET', url: '/billing/credits', headers: user.auth });
   expect(res.statusCode).toBe(200);
-  const sub = await h.prisma.subscription.findUniqueOrThrow({ where: { userId: user.id } });
-  return { checkoutUrl: res.json().data.checkoutUrl as string, customerId: sub.stripeCustomerId! };
+  return res.json().data.balance as number;
 }
 
-describe('GET /billing/plans', () => {
-  it('인증 없이 조회할 수 있다', async () => {
-    const res = await h.app.inject({ method: 'GET', url: '/billing/plans' });
+/** 결제 없이 잔액을 만든다 — 예약·환급 검증의 준비 단계. */
+async function seedCredits(user: TestUser, amount: number): Promise<void> {
+  await h.prisma.creditLedger.create({
+    data: { userId: user.id, delta: amount, reason: 'promo' },
+  });
+}
+
+describe('GET /billing/products', () => {
+  it('크레딧 팩 메타를 표시 순서대로 준다 (가격은 없다)', async () => {
+    const res = await h.app.inject({ method: 'GET', url: '/billing/products' });
     expect(res.statusCode).toBe(200);
-    const plans = res.json().data;
-    expect(plans.map((p: { plan: string }) => p.plan)).toEqual(['free', 'standard', 'premium']);
-    expect(plans[1]).toMatchObject({ priceKrw: 9900 });
+
+    const packs = res.json().data as { productId: string; credits: number }[];
+    expect(packs.length).toBeGreaterThan(0);
+    expect(packs[0]).toEqual({
+      productId: PACK_SMALL,
+      credits: PACK_SMALL_CREDITS,
+      displayOrder: 1,
+    });
+    // 가격의 원천은 스토어다. 서버가 내리면 스토어 가격과 어긋난 값이 화면에 뜬다.
+    expect(Object.keys(packs[0] ?? {})).not.toContain('priceKrw');
   });
 });
 
-describe('GET /billing/subscription', () => {
-  it('구독한 적 없으면 free', async () => {
+describe('POST /billing/webhook/revenuecat', () => {
+  it('인증 헤더가 다르면 401 이고 본문을 처리하지 않는다', async () => {
     const user = await h.createUser();
-    const res = await h.app.inject({
-      method: 'GET',
-      url: '/billing/subscription',
-      headers: user.auth,
+    const res = await postWebhook(purchaseEvent({ userId: user.id }), 'wrong-token');
+
+    expect(res.statusCode).toBe(401);
+    expect(await balanceOf(user)).toBe(0);
+    expect(await h.prisma.purchase.count()).toBe(0);
+  });
+
+  it('인증 헤더가 없어도 401', async () => {
+    const user = await h.createUser();
+    expect((await postWebhook(purchaseEvent({ userId: user.id }), null)).statusCode).toBe(401);
+    expect(await balanceOf(user)).toBe(0);
+  });
+
+  it('구매 이벤트로 크레딧을 지급한다', async () => {
+    const user = await h.createUser();
+    const res = await postWebhook(purchaseEvent({ userId: user.id }));
+
+    expect(res.statusCode).toBe(200);
+    expect(await balanceOf(user)).toBe(PACK_SMALL_CREDITS);
+
+    const purchase = await h.prisma.purchase.findFirst({ where: { userId: user.id } });
+    expect(purchase).toMatchObject({
+      store: 'apple',
+      productId: PACK_SMALL,
+      creditsGranted: PACK_SMALL_CREDITS,
+      status: 'completed',
+      environment: 'sandbox',
     });
-    expect(res.json().data).toEqual({ plan: 'free', status: 'active', currentPeriodEnd: null });
+  });
+
+  it('같은 거래가 다시 와도 크레딧은 한 번만 지급된다', async () => {
+    const user = await h.createUser();
+    const event = purchaseEvent({ userId: user.id });
+
+    expect((await postWebhook(event)).statusCode).toBe(200);
+    expect((await postWebhook(event)).statusCode).toBe(200);
+
+    expect(await balanceOf(user)).toBe(PACK_SMALL_CREDITS);
+    expect(await h.prisma.purchase.count({ where: { userId: user.id } })).toBe(1);
+    expect(
+      await h.prisma.creditLedger.count({ where: { userId: user.id, reason: 'purchase' } }),
+    ).toBe(1);
+  });
+
+  it('카탈로그에 없는 상품은 지급하지 않고 실패로 남긴다 (재시도로 복구 가능)', async () => {
+    const user = await h.createUser();
+    const res = await postWebhook(purchaseEvent({ userId: user.id, productId: 'credit_pack_???' }));
+
+    // 2xx 를 주면 RevenueCat 이 재시도를 멈춰 지급이 영영 누락된다.
+    expect(res.statusCode).toBe(500);
+    expect(await balanceOf(user)).toBe(0);
+    expect(await h.prisma.purchase.count()).toBe(0);
+  });
+
+  it('환불 이벤트로 지급분을 회수하고 잔액이 음수가 될 수 있다', async () => {
+    const user = await h.createUser();
+    const transactionId = `txn_${randomUUID()}`;
+
+    await postWebhook(purchaseEvent({ userId: user.id, transactionId }));
+    // 크레딧을 다 쓴 뒤 환불이 들어오는 상황
+    await h.prisma.creditLedger.create({
+      data: { userId: user.id, delta: -PACK_SMALL_CREDITS, reason: 'promo' },
+    });
+
+    const res = await postWebhook(
+      purchaseEvent({ userId: user.id, transactionId, type: 'REFUND' }),
+    );
+    expect(res.statusCode).toBe(200);
+
+    // 이미 만들어진 결과물은 회수할 수 없으므로 음수 잔액으로 남는다.
+    expect(await balanceOf(user)).toBe(-PACK_SMALL_CREDITS);
+    const purchase = await h.prisma.purchase.findUnique({ where: { storeTransactionId: transactionId } });
+    expect(purchase?.status).toBe('refunded');
+    expect(purchase?.refundedAt).not.toBeNull();
+  });
+
+  it('환불 이벤트가 두 번 와도 한 번만 회수한다', async () => {
+    const user = await h.createUser();
+    const transactionId = `txn_${randomUUID()}`;
+    await postWebhook(purchaseEvent({ userId: user.id, transactionId }));
+
+    const refund = purchaseEvent({ userId: user.id, transactionId, type: 'REFUND' });
+    await postWebhook(refund);
+    await postWebhook(refund);
+
+    expect(await balanceOf(user)).toBe(0);
+    expect(
+      await h.prisma.creditLedger.count({
+        where: { userId: user.id, reason: 'store_refund_revoke' },
+      }),
+    ).toBe(1);
+  });
+
+  it('처리 대상이 아닌 이벤트는 조용히 무시한다', async () => {
+    const user = await h.createUser();
+    const res = await postWebhook(purchaseEvent({ userId: user.id, type: 'INITIAL_PURCHASE' }));
+
+    expect(res.statusCode).toBe(200);
+    expect(await balanceOf(user)).toBe(0);
+  });
+});
+
+describe('GET /billing/credits', () => {
+  it('잔액과 내역을 최신순으로 준다', async () => {
+    const user = await h.createUser();
+    await postWebhook(purchaseEvent({ userId: user.id }));
+
+    const res = await h.app.inject({ method: 'GET', url: '/billing/credits', headers: user.auth });
+    expect(res.statusCode).toBe(200);
+
+    const data = res.json().data as { balance: number; entries: { delta: number; reason: string }[] };
+    expect(data.balance).toBe(PACK_SMALL_CREDITS);
+    expect(data.entries).toHaveLength(1);
+    expect(data.entries[0]).toMatchObject({ delta: PACK_SMALL_CREDITS, reason: 'purchase' });
   });
 
   it('인증이 없으면 401', async () => {
-    const res = await h.app.inject({ method: 'GET', url: '/billing/subscription' });
-    expect(res.statusCode).toBe(401);
+    expect((await h.app.inject({ method: 'GET', url: '/billing/credits' })).statusCode).toBe(401);
   });
 });
 
-describe('POST /billing/checkout', () => {
-  it('Checkout URL 을 주지만 결제 전에는 플랜을 올리지 않는다', async () => {
+describe('POST /billing/sync', () => {
+  it('mock 모드에서는 조회할 구매가 없어 지급이 0이고 잔액은 그대로다', async () => {
     const user = await h.createUser();
+    await seedCredits(user, 300);
 
-    const { checkoutUrl, customerId } = await startCheckout(user);
-
-    expect(checkoutUrl).toContain('checkout.stripe.com');
-    expect(customerId).toBeTruthy();
-    const sub = await h.prisma.subscription.findUniqueOrThrow({ where: { userId: user.id } });
-    expect(sub.plan).toBe('free'); // 웹훅 전까지는 free
-  });
-
-  it('두 번 호출해도 같은 Stripe 고객을 재사용한다', async () => {
-    const user = await h.createUser();
-    const first = await startCheckout(user);
-    const second = await startCheckout(user, 'premium');
-    expect(second.customerId).toBe(first.customerId);
-    expect(await h.prisma.subscription.count({ where: { userId: user.id } })).toBe(1);
-  });
-
-  it('알 수 없는 플랜은 400', async () => {
-    const user = await h.createUser();
-    const res = await h.app.inject({
-      method: 'POST',
-      url: '/billing/checkout',
-      headers: user.auth,
-      payload: { plan: 'gold' },
-    });
-    expect(res.statusCode).toBe(400);
-  });
-});
-
-describe('POST /billing/webhook — 서명 검증', () => {
-  it('서명이 없으면 400', async () => {
-    const res = await h.app.inject({
-      method: 'POST',
-      url: '/billing/webhook',
-      headers: { 'content-type': 'application/json' },
-      payload: JSON.stringify({ type: 'ping', data: { object: {} } }),
-    });
-    expect(res.statusCode).toBe(400);
-  });
-
-  it('서명이 틀리면 400', async () => {
-    const user = await h.createUser();
-    const { customerId } = await startCheckout(user);
-    const res = await postWebhook(
-      subscriptionEvent({ type: 'customer.subscription.created', customerId }),
-      'deadbeef',
-    );
-    expect(res.statusCode).toBe(400);
-    expect((await h.prisma.subscription.findUniqueOrThrow({ where: { userId: user.id } })).plan).toBe('free');
-  });
-
-  it('본문이 변조되면 서명이 깨져 400', async () => {
-    const user = await h.createUser();
-    const { customerId } = await startCheckout(user);
-    const event = subscriptionEvent({ type: 'customer.subscription.created', customerId });
-    const goodSignature = sign(JSON.stringify(event));
-
-    const tampered = { ...event, data: { object: { ...event.data.object, customer: 'cus_other' } } };
-    const res = await h.app.inject({
-      method: 'POST',
-      url: '/billing/webhook',
-      headers: { 'content-type': 'application/json', 'stripe-signature': goodSignature },
-      payload: JSON.stringify(tampered),
-    });
-
-    expect(res.statusCode).toBe(400);
-  });
-});
-
-describe('POST /billing/webhook — 구독 상태 동기화', () => {
-  it('결제 완료(subscription.created) 면 플랜이 올라간다', async () => {
-    const user = await h.createUser();
-    const { customerId } = await startCheckout(user);
-
-    const res = await postWebhook(
-      subscriptionEvent({ type: 'customer.subscription.created', customerId }),
-    );
-
+    const res = await h.app.inject({ method: 'POST', url: '/billing/sync', headers: user.auth });
     expect(res.statusCode).toBe(200);
-    const sub = await h.prisma.subscription.findUniqueOrThrow({ where: { userId: user.id } });
-    expect(sub.plan).toBe('standard');
-    expect(sub.status).toBe('active');
-    expect(sub.stripeSubscriptionId).toBe('sub_test_1');
-    expect(sub.currentPeriodEnd).not.toBeNull();
-  });
-
-  it('premium 가격이면 premium 으로 매핑된다', async () => {
-    const user = await h.createUser();
-    const { customerId } = await startCheckout(user, 'premium');
-    await postWebhook(
-      subscriptionEvent({ type: 'customer.subscription.created', customerId, priceId: PRICE_PREMIUM }),
-    );
-    const sub = await h.prisma.subscription.findUniqueOrThrow({ where: { userId: user.id } });
-    expect(sub.plan).toBe('premium');
-  });
-
-  it('current_period_end 가 item 아래에만 있어도 읽는다 (2025+ API 버전)', async () => {
-    const user = await h.createUser();
-    const { customerId } = await startCheckout(user);
-
-    await postWebhook(
-      subscriptionEvent({ type: 'customer.subscription.created', customerId, periodEndOnItem: true }),
-    );
-
-    const sub = await h.prisma.subscription.findUniqueOrThrow({ where: { userId: user.id } });
-    expect(sub.currentPeriodEnd).not.toBeNull();
-  });
-
-  it('해지(subscription.deleted) 면 free 로 돌아간다', async () => {
-    const user = await h.createUser();
-    const { customerId } = await startCheckout(user);
-    await postWebhook(subscriptionEvent({ type: 'customer.subscription.created', customerId }));
-
-    await postWebhook(
-      subscriptionEvent({
-        type: 'customer.subscription.deleted',
-        customerId,
-        createdAt: new Date(Date.now() + 1000),
-      }),
-    );
-
-    const sub = await h.prisma.subscription.findUniqueOrThrow({ where: { userId: user.id } });
-    expect(sub.plan).toBe('free');
-    expect(sub.status).toBe('canceled');
-    expect(sub.stripeSubscriptionId).toBeNull();
-  });
-
-  it('결제 실패면 past_due 가 되지만 플랜은 유지된다', async () => {
-    const user = await h.createUser();
-    const { customerId } = await startCheckout(user);
-    await postWebhook(subscriptionEvent({ type: 'customer.subscription.created', customerId }));
-
-    await postWebhook({
-      id: `evt_${randomUUID()}`,
-      type: 'invoice.payment_failed',
-      created: Math.floor((Date.now() + 1000) / 1000),
-      data: { object: { customer: customerId } },
-    });
-
-    const sub = await h.prisma.subscription.findUniqueOrThrow({ where: { userId: user.id } });
-    expect(sub.status).toBe('past_due');
-    expect(sub.plan).toBe('standard');
-  });
-
-  it('모르는 고객의 이벤트는 200 으로 무시한다', async () => {
-    const res = await postWebhook(
-      subscriptionEvent({ type: 'customer.subscription.created', customerId: 'cus_unknown' }),
-    );
-    expect(res.statusCode).toBe(200);
-  });
-
-  it('처리하지 않는 이벤트 타입도 200', async () => {
-    const res = await postWebhook({
-      id: 'evt_x',
-      type: 'charge.succeeded',
-      created: Math.floor(Date.now() / 1000),
-      data: { object: {} },
-    });
-    expect(res.statusCode).toBe(200);
-  });
-
-  it('같은 이벤트가 중복 전달돼도 결과가 같다 (멱등)', async () => {
-    const user = await h.createUser();
-    const { customerId } = await startCheckout(user);
-    const event = subscriptionEvent({ type: 'customer.subscription.created', customerId });
-
-    await postWebhook(event);
-    await postWebhook(event);
-    await postWebhook(event);
-
-    const sub = await h.prisma.subscription.findUniqueOrThrow({ where: { userId: user.id } });
-    expect(sub.plan).toBe('standard');
-  });
-
-  it('오래된 이벤트가 뒤늦게 와도 최신 상태를 덮지 않는다 (순서 보정)', async () => {
-    const user = await h.createUser();
-    const { customerId } = await startCheckout(user);
-    const now = new Date();
-
-    // 최신: premium 으로 업그레이드
-    await postWebhook(
-      subscriptionEvent({
-        type: 'customer.subscription.updated',
-        customerId,
-        priceId: PRICE_PREMIUM,
-        createdAt: now,
-      }),
-    );
-    // 지연 도착: 1시간 전의 standard 이벤트
-    await postWebhook(
-      subscriptionEvent({
-        type: 'customer.subscription.updated',
-        customerId,
-        priceId: PRICE_STANDARD,
-        createdAt: new Date(now.getTime() - 3600_000),
-      }),
-    );
-
-    const sub = await h.prisma.subscription.findUniqueOrThrow({ where: { userId: user.id } });
-    expect(sub.plan).toBe('premium');
-  });
-
-  it('해지 뒤 재구독(더 최신 이벤트)은 정상 반영된다', async () => {
-    const user = await h.createUser();
-    const { customerId } = await startCheckout(user);
-    const t0 = Date.now();
-
-    await postWebhook(
-      subscriptionEvent({ type: 'customer.subscription.created', customerId, createdAt: new Date(t0) }),
-    );
-    await postWebhook(
-      subscriptionEvent({
-        type: 'customer.subscription.deleted',
-        customerId,
-        createdAt: new Date(t0 + 1000),
-      }),
-    );
-    await postWebhook(
-      subscriptionEvent({
-        type: 'customer.subscription.created',
-        customerId,
-        subscriptionId: 'sub_test_2',
-        createdAt: new Date(t0 + 2000),
-      }),
-    );
-
-    const sub = await h.prisma.subscription.findUniqueOrThrow({ where: { userId: user.id } });
-    expect(sub.plan).toBe('standard');
-    expect(sub.stripeSubscriptionId).toBe('sub_test_2');
+    expect(res.json().data).toEqual({ granted: 0, balance: 300 });
   });
 });
 
-describe('POST /billing/cancel', () => {
-  it('기간 만료 후 해지로 표시하고 플랜은 유지한다', async () => {
-    const user = await h.createUser();
-    const { customerId } = await startCheckout(user);
-    await postWebhook(subscriptionEvent({ type: 'customer.subscription.created', customerId }));
-
-    const res = await h.app.inject({
-      method: 'POST',
-      url: '/billing/cancel',
-      headers: user.auth,
+describe('export 크레딧 예약·환급', () => {
+  async function readyVideo(user: TestUser): Promise<string> {
+    const video = await h.prisma.video.create({
+      data: { userId: user.id, kind: 'source', status: 'ready', s3Key: `u/${user.id}/a.mp4` },
     });
-
-    expect(res.statusCode).toBe(200);
-    const sub = await h.prisma.subscription.findUniqueOrThrow({ where: { userId: user.id } });
-    expect(sub.status).toBe('canceling');
-    expect(sub.plan).toBe('standard'); // 즉시 다운그레이드 아님
-  });
-
-  it('구독이 없으면 400', async () => {
-    const user = await h.createUser();
-    const res = await h.app.inject({ method: 'POST', url: '/billing/cancel', headers: user.auth });
-    expect(res.statusCode).toBe(400);
-  });
-});
-
-describe('플랜별 편집 제한', () => {
-  async function createReadyVideo(userId: string) {
-    return h.prisma.video.create({
-      data: {
-        userId,
-        originalUrls: ['https://cdn.example.com/clip.mp4'],
-        status: 'ready',
-        s3Key: `uploads/${userId}/${randomUUID()}.mp4`,
-      },
-      select: { id: true },
-    });
+    return video.id;
   }
 
-  function requestEdit(user: TestUser, videoId: string) {
+  function createJob(user: TestUser, videoId: string) {
     return h.app.inject({
       method: 'POST',
       url: '/edit-jobs',
       headers: user.auth,
-      payload: { videoIds: [videoId], stylePreset: '일상' },
+      payload: {
+        clips: [{ videoId, startMs: 0, endMs: 3000 }],
+        stylePreset: '일상',
+        outputProfile: 'short_vertical',
+        fitMode: 'contain',
+      },
     });
   }
 
-  // ⚠️ 플랜별 편집 횟수 제한은 **의도적으로 미적용** 상태다(2026-08-05, Dev A).
-  // 기획 미확정으로 `FREE_MONTHLY_LIMIT` 이 로직에서 제거됐다 — docs/plan-limits.md 참고.
-  // 아래 테스트는 "현재 계약"을 고정한다. 제한을 재도입하면 여기가 깨지므로,
-  // 그때 이 블록을 원래 기대값(4편째 403 + '무료 플랜' 메시지)으로 되돌릴 것.
-  it('현재는 Free 플랜도 편집 횟수 제한이 없다 (기획 확정까지 유예)', async () => {
+  it('잔액이 모자라면 402 INSUFFICIENT_CREDITS 로 거절하고 작업을 만들지 않는다', async () => {
     const user = await h.createUser();
-    const video = await createReadyVideo(user.id);
+    await seedCredits(user, MOVIE_EXPORT_COST - 1);
+    const videoId = await readyVideo(user);
 
-    for (let i = 0; i < 4; i += 1) {
-      expect((await requestEdit(user, video.id)).statusCode).toBe(202);
-    }
+    const res = await createJob(user, videoId);
+    expect(res.statusCode).toBe(402);
+    expect(res.json().error).toMatchObject({
+      code: 'INSUFFICIENT_CREDITS',
+      required: MOVIE_EXPORT_COST,
+      balance: MOVIE_EXPORT_COST - 1,
+    });
+
+    // 예약이 실패하면 작업·결과물 레코드도 남지 않는다 (같은 트랜잭션).
+    expect(await h.prisma.editJob.count({ where: { userId: user.id } })).toBe(0);
+    expect(await h.prisma.video.count({ where: { userId: user.id, kind: 'result' } })).toBe(0);
+    expect(await balanceOf(user)).toBe(MOVIE_EXPORT_COST - 1);
   });
 
-  it('구독 플랜은 편집 요청에 영향을 주지 않는다 (제한 미적용이므로)', async () => {
+  it('작업을 만들면 예약으로 차감된다', async () => {
     const user = await h.createUser();
-    const { customerId } = await startCheckout(user);
-    await postWebhook(subscriptionEvent({ type: 'customer.subscription.created', customerId }));
-    const sub = await h.app.inject({
-      method: 'GET',
-      url: '/billing/subscription',
+    await seedCredits(user, MOVIE_EXPORT_COST * 2);
+    const videoId = await readyVideo(user);
+
+    const res = await createJob(user, videoId);
+    expect(res.statusCode).toBe(202);
+
+    const jobId = res.json().data.jobId as string;
+    expect(await balanceOf(user)).toBe(MOVIE_EXPORT_COST);
+    const entry = await h.prisma.creditLedger.findFirst({ where: { editJobId: jobId } });
+    expect(entry).toMatchObject({ delta: -MOVIE_EXPORT_COST, reason: 'export_reserve' });
+  });
+
+  it('취소하면 예약분을 환급한다', async () => {
+    const user = await h.createUser();
+    await seedCredits(user, MOVIE_EXPORT_COST);
+    const videoId = await readyVideo(user);
+    const jobId = (await createJob(user, videoId)).json().data.jobId as string;
+
+    const res = await h.app.inject({
+      method: 'DELETE',
+      url: `/edit-jobs/${jobId}`,
       headers: user.auth,
     });
-    expect(sub.json().data.plan).toBe('standard');
-    const video = await createReadyVideo(user.id);
-
-    for (let i = 0; i < 4; i += 1) {
-      expect((await requestEdit(user, video.id)).statusCode).toBe(202);
-    }
+    expect(res.statusCode).toBe(200);
+    expect(await balanceOf(user)).toBe(MOVIE_EXPORT_COST);
   });
 
-  it('GET /billing/plans 의 features 문구는 FE 표시용이며 백엔드가 집행하지 않는다', async () => {
-    // docs/plan-limits.md 가 명시한 사실. 문구와 실제 동작이 다르다는 점을 테스트로 남겨둔다.
-    const res = await h.app.inject({ method: 'GET', url: '/billing/plans' });
-    const free = res.json().data.find((p: { plan: string }) => p.plan === 'free');
-    expect(free.features).toContain('월 3편 편집');
+  it('취소를 두 번 해도 환급은 한 번만 기록된다', async () => {
+    const user = await h.createUser();
+    await seedCredits(user, MOVIE_EXPORT_COST);
+    const videoId = await readyVideo(user);
+    const jobId = (await createJob(user, videoId)).json().data.jobId as string;
+
+    const url = `/edit-jobs/${jobId}`;
+    await h.app.inject({ method: 'DELETE', url, headers: user.auth });
+    await h.app.inject({ method: 'DELETE', url, headers: user.auth }); // 멱등 취소
+
+    expect(await balanceOf(user)).toBe(MOVIE_EXPORT_COST);
+    expect(
+      await h.prisma.creditLedger.count({ where: { editJobId: jobId, reason: 'export_refund' } }),
+    ).toBe(1);
+  });
+
+  it('잔액이 1회분일 때 동시에 2건을 요청하면 1건만 성공한다', async () => {
+    const user = await h.createUser();
+    await seedCredits(user, MOVIE_EXPORT_COST);
+    const videoId = await readyVideo(user);
+
+    const [a, b] = await Promise.all([createJob(user, videoId), createJob(user, videoId)]);
+    const codes = [a.statusCode, b.statusCode].sort();
+
+    expect(codes).toEqual([202, 402]);
+    expect(await balanceOf(user)).toBe(0);
+    expect(await h.prisma.editJob.count({ where: { userId: user.id } })).toBe(1);
   });
 });

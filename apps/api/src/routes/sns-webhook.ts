@@ -16,7 +16,7 @@ interface VerifyQuery {
  * 등록 시 Meta 가 `hub.challenge` 를 되돌려받아야 통과시킨다. 그 검증만 처리한다.
  *
  * 이벤트(POST)는 서명만 확인하고 200 으로 받아 넘긴다 — 구독한 필드가 없으면 사실상 오지 않는다.
- * Stripe 웹훅과 같은 이유로 raw body 가 필요하므로 파서를 이 스코프에만 등록한다.
+ * 서명 검증에 raw body 가 필요하므로 파서를 이 스코프에만 등록한다.
  */
 export async function snsWebhookRoutes(app: FastifyInstance): Promise<void> {
   app.addContentTypeParser('application/json', { parseAs: 'buffer' }, (_req, body, done) => {

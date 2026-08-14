@@ -1,135 +1,88 @@
-import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { decodeJwt } from 'jose';
+import type { FastifyInstance } from 'fastify';
 import type { ApiSuccess } from '@vlog-studio/shared-types';
 import {
-  API_ERROR_SCHEMA,
   AUTHENTICATED_ERROR_RESPONSES,
-  CANCELING_DATA_SCHEMA,
-  CHECKOUT_URL_SCHEMA,
   COMMON_ERROR_RESPONSES,
-  PLAN_INFO_SCHEMA,
-  SUBSCRIPTION_SCHEMA,
+  CREDIT_BALANCE_SCHEMA,
+  CREDIT_PACK_SCHEMA,
+  CREDIT_SYNC_SCHEMA,
   successResponseSchema,
 } from '../schemas/responses.js';
-import {
-  getPlans,
-  createCheckout,
-  getSubscription,
-  cancelSubscription,
-  type PlanInfo,
-  type SubscriptionDto,
-} from '../services/billing.service.js';
+import { getProducts, syncPurchases } from '../services/billing.service.js';
+import type { CreditPack } from '../services/billing/credit-policy.js';
+import { getBalance, listEntries, type CreditEntryDto } from '../services/credit.service.js';
 
-interface CheckoutBody {
-  plan: 'standard' | 'premium';
-}
-
-/**
- * Stripe 고객에 붙일 이메일을 토큰에서 꺼낸다.
- * `request.user`(공통 소유)에는 email이 없어서 이미 검증된 JWT를 다시 디코드만 한다.
- * 서명 검증은 preHandler(app.authenticate)가 이미 끝냈으므로 여기선 파싱만 한다.
- * TODO: AuthUser 에 email 추가는 인증 모듈 공동 소유라 Dev A와 합의 후 정리.
- */
-function emailFromToken(request: FastifyRequest): string | undefined {
-  const header = request.headers.authorization;
-  if (!header?.startsWith('Bearer ')) {
-    return undefined;
-  }
-  try {
-    const { email } = decodeJwt(header.slice('Bearer '.length).trim());
-    return typeof email === 'string' && email.length > 0 ? email : undefined;
-  } catch {
-    return undefined;
-  }
-}
+const ENTRY_LIMIT = 50;
 
 export async function billingRoutes(app: FastifyInstance): Promise<void> {
-  // GET /billing/plans — 플랜 목록 (인증 불필요)
+  // GET /billing/products — 크레딧 팩 메타 (인증 불필요)
+  //
+  // 가격·통화는 응답에 없다. 현지 가격의 원천은 스토어이고, 앱은 RevenueCat SDK 의
+  // getOfferings() 로 표시 가격을 받는다.
   app.get(
-    '/billing/plans',
+    '/billing/products',
     {
       schema: {
         tags: ['billing'],
-        summary: '플랜 목록',
+        summary: '크레딧 팩 목록',
+        description:
+          '크레딧 팩의 상품 ID와 지급 크레딧 수. **가격은 스토어가 원천이므로 응답에 없다.**',
         response: {
-          200: successResponseSchema({ type: 'array', items: PLAN_INFO_SCHEMA }),
+          200: successResponseSchema({ type: 'array', items: CREDIT_PACK_SCHEMA }),
           ...COMMON_ERROR_RESPONSES,
         },
       },
     },
-    async (): Promise<ApiSuccess<PlanInfo[]>> => {
-      return { success: true, data: getPlans() };
+    async (): Promise<ApiSuccess<CreditPack[]>> => {
+      return { success: true, data: getProducts() };
     },
   );
 
-  // GET /billing/subscription — 내 구독 상태
+  // GET /billing/credits — 내 잔액과 최근 내역
   app.get(
-    '/billing/subscription',
+    '/billing/credits',
     {
       preHandler: app.authenticate,
       schema: {
         tags: ['billing'],
-        summary: '내 구독 상태',
+        summary: '크레딧 잔액과 내역',
+        description:
+          '잔액의 원천은 항상 백엔드다. 클라이언트·RevenueCat 의 상태는 표시·동기화용이다.',
         response: {
-          200: successResponseSchema(SUBSCRIPTION_SCHEMA),
+          200: successResponseSchema(CREDIT_BALANCE_SCHEMA),
           ...AUTHENTICATED_ERROR_RESPONSES,
         },
       },
     },
-    async (request): Promise<ApiSuccess<SubscriptionDto>> => {
-      return { success: true, data: await getSubscription(request.user.id) };
+    async (request): Promise<ApiSuccess<{ balance: number; entries: CreditEntryDto[] }>> => {
+      const [balance, entries] = await Promise.all([
+        getBalance(request.user.id),
+        listEntries(request.user.id, ENTRY_LIMIT),
+      ]);
+      return { success: true, data: { balance, entries } };
     },
   );
 
-  // POST /billing/checkout — Checkout Session 생성
-  app.post<{ Body: CheckoutBody }>(
-    '/billing/checkout',
-    {
-      preHandler: app.authenticate,
-      schema: {
-        tags: ['billing'],
-        summary: 'Checkout Session 생성',
-        body: {
-          type: 'object',
-          additionalProperties: false,
-          required: ['plan'],
-          properties: { plan: { type: 'string', enum: ['standard', 'premium'] } },
-        },
-        response: {
-          200: successResponseSchema(CHECKOUT_URL_SCHEMA),
-          400: API_ERROR_SCHEMA,
-          ...AUTHENTICATED_ERROR_RESPONSES,
-        },
-      },
-    },
-    async (request): Promise<ApiSuccess<{ checkoutUrl: string }>> => {
-      const data = await createCheckout({
-        userId: request.user.id,
-        email: emailFromToken(request),
-        plan: request.body.plan,
-      });
-      return { success: true, data };
-    },
-  );
-
-  // POST /billing/cancel — 기간 만료 후 해지
+  // POST /billing/sync — 웹훅 유실 보정
+  //
+  // 앱이 구매 완료 직후 호출한다. 이미 지급된 거래는 건너뛰므로 몇 번 호출해도 안전하다.
   app.post(
-    '/billing/cancel',
+    '/billing/sync',
     {
       preHandler: app.authenticate,
       schema: {
         tags: ['billing'],
-        summary: '구독 해지(기간말)',
+        summary: '구매 동기화',
+        description: '스토어 구매 이력을 조회해 웹훅이 유실된 지급을 보정한다. 멱등하다.',
         response: {
-          200: successResponseSchema(CANCELING_DATA_SCHEMA),
-          400: API_ERROR_SCHEMA,
+          200: successResponseSchema(CREDIT_SYNC_SCHEMA),
           ...AUTHENTICATED_ERROR_RESPONSES,
         },
       },
     },
-    async (request): Promise<ApiSuccess<{ canceling: true }>> => {
-      await cancelSubscription(request.user.id);
-      return { success: true, data: { canceling: true } };
+    async (request): Promise<ApiSuccess<{ granted: number; balance: number }>> => {
+      const { granted } = await syncPurchases(request.user.id);
+      return { success: true, data: { granted, balance: await getBalance(request.user.id) } };
     },
   );
 }

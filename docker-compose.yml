@@ -83,7 +83,7 @@ services:
       migrate: { condition: service_completed_successfully }
       redis: { condition: service_healthy }
       minio: { condition: service_healthy }
-    # Supabase·Stripe·SNS 자격증명은 여기서 온다. 없으면 뜨긴 하지만 인증이 동작하지 않는다.
+    # Supabase·결제·SNS 자격증명은 여기서 온다. 없으면 뜨긴 하지만 인증이 동작하지 않는다.
     env_file:
       - path: apps/api/.env
         required: false
@@ -104,7 +104,7 @@ services:
       CLOUDFRONT_DOMAIN: ""
       # 외부 연동은 기본 mock. 실키 경로를 확인해야 할 때만 해당 줄을 지운다.
       SNS_MOCK: "true"
-      STRIPE_MOCK: "true"
+      BILLING_MOCK: "true"
       SENTRY_DSN: ""
     ports:
       - "${API_HOST_PORT:-3000}:3000"   # 호스트 포트가 점유됐다면 API_HOST_PORT로 변경

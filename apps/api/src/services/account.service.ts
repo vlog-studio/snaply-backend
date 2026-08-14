@@ -9,7 +9,7 @@ import { getPrisma } from '../db/client.js';
 import { AppError } from '../lib/errors.js';
 import { captureException } from '../lib/sentry.js';
 import { removeEditJob } from '../queue/edit-queue.js';
-import { cancelSubscriptionImmediately } from './billing.service.js';
+import { refundForExport } from './credit.service.js';
 import { deleteObjectsByPrefix } from './storage.service.js';
 import { deleteAuthUser } from './supabase-admin.service.js';
 
@@ -27,13 +27,14 @@ export function purgeAfterFor(deletedAt: Date): Date {
 }
 
 /**
- * 계정 소프트 삭제. Stripe 해지를 먼저 시도하고, 실패하면 삭제 전체를 중단한다
- * (유료 구독이 살아 있는 채로 계정만 잠기는 상태를 만들지 않는다 — 사용자는 재시도 가능).
+ * 계정 소프트 삭제.
+ *
+ * 해지할 정기 구독은 없다 — 제품 모델에서 제거했다
+ * (docs/decisions/credit-payment-model.md). 잔여 크레딧은 유예 기간 후 실삭제 시
+ * 원장과 함께 사라진다(FK cascade). 유예 중에는 복구가 가능하므로 여기서 소멸시키지 않는다.
  */
 export async function deleteAccount(userId: string): Promise<{ purgeAfter: Date }> {
   const prisma = getPrisma();
-
-  await cancelSubscriptionImmediately(userId);
 
   const pendingJobs = await prisma.editJob.findMany({
     where: { userId, status: { in: ['queued', 'processing'] } },
@@ -55,9 +56,11 @@ export async function deleteAccount(userId: string): Promise<{ purgeAfter: Date 
     }),
   ]);
 
-  // 큐 제거는 최선 노력 — 워커가 이미 잡은 작업은 제거되지 않고, GC 가 산출물을 정리한다
+  // 큐 제거는 최선 노력 — 워커가 이미 잡은 작업은 제거되지 않고, GC 가 산출물을 정리한다.
+  // 취소된 작업의 예약 크레딧은 사용자 취소와 동일하게 환급한다 (유예 중 복구가 가능하므로).
   for (const job of pendingJobs) {
     await removeEditJob(job.id);
+    await refundForExport(job.id);
   }
 
   return { purgeAfter: purgeAfterFor(now) };
