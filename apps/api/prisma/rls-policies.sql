@@ -109,3 +109,11 @@ create policy "credit_ledger_select_own" on public.credit_ledger
   for select using (user_id = public.current_app_user_id());
 -- 원장은 append-only 이고 잔액의 원천이다. 지급·차감·환급은 전부 서버(service_role)가
 -- 수행하므로 유저 쓰기 정책을 두지 않는다 — 클라이언트가 잔액을 만들 수 있으면 안 된다.
+
+-- ── ad_rewards ─────────────────────────────────────────
+alter table public.ad_rewards enable row level security;
+
+-- 세션 상태 조회만 허용한다. 발급·확정은 서버(service_role)가 하며, 특히 nonce 와 status 를
+-- 클라이언트가 쓸 수 있으면 광고를 보지 않고 지급을 만들어 낼 수 있다.
+create policy "ad_rewards_select_own" on public.ad_rewards
+  for select using (user_id = public.current_app_user_id());

@@ -34,6 +34,7 @@ model User {
   snsUploads       SnsUpload[]
   purchases        Purchase[]
   creditEntries    CreditLedger[]
+  adRewards        AdReward[]
 
   @@index([deletedAt])
   @@map("users")
@@ -192,6 +193,37 @@ model Purchase {
   @@map("purchases")
 }
 
+/// 보상형 광고 세션. 지급의 트리거는 **오직 AdMob SSV 콜백**이며, 앱이 "광고를 봤다"고
+/// 알리는 경로는 존재하지 않는다 (docs/decisions/ad-reward-credits.md §3).
+/// 이 표는 그 콜백을 우리 사용자·정책과 이어 붙이기 위한 왕복 상태다.
+model AdReward {
+  id            String    @id @default(uuid()) @db.Uuid
+  userId        String    @map("user_id") @db.Uuid
+  /// SSV custom_data 로 왕복하는 일회성 난수. 추측 불가해야 한다.
+  nonce         String    @unique @db.VarChar(64)
+  /// pending | granted | expired | rejected
+  status        String    @db.VarChar(16)
+  /// 지급 확정된 크레딧. 세션 발급 시점의 정책값을 스냅샷한다 —
+  /// 정책이 바뀌어도 이미 시작된 광고의 약속은 지켜야 한다.
+  credits       Int
+  /// AdMob transaction_id. 같은 트랜잭션의 재전송이 두 번 지급하지 않는 근거.
+  transactionId String?   @unique @map("transaction_id") @db.VarChar(64)
+  adUnit        String?   @map("ad_unit") @db.VarChar(64)
+  /// 거절 사유(서명 불일치, 한도 초과, 만료 등). 운영 진단용.
+  rejectReason  String?   @map("reject_reason") @db.VarChar(64)
+  expiresAt     DateTime  @map("expires_at") @db.Timestamptz(6)
+  grantedAt     DateTime? @map("granted_at") @db.Timestamptz(6)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  creditEntries CreditLedger[]
+
+  @@index([userId, createdAt])
+  /// 일일 한도·쿨다운은 "지급된 시각"으로 센다 — 발급만 되고 끝난 세션은 한도를 깎지 않는다.
+  @@index([userId, grantedAt])
+  @@map("ad_rewards")
+}
+
 /// 크레딧 증감 원장. append-only 이며 잔액은 항상 delta 합계다 — 이 표가 잔액의 원천이고
 /// 클라이언트·RevenueCat 상태는 표시·동기화용이다 (payment-channel-iap.md §5).
 model CreditLedger {
@@ -199,19 +231,24 @@ model CreditLedger {
   userId     String   @map("user_id") @db.Uuid
   /// +지급 / -차감. 단위는 100크레딧 = Movie export 1회 (credit-policy.ts)
   delta      Int
-  /// purchase | signup_bonus | export_reserve | export_refund | store_refund_revoke | promo
+  /// purchase | signup_bonus | export_reserve | export_refund | store_refund_revoke | promo | ad_reward
   reason     String   @db.VarChar(30)
   purchaseId String?  @map("purchase_id") @db.Uuid
   editJobId  String?  @map("edit_job_id") @db.Uuid
+  adRewardId String?  @map("ad_reward_id") @db.Uuid
   createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  purchase Purchase? @relation(fields: [purchaseId], references: [id], onDelete: SetNull)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  purchase  Purchase? @relation(fields: [purchaseId], references: [id], onDelete: SetNull)
+  adReward  AdReward? @relation(fields: [adRewardId], references: [id], onDelete: SetNull)
 
   /// 한 작업의 같은 사유는 한 번뿐이다. 예약·환급이 어느 경로로 몇 번 시도되든
   /// (API 취소 / 워커 실패 / 재시도) 결과가 같아지는 근거다. editJobId 가 NULL 인
   /// 행(구매·프로모션)은 Postgres 가 NULL 을 서로 다르게 보므로 제약을 받지 않는다.
   @@unique([editJobId, reason])
+  /// 위와 같은 장치. 한 보상 세션은 `ad_reward` 행을 최대 하나만 만든다 — SSV 재전송이
+  /// transaction_id unique 를 비껴가더라도 여기서 두 번째 지급이 막힌다.
+  @@unique([adRewardId, reason])
   @@index([userId, createdAt])
   @@map("credit_ledger")
 }
