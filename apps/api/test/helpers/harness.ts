@@ -65,6 +65,7 @@ const TABLES = [
   'sns_uploads',
   'sns_connections',
   'credit_ledger',
+  'ad_rewards',
   'purchases',
   'edit_jobs',
   'videos',

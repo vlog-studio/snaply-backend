@@ -204,6 +204,50 @@ export const ENV_VARS = [
     description: '신규 가입 지급 크레딧. 수량 미확정이라 기본 0(지급 안 함) — backlog A-2',
   },
 
+  // ── 보상형 광고 (AdMob SSV) ──────────────────────────
+  {
+    key: 'AD_REWARD_ENABLED',
+    required: false,
+    origin: 'shared',
+    description: '킬 스위치. true 여야 세션이 발급된다. 기본 false — AdMob 콘솔 설정 전에는 꺼 둔다',
+  },
+  {
+    key: 'AD_REWARD_CREDITS',
+    required: false,
+    origin: 'shared',
+    description: '광고 1편 완료당 지급 크레딧. 기본 20(잠정값) — backlog A-2',
+  },
+  {
+    key: 'AD_REWARD_DAILY_LIMIT',
+    required: false,
+    origin: 'shared',
+    description: 'KST 하루 최대 지급 횟수. 기본 3(잠정값)',
+  },
+  {
+    key: 'AD_REWARD_COOLDOWN_SECONDS',
+    required: false,
+    origin: 'shared',
+    description: '마지막 지급 이후 다음 세션까지의 대기 시간. 기본 300(잠정값)',
+  },
+  {
+    key: 'AD_REWARD_SESSION_TTL_SECONDS',
+    required: false,
+    origin: 'shared',
+    description: '세션 만료. SSV 가 이 시간 뒤에 오면 지급하지 않는다. 기본 900',
+  },
+  {
+    key: 'ADMOB_SSV_ALLOWED_AD_UNITS',
+    required: false,
+    origin: 'shared',
+    description: 'SSV 를 받아들일 광고 단위 ID(쉼표 구분). **비어 있으면 전부 거절**한다',
+  },
+  {
+    key: 'ADMOB_VERIFIER_KEYS_URL',
+    required: false,
+    origin: 'shared',
+    description: '서명 검증 공개키 세트. 기본 gstatic. 테스트는 로컬 키셋(file: URL)으로 교체',
+  },
+
   // ── Instagram ────────────────────────────────────────
   {
     key: 'INSTAGRAM_APP_ID',
