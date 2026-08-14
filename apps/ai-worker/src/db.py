@@ -149,20 +149,11 @@ async def mark_failed(job_id: str, error_message: str, error_code: str = "INTERN
 async def _refund_export_credits(conn, job_id: str) -> None:
     """실패한 export 의 예약 크레딧을 환급한다.
 
-    금액을 인자로 받지 않고 원장에서 계산한다 — 실제로 차감된 만큼만 돌려주기 위해서다.
-    `credit_ledger(edit_job_id, reason)` unique 제약이 멱등성을 보장하므로, API 취소 경로
-    (apps/api/src/services/credit.service.ts `refundForExport`)와 겹쳐 실행돼도 환급은
-    한 번만 기록된다. 두 경로가 같은 문장을 쓴다 — 한쪽만 고치지 말 것.
+    환급 로직 자체는 DB 함수 `refund_export_credits` 에 있다(마이그레이션
+    `20260814010000_add_refund_export_credits_function`). 환급을 실행하는 주체가 API 취소
+    경로와 이 워커 둘이라, 같은 SQL 을 두 언어에 복사하면 한쪽만 고쳐질 수 있다. 정의는
+    DB 한 곳에 두고 여기서는 호출만 한다 — **SQL 을 여기로 다시 옮기지 말 것.**
+
+    멱등하다: `credit_ledger(edit_job_id, reason)` unique 제약이 중복 환급을 막는다.
     """
-    await conn.execute(
-        """
-        INSERT INTO credit_ledger (id, user_id, delta, reason, edit_job_id, created_at)
-        SELECT gen_random_uuid(), user_id, -SUM(delta), 'export_refund', $1::uuid, now()
-        FROM credit_ledger
-        WHERE edit_job_id = $1::uuid
-        GROUP BY user_id
-        HAVING SUM(delta) < 0
-        ON CONFLICT (edit_job_id, reason) DO NOTHING
-        """,
-        job_id,
-    )
+    await conn.execute("SELECT refund_export_credits($1::uuid)", job_id)
