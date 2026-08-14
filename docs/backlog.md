@@ -67,6 +67,16 @@ export 예약/환급, 레거시 Stripe·`subscriptions` 제거가 반영됐다
 - 프로모션·운영 보상 지급 기준
 - 고해상도 export의 추가 차감 여부 (현재 전 export 동일 100)
 
+**결정할 것 — 광고 보상(2026-08-14 구현 완료, 값만 미확정)**: 보상 지급 경로와 검증 규칙은
+[decisions/ad-reward-credits.md](./decisions/ad-reward-credits.md)에서 확정됐고 구현·테스트가
+끝났다. 남은 것은 **값**이며, 확정 전까지 `AD_REWARD_ENABLED=false`로 배포돼 사용자에게
+노출되지 않는다.
+- **1회 보상 크레딧** (현재 20, 15~20 범위에서 원가·eCPM 실측 후 확정)
+- **일일 한도** (현재 3). 기준 시각은 **KST 자정으로 확정**됐다 — 이건 다시 정하지 않는다
+- **쿨다운 길이** (현재 300초)
+- 광고 크레딧 만료 → **v1은 두지 않는다**(결정 완료). 출처별 버킷·차감 우선순위도 v1 범위 밖이며,
+  필요해지면 별도 결정 문서로 다룬다
+
 **결정할 것 — 구독(보관 축)**: 용량 티어와 가격 · 연 구독 여부 · 구독 혜택에 워터마크
 제거·고해상도 export를 포함할지 · 무비 만료 알림 발송 시점.
 경계 규칙상 **구독에 크레딧을 얹는 안은 검토 대상이 아니다**
@@ -237,6 +247,30 @@ geofence 진입 → 기기에서 푸시 수신 확인.
   [decisions/account-deletion.md](./decisions/account-deletion.md)
 
 **완료 조건**: 검수 제출 전 두 엔드포인트 구현 + 콘솔 등록.
+
+### C-6. AdMob 콘솔 설정 → 보상형 광고 지급 실검증
+
+**막힌 이유**: 백엔드 구현은 끝났다(2026-08-14, [progress.md](./progress.md) ·
+[decisions/ad-reward-credits.md](./decisions/ad-reward-credits.md)). 남은 것은 저장소 밖 설정이다 —
+AdMob 앱 등록, 보상형 광고 단위 생성, SSV 콜백 URL 입력, 생성된 광고 단위 ID 전달이 없으면
+검증이 통과할 수 없다. C-1(스토어 등록)과 같은 성격의 외부 블로커다.
+
+**설정 시 맞춰야 할 것**
+- SSV 콜백 URL은 **`GET {고정 도메인}/billing/webhook/admob`** — 쿼리 파라미터를 임의로 덧붙이지
+  않는다(서명 대상이 쿼리스트링 원문이다). 고정 도메인은 D-1에 걸려 있다.
+- 생성된 광고 단위 ID를 `ADMOB_SSV_ALLOWED_AD_UNITS`(쉼표 구분)에 넣어야 한다. **비어 있으면
+  모든 콜백이 거절된다** — 지급 경로를 "설정 안 함 = 전부 허용"으로 열지 않기 때문이다.
+  **형식이 확정되지 않았다**: Google 문서의 `ad_unit` 설명은 "AdMob ad unit ID" 인데 예시값은
+  `2747237135` 같은 숫자다(전체 형식 `ca-app-pub-…/2747237135` 가 아니다). 숫자 부분과 전체
+  형식을 **둘 다 넣고 시작**한 뒤, 첫 지급이 통과하면 실제로 온 값을 `ad_rewards.ad_unit` 에서
+  확인해 정리한다. 거절 시에도 수신한 `ad_unit` 을 기록하므로 로그 없이 판정할 수 있다.
+- 앱은 SDK에 `customData = nonce`, `userId = ssvUserId`를 그대로 넣어야 한다
+  (`POST /billing/ad-rewards` 응답값). 값이 어긋나면 세션을 못 찾아 지급되지 않는다.
+- 값(보상량·한도·쿨다운)은 A-2에서 확정한다. 확정 전까지 `AD_REWARD_ENABLED=false`다.
+
+**완료 조건**: A-2 값 확정 → AdMob 앱·보상형 광고 단위 생성 → SSV 콜백 URL 등록 →
+`ADMOB_SSV_ALLOWED_AD_UNITS`·`AD_REWARD_ENABLED=true` 주입 → 테스트 광고 시청 →
+실제 SSV 수신 → 크레딧 지급 → 같은 트랜잭션 재전송 시 중복 지급 없음까지 통과하면 닫힌다.
 
 ---
 
