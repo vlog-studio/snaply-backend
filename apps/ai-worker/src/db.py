@@ -120,7 +120,11 @@ async def mark_done(job_id: str) -> bool:
 
 
 async def mark_failed(job_id: str, error_message: str, error_code: str = "INTERNAL") -> None:
-    """진행 중 작업만 failed 처리. 이미 canceled/done이면 덮어쓰지 않는다."""
+    """진행 중 작업만 failed 처리. 이미 canceled/done이면 덮어쓰지 않는다.
+
+    실패를 확정한 경우에만 예약 크레딧을 환급한다 — 실패의 최종 판정 주체가 워커이므로
+    여기서 즉시 돌려주는 것이 사용자에게 정확하다.
+    """
     now = datetime.now(timezone.utc)
     async with _pool_or_raise().acquire() as conn:
         row = await conn.fetchrow(
@@ -132,8 +136,33 @@ async def mark_failed(job_id: str, error_message: str, error_code: str = "INTERN
             error_code,
             now,
         )
-        if row and row["video_id"]:
+        if row is None:
+            return  # 이미 canceled/done — 상태도 크레딧도 건드리지 않는다
+        if row["video_id"]:
             await conn.execute(
                 "UPDATE videos SET status='failed' WHERE id=$1 AND deleted_at IS NULL",
                 row["video_id"],
             )
+        await _refund_export_credits(conn, job_id)
+
+
+async def _refund_export_credits(conn, job_id: str) -> None:
+    """실패한 export 의 예약 크레딧을 환급한다.
+
+    금액을 인자로 받지 않고 원장에서 계산한다 — 실제로 차감된 만큼만 돌려주기 위해서다.
+    `credit_ledger(edit_job_id, reason)` unique 제약이 멱등성을 보장하므로, API 취소 경로
+    (apps/api/src/services/credit.service.ts `refundForExport`)와 겹쳐 실행돼도 환급은
+    한 번만 기록된다. 두 경로가 같은 문장을 쓴다 — 한쪽만 고치지 말 것.
+    """
+    await conn.execute(
+        """
+        INSERT INTO credit_ledger (id, user_id, delta, reason, edit_job_id, created_at)
+        SELECT gen_random_uuid(), user_id, -SUM(delta), 'export_refund', $1::uuid, now()
+        FROM credit_ledger
+        WHERE edit_job_id = $1::uuid
+        GROUP BY user_id
+        HAVING SUM(delta) < 0
+        ON CONFLICT (edit_job_id, reason) DO NOTHING
+        """,
+        job_id,
+    )
