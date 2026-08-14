@@ -29,6 +29,18 @@ export interface BillingConfig {
   webhookAuthToken: string;
   /** 실키 미설정 시 RevenueCat 호출을 모의(mock)한다. 웹훅 인증은 mock 에서도 그대로 검증한다. */
   mock: boolean;
+  admob: AdMobConfig;
+}
+
+/** 보상형 광고 SSV. 정책값(보상량·한도)은 여기가 아니라 `billing/credit-policy.ts` 가 원천이다. */
+export interface AdMobConfig {
+  /**
+   * SSV 를 받아들일 광고 단위 ID 목록. **비어 있으면 어떤 광고 단위도 받지 않는다** —
+   * 지급 경로이므로 "설정 안 함 = 전부 허용" 으로 열지 않는다.
+   */
+  allowedAdUnits: readonly string[];
+  /** 서명 검증 공개키 세트. 테스트는 로컬 키셋(`file:` URL)으로 바꿔 끼운다. */
+  verifierKeysUrl: string;
 }
 
 export interface SnsProviderConfig {
@@ -157,6 +169,15 @@ export function loadConfig(): AppConfig {
       webhookAuthToken: process.env.REVENUECAT_WEBHOOK_AUTH_TOKEN || 'dev-webhook-token',
       // SNS_MOCK 과 분리 — SNS 는 mock 인 채로 결제만 실키로 검증할 수 있어야 한다.
       mock: process.env.BILLING_MOCK === 'true' || !process.env.REVENUECAT_API_KEY,
+      admob: {
+        allowedAdUnits: (process.env.ADMOB_SSV_ALLOWED_AD_UNITS ?? '')
+          .split(',')
+          .map((unit) => unit.trim())
+          .filter((unit) => unit.length > 0),
+        verifierKeysUrl:
+          process.env.ADMOB_VERIFIER_KEYS_URL
+          || 'https://www.gstatic.com/admob/reward/verifier-keys.json',
+      },
     },
   };
 }

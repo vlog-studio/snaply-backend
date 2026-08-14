@@ -66,6 +66,97 @@ export const CREDIT_REASON = {
   exportRefund: 'export_refund',
   storeRefundRevoke: 'store_refund_revoke',
   promo: 'promo',
+  adReward: 'ad_reward',
 } as const;
 
 export type CreditReason = (typeof CREDIT_REASON)[keyof typeof CREDIT_REASON];
+
+/** 앱이 내역 화면 문구를 안전하게 매핑할 수 있도록 OpenAPI 에 enum 으로 내리는 값. */
+export const CREDIT_REASONS: readonly CreditReason[] = Object.values(CREDIT_REASON);
+
+// ── 보상형 광고 ────────────────────────────────────────
+
+/**
+ * 일일 한도의 기준 시각은 **KST(UTC+9) 자정**이다.
+ *
+ * UTC 자정은 한국 사용자에게 오전 9시라 "오늘 3번"이 하루 중간에 초기화되고, 롤링 24시간은
+ * 앱이 "언제 다시 볼 수 있는지"를 한 문장으로 설명할 수 없다. 한국은 서머타임이 없으므로
+ * 고정 오프셋으로 계산해도 어긋나지 않는다 (docs/decisions/ad-reward-credits.md §4).
+ *
+ * 이 값을 바꾸면 앱이 표시하는 `resetsAt` 의 의미가 함께 바뀐다 — 서버가 정한 시각을 앱이
+ * 그대로 그리므로, 기준을 바꿀 때 앱 배포는 필요 없지만 문서는 같이 고쳐야 한다.
+ */
+export const AD_REWARD_DAY_OFFSET_MINUTES = 9 * 60;
+
+/**
+ * 광고 보상 정책. **전부 잠정값**이며 원가·eCPM 실측 후 확정한다
+ * (docs/backlog.md A-2, docs/meetings/2026-08-12-rewarded-credit-review.md §1).
+ * `CREDIT_SIGNUP_BONUS` 와 같은 이유로 env 로 덮어쓸 수 있게 둔다 — 값이 확정되면
+ * 아래 기본값 숫자만 교체한다.
+ *
+ * 기본값 `enabled: false` 는 킬 스위치다. AdMob 콘솔 설정(광고 단위 생성·SSV 콜백 URL 등록)
+ * 이 끝나기 전에는 앱이 진입점 자체를 숨겨야 하므로, 켜는 쪽이 아니라 **꺼진 쪽으로
+ * 떨어뜨린다**.
+ */
+export interface AdRewardPolicy {
+  enabled: boolean;
+  /** 광고 1편 완료당 지급 크레딧 */
+  credits: number;
+  /** KST 하루 최대 지급 횟수 */
+  dailyLimit: number;
+  /** 마지막 지급 이후 다음 세션을 발급하기까지 대기 시간 */
+  cooldownSeconds: number;
+  /** 세션 만료. SSV 가 이 시간 뒤에 도착하면 지급하지 않는다 */
+  sessionTtlSeconds: number;
+}
+
+const AD_REWARD_DEFAULTS: AdRewardPolicy = {
+  enabled: false,
+  credits: 20,
+  dailyLimit: 3,
+  cooldownSeconds: 300,
+  sessionTtlSeconds: 900,
+};
+
+function positiveInt(raw: string | undefined, fallback: number): number {
+  const value = Number(raw);
+  return Number.isInteger(value) && value > 0 ? value : fallback;
+}
+
+/** 쿨다운만 0 을 허용한다 — "쿨다운 없음" 은 실제로 고를 수 있는 설정이다. */
+function nonNegativeInt(raw: string | undefined, fallback: number): number {
+  const value = Number(raw);
+  return Number.isInteger(value) && value >= 0 ? value : fallback;
+}
+
+/**
+ * 현재 정책 스냅샷. 요청마다 env 를 다시 읽는다 — 값이 프로세스 수명보다 자주 바뀌지 않지만,
+ * 테스트가 하네스를 다시 세우지 않고 킬 스위치를 토글할 수 있어야 한다.
+ */
+export function adRewardPolicy(): AdRewardPolicy {
+  return {
+    enabled: process.env.AD_REWARD_ENABLED === 'true',
+    credits: positiveInt(process.env.AD_REWARD_CREDITS, AD_REWARD_DEFAULTS.credits),
+    dailyLimit: positiveInt(process.env.AD_REWARD_DAILY_LIMIT, AD_REWARD_DEFAULTS.dailyLimit),
+    cooldownSeconds: nonNegativeInt(
+      process.env.AD_REWARD_COOLDOWN_SECONDS,
+      AD_REWARD_DEFAULTS.cooldownSeconds,
+    ),
+    sessionTtlSeconds: positiveInt(
+      process.env.AD_REWARD_SESSION_TTL_SECONDS,
+      AD_REWARD_DEFAULTS.sessionTtlSeconds,
+    ),
+  };
+}
+
+/** `at` 이 속한 KST 하루의 시작(=UTC 기준 시각). 일일 한도를 세는 창의 하한이다. */
+export function adRewardDayStart(at: Date): Date {
+  const offsetMs = AD_REWARD_DAY_OFFSET_MINUTES * 60_000;
+  const shifted = at.getTime() + offsetMs;
+  return new Date(Math.floor(shifted / 86_400_000) * 86_400_000 - offsetMs);
+}
+
+/** 다음 초기화 시각. 앱이 "내일 다시 볼 수 있어요"를 그리는 근거. */
+export function adRewardDayEnd(at: Date): Date {
+  return new Date(adRewardDayStart(at).getTime() + 86_400_000);
+}

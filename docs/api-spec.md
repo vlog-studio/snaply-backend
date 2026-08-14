@@ -262,8 +262,10 @@ Body: `{ "videoId": "uuid", "caption": "문구(선택)" }`
   "entries": [{ "id":"uuid","delta":-100,"reason":"export_reserve","createdAt":"..." }]
 }}
 ```
-- `entries`는 최신순 최대 50건.
-- `reason`: `purchase` | `signup_bonus` | `export_reserve` | `export_refund` | `store_refund_revoke` | `promo`
+- `entries`는 **최신순 최대 50건이며 전체 내역이 아니다.** 페이지네이션은 없다 —
+  더 오래된 내역을 받는 방법이 현재 없으므로 앱은 "최근 내역"으로 표시한다.
+- `reason` (OpenAPI enum): `purchase` | `signup_bonus` | `export_reserve` | `export_refund` |
+  `store_refund_revoke` | `promo` | `ad_reward`
 - `balance`는 **음수가 될 수 있다** — 크레딧을 쓴 뒤 스토어 환불이 들어온 경우다. 음수면 신규
   export만 막히고 기존 결과물은 회수하지 않는다.
 
@@ -282,6 +284,75 @@ Body: `{ "videoId": "uuid", "caption": "문구(선택)" }`
   (매핑을 배포하면 그 재시도가 지급으로 이어진다).
 - 그 밖의 이벤트는 무시하고 200.
 - 전역 rate limit 제외 — 발신 IP가 소수라 429가 나면 재시도가 쌓인다.
+
+---
+
+## 보상형 광고 크레딧
+
+정책의 원천은 [decisions/ad-reward-credits.md](./decisions/ad-reward-credits.md).
+
+> **앱이 지급을 요청하는 API는 없다.** 지급의 유일한 트리거는 AdMob SSV 콜백이고, 앱은
+> 세션을 열고 상태를 조회할 뿐이다. 지급량도 앱이 정하지 않는다 — 세션 발급 시점에 서버가
+> 스냅샷한 값이다.
+
+**앱의 흐름**: `POST /billing/ad-rewards`(광고 로드 직전) → `nonce`를 AdMob SDK의 `customData`,
+`ssvUserId`를 `userId`로 전달 → 광고 시청 → 닫힘 직후 `GET /billing/ad-rewards/{rewardId}`를
+짧게 폴링(~10초).
+
+### GET /billing/ad-rewards  🔒
+"광고 보고 +N크레딧" 버튼의 표시·비활성·남은 횟수·다음 가능 시각을 정하는 **유일한 근거**.
+```json
+{ "success": true, "data": {
+  "enabled": true, "rewardCredits": 20, "dailyLimit": 3, "remainingToday": 2,
+  "nextAvailableAt": "2026-08-14T09:15:00.000Z", "resetsAt": "2026-08-15T00:00:00.000Z"
+}}
+```
+- **앱은 보상량·한도·쿨다운을 하드코딩하지 않는다.** 값은 잠정이며 서버에서 바뀐다([backlog.md](./backlog.md) A-2).
+- `enabled: false` → 진입점 자체를 숨긴다(킬 스위치). 이때 세션 발급은 `503`.
+- `nextAvailableAt`은 쿨다운 중일 때만 채워진다. `null`이면 지금 가능.
+- `resetsAt`은 **KST 자정** 기준이다. 한도는 "실제로 지급된 횟수"로만 센다 — 광고를 끝까지
+  보지 못했거나 콜백이 유실된 세션은 한도를 깎지 않는다.
+- `remainingToday: 0`이면 버튼을 비활성화하되 `2/3회`처럼 진척도로 보이지 않게 한다(서버는 숫자만 준다).
+
+### POST /billing/ad-rewards  🔒
+보상 세션 발급. **요청 본문 없음.**
+```json
+{ "success": true, "data": {
+  "rewardId": "uuid", "nonce": "9c1b…", "ssvUserId": "user-uuid",
+  "rewardCredits": 20, "expiresAt": "2026-08-14T09:25:00.000Z"
+}}
+```
+- `nonce` → SDK `customData`, `ssvUserId` → SDK `userId`. `rewardId`는 폴링 전용이며
+  `nonce`와 분리돼 있다(폴링 경로에 SSV 비밀을 흘리지 않기 위해).
+- `expiresAt` 이후 도착한 SSV는 지급되지 않는다.
+
+| 상태 | code | 조건 | `error`의 추가 필드 |
+|---:|---|---|---|
+| 409 | `AD_REWARD_COOLDOWN` | 쿨다운 중 | `nextAvailableAt` |
+| 409 | `AD_REWARD_LIMIT_REACHED` | 일일 한도 소진 | `resetsAt` |
+| 409 | `AD_REWARD_SESSION_ACTIVE` | 아직 pending인 세션이 있음 | `rewardId` (이걸 계속 폴링하면 된다) |
+| 503 | `AD_REWARDS_DISABLED` | 킬 스위치 off | — |
+
+### GET /billing/ad-rewards/{rewardId}  🔒
+```json
+{ "success": true, "data": {
+  "rewardId": "uuid", "status": "granted", "credits": 20, "balance": 80
+}}
+```
+- `status`: `pending` | `granted` | `expired` | `rejected`
+- `credits`는 `granted`일 때만 채워진다. `balance`는 **항상** 현재 잔액(앱이 별도 호출을 줄이도록).
+- **`pending`은 실패가 아니다.** AdMob이 실패한 콜백을 재전송한다고 가정하지 않으므로 폴링이
+  타임아웃하면 "지급 확인 중"으로 표시하고 끝낸다. IAP의 `POST /billing/sync` 같은 보정 경로는
+  광고 쪽에 **의도적으로 없다**(앱이 지급을 트리거할 수 있으면 그 자체가 공격면이 된다).
+- 남의 `rewardId`는 **404**다(403으로 존재를 알리지 않는다).
+
+### GET /billing/webhook/admob  (AdMob 전용)
+보상형 광고 SSV 콜백. **GET + 쿼리스트링**이며 인증 미들웨어가 없다 — 인증이 곧 서명이다.
+- 서명(ECDSA-SHA256)·timestamp(±10분)·세션·사용자 일치·광고 단위 허용 목록·일일 한도·계정 상태를
+  전부 통과해야 지급한다. 지급량은 `reward_amount`가 아니라 세션에 스냅샷된 값이다.
+- 같은 세션의 재전송 → 지급 없이 **200**.
+- 검증 실패 → **400**. 원장에는 아무것도 쓰지 않고 `ad_rewards.status = rejected`만 남긴다.
+- 전역 rate limit 제외(`/billing/webhook` 접두사).
 
 ---
 

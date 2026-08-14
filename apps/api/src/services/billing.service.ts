@@ -8,7 +8,7 @@
  * 이 모듈은 "스토어 이벤트를 우리 크레딧 원장으로 옮기는 일"만 한다. 잔액 계산과
  * 멱등성은 credit.service 가 책임진다.
  */
-import type { BillingConfig } from '../config.js';
+import type { AdMobConfig, BillingConfig } from '../config.js';
 import { AppError } from '../lib/errors.js';
 import { captureException } from '../lib/sentry.js';
 import { CREDIT_PACKS, creditsForProduct, type CreditPack } from './billing/credit-policy.js';
@@ -31,6 +31,11 @@ function config(): BillingConfig {
     throw new Error('billing이 초기화되지 않았습니다. initBilling()을 먼저 호출하세요.');
   }
   return cfg;
+}
+
+/** 보상형 광고 SSV 설정. 라우트가 요청마다 들고 다니지 않도록 여기서 꺼낸다. */
+export function getAdMobConfig(): AdMobConfig {
+  return config().admob;
 }
 
 /**

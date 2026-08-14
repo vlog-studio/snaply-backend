@@ -1,3 +1,5 @@
+import { CREDIT_REASONS } from '../services/billing/credit-policy.js';
+
 type JsonSchema = Readonly<Record<string, unknown>>;
 
 const TRUE_SCHEMA = { type: 'boolean', enum: [true] } as const;
@@ -388,7 +390,12 @@ export const CREDIT_ENTRY_SCHEMA = {
     id: { type: 'string', format: 'uuid' },
     /** +지급 / -차감 */
     delta: { type: 'integer' },
-    reason: { type: 'string' },
+    /**
+     * 앱이 내역 화면 문구를 매핑하는 값이라 enum 으로 고정한다. 값을 늘릴 때는
+     * `credit-policy.ts` 의 `CREDIT_REASON` 과 함께 고쳐야 한다 — 여기 없는 값은
+     * 직렬화에서 살아남지 못한다.
+     */
+    reason: { type: 'string', enum: [...CREDIT_REASONS] },
     createdAt: { type: 'string', format: 'date-time' },
   },
 } as const;
@@ -400,7 +407,87 @@ export const CREDIT_BALANCE_SCHEMA = {
   properties: {
     // 스토어 환불로 지급분이 회수되면 음수가 될 수 있다 — minimum 을 걸지 않는다.
     balance: { type: 'integer' },
-    entries: { type: 'array', items: CREDIT_ENTRY_SCHEMA },
+    entries: {
+      type: 'array',
+      description: '최신순 **최대 50건**. 전체 내역이 아니다 — 페이지네이션은 없다.',
+      items: CREDIT_ENTRY_SCHEMA,
+    },
+  },
+} as const;
+
+/** 광고 보상 가용성. 앱은 보상량·한도·쿨다운을 하드코딩하지 않고 이 응답만 본다. */
+export const AD_REWARD_AVAILABILITY_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['enabled', 'rewardCredits', 'dailyLimit', 'remainingToday', 'nextAvailableAt', 'resetsAt'],
+  properties: {
+    /** false 면 앱은 진입점 자체를 숨긴다 (킬 스위치). */
+    enabled: { type: 'boolean' },
+    rewardCredits: { type: 'integer', minimum: 1 },
+    dailyLimit: { type: 'integer', minimum: 1 },
+    remainingToday: { type: 'integer', minimum: 0 },
+    /** 쿨다운 중일 때만 채운다. null 이면 지금 가능. */
+    nextAvailableAt: { type: 'string', format: 'date-time', nullable: true },
+    /** 일일 한도 초기화 시각(KST 자정). */
+    resetsAt: { type: 'string', format: 'date-time' },
+  },
+} as const;
+
+export const AD_REWARD_SESSION_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['rewardId', 'nonce', 'ssvUserId', 'rewardCredits', 'expiresAt'],
+  properties: {
+    /** 상태 폴링용 식별자. SSV 비밀(`nonce`)과 분리돼 있다. */
+    rewardId: { type: 'string', format: 'uuid' },
+    /** AdMob SDK 의 `customData` 로 그대로 전달한다. */
+    nonce: { type: 'string' },
+    /** AdMob SDK 의 `userId` 로 그대로 전달한다. */
+    ssvUserId: { type: 'string' },
+    rewardCredits: { type: 'integer', minimum: 1 },
+    expiresAt: { type: 'string', format: 'date-time' },
+  },
+} as const;
+
+export const AD_REWARD_STATUS_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['rewardId', 'status', 'credits', 'balance'],
+  properties: {
+    rewardId: { type: 'string', format: 'uuid' },
+    status: { type: 'string', enum: ['pending', 'granted', 'expired', 'rejected'] },
+    /** granted 일 때만 채워진다. */
+    credits: { type: 'integer', nullable: true },
+    /** 항상 현재 잔액 — 앱이 별도 호출을 하지 않아도 되게. */
+    balance: { type: 'integer' },
+  },
+} as const;
+
+/**
+ * 409 전용 에러 스키마. 세션 발급 거절은 `AppError.details` 로 "언제 다시 가능한지" 를
+ * 함께 내리므로 여기 선언해야 직렬화에서 살아남는다 (`402 INSUFFICIENT_CREDITS` 와 같은 방식).
+ */
+export const CONFLICT_ERROR_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['success', 'error'],
+  properties: {
+    success: { type: 'boolean', enum: [false] },
+    error: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['code', 'message'],
+      properties: {
+        code: { type: 'string' },
+        message: { type: 'string' },
+        /** AD_REWARD_COOLDOWN */
+        nextAvailableAt: { type: 'string', format: 'date-time' },
+        /** AD_REWARD_LIMIT_REACHED */
+        resetsAt: { type: 'string', format: 'date-time' },
+        /** AD_REWARD_SESSION_ACTIVE — 이 세션을 계속 폴링하면 된다 */
+        rewardId: { type: 'string', format: 'uuid' },
+      },
+    },
   },
 } as const;
 
