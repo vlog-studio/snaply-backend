@@ -73,7 +73,7 @@ cp .env.example apps/api/.env
 | `REDIS_URL` | `redis://localhost:6379` |
 | `SNS_TOKEN_ENCRYPTION_KEY` | 아무 랜덤 문자열(32바이트 권장) |
 
-외부 실키(Firebase/Instagram/TikTok/Stripe/Sentry)는 **없어도 됨** — 해당 기능이 mock/dry-run으로 동작하고, 나중에 키만 넣으면 실제 호출로 전환된다.
+외부 실키(Firebase/Instagram/TikTok/RevenueCat/Sentry)는 **없어도 됨** — 해당 기능이 mock/dry-run으로 동작하고, 나중에 키만 넣으면 실제 호출로 전환된다.
 
 ### 3-3. 인프라 기동 (MinIO + Redis)
 ```bash
@@ -147,7 +147,7 @@ npm run stack:down
 - 인프라 포트가 개발용과 다르다(**5433 / 6380 / 9200**). 프로젝트 이름도 `snaply-dev` 와
   분리돼 있어 **개발 인프라를 켜둔 채로 동시에 띄울 수 있다.**
 - 자격증명은 `apps/api/.env` 를 읽어 오지만, **외부 연동은 기본 mock 이다**
-  (`SNS_MOCK`/`STRIPE_MOCK`). 잠깐 띄운 서버가 실제 Stripe·Instagram 을 호출하지 않게 하려는 것.
+  (`SNS_MOCK`/`BILLING_MOCK`). 잠깐 띄운 서버가 실제 RevenueCat·Instagram 을 호출하지 않게 하려는 것.
   실키 경로를 봐야 하면 `docker-compose.yml` 의 해당 줄을 지운다.
 - `stack:*` 명령은 `--env-file apps/api/.env` 를 넘기므로 Compose의 `${S3_PUBLIC_ENDPOINT}` 같은
   보간 값도 같은 파일에서 읽는다. 휴대폰 테스트 시 이 값을 `http://<PC의 LAN IP>:9200`으로 둔다.

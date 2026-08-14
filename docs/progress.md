@@ -783,3 +783,60 @@ stripe trigger customer.subscription.created --api-key $STRIPE_SECRET_KEY
 
 **후속(미결 아님, 정책 대기)**: 크레딧 차감/환급이 확정되면(backlog A-2) 취소 시 환급을
 이 엔드포인트에 연결한다. 앱 쪽은 `errorCode`→문구 매핑과 취소 UI를 이어받는다.
+
+## 크레딧 결제 구현 + Stripe·구독 제거 (2026-08-14)
+
+기본 단위 **Movie export 1회 = 100크레딧**과 "유료 구독 없음"이 확정돼
+[plans/iap-migration.md](./plans/iap-migration.md)를 구현했다. 정책 근거는
+[decisions/credit-payment-model.md](./decisions/credit-payment-model.md) ·
+[decisions/payment-channel-iap.md](./decisions/payment-channel-iap.md).
+
+**스키마** (`20260814000000_add_credit_ledger_drop_subscriptions`)
+- `credit_ledger` — append-only 증감 원장. **잔액은 delta 합계**이며 캐시 컬럼을 두지 않았다
+  (원장과 잔액이 어긋날 여지를 없앰). 병목 시 `users.credit_balance` 증분 갱신으로 얹는다
+- `purchases` — 스토어 거래 원장. `store_transaction_id` unique 가 중복 지급을 원천 차단
+- `credit_ledger(edit_job_id, reason)` unique — 예약·환급 멱등성의 근거. 취소(API)와
+  실패(워커)가 겹쳐도 환급이 한 번만 기록된다
+- `subscriptions` 테이블 drop (운영에 유료 구독 행 없음 확인 후 이관 없이 제거)
+
+**크레딧 서비스** (`services/credit.service.ts`, `services/billing/credit-policy.ts`)
+- 지급/회수/예약/환급. "이미 처리했는지" 조회 후 분기하지 않고 **판정을 DB 제약에 맡긴다** —
+  웹훅 재전송과 동시 요청은 조회와 삽입 사이를 파고들기 때문
+- 환급은 금액을 인자로 받지 않고 원장에서 계산한다(실제 차감된 만큼만 되돌림)
+- 미확정 수량(팩별 크레딧·가입 보너스)은 `credit-policy.ts` 한 곳에 격리 — backlog A-2 확정 시
+  숫자만 교체한다
+
+**결제 API** (`routes/billing.ts`, `routes/billing-webhook.ts`)
+- `GET /billing/products` · `GET /billing/credits` · `POST /billing/sync`
+- `POST /billing/webhook/revenuecat` — Authorization 헤더 시크릿 검증(서명 아님, raw body 불필요).
+  이벤트 타입으로 **먼저 분기**시켜 두어 구독 이벤트가 붙어도 구조를 뒤집지 않는다
+- 카탈로그에 없는 상품은 임의 지급 대신 500 — RevenueCat 재시도가 매핑 배포 후 지급으로 이어진다
+- 제거: `GET /billing/plans` · `GET /billing/subscription` · `POST /billing/checkout` ·
+  `POST /billing/cancel` · Stripe 웹훅
+
+**export 연동** (`services/edit-job.service.ts`, `ai-worker/src/db.py`)
+- 결과물 video + edit_job 생성과 예약이 한 트랜잭션. 잔액 부족은 `402 INSUFFICIENT_CREDITS`
+  (+`required`·`balance`)이며 작업 레코드도 남지 않는다
+- **잠금 순서가 중요하다**: 유저 행 `FOR UPDATE` 가 INSERT 보다 **먼저**여야 한다. 뒤에 두면
+  `videos`/`edit_jobs` INSERT 의 FK 검사가 같은 `users` 행에 share 락을 걸어 동시 요청끼리
+  데드락이 난다 — 실제로 40P01 로 재현됐고 순서를 바꿔 해결했다
+- 취소·큐 적재 실패·워커 실패 모두 환급. 워커는 `mark_failed` 에서 API 와 같은 문장을 실행한다
+- BullMQ 자동 재시도로는 추가 차감이 없다 (`mark_processing` 이 `failed` 를 되살리지 않아
+  첫 실패가 종료 상태다)
+
+**정리**
+- `plan` 개념 제거: `Plan` 타입, `UserProfile.plan`, `AuthUser.plan`, `GET /auth/me` 의 `plan` 필드.
+  **FE 영향 있음** — 앱이 이 필드를 읽고 있으면 정리 필요
+- `stripe.client.ts`, `billing-realkey.test.ts`, `stripe` 의존성, `STRIPE_*` 환경변수 제거
+- 신규 환경변수: `REVENUECAT_API_KEY` · `REVENUECAT_WEBHOOK_AUTH_TOKEN` · `BILLING_MOCK` ·
+  `CREDIT_SIGNUP_BONUS` (env-spec + `.env.example` 동기화)
+- 약관·개인정보처리방침의 "유료 구독/Stripe" → 크레딧 결제/RevenueCat·Apple·Google
+
+**검증**
+- `npm test -w apps/api` — 15 파일 **161 테스트 통과** + tsc + storage 테스트.
+  billing 17개 신규(웹훅 401·멱등 지급·환불 회수·중복 환불 방지·알 수 없는 상품 500·
+  잔액 조회·sync 멱등·402 거절·예약·취소 환급·중복 환급 방지·동시 2건 중 1건만 성공)
+- 워커 파이썬 변경(`_refund_export_credits`)은 문법 검증만 수행. 실제 실패 환급은 로컬 워커
+  기동 시 실검증 필요
+- **미검증**: RevenueCat 실키 경로(`/billing/sync` REST 조회)와 실제 스토어 sandbox 구매 —
+  스토어 상품 등록이 선행돼야 한다 (backlog C-1)

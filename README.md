@@ -50,7 +50,8 @@ packages/
 | [decisions/storage-and-subscription-policy.md](docs/decisions/storage-and-subscription-policy.md) | Free 한도 2GB 축소 + 무비 30일 보관 + 크레딧·구독 2축 분리 |
 | [decisions/env-management.md](docs/decisions/env-management.md) | 환경변수 — 파일은 로컬만, 운영은 주입. 목록의 단일 원천 |
 | [decisions/plan-limits.md](docs/decisions/plan-limits.md) | 구독 폐기 전 플랜 차등 집행을 보류했던 과거 결정과 근거 |
-| [decisions/credit-payment-model.md](docs/decisions/credit-payment-model.md) | 정기 구독 제거 + 무비 생성 크레딧 결제 전환 결정 |
+| [decisions/credit-payment-model.md](docs/decisions/credit-payment-model.md) | 정기 구독 제거 + 무비 생성 크레딧 결제 전환 결정 (단위: export 1회 = 100크레딧) |
+| [decisions/payment-channel-iap.md](docs/decisions/payment-channel-iap.md) | 결제 채널을 Apple/Google IAP + RevenueCat으로 확정, Stripe 제거 |
 | [decisions/movie-model.md](docs/decisions/movie-model.md) | 영상 묶음 구조 3안 비교와 `Movie` 엔티티 채택 결정 |
 
 작업을 고를 때는 [docs/backlog.md](docs/backlog.md)에서 시작한다. 결정 문서는 선택한 항목의
