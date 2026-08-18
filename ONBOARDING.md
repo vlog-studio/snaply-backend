@@ -131,6 +131,12 @@ npm run worker                           # edit-jobs 큐 구독 시작
 | `npm test -w apps/api` | 통합 테스트 (실제 Postgres/Redis/MinIO 사용, `snaply_test` DB 자동 생성) |
 | `npm run auth:stub -w apps/api` | 로컬 Supabase Auth 스텁 — 수동 테스트용 JWT 발급 |
 
+### 외부에서 로컬 서버를 호출해야 할 때
+
+AdMob SSV 콜백·RevenueCat 웹훅·SNS OAuth 콜백처럼 **외부 서비스가 우리 서버를 직접**
+호출하는 테스트는 `localhost` 로 할 수 없다. cloudflared 로 임시 공개 주소를 띄운다 —
+설치·절차·주의사항은 [docs/local-tunnel.md](docs/local-tunnel.md).
+
 ### 컨테이너로 테스트 서버 잠깐 띄우기
 
 평소 개발은 "인프라만 컨테이너 + 앱은 네이티브"(`infra:up` + `dev:api`)다.

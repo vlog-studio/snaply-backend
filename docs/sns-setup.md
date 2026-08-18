@@ -24,6 +24,9 @@
 
 ## 1. 터널 + 공개 버킷 준비
 
+> cloudflared 설치와 임시 주소의 주의사항은 [local-tunnel.md](./local-tunnel.md) 가 원천이다.
+> 여기서는 인스타·틱톡에 필요한 두 터널과 공개 버킷만 다룬다.
+
 ```bash
 # 1) 개발 버킷에 익명 읽기 정책 (로컬 MinIO 전용 — S3_ENDPOINT 없으면 실행 거부됨)
 npm run dev:public-bucket -w apps/api
