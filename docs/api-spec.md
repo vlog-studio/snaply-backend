@@ -311,9 +311,9 @@ Body: `{ "videoId": "uuid", "caption": "문구(선택)" }`
   "nextAvailableAt": "2026-08-14T09:15:00.000Z", "resetsAt": "2026-08-15T00:00:00.000Z"
 }}
 ```
-- **앱은 보상량·한도·쿨다운을 하드코딩하지 않는다.** 보상량 20·한도 5는 2026-08-18에 확정됐지만
-  ([decisions/ad-reward-credits.md](./decisions/ad-reward-credits.md) §7) 쿨다운은 아직 잠정이고,
-  확정값도 env 로 바뀔 수 있다 — 앱은 항상 이 응답을 그대로 그린다.
+- **앱은 보상량·한도·쿨다운을 하드코딩하지 않는다.** 값은 2026-08-18에 전부 확정됐지만
+  ([decisions/ad-reward-credits.md](./decisions/ad-reward-credits.md) §7) env 로 바뀔 수 있다 —
+  앱은 항상 이 응답을 그대로 그린다.
 - `enabled: false` → 진입점 자체를 숨긴다(킬 스위치). 이때 세션 발급은 `503`.
 - `nextAvailableAt`은 쿨다운 중일 때만 채워진다. `null`이면 지금 가능.
 - `resetsAt`은 **KST 자정** 기준이다. 한도는 "실제로 지급된 횟수"로만 센다 — 광고를 끝까지
