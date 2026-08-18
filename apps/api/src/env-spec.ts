@@ -227,7 +227,7 @@ export const ENV_VARS = [
     key: 'AD_REWARD_COOLDOWN_SECONDS',
     required: false,
     origin: 'shared',
-    description: '마지막 지급 이후 다음 세션까지의 대기 시간. 기본 300(잠정값)',
+    description: '마지막 지급 이후 다음 세션까지의 대기 시간. 기본 300(확정값). 세션 TTL 보다 작게 두지 않는다',
   },
   {
     key: 'AD_REWARD_SESSION_TTL_SECONDS',

@@ -91,10 +91,9 @@ export const AD_REWARD_DAY_OFFSET_MINUTES = 9 * 60;
 /**
  * 광고 보상 정책.
  *
- * **확정값**: `credits: 20` · `dailyLimit: 5` (2026-08-18,
- * docs/decisions/ad-reward-credits.md §7). `cooldownSeconds` 는 아직 잠정이다
- * (docs/backlog.md A-2). `CREDIT_SIGNUP_BONUS` 와 같은 이유로 전부 env 로 덮어쓸 수 있게
- * 둔다 — 남은 값이 확정되면 아래 기본값 숫자만 교체한다.
+ * **아래 값은 전부 확정됐다** (2026-08-18, docs/decisions/ad-reward-credits.md §7).
+ * `CREDIT_SIGNUP_BONUS` 와 같은 이유로 여전히 env 로 덮어쓸 수 있게 둔다 — 운영에서
+ * 배포 없이 되돌리거나 실험할 수 있어야 하기 때문이며, 잠정값이라는 뜻은 아니다.
  *
  * 기본값 `enabled: false` 는 킬 스위치다. AdMob 콘솔 설정(광고 단위 생성·SSV 콜백 URL 등록)
  * 이 끝나기 전에는 앱이 진입점 자체를 숨겨야 하므로, 켜는 쪽이 아니라 **꺼진 쪽으로
@@ -125,6 +124,9 @@ const AD_REWARD_DEFAULTS: AdRewardPolicy = {
   // 값이다 (docs/decisions/ad-reward-credits.md §7). 크레딧과 한도를 따로 바꾸면 이 관계가
   // 깨지므로 둘 중 하나만 손대지 않는다.
   dailyLimit: 5,
+  // 세션 TTL 의 하한(300초)이 이 값의 하한이기도 하다 — 더 내리면 TTL 이 쿨다운을 넘어
+  // 대기 시간 역전이 되살아난다. 더 올리면 "부족한 만큼만 채우는" 제작 흐름이 끊긴다
+  // (docs/decisions/ad-reward-credits.md §7).
   cooldownSeconds: 300,
   // 쿨다운과 같은 값. 더 짧게 잡으면 광고가 길어졌을 때 정상 시청분의 SSV 가 만료로 거절된다.
   sessionTtlSeconds: 300,
