@@ -233,7 +233,8 @@ export const ENV_VARS = [
     key: 'AD_REWARD_SESSION_TTL_SECONDS',
     required: false,
     origin: 'shared',
-    description: '세션 만료. SSV 가 이 시간 뒤에 오면 지급하지 않는다. 기본 900',
+    description:
+      '세션 만료. SSV 가 이 시간 뒤에 오면 지급하지 않는다. 기본 300 — 쿨다운보다 크게 잡지 않는다',
   },
   {
     key: 'ADMOB_SSV_ALLOWED_AD_UNITS',
