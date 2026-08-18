@@ -307,16 +307,19 @@ Body: `{ "videoId": "uuid", "caption": "문구(선택)" }`
 "광고 보고 +N크레딧" 버튼의 표시·비활성·남은 횟수·다음 가능 시각을 정하는 **유일한 근거**.
 ```json
 { "success": true, "data": {
-  "enabled": true, "rewardCredits": 20, "dailyLimit": 3, "remainingToday": 2,
+  "enabled": true, "rewardCredits": 20, "dailyLimit": 5, "remainingToday": 2,
   "nextAvailableAt": "2026-08-14T09:15:00.000Z", "resetsAt": "2026-08-15T00:00:00.000Z"
 }}
 ```
-- **앱은 보상량·한도·쿨다운을 하드코딩하지 않는다.** 값은 잠정이며 서버에서 바뀐다([backlog.md](./backlog.md) A-2).
+- **앱은 보상량·한도·쿨다운을 하드코딩하지 않는다.** 보상량 20·한도 5는 2026-08-18에 확정됐지만
+  ([decisions/ad-reward-credits.md](./decisions/ad-reward-credits.md) §7) 쿨다운은 아직 잠정이고,
+  확정값도 env 로 바뀔 수 있다 — 앱은 항상 이 응답을 그대로 그린다.
 - `enabled: false` → 진입점 자체를 숨긴다(킬 스위치). 이때 세션 발급은 `503`.
 - `nextAvailableAt`은 쿨다운 중일 때만 채워진다. `null`이면 지금 가능.
 - `resetsAt`은 **KST 자정** 기준이다. 한도는 "실제로 지급된 횟수"로만 센다 — 광고를 끝까지
   보지 못했거나 콜백이 유실된 세션은 한도를 깎지 않는다.
-- `remainingToday: 0`이면 버튼을 비활성화하되 `2/3회`처럼 진척도로 보이지 않게 한다(서버는 숫자만 준다).
+- `remainingToday: 0`이면 버튼을 비활성화하되 `2/5회`처럼 진척도로 보이지 않게 한다(서버는 숫자만 준다).
+  한도를 다 쓰면 정확히 export 1편(100크레딧)이 되지만 **"광고 5편 = 무비 1편"으로 묶어 표시하지 않는다.**
 
 ### POST /billing/ad-rewards  🔒
 보상 세션 발급. **요청 본문 없음.**

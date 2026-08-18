@@ -945,3 +945,32 @@ AdMob SSV 콜백이고, 앱은 세션을 열고 상태를 조회할 뿐이다. �
 - 커버: 포기 후 즉시 새 세션 발급 · 포기한 세션에 SSV 도착 시 지급 · 포기 세션을 한도 이상
   쌓아도 지급은 `dailyLimit` 까지 · 만료된 포기 세션은 거절 · 지급된 세션 포기 멱등 ·
   2회 포기 · 남의 세션 404(상태 불변) · 포기가 쿨다운을 우회하지 않음
+
+---
+
+## 광고 보상 정책 값 확정 — 20크레딧 · 일일 5회 (2026-08-18)
+
+`credit-policy.ts` 의 잠정값이던 보상량·한도를 확정했다. 결정과 트레이드오프는
+[decisions/ad-reward-credits.md](./decisions/ad-reward-credits.md) §7.
+
+**확정값**
+- 1회 보상 **20크레딧**, 일일 한도 **3 → 5회**. `20 × 5 = 100 = MOVIE_EXPORT_COST` 라
+  **한도를 다 쓰면 정확히 export 1편**이다 — 의도된 값이며 둘을 따로 바꾸지 않는다
+- 쿨다운 300초만 잠정으로 남았다(클라이언트 UX, [backlog.md](./backlog.md) A-2).
+  세션 TTL·만료 없음·KST 자정 기준은 이미 확정돼 있었다
+
+**받아들인 것**
+- 회의안 §2가 피하려던 `광고 5편 = 무비 1편` 프레이밍을 사용자가 스스로 발견할 수 있다.
+  UI 원칙(진척도·완주 과제로 표시하지 않음)은 유지하고 api-spec 의 표시 규칙에 명시했다
+- **원가·eCPM 실측 없이 정한 값이다.** 손익분기는 보상량만이 정하고(한도와 무관) 한도는 손실
+  규모·무료 상한(사용자당 월 최대 30편)을 정한다. 파일럿에서 순매출이 20원을 밑돌면
+  **보상량을 먼저 내린다** — 한도 인하는 되돌릴 수 없는 혜택 축소다
+
+**반영 위치**: `credit-policy.ts` 기본값·주석, `env-spec.ts`·`.env.example` 설명,
+[api-spec.md](./api-spec.md) `GET /billing/ad-rewards` 예시와 표시 규칙, backlog A-2·C-6.
+
+**검증**
+- `npm test -w apps/api` — 16 파일 **196 테스트 통과** + tsc + storage 테스트
+- 기본값 테스트 2개 추가(`ad-reward.test.ts`) — 다른 테스트는 env 로 한도를 3으로 덮어쓰므로
+  기본값 자체가 검증되지 않았다. `credits × dailyLimit === MOVIE_EXPORT_COST` 와
+  `sessionTtlSeconds <= cooldownSeconds` 를 못 박아 한쪽만 바뀌는 것을 막는다
