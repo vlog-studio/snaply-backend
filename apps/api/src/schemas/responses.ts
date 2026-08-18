@@ -455,7 +455,13 @@ export const AD_REWARD_STATUS_SCHEMA = {
   required: ['rewardId', 'status', 'credits', 'balance'],
   properties: {
     rewardId: { type: 'string', format: 'uuid' },
-    status: { type: 'string', enum: ['pending', 'granted', 'expired', 'rejected'] },
+    status: {
+      type: 'string',
+      enum: ['pending', 'abandoned', 'granted', 'expired', 'rejected'],
+      description:
+        '`pending` 은 실패가 아니다(SSV 대기). `abandoned` 는 앱이 슬롯을 비운 상태이며, '
+        + '만료 전에 SSV 가 도착하면 그대로 `granted` 가 된다.',
+    },
     /** granted 일 때만 채워진다. */
     credits: { type: 'integer', nullable: true },
     /** 항상 현재 잔액 — 앱이 별도 호출을 하지 않아도 되게. */

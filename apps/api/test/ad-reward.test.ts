@@ -471,6 +471,121 @@ describe('GET /billing/ad-rewards/:rewardId', () => {
   });
 });
 
+describe('DELETE /billing/ad-rewards/:rewardId (세션 포기)', () => {
+  function abandon(user: TestUser, rewardId: string) {
+    return h.app.inject({
+      method: 'DELETE',
+      url: `/billing/ad-rewards/${rewardId}`,
+      headers: user.auth,
+    });
+  }
+
+  it('슬롯을 즉시 비워 TTL 을 기다리지 않고 다음 세션을 받는다', async () => {
+    const user = await h.createUser();
+    const first = (await openSession(user)).json().data.rewardId as string;
+    // 포기 전에는 진행 중 세션이 하나뿐이라는 규칙이 그대로 산다.
+    expect((await openSession(user)).statusCode).toBe(409);
+
+    const res = await abandon(user, first);
+    expect(res.statusCode).toBe(200);
+    expect(res.json().data).toMatchObject({ rewardId: first, status: 'abandoned', credits: null });
+
+    expect((await openSession(user)).statusCode).toBe(200);
+  });
+
+  it('포기한 세션에도 만료 전에 도착한 SSV 는 지급한다 (사용자는 광고를 봤을 수 있다)', async () => {
+    const user = await h.createUser();
+    const session = (await openSession(user)).json().data as { rewardId: string; nonce: string };
+    await abandon(user, session.rewardId);
+
+    const res = await callSsv({ nonce: session.nonce, userId: user.id });
+
+    expect(res.statusCode).toBe(200);
+    expect(await balanceOf(user)).toBe(REWARD_CREDITS);
+    expect(
+      (await h.prisma.adReward.findUnique({ where: { id: session.rewardId } }))?.status,
+    ).toBe('granted');
+  });
+
+  it('포기 후 새 세션을 열어도 하루 지급은 한도를 넘지 못한다', async () => {
+    const user = await h.createUser();
+    const abandoned: { rewardId: string; nonce: string }[] = [];
+    // 한도(3)보다 많은 세션을 포기로 쌓아 둔다 — 전부 지급 자격이 남아 있는 상태다.
+    for (let i = 0; i < DAILY_LIMIT + 2; i += 1) {
+      const session = (await openSession(user)).json().data as { rewardId: string; nonce: string };
+      abandoned.push(session);
+      await abandon(user, session.rewardId);
+    }
+
+    for (const session of abandoned) {
+      await callSsv({ nonce: session.nonce, userId: user.id });
+    }
+
+    // 지급 시점의 한도 재확인이 막는다 — 세션이 몇 개든 하루 지급은 dailyLimit 이다.
+    expect(await balanceOf(user)).toBe(REWARD_CREDITS * DAILY_LIMIT);
+    expect(await h.prisma.creditLedger.count({ where: { reason: 'ad_reward' } })).toBe(DAILY_LIMIT);
+  });
+
+  it('만료된 포기 세션에는 지급하지 않는다', async () => {
+    const user = await h.createUser();
+    const session = (await openSession(user)).json().data as { rewardId: string; nonce: string };
+    await abandon(user, session.rewardId);
+    await h.prisma.adReward.update({
+      where: { id: session.rewardId },
+      data: { expiresAt: new Date(Date.now() - 1000) },
+    });
+
+    const res = await callSsv({ nonce: session.nonce, userId: user.id });
+
+    expect(res.statusCode).toBe(400);
+    expect(await balanceOf(user)).toBe(0);
+    expect(
+      (await h.prisma.adReward.findUnique({ where: { id: session.rewardId } }))?.rejectReason,
+    ).toBe('session_expired');
+  });
+
+  it('멱등이다 — 이미 지급된 세션을 포기해도 상태가 바뀌지 않는다', async () => {
+    const user = await h.createUser();
+    const rewardId = await watchAd(user);
+
+    const res = await abandon(user, rewardId);
+    expect(res.statusCode).toBe(200);
+    expect(res.json().data).toMatchObject({ status: 'granted', credits: REWARD_CREDITS });
+    expect(await balanceOf(user)).toBe(REWARD_CREDITS);
+  });
+
+  it('두 번 포기해도 200 이고 상태는 그대로다', async () => {
+    const user = await h.createUser();
+    const rewardId = (await openSession(user)).json().data.rewardId as string;
+
+    expect((await abandon(user, rewardId)).statusCode).toBe(200);
+    const second = await abandon(user, rewardId);
+    expect(second.statusCode).toBe(200);
+    expect(second.json().data.status).toBe('abandoned');
+  });
+
+  it('남의 세션은 포기시킬 수 없다 (404, 상태도 그대로)', async () => {
+    const [owner, attacker] = [await h.createUser(), await h.createUser()];
+    const rewardId = (await openSession(owner)).json().data.rewardId as string;
+
+    expect((await abandon(attacker, rewardId)).statusCode).toBe(404);
+    expect((await h.prisma.adReward.findUnique({ where: { id: rewardId } }))?.status).toBe(
+      'pending',
+    );
+  });
+
+  it('포기는 쿨다운을 우회하지 않는다 — 기준은 여전히 마지막 지급 시각이다', async () => {
+    const user = await h.createUser();
+    await watchAd(user);
+
+    await withEnv({ AD_REWARD_COOLDOWN_SECONDS: '300' }, async () => {
+      const res = await openSession(user);
+      expect(res.statusCode).toBe(409);
+      expect(res.json().error.code).toBe('AD_REWARD_COOLDOWN');
+    });
+  });
+});
+
 describe('GET /billing/credits', () => {
   it('광고 지급이 내역에 ad_reward 로 보인다', async () => {
     const user = await h.createUser();
