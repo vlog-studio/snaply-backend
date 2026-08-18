@@ -49,14 +49,56 @@ export function parseSsvQuery(query: URLSearchParams): SsvParams {
 }
 
 /**
- * 서명 대상 원문. AdMob 은 쿼리스트링에서 **`&signature=` 직전까지**를 서명한다.
+ * 서명 대상 구간. AdMob 은 쿼리스트링에서 **`&signature=` 직전까지**를 서명한다.
  *
- * 그래서 `URLSearchParams` 로 다시 조립한 문자열을 쓰면 안 된다 — 인코딩·순서가 한 글자만
- * 달라도 검증이 실패한다. 반드시 수신한 raw 쿼리스트링을 그대로 잘라 쓴다.
+ * `URLSearchParams` 로 다시 조립한 문자열을 쓰면 안 된다 — 파라미터 순서가 바뀌면 검증이
+ * 실패한다. 반드시 수신한 raw 쿼리스트링을 그대로 잘라 쓴다. 다만 잘라 낸 원문이 곧 서명
+ * 대상인 것은 아니다 — 인코딩 차이는 `signedContentCandidates()` 가 흡수한다.
  */
 export function signedContentOf(rawQuery: string): string | null {
   const index = rawQuery.indexOf('&signature=');
   return index < 0 ? null : rawQuery.slice(0, index);
+}
+
+/** 파라미터 순서를 유지한 채 키·값만 퍼센트 디코딩한다. 이스케이프가 깨졌으면 null. */
+function decodeValues(content: string, plusAsSpace: boolean): string | null {
+  try {
+    return content
+      .split('&')
+      .map((pair) => {
+        const eq = pair.indexOf('=');
+        if (eq < 0) {
+          return decodeURIComponent(pair);
+        }
+        const value = pair.slice(eq + 1);
+        const encoded = plusAsSpace ? value.replace(/\+/g, '%20') : value;
+        return `${decodeURIComponent(pair.slice(0, eq))}=${decodeURIComponent(encoded)}`;
+      })
+      .join('&');
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 서명을 대조할 문자열 후보. 순서대로 시도하고 하나라도 통과하면 정상 콜백이다.
+ *
+ * **AdMob 은 인코딩 *전* 원문에 서명하고, 전송할 때 값을 퍼센트 인코딩한다.** 값이 모두
+ * ASCII 면 두 문자열이 같아서 차이가 드러나지 않는다 — 그래서 이 경로는 오래 멀쩡해 보였다.
+ * 보상 상품명을 한글("크레딧")로 설정하고 실제 콜백을 받아 보니 수신 원문으로는 검증이
+ * 실패하고, 값을 디코딩한 문자열로는 통과했다 (2026-08-18 실측, key_id=3335741209).
+ *
+ * 값에 공백이 있으면 `+` 로 올 수도 있어 세 번째 후보를 둔다. 후보가 틀리면 검증이 실패할
+ * 뿐이므로 여러 개를 시도해도 위조를 통과시키지 않는다 — 어느 후보든 Google 서명과 맞아야
+ * 한다.
+ */
+export function signedContentCandidates(rawQuery: string): string[] {
+  const raw = signedContentOf(rawQuery);
+  if (raw === null) {
+    return [];
+  }
+  const candidates = [raw, decodeValues(raw, false), decodeValues(raw, true)];
+  return [...new Set(candidates.filter((value): value is string => value !== null))];
 }
 
 interface VerifierKey {
@@ -125,7 +167,8 @@ async function keys(
  */
 export async function verifySsvSignature(params: {
   config: AdMobConfig;
-  signedContent: string;
+  /** `signedContentCandidates()` 의 결과. 하나라도 통과하면 정상 콜백이다. */
+  signedContents: string[];
   signature: string;
   keyId: string;
 }): Promise<boolean> {
@@ -150,9 +193,11 @@ export async function verifySsvSignature(params: {
     return false;
   }
 
-  try {
-    return createVerify('SHA256').update(params.signedContent).verify(pem, signatureBytes);
-  } catch {
-    return false; // 키가 깨졌거나 서명이 DER 형식이 아니다
-  }
+  return params.signedContents.some((content) => {
+    try {
+      return createVerify('SHA256').update(content).verify(pem, signatureBytes);
+    } catch {
+      return false; // 키가 깨졌거나 서명이 DER 형식이 아니다
+    }
+  });
 }

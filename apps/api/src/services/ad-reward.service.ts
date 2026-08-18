@@ -29,6 +29,7 @@ import {
 } from './billing/credit-policy.js';
 import {
   parseSsvQuery,
+  signedContentCandidates,
   signedContentOf,
   verifySsvSignature,
   type SsvParams,
@@ -392,7 +393,7 @@ export async function handleSsvCallback(params: {
 
   const verified = await verifySsvSignature({
     config: params.config,
-    signedContent,
+    signedContents: signedContentCandidates(params.rawQuery),
     signature: ssv.signature as string,
     keyId: ssv.keyId as string,
   });

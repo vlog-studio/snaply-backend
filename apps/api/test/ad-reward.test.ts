@@ -78,11 +78,17 @@ interface SsvOptions {
   timestampMs?: number;
   /** true 면 우리 키가 아닌 키로 서명한다 (위조). */
   forge?: boolean;
+  /** 콘솔에서 정한 보상 상품명. 한글이면 전송 시 퍼센트 인코딩된다. */
+  rewardItem?: string;
 }
 
 /**
  * 실제 AdMob 콜백과 같은 모양의 쿼리스트링을 만든다.
- * 서명 대상은 `&signature=` **직전까지의 원문**이므로, 여기서도 조립한 문자열을 그대로 서명한다.
+ *
+ * **서명은 인코딩 전 값에, 전송은 인코딩된 값으로** 한다 — AdMob 의 실제 동작이다
+ * (2026-08-18 실측). 값이 ASCII 뿐이면 두 문자열이 같아 차이가 없지만, 한글 상품명처럼
+ * 인코딩이 필요한 값이 섞이면 갈라진다. 예전 헬퍼는 인코딩된 문자열에 서명해서 이 갈림을
+ * 만들지 못했고, 그래서 검증 버그가 테스트를 통과했다.
  */
 function ssvUrl(options: SsvOptions): string {
   const params: [string, string][] = [
@@ -91,19 +97,18 @@ function ssvUrl(options: SsvOptions): string {
     ['custom_data', options.nonce],
     // 서버는 이 값을 무시한다 — 지급량의 원천은 세션에 스냅샷된 정책값이다.
     ['reward_amount', '1'],
-    ['reward_item', 'credit'],
+    ['reward_item', options.rewardItem ?? 'credit'],
     ['timestamp', String(options.timestampMs ?? Date.now())],
     ['transaction_id', options.transactionId ?? randomUUID().replace(/-/g, '')],
     ['user_id', options.userId],
   ];
-  const content = params
-    .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
-    .join('&');
+  const sent = params.map(([key, value]) => `${key}=${encodeURIComponent(value)}`).join('&');
+  const signedContent = params.map(([key, value]) => `${key}=${value}`).join('&');
   const signature = createSign('SHA256')
-    .update(content)
+    .update(signedContent)
     .sign(options.forge ? foreignKey : privateKey)
     .toString('base64url');
-  return `/billing/webhook/admob?${content}&signature=${signature}&key_id=${KEY_ID}`;
+  return `/billing/webhook/admob?${sent}&signature=${signature}&key_id=${KEY_ID}`;
 }
 
 function callSsv(options: SsvOptions) {
@@ -301,6 +306,26 @@ describe('GET /billing/webhook/admob (SSV)', () => {
 
     const entry = await h.prisma.creditLedger.findFirst({ where: { adRewardId: rewardId } });
     expect(entry).toMatchObject({ delta: REWARD_CREDITS, reason: 'ad_reward' });
+  });
+
+  /**
+   * 회귀: 콘솔에서 보상 상품명을 "크레딧"으로 설정한 계정의 실제 콜백이 전부 위조로
+   * 판정됐다. 원인은 서명 대상이 인코딩 전 원문인데 수신 원문으로 검증한 것이다.
+   */
+  it('상품명이 한글이라 퍼센트 인코딩돼 와도 지급한다', async () => {
+    const user = await h.createUser();
+    const session = (await openSession(user)).json().data as { nonce: string };
+    const res = await callSsv({ nonce: session.nonce, userId: user.id, rewardItem: '크레딧' });
+    expect(res.statusCode).toBe(200);
+    expect(await balanceOf(user)).toBe(REWARD_CREDITS);
+  });
+
+  it('값에 공백이 있어도 지급한다 (공백은 %20 또는 + 로 온다)', async () => {
+    const user = await h.createUser();
+    const session = (await openSession(user)).json().data as { nonce: string };
+    const res = await callSsv({ nonce: session.nonce, userId: user.id, rewardItem: 'movie credit' });
+    expect(res.statusCode).toBe(200);
+    expect(await balanceOf(user)).toBe(REWARD_CREDITS);
   });
 
   it('같은 transaction_id 가 재전송돼도 지급은 한 번뿐이고 200 이다', async () => {
