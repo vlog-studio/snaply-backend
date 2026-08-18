@@ -215,13 +215,13 @@ export const ENV_VARS = [
     key: 'AD_REWARD_CREDITS',
     required: false,
     origin: 'shared',
-    description: '광고 1편 완료당 지급 크레딧. 기본 20(잠정값) — backlog A-2',
+    description: '광고 1편 완료당 지급 크레딧. 기본 20(확정값 — decisions/ad-reward-credits.md §7)',
   },
   {
     key: 'AD_REWARD_DAILY_LIMIT',
     required: false,
     origin: 'shared',
-    description: 'KST 하루 최대 지급 횟수. 기본 3(잠정값)',
+    description: 'KST 하루 최대 지급 횟수. 기본 5(확정값). 20 × 5 = export 1편',
   },
   {
     key: 'AD_REWARD_COOLDOWN_SECONDS',

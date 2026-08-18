@@ -79,7 +79,7 @@ export const CREDIT_REASONS: readonly CreditReason[] = Object.values(CREDIT_REAS
 /**
  * 일일 한도의 기준 시각은 **KST(UTC+9) 자정**이다.
  *
- * UTC 자정은 한국 사용자에게 오전 9시라 "오늘 3번"이 하루 중간에 초기화되고, 롤링 24시간은
+ * UTC 자정은 한국 사용자에게 오전 9시라 "오늘 5번"이 하루 중간에 초기화되고, 롤링 24시간은
  * 앱이 "언제 다시 볼 수 있는지"를 한 문장으로 설명할 수 없다. 한국은 서머타임이 없으므로
  * 고정 오프셋으로 계산해도 어긋나지 않는다 (docs/decisions/ad-reward-credits.md §4).
  *
@@ -89,10 +89,12 @@ export const CREDIT_REASONS: readonly CreditReason[] = Object.values(CREDIT_REAS
 export const AD_REWARD_DAY_OFFSET_MINUTES = 9 * 60;
 
 /**
- * 광고 보상 정책. **전부 잠정값**이며 원가·eCPM 실측 후 확정한다
- * (docs/backlog.md A-2, docs/meetings/2026-08-12-rewarded-credit-review.md §1).
- * `CREDIT_SIGNUP_BONUS` 와 같은 이유로 env 로 덮어쓸 수 있게 둔다 — 값이 확정되면
- * 아래 기본값 숫자만 교체한다.
+ * 광고 보상 정책.
+ *
+ * **확정값**: `credits: 20` · `dailyLimit: 5` (2026-08-18,
+ * docs/decisions/ad-reward-credits.md §7). `cooldownSeconds` 는 아직 잠정이다
+ * (docs/backlog.md A-2). `CREDIT_SIGNUP_BONUS` 와 같은 이유로 전부 env 로 덮어쓸 수 있게
+ * 둔다 — 남은 값이 확정되면 아래 기본값 숫자만 교체한다.
  *
  * 기본값 `enabled: false` 는 킬 스위치다. AdMob 콘솔 설정(광고 단위 생성·SSV 콜백 URL 등록)
  * 이 끝나기 전에는 앱이 진입점 자체를 숨겨야 하므로, 켜는 쪽이 아니라 **꺼진 쪽으로
@@ -119,7 +121,10 @@ export interface AdRewardPolicy {
 const AD_REWARD_DEFAULTS: AdRewardPolicy = {
   enabled: false,
   credits: 20,
-  dailyLimit: 3,
+  // 20 × 5 = 100 = MOVIE_EXPORT_COST. 한도를 다 쓰면 정확히 export 1편이며, 이는 의도된
+  // 값이다 (docs/decisions/ad-reward-credits.md §7). 크레딧과 한도를 따로 바꾸면 이 관계가
+  // 깨지므로 둘 중 하나만 손대지 않는다.
+  dailyLimit: 5,
   cooldownSeconds: 300,
   // 쿨다운과 같은 값. 더 짧게 잡으면 광고가 길어졌을 때 정상 시청분의 SSV 가 만료로 거절된다.
   sessionTtlSeconds: 300,
