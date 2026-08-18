@@ -106,7 +106,13 @@ export interface AdRewardPolicy {
   dailyLimit: number;
   /** 마지막 지급 이후 다음 세션을 발급하기까지 대기 시간 */
   cooldownSeconds: number;
-  /** 세션 만료. SSV 가 이 시간 뒤에 도착하면 지급하지 않는다 */
+  /**
+   * 세션 만료. SSV 가 이 시간 뒤에 도착하면 지급하지 않는다.
+   *
+   * **쿨다운을 넘기지 않는다.** 넘기면 지급받은 사용자(쿨다운만 기다림)보다 콜백이 유실된
+   * 사용자(슬롯이 비기까지 TTL 을 기다림)가 더 오래 잠기는 역전이 생긴다
+   * (docs/decisions/ad-reward-credits.md §4-1).
+   */
   sessionTtlSeconds: number;
 }
 
@@ -115,7 +121,8 @@ const AD_REWARD_DEFAULTS: AdRewardPolicy = {
   credits: 20,
   dailyLimit: 3,
   cooldownSeconds: 300,
-  sessionTtlSeconds: 900,
+  // 쿨다운과 같은 값. 더 짧게 잡으면 광고가 길어졌을 때 정상 시청분의 SSV 가 만료로 거절된다.
+  sessionTtlSeconds: 300,
 };
 
 function positiveInt(raw: string | undefined, fallback: number): number {
