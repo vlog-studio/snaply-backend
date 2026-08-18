@@ -299,6 +299,10 @@ Body: `{ "videoId": "uuid", "caption": "문구(선택)" }`
 `ssvUserId`를 `userId`로 전달 → 광고 시청 → 닫힘 직후 `GET /billing/ad-rewards/{rewardId}`를
 짧게 폴링(~10초).
 
+**광고가 성립하지 않은 경우**(사용자 중도 이탈 · 노필 · 로드 실패)는
+`DELETE /billing/ad-rewards/{rewardId}`로 세션을 포기해 진행 중 슬롯을 즉시 비운다.
+호출하지 않으면 세션 TTL(기본 300초)이 지나야 다음 세션을 받을 수 있다.
+
 ### GET /billing/ad-rewards  🔒
 "광고 보고 +N크레딧" 버튼의 표시·비활성·남은 횟수·다음 가능 시각을 정하는 **유일한 근거**.
 ```json
@@ -324,7 +328,9 @@ Body: `{ "videoId": "uuid", "caption": "문구(선택)" }`
 ```
 - `nonce` → SDK `customData`, `ssvUserId` → SDK `userId`. `rewardId`는 폴링 전용이며
   `nonce`와 분리돼 있다(폴링 경로에 SSV 비밀을 흘리지 않기 위해).
-- `expiresAt` 이후 도착한 SSV는 지급되지 않는다.
+- `expiresAt` 이후 도착한 SSV는 지급되지 않는다. TTL은 기본 **300초**이며 쿨다운을 넘기지
+  않는다 — 넘기면 콜백이 유실된 사용자가 지급받은 사용자보다 오래 잠긴다
+  ([decisions/ad-reward-credits.md](./decisions/ad-reward-credits.md) §4-1).
 
 | 상태 | code | 조건 | `error`의 추가 필드 |
 |---:|---|---|---|
@@ -339,12 +345,31 @@ Body: `{ "videoId": "uuid", "caption": "문구(선택)" }`
   "rewardId": "uuid", "status": "granted", "credits": 20, "balance": 80
 }}
 ```
-- `status`: `pending` | `granted` | `expired` | `rejected`
+- `status`: `pending` | `abandoned` | `granted` | `expired` | `rejected`
+- `abandoned`는 앱이 세션을 포기해 슬롯을 비운 상태다. **실패가 아니다** — 만료 전에 SSV가
+  도착하면 그대로 `granted`가 된다.
 - `credits`는 `granted`일 때만 채워진다. `balance`는 **항상** 현재 잔액(앱이 별도 호출을 줄이도록).
 - **`pending`은 실패가 아니다.** AdMob이 실패한 콜백을 재전송한다고 가정하지 않으므로 폴링이
   타임아웃하면 "지급 확인 중"으로 표시하고 끝낸다. IAP의 `POST /billing/sync` 같은 보정 경로는
   광고 쪽에 **의도적으로 없다**(앱이 지급을 트리거할 수 있으면 그 자체가 공격면이 된다).
 - 남의 `rewardId`는 **404**다(403으로 존재를 알리지 않는다).
+
+### DELETE /billing/ad-rewards/{rewardId}  🔒
+세션 포기. 앱이 SDK로부터 **결과가 확정됐음**(중도 이탈 · 노필 · 로드 실패)을 알았을 때 호출해
+진행 중 슬롯을 즉시 비운다. 응답 본문은 `GET /billing/ad-rewards/{rewardId}`와 같은 모양이다.
+```json
+{ "success": true, "data": {
+  "rewardId": "uuid", "status": "abandoned", "credits": null, "balance": 0
+}}
+```
+- **지급 자격은 남는다.** 포기는 슬롯만 비운다 — 만료 전에 SSV가 도착하면 그대로 지급된다
+  (사용자는 실제로 광고를 봤을 수 있다). 포기 후 새 세션을 열어도 하루 지급 횟수는
+  지급 시점의 한도 재확인이 막는다.
+- **멱등이다.** 이미 확정된(`granted`·`expired`·`rejected`) 세션이나 이미 포기한 세션에 다시
+  호출해도 200이고 현재 상태를 그대로 돌려준다. 앱이 재시도를 특별히 다룰 필요가 없다.
+- 남의 `rewardId`는 **404**다(상태도 바뀌지 않는다).
+- 이 경로는 **지급을 만들 수 없다** — 자기 세션의 슬롯을 비우는 것뿐이라 "앱은 지급을 요청할 수
+  없다"는 설계를 깨지 않는다.
 
 ### GET /billing/webhook/admob  (AdMob 전용)
 보상형 광고 SSV 콜백. **GET + 쿼리스트링**이며 인증 미들웨어가 없다 — 인증이 곧 서명이다.
