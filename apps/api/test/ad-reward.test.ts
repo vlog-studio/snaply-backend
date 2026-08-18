@@ -16,6 +16,7 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createHarness, type Harness, type TestUser } from './helpers/harness.js';
 import { resetVerifierKeyCache } from '../src/services/billing/admob-ssv.js';
+import { adRewardPolicy, MOVIE_EXPORT_COST } from '../src/services/billing/credit-policy.js';
 
 let h: Harness;
 
@@ -140,6 +141,19 @@ async function balanceOf(user: TestUser): Promise<number> {
 }
 
 /** 쿨다운·킬 스위치처럼 정책 env 를 잠깐만 바꿔야 하는 테스트용. */
+/** 기본값을 보려면 env 를 걷어내야 한다. `withEnv` 의 반대. */
+async function withoutEnv(keys: string[], fn: () => Promise<void>): Promise<void> {
+  const saved = keys.map((key) => [key, process.env[key]] as const);
+  for (const [key] of saved) delete process.env[key];
+  try {
+    await fn();
+  } finally {
+    for (const [key, value] of saved) {
+      if (value !== undefined) process.env[key] = value;
+    }
+  }
+}
+
 async function withEnv(overrides: Record<string, string>, fn: () => Promise<void>): Promise<void> {
   const saved: Record<string, string | undefined> = {};
   for (const [key, value] of Object.entries(overrides)) {
@@ -595,6 +609,30 @@ describe('GET /billing/credits', () => {
     expect(res.json().data.entries[0]).toMatchObject({
       delta: REWARD_CREDITS,
       reason: 'ad_reward',
+    });
+  });
+});
+
+/**
+ * 이 파일의 다른 테스트는 env 로 정책을 덮어쓴다(한도 테스트가 5회를 돌 필요가 없다).
+ * 그래서 **기본값 자체**는 여기서만 검증한다 — env 를 지우고 정책을 다시 읽는다.
+ */
+describe('정책 기본값', () => {
+  it('보상량 20 · 한도 5 이고, 곱이 export 1편이다', async () => {
+    await withoutEnv(['AD_REWARD_CREDITS', 'AD_REWARD_DAILY_LIMIT'], async () => {
+      const policy = adRewardPolicy();
+      expect(policy.credits).toBe(20);
+      expect(policy.dailyLimit).toBe(5);
+      // 20 × 5 = 100. 하루 한도를 다 쓰면 정확히 export 1편이라는 것이 확정된 정책 의미다
+      // (docs/decisions/ad-reward-credits.md §7). 한쪽만 바꾸면 이 관계가 조용히 깨진다.
+      expect(policy.credits * policy.dailyLimit).toBe(MOVIE_EXPORT_COST);
+    });
+  });
+
+  it('세션 TTL 은 쿨다운을 넘지 않는다', async () => {
+    await withoutEnv(['AD_REWARD_COOLDOWN_SECONDS', 'AD_REWARD_SESSION_TTL_SECONDS'], async () => {
+      const policy = adRewardPolicy();
+      expect(policy.sessionTtlSeconds).toBeLessThanOrEqual(policy.cooldownSeconds);
     });
   });
 });
