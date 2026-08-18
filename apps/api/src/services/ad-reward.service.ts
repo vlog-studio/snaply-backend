@@ -44,10 +44,23 @@ const TIMESTAMP_SKEW_MS = 10 * 60_000;
 
 export const AD_REWARD_STATUS = {
   pending: 'pending',
+  /**
+   * 앱이 결과를 확정적으로 알고(중도 이탈·노필) 슬롯을 스스로 비운 상태.
+   * **지급 자격은 남는다** — 만료 전에 SSV 가 도착하면 그대로 지급한다
+   * (docs/decisions/ad-reward-credits.md §4-1). 포기는 "다음 광고를 열 수 있게 하는 것"
+   * 이지 "받은 보상을 버리는 것" 이 아니다.
+   */
+  abandoned: 'abandoned',
   granted: 'granted',
   expired: 'expired',
   rejected: 'rejected',
 } as const;
+
+/**
+ * 아직 지급될 수 있는 상태. `pending` 만 다음 세션 발급을 막고, `abandoned` 는 슬롯을
+ * 비운 채 SSV 를 기다린다.
+ */
+const GRANTABLE_STATUSES: string[] = [AD_REWARD_STATUS.pending, AD_REWARD_STATUS.abandoned];
 
 export type AdRewardStatus = (typeof AD_REWARD_STATUS)[keyof typeof AD_REWARD_STATUS];
 
@@ -119,7 +132,7 @@ async function lastGrantedAt(userId: string): Promise<Date | null> {
 }
 
 /**
- * 만료된 pending 세션을 조회 시점에 정리한다.
+ * 만료된 세션(`pending`·`abandoned`)을 조회 시점에 정리한다.
  *
  * AdMob 이 실패한 콜백을 재전송한다고 가정하지 않으므로(§6), 유실된 세션은 배치가 없으면
  * 영원히 pending 으로 남아 다음 세션 발급을 막는다. 별도 배치를 두는 대신 읽는 쪽에서
@@ -127,7 +140,7 @@ async function lastGrantedAt(userId: string): Promise<Date | null> {
  */
 async function expireStaleSessions(userId: string, now: Date): Promise<void> {
   await getPrisma().adReward.updateMany({
-    where: { userId, status: AD_REWARD_STATUS.pending, expiresAt: { lt: now } },
+    where: { userId, status: { in: GRANTABLE_STATUSES }, expiresAt: { lt: now } },
     data: { status: AD_REWARD_STATUS.expired, rejectReason: REJECT.sessionExpired },
   });
 }
@@ -229,13 +242,8 @@ export async function createSession(userId: string): Promise<AdRewardSession> {
   };
 }
 
-/** 앱이 광고 닫힘 직후 짧게 폴링한다. 남의 세션은 존재를 알리지 않도록 404 로 답한다. */
-export async function getSessionStatus(
-  userId: string,
-  rewardId: string,
-): Promise<AdRewardStatusDto> {
-  await expireStaleSessions(userId, new Date());
-
+/** 세션 1건의 상태 응답. 남의 세션은 존재를 알리지 않도록 404 로 답한다. */
+async function statusDto(userId: string, rewardId: string): Promise<AdRewardStatusDto> {
   const reward = await getPrisma().adReward.findFirst({
     where: { id: rewardId, userId },
     select: { id: true, status: true, credits: true },
@@ -256,6 +264,46 @@ export async function getSessionStatus(
     // 앱이 잔액 조회를 따로 하지 않도록 항상 함께 내린다.
     balance: agg._sum.delta ?? 0,
   };
+}
+
+/** 앱이 광고 닫힘 직후 짧게 폴링한다. */
+export async function getSessionStatus(
+  userId: string,
+  rewardId: string,
+): Promise<AdRewardStatusDto> {
+  await expireStaleSessions(userId, new Date());
+  return statusDto(userId, rewardId);
+}
+
+/**
+ * 세션 포기. 앱이 SDK 로부터 **결과가 확정됐음**(사용자 중도 이탈·노필·로드 실패)을 알았을 때
+ * 호출해 진행 중 슬롯을 즉시 비운다. TTL 이 끝나기를 기다릴 이유가 없기 때문이다
+ * (docs/decisions/ad-reward-credits.md §4-1).
+ *
+ * 새 공격면이 되지 않는 이유: 이 경로는 지급을 **만들지 못한다.** 할 수 있는 것은 자기 세션의
+ * 슬롯을 비우는 것뿐이고, 그건 호출한 사용자에게 손해일 뿐이라 악용할 동기가 없다.
+ *
+ * SSV 와의 경합은 **지급 우선**으로 정했다. 포기는 슬롯만 비우고 지급 자격은 남기므로,
+ * 만료 전에 도착한 콜백은 그대로 지급된다 — 사용자는 실제로 광고를 봤을 수 있다.
+ * 이래도 하루 지급 횟수는 지급 시점의 한도 재확인이 막는다.
+ *
+ * 멱등이다. 이미 확정된(granted·expired·rejected) 세션이나 이미 포기한 세션에 다시 호출해도
+ * 현재 상태를 그대로 돌려준다 — 앱이 재시도를 특별히 다루지 않아도 된다.
+ */
+export async function abandonSession(
+  userId: string,
+  rewardId: string,
+): Promise<AdRewardStatusDto> {
+  const now = new Date();
+  await expireStaleSessions(userId, now);
+
+  await getPrisma().adReward.updateMany({
+    // pending 만 바꾼다. granted 를 되돌리거나 만료를 덮어쓰지 않는다.
+    where: { id: rewardId, userId, status: AD_REWARD_STATUS.pending },
+    data: { status: AD_REWARD_STATUS.abandoned },
+  });
+
+  return statusDto(userId, rewardId);
 }
 
 // ── SSV 콜백 ────────────────────────────────────────────
@@ -280,7 +328,7 @@ async function rejectSession(
   adUnit?: string | null,
 ): Promise<void> {
   await getPrisma().adReward.updateMany({
-    where: { id: rewardId, status: AD_REWARD_STATUS.pending },
+    where: { id: rewardId, status: { in: GRANTABLE_STATUSES } },
     data: {
       status: AD_REWARD_STATUS.rejected,
       rejectReason: reason,
@@ -338,7 +386,7 @@ export async function handleSsvCallback(params: {
   if (reward.status === AD_REWARD_STATUS.granted) {
     return;
   }
-  if (reward.status !== AD_REWARD_STATUS.pending) {
+  if (!GRANTABLE_STATUSES.includes(reward.status)) {
     throw ssvRejected('이미 종료된 보상 세션입니다.');
   }
 
@@ -408,7 +456,7 @@ async function grant(params: {
     await getPrisma().$transaction(async (tx) => {
       // status 전이를 조건으로 걸어, 동시에 도착한 두 번째 콜백이 통과하지 못하게 한다.
       const updated = await tx.adReward.updateMany({
-        where: { id: params.rewardId, status: AD_REWARD_STATUS.pending },
+        where: { id: params.rewardId, status: { in: GRANTABLE_STATUSES } },
         data: {
           status: AD_REWARD_STATUS.granted,
           transactionId: params.transactionId,

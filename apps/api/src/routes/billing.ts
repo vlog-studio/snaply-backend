@@ -17,6 +17,7 @@ import { getProducts, syncPurchases } from '../services/billing.service.js';
 import type { CreditPack } from '../services/billing/credit-policy.js';
 import { getBalance, listEntries, type CreditEntryDto } from '../services/credit.service.js';
 import {
+  abandonSession,
   createSession,
   getAvailability,
   getSessionStatus,
@@ -186,6 +187,42 @@ export async function billingRoutes(app: FastifyInstance): Promise<void> {
       return {
         success: true,
         data: await getSessionStatus(request.user.id, request.params.rewardId),
+      };
+    },
+  );
+
+  // DELETE /billing/ad-rewards/:rewardId — 세션 포기
+  //
+  // 앱이 SDK 로부터 결과가 확정됐음(중도 이탈·노필·로드 실패)을 알았을 때 슬롯을 즉시 비운다.
+  // **지급을 만들 수 있는 경로가 아니다** — 자기 세션을 포기하는 것뿐이라 §3의 설계를 깨지
+  // 않는다. 만료 전에 SSV 가 도착하면 포기한 세션도 그대로 지급된다.
+  app.delete<{ Params: { rewardId: string } }>(
+    '/billing/ad-rewards/:rewardId',
+    {
+      preHandler: app.authenticate,
+      schema: {
+        tags: ['billing'],
+        summary: '광고 보상 세션 포기',
+        description:
+          '진행 중 슬롯을 즉시 비워 TTL 을 기다리지 않고 다음 세션을 발급받게 한다.\n\n'
+          + '**지급 자격은 남는다** — 만료 전에 SSV 가 도착하면 `granted` 가 된다. '
+          + '이미 확정된 세션에 호출해도 현재 상태를 그대로 돌려준다(멱등).',
+        params: {
+          type: 'object',
+          required: ['rewardId'],
+          properties: { rewardId: { type: 'string', format: 'uuid' } },
+        },
+        response: {
+          200: successResponseSchema(AD_REWARD_STATUS_SCHEMA),
+          404: API_ERROR_SCHEMA,
+          ...AUTHENTICATED_ERROR_RESPONSES,
+        },
+      },
+    },
+    async (request): Promise<ApiSuccess<AdRewardStatusDto>> => {
+      return {
+        success: true,
+        data: await abandonSession(request.user.id, request.params.rewardId),
       };
     },
   );
