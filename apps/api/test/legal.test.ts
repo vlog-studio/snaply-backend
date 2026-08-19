@@ -60,6 +60,15 @@ describe('공개 페이지', () => {
     expect(res.body).toContain('업로드하는 모든 영상을 분석하지 않습니다');
   });
 
+  it('분석 사업자의 학습 이용과 보관 기간을 적는다', async () => {
+    const res = await h.app.inject({ method: 'GET', url: '/legal/privacy' });
+
+    // 워커가 store: False 로 보내기 때문에 남는 축은 남용 모니터링 30일뿐이다.
+    // store 를 다시 켜면 이 문장이 사실이 아니게 된다 (test_video_analysis.py 가 그쪽을 잡는다).
+    expect(res.body).toContain('학습에 이용되지 않습니다');
+    expect(res.body).toContain('최대 30일');
+  });
+
   it('분석 사업자를 수탁자와 국외 이전 양쪽에 적는다', async () => {
     const res = await h.app.inject({ method: 'GET', url: '/legal/privacy' });
 
