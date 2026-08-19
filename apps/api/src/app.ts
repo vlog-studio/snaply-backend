@@ -47,21 +47,23 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
 
   // 에러/404 핸들러는 라우트 등록보다 먼저 설정해야 자식 컨텍스트가 상속받는다.
   app.setErrorHandler((error, request, reply) => {
-    // Rate limit 초과 → 429
-    if (error.statusCode === 429 || error.code === 'FST_ERR_RATE_LIMIT') {
-      reply.status(429).send({
-        success: false,
-        error: { code: 'RATE_LIMITED', message: '요청이 너무 많습니다. 잠시 후 다시 시도하세요.' },
-      });
-      return;
-    }
-
-    // 커스텀 도메인 에러
+    // 커스텀 도메인 에러. **rate limit 판정보다 앞이다** — 도메인에도 429 를 쓰는 한도가 있고
+    // (예: 추천 일일 한도 RECOMMENDATION_LIMIT), 뒤에 두면 그 코드가 전부 RATE_LIMITED 로
+    // 뭉개져 앱이 "잠시 후 다시"와 "오늘은 끝"을 구분할 수 없다.
     if (error instanceof AppError) {
       reply.status(error.statusCode).send({
         success: false,
         // details 를 먼저 펼친다 — code/message 는 어떤 부가 정보로도 덮이지 않아야 한다.
         error: { ...error.details, code: error.code, message: error.message },
+      });
+      return;
+    }
+
+    // 플러그인이 만든 rate limit 초과 → 429
+    if (error.statusCode === 429 || error.code === 'FST_ERR_RATE_LIMIT') {
+      reply.status(429).send({
+        success: false,
+        error: { code: 'RATE_LIMITED', message: '요청이 너무 많습니다. 잠시 후 다시 시도하세요.' },
       });
       return;
     }
