@@ -47,6 +47,34 @@ describe('공개 페이지', () => {
     expect(res.body).toContain('저장하지 않습니다');
     expect(res.body).toContain('AES-256-GCM');
   });
+
+  it('영상 내용 분석의 고지가 워커의 실제 전송 범위와 같은 말을 한다', async () => {
+    const res = await h.app.inject({ method: 'GET', url: '/legal/privacy' });
+
+    // 이 세 문장이 곧 구현이다. 파이프라인이 프레임 수를 늘리거나 오디오를 싣거나
+    // 영상 삭제 시 분석을 남기도록 바뀌면, 고지가 사실이 아니게 되므로 여기서 잡는다.
+    expect(res.body).toContain('정지 이미지 최대 4장');
+    expect(res.body).toContain('소리는 전송하지 않습니다');
+    expect(res.body).toContain('영상을 삭제하면 그 영상의 분석 결과도 함께 삭제');
+    // 분석은 업로드 시점이 아니라 후보가 정해진 시점에만 돈다.
+    expect(res.body).toContain('업로드하는 모든 영상을 분석하지 않습니다');
+  });
+
+  it('분석 사업자를 수탁자와 국외 이전 양쪽에 적는다', async () => {
+    const res = await h.app.inject({ method: 'GET', url: '/legal/privacy' });
+
+    // 위탁 표에만 적고 국외 이전 절에서 빠뜨리는 것이 흔한 누락이다.
+    expect(res.body).toContain('개인정보의 국외 이전');
+    expect(res.body.match(/OpenAI/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
+  });
+
+  it('이용약관도 분석과 추천을 다룬다', async () => {
+    const res = await h.app.inject({ method: 'GET', url: '/legal/terms' });
+
+    expect(res.body).toContain('영상 내용 분석과 자동 추천');
+    // 추천은 제안일 뿐이고 과금되지 않는다 — 크레딧 정책과 어긋나면 안 되는 문장이다.
+    expect(res.body).toContain('추천에는 크레딧이');
+  });
 });
 
 describe('URL 소유권 검증 — 메타 태그 방식', () => {
