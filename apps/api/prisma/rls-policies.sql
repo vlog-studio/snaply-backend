@@ -125,3 +125,11 @@ alter table public.ad_rewards enable row level security;
 -- 클라이언트가 쓸 수 있으면 광고를 보지 않고 지급을 만들어 낼 수 있다.
 create policy "ad_rewards_select_own" on public.ad_rewards
   for select using (user_id = public.current_app_user_id());
+
+-- ── movie_templates · movie_template_slots ─────────────
+-- 유저 데이터가 아니라 제품 데이터다. 소유자 컬럼이 없으므로 "본인 것만" 규칙이 성립하지 않는다.
+-- 정책을 만들지 않는 것이 곧 정책이다 — RLS 를 켠 채 정책이 없으면 service_role(API 서버)만
+-- 읽는다. 앱은 GET /movie-templates 로만 접근하며, 그 응답에는 match_hints 가 없다.
+-- 클라이언트에 직접 select 를 열면 점수화 내부값이 그대로 나간다.
+alter table public.movie_templates enable row level security;
+alter table public.movie_template_slots enable row level security;

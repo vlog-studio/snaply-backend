@@ -180,6 +180,54 @@ model VideoAnalysis {
   @@map("video_analyses")
 }
 
+// 무비 템플릿 카탈로그 — 사용자가 "템플릿으로 시작"할 때 고르는 무비의 형태.
+//
+// 앱의 로컬 상수에서 서버로 옮겼다. 슬롯의 매칭 규칙(match_hints)과 슬롯 정의가 서로 다른
+// 저장소에 있으면 한쪽만 고쳐진다 — docs/decisions/template-snap-recommendation.md §2.
+//
+// 유저 데이터가 아니라 제품 데이터다. 그래서 user_id 가 없고, 행은 마이그레이션이 넣는다.
+model MovieTemplate {
+  // 'walk' · 'cafe' 처럼 사람이 읽는 고정 id. 앱의 내장 폴백 카탈로그와 같은 값이어야
+  // 서버 응답과 폴백이 같은 템플릿을 가리킨다.
+  id          String @id @db.VarChar(40)
+  name        String @db.VarChar(60)
+  description String @db.VarChar(120)
+  // POST /edit-jobs 가 받는 프리셋 이름 그대로('감성'·'여행'·'일상'). 앱 쪽 영문 MovieStyle 로의
+  // 변환은 앱이 한다 — 편집 프리셋의 원천은 서버다.
+  style String @db.VarChar(20)
+  // 앱에서만 쓰는 트랙 키. 서버 편집 파이프라인은 BGM 을 받지 않는다.
+  bgm       String @db.VarChar(40)
+  sortOrder Int    @map("sort_order")
+  // 내린 템플릿. 행을 지우면 그 템플릿으로 만든 과거 추천이 고아가 된다.
+  retiredAt DateTime? @map("retired_at") @db.Timestamptz(6)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  slots MovieTemplateSlot[]
+
+  @@index([retiredAt, sortOrder])
+  @@map("movie_templates")
+}
+
+// 템플릿의 한 장면. label·hint 는 사람에게 보여주는 촬영 지시고, matchHints 는 점수화 내부값이다.
+model MovieTemplateSlot {
+  templateId String @map("template_id") @db.VarChar(40)
+  // 템플릿 안에서만 유일하면 되는 id('start'·'menu'). 추천 응답이 슬롯을 가리키는 키다.
+  slotId   String @map("slot_id") @db.VarChar(40)
+  position Int
+  label    String @db.VarChar(30)
+  hint     String @db.VarChar(80)
+  // { places, objects, actions, topics, temporalPrior } — 추천 점수화가 읽는 값이며
+  // GET /movie-templates 응답에는 넣지 않는다. jsonb 라 형태가 바뀌어도 마이그레이션이 필요없다.
+  matchHints Json @default("{}") @map("match_hints")
+
+  template MovieTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@id([templateId, slotId])
+  @@unique([templateId, position])
+  @@map("movie_template_slots")
+}
+
 // SNS 연동 계정
 model SnsConnection {
   id               String    @id @default(uuid()) @db.Uuid

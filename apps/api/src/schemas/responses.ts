@@ -640,3 +640,52 @@ export const WEBHOOK_RECEIVED_SCHEMA = {
   required: ['received'],
   properties: { received: TRUE_SCHEMA },
 } as const;
+
+/**
+ * 템플릿의 한 장면. `label`·`hint` 는 사람에게 보여주는 촬영 지시다.
+ *
+ * 점수화가 읽는 `matchHints` 는 **여기 없다.** 내부값이고, 앱이 읽으면 가중치 조정이 다시
+ * 앱 릴리스에 묶인다 (docs/decisions/template-snap-recommendation.md §2).
+ */
+export const MOVIE_TEMPLATE_SLOT_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['id', 'label', 'hint'],
+  properties: {
+    id: { type: 'string', description: '템플릿 안에서만 유일한 슬롯 id' },
+    label: { type: 'string', description: '장면 이름 (예: 골목)' },
+    hint: { type: 'string', description: '무엇을 찍을지에 대한 지시 (예: 좁은 길, 걷는 발)' },
+  },
+} as const;
+
+export const MOVIE_TEMPLATE_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['id', 'name', 'description', 'style', 'bgm', 'slots'],
+  properties: {
+    id: { type: 'string', description: "'walk' 처럼 고정된 사람이 읽는 id" },
+    name: { type: 'string' },
+    description: { type: 'string' },
+    style: {
+      type: 'string',
+      description:
+        'POST /edit-jobs 가 받는 프리셋 이름 그대로. 앱이 모르는 프리셋이 오면 그 템플릿을 건너뛴다',
+    },
+    bgm: { type: 'string', description: '앱에서만 쓰는 트랙 키. 편집 파이프라인은 받지 않는다' },
+    slots: { type: 'array', items: MOVIE_TEMPLATE_SLOT_SCHEMA, description: '촬영 순서' },
+  },
+} as const;
+
+export const MOVIE_TEMPLATE_CATALOG_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['updatedAt', 'templates'],
+  properties: {
+    updatedAt: {
+      type: 'string',
+      format: 'date-time',
+      description: '목록에서 가장 최근에 바뀐 템플릿의 시각. 앱의 캐시 갱신 판단 근거',
+    },
+    templates: { type: 'array', items: MOVIE_TEMPLATE_SCHEMA },
+  },
+} as const;

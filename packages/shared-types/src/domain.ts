@@ -197,3 +197,42 @@ export interface NearbyLocation {
   category: LocationCategory;
   distanceMeters: number;
 }
+
+/**
+ * 무비 템플릿의 한 장면.
+ *
+ * `label`·`hint` 는 **사람에게 보여주는 촬영 지시**다. 슬롯에 들어간 스냅의 내용을 주장하지
+ * 않는다 — `골목` 슬롯은 "여기에 골목을 찍어 오라"는 뜻이지 "이 스냅은 골목이다"가 아니다.
+ *
+ * 점수화가 쓰는 매칭 힌트(`match_hints`)는 이 계약에 없다. 내부값이고, 앱이 읽기 시작하면
+ * 가중치 조정이 다시 앱 릴리스에 묶인다.
+ */
+export interface MovieTemplateSlot {
+  /** 템플릿 안에서만 유일하다. 추천 응답이 슬롯을 가리키는 키다. */
+  id: string;
+  label: string;
+  hint: string;
+}
+
+/** 사용자가 "템플릿으로 시작"할 때 고르는 무비의 형태. */
+export interface MovieTemplate {
+  /** 'walk' · 'cafe' 처럼 고정된 사람이 읽는 id. 앱의 내장 폴백 카탈로그와 같은 값이다. */
+  id: string;
+  name: string;
+  description: string;
+  /** `POST /edit-jobs` 가 받는 프리셋 그대로. 앱이 자기 표기로 변환한다. */
+  style: StylePreset;
+  /** 앱에서만 쓰는 트랙 키. 서버 편집 파이프라인은 BGM 을 받지 않는다. */
+  bgm: string;
+  /** 촬영 순서. `position` 오름차순이다. */
+  slots: MovieTemplateSlot[];
+}
+
+/**
+ * 카탈로그 응답. `updatedAt` 은 목록에서 가장 최근에 바뀐 템플릿의 시각이고, 앱은 이 값으로
+ * 로컬 캐시를 갱신할지 판단한다.
+ */
+export interface MovieTemplateCatalog {
+  updatedAt: string;
+  templates: MovieTemplate[];
+}
