@@ -24,6 +24,7 @@
     "stack:down": "docker compose --env-file apps/api/.env down",
     "dev:api": "npm run dev -w apps/api",
     "worker": "cd apps/ai-worker && .venv/bin/python src/worker.py",
+    "worker:analysis": "cd apps/ai-worker && .venv/bin/python src/analysis_worker.py",
     "worker:install": "cd apps/ai-worker && python3.11 -m venv .venv && .venv/bin/pip install -r requirements.txt",
     "db:generate": "npm run prisma:generate -w apps/api",
     "db:migrate": "npm run prisma:migrate -w apps/api",

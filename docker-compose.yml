@@ -94,6 +94,7 @@ services:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/snaply
       DIRECT_URL: postgresql://postgres:postgres@postgres:5432/snaply
       REDIS_URL: redis://redis:6379
+      VIDEO_ANALYSIS_QUEUE_NAME: video-analysis
       S3_ENDPOINT: http://minio:9000
       S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-http://localhost:9200}
       S3_BUCKET_NAME: snaply
@@ -130,6 +131,35 @@ services:
       # api 와 같은 이유로 CloudFront 를 비운다 — 미디어는 이 스택의 MinIO 에 있다.
       CLOUDFRONT_DOMAIN: ""
       WHISPER_MODEL: ${WHISPER_MODEL:-small}
+      SENTRY_DSN: ""
+
+  # 스냅 내용 분석 워커. 편집 워커와 같은 이미지, 커맨드만 다르다 —
+  # 분석은 모델 호출 대기가 대부분이라 동시성을 따로 잡고, 한쪽 재배포가 다른 쪽을 멈추지 않는다.
+  # OPENAI_API_KEY 가 없으면 이 컨테이너는 기동 단계에서 종료된다(의도된 동작).
+  # 작업 적재는 API 의 POST /videos/:id/analysis 만 한다 — 업로드 시 자동 분석은 없다.
+  analysis-worker:
+    build:
+      context: ./apps/ai-worker
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+      minio: { condition: service_healthy }
+    command: ["python", "analysis_worker.py"]
+    # OPENAI_* 는 여기서 온다. 이미지에는 .env 가 들어가지 않는다(운영과 같은 주입 경로).
+    env_file:
+      - path: apps/api/.env
+        required: false
+    environment:
+      REDIS_URL: redis://redis:6379
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/snaply
+      VIDEO_ANALYSIS_QUEUE_NAME: video-analysis
+      S3_ENDPOINT: http://minio:9000
+      S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-http://localhost:9200}
+      S3_BUCKET_NAME: snaply
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin123
+      AWS_REGION: ap-northeast-2
+      CLOUDFRONT_DOMAIN: ""
       SENTRY_DSN: ""
 
 volumes:
