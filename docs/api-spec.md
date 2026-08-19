@@ -276,6 +276,75 @@ Query: `kind`(`source | result`, 선택), `cursor`(선택), `limit`(기본 20, �
 
 ---
 
+## 스냅 추천 (템플릿 슬롯 채우기)
+
+템플릿의 각 슬롯에 어떤 스냅을 넣을지 서버가 제안한다. 결과의 근거는 [스냅 내용 분석](#스냅-내용-분석)이고,
+정책은 [decisions/template-snap-recommendation.md](./decisions/template-snap-recommendation.md).
+
+**앱은 이 결과를 기다리지 않는다.** 로컬 매칭(촬영 시각·좌표)이 먼저 화면을 채우고, 도착한
+추천은 **사용자가 손대지 않은 슬롯에만** 얹힌다. 그래서 이 API 가 느리거나 죽어도, 꺼져 있어도
+템플릿 화면은 그대로 동작한다.
+
+**후보는 앱이 고른다.** 서버는 스냅이 언제 어디서 찍혔는지 모른다(`POST /videos` 가 촬영
+시각·좌표를 받지 않는다). 한 번의 외출을 묶는 계산은 앱만 할 수 있다.
+
+**크레딧을 차감하지 않는다.** 비용은 후보 수 상한(12)과 최근 24시간 추천 횟수 상한(20)으로 막는다.
+
+**`MOVIE_RECOMMENDATION_ENABLED=true` 일 때만 동작한다.** 기본은 꺼짐이며, 꺼져 있으면
+`503 RECOMMENDATION_DISABLED` 다. 이 경로는 생산 스냅의 프레임을 외부 모델로 보내므로
+약관 개정·제3자 제공 고지 전에는 켜지 않는다.
+
+### POST /movie-recommendations  🔒  (10req/분)
+```json
+{ "templateId": "cafe", "candidates": ["uuid-1", "uuid-2", "uuid-3"] }
+```
+→ 202 `{ "data": { "id": "uuid", "status": "processing" } }`
+
+- `candidates` 는 **촬영 시간 오름차순**이어야 한다. 이 순서가 점수화의 시간 사전값이다.
+- **멱등하다.** 같은 (유저·템플릿·후보 집합)이 24시간 안에 다시 오면 새로 만들지 않고 기존
+  추천을 돌려준다. 순서만 다른 재요청도 같은 집합으로 본다.
+- 소유·`kind=source`·`status=ready` 인 스냅만 후보가 된다(아니면 403, 어느 것이 문제인지는
+  알려주지 않는다).
+- 에러: 후보 0개 400 · 후보 초과 **400 `TOO_MANY_CANDIDATES`** (`max` 동봉) ·
+  없거나 내린 템플릿 404 · 최근 24시간 한도 초과 **429 `RECOMMENDATION_LIMIT`**
+  (`RATE_LIMITED` 와 다르다 — 잠시 후 재시도로 풀리지 않는다) ·
+  분석 큐 접근 불가 503 · 기능 꺼짐 503 `RECOMMENDATION_DISABLED`
+
+```json
+{ "success": false, "error": { "code":"TOO_MANY_CANDIDATES",
+  "message":"후보 스냅은 한 번에 12개까지 보낼 수 있습니다.", "max":12 } }
+```
+
+### GET /movie-recommendations/:id  🔒
+```json
+{ "success": true, "data": {
+  "id": "uuid", "templateId": "cafe", "status": "done",
+  "slots": [
+    { "slotId": "front", "videoId": "uuid-1", "score": 0.82 },
+    { "slotId": "menu",  "videoId": "uuid-2", "score": 0.71 },
+    { "slotId": "room",  "videoId": null,     "score": null }
+  ],
+  "excluded": [ { "videoId": "uuid-9", "reason": "unusable" } ],
+  "createdAt": "2026-08-19T02:00:00.000Z", "completedAt": "2026-08-19T02:00:12.000Z"
+}}
+```
+
+`status`: `processing | done | failed`
+- `processing` 동안 `slots` 는 **빈 배열**이다. 앱은 로컬 매칭 결과를 그대로 두고 계속 폴링한다.
+- **채점은 이 조회 시점에 일어난다.** 후보 분석이 다 끝났으면 배정하고 `done` 으로 굳힌다.
+  접수 후 일정 시간이 지나면 끝난 분석만으로 채점하고 닫는다 — 분석 워커가 죽었을 때 추천이
+  영원히 걸려 있으면 안 된다.
+- `slots` 는 템플릿의 슬롯 순서 그대로다. `videoId: null` 은 **그 자리에 넣을 후보가 없었다**는
+  뜻이고, 화면에서는 `지금 찍기` 로 남는다. 못 쓸 스냅으로 채우지 않는다.
+- `score` 는 0~1 **슬롯 적합도**다. 스냅이 무엇을 담고 있는지에 대한 주장이 **아니다** —
+  슬롯 이름은 사람에게 주는 촬영 지시이고, 서버는 "이 스냅이 골목이다"라고 말하지 않는다.
+- `excluded[].reason`: `unusable`(분석이 편집에 못 쓴다고 판단) ·
+  `analysis_failed`(분석 실패 또는 시한 초과) · `no_match`(슬롯보다 후보가 많아 자리 없음)
+- 분석의 `summary`·`topics` 등 모델 출력은 **이 응답에 나오지 않는다.** 추천은 내부 신호이지
+  사용자에게 보여주는 문구가 아니다.
+
+---
+
 ## 위치 알림
 
 ### GET /locations  🔒

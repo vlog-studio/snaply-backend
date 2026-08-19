@@ -36,6 +36,7 @@ model User {
   purchases        Purchase[]
   creditEntries    CreditLedger[]
   adRewards        AdReward[]
+  recommendations  MovieRecommendation[]
 
   @@index([deletedAt])
   @@map("users")
@@ -99,6 +100,7 @@ model Video {
   editJobs   EditJob[]
   snsUploads SnsUpload[]
   analyses   VideoAnalysis[]
+  recommendationItems MovieRecommendationItem[]
 
   @@index([userId, createdAt])
   @@index([userId, kind, createdAt])
@@ -204,6 +206,7 @@ model MovieTemplate {
   updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   slots MovieTemplateSlot[]
+  recommendations MovieRecommendation[]
 
   @@index([retiredAt, sortOrder])
   @@map("movie_templates")
@@ -226,6 +229,57 @@ model MovieTemplateSlot {
   @@id([templateId, slotId])
   @@unique([templateId, position])
   @@map("movie_template_slots")
+}
+
+// 템플릿 슬롯에 어떤 스냅을 넣을지에 대한 서버의 제안 1건.
+//
+// 앱의 로컬 매칭이 먼저 화면을 채우고, 이 결과가 도착하면 그 위에 얹힌다 — 그래서 이 행이
+// 늦거나 비어도 사용자는 아무것도 잃지 않는다
+// (docs/decisions/template-snap-recommendation.md §1).
+model MovieRecommendation {
+  id         String @id @default(uuid()) @db.Uuid
+  userId     String @map("user_id") @db.Uuid
+  templateId String @map("template_id") @db.VarChar(40)
+  // 후보 스냅, **촬영 시간 오름차순**. 이 순서가 점수화의 시간 사전값이므로 집합이 아니라
+  // 배열로 남긴다. 후보를 고르는 쪽은 앱이다 — 서버는 촬영 시각도 좌표도 모른다.
+  candidateVideoIds String[] @map("candidate_video_ids") @db.Uuid
+  // (userId, templateId, 후보 집합) 의 해시. 재사용 창 안에서 같은 요청은 같은 추천을 받는다.
+  // 화면을 다시 열 때마다 재분석하면 그게 그대로 비용이다.
+  candidateHash String @map("candidate_hash") @db.VarChar(64)
+  status        String @default("processing") @db.VarChar(20)
+  // [{ videoId, reason }] — 배정에서 빠진 후보와 그 이유(unusable · analysis_failed · no_match).
+  excluded Json @default("[]")
+
+  completedAt DateTime? @map("completed_at") @db.Timestamptz(6)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  items    MovieRecommendationItem[]
+  user     User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  template MovieTemplate            @relation(fields: [templateId], references: [id], onDelete: Restrict)
+
+  // 멱등 조회: 같은 후보 집합의 최근 추천을 찾는다.
+  @@index([userId, templateId, candidateHash, createdAt])
+  // 일일 추천 횟수 집계.
+  @@index([userId, createdAt])
+  @@map("movie_recommendations")
+}
+
+// 슬롯 하나에 대한 배정. `videoId` 가 null 이면 채울 후보가 없었다는 뜻이고, 그 자리는
+// 화면에서 `지금 찍기` 로 남는다 — 못 쓸 스냅을 채우는 것보다 정직하다.
+model MovieRecommendationItem {
+  recommendationId String @map("recommendation_id") @db.Uuid
+  slotId           String @map("slot_id") @db.VarChar(40)
+  position         Int
+  // 영상이 삭제되면 그 자리는 비워진다(SetNull). 추천 전체를 지우지는 않는다.
+  videoId String? @map("video_id") @db.Uuid
+  score   Float?
+
+  recommendation MovieRecommendation @relation(fields: [recommendationId], references: [id], onDelete: Cascade)
+  video          Video?              @relation(fields: [videoId], references: [id], onDelete: SetNull)
+
+  @@id([recommendationId, slotId])
+  @@map("movie_recommendation_items")
 }
 
 // SNS 연동 계정

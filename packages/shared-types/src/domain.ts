@@ -236,3 +236,41 @@ export interface MovieTemplateCatalog {
   updatedAt: string;
   templates: MovieTemplate[];
 }
+
+export type MovieRecommendationStatus = 'processing' | 'done' | 'failed';
+
+/** 슬롯 하나에 대한 서버의 제안. `videoId` 가 null 이면 채울 후보가 없었다는 뜻이다. */
+export interface MovieRecommendationSlot {
+  slotId: string;
+  videoId: string | null;
+  /** 0~1. **슬롯 적합도**이며, 스냅이 무엇을 담고 있는지에 대한 주장이 아니다. */
+  score: number | null;
+}
+
+/**
+ * 배정에서 빠진 후보.
+ * - `unusable` — 분석이 편집에 못 쓴다고 판단(흔들림·어두움·초점)
+ * - `analysis_failed` — 분석이 실패했거나 제시간에 끝나지 않음
+ * - `no_match` — 쓸 수는 있지만 슬롯보다 후보가 많아 자리가 없었음
+ */
+export interface MovieRecommendationExclusion {
+  videoId: string;
+  reason: 'unusable' | 'analysis_failed' | 'no_match';
+}
+
+/**
+ * 템플릿 슬롯을 어떤 스냅으로 채울지에 대한 서버의 제안 1건.
+ *
+ * 앱은 이걸 기다리지 않는다 — 로컬 매칭이 먼저 화면을 채우고, 이 결과가 도착하면 사용자가
+ * 손대지 않은 슬롯에만 얹힌다.
+ */
+export interface MovieRecommendation {
+  id: string;
+  templateId: string;
+  status: MovieRecommendationStatus;
+  /** 템플릿의 슬롯 순서 그대로. `status` 가 `done` 이 되기 전에는 비어 있다. */
+  slots: MovieRecommendationSlot[];
+  excluded: MovieRecommendationExclusion[];
+  createdAt: string;
+  completedAt: string | null;
+}

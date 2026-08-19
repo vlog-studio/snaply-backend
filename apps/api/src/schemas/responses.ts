@@ -689,3 +689,82 @@ export const MOVIE_TEMPLATE_CATALOG_SCHEMA = {
     templates: { type: 'array', items: MOVIE_TEMPLATE_SCHEMA },
   },
 } as const;
+
+/**
+ * 후보 수 상한 초과 400. `max` 를 함께 내려야 앱이 "몇 개까지 보낼 수 있는지"를 하드코딩하지
+ * 않는다 — 상한은 서버 정책이고 실측 후 바뀐다.
+ */
+export const CANDIDATE_LIMIT_ERROR_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['success', 'error'],
+  properties: {
+    success: { type: 'boolean', enum: [false] },
+    error: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['code', 'message'],
+      properties: {
+        code: { type: 'string' },
+        message: { type: 'string' },
+        max: { type: 'integer', description: '추천 1회에 보낼 수 있는 후보 수' },
+      },
+    },
+  },
+} as const;
+
+export const RECOMMENDATION_ACCEPTED_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['id', 'status'],
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    status: { type: 'string', enum: ['processing', 'done', 'failed'] },
+  },
+} as const;
+
+export const MOVIE_RECOMMENDATION_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['id', 'templateId', 'status', 'slots', 'excluded', 'createdAt', 'completedAt'],
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    templateId: { type: 'string' },
+    status: { type: 'string', enum: ['processing', 'done', 'failed'] },
+    slots: {
+      type: 'array',
+      description: '템플릿의 슬롯 순서 그대로. done 이 되기 전에는 비어 있다',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['slotId', 'videoId', 'score'],
+        properties: {
+          slotId: { type: 'string' },
+          videoId: {
+            type: ['string', 'null'],
+            format: 'uuid',
+            description: 'null 이면 채울 후보가 없었다는 뜻',
+          },
+          score: {
+            type: ['number', 'null'],
+            description: '0~1 슬롯 적합도. 스냅 내용에 대한 주장이 아니다',
+          },
+        },
+      },
+    },
+    excluded: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['videoId', 'reason'],
+        properties: {
+          videoId: { type: 'string', format: 'uuid' },
+          reason: { type: 'string', enum: ['unusable', 'analysis_failed', 'no_match'] },
+        },
+      },
+    },
+    createdAt: { type: 'string', format: 'date-time' },
+    completedAt: { type: ['string', 'null'], format: 'date-time' },
+  },
+} as const;

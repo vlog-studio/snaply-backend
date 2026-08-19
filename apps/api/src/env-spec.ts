@@ -224,6 +224,15 @@ export const ENV_VARS = [
     description: '결과에 기록되는 프롬프트 버전 태그. 기본 v1. 프롬프트를 바꾸면 올린다',
   },
 
+  // ── 템플릿 스냅 추천 ─────────────────────────────────
+  {
+    key: 'MOVIE_RECOMMENDATION_ENABLED',
+    required: false,
+    origin: 'shared',
+    description:
+      'true 일 때만 POST /movie-recommendations 가 동작한다. 기본 false — 이 경로는 생산 스냅 프레임을 외부 모델로 보내므로 약관 개정·제3자 제공 고지 완료 전에는 켜지 않는다',
+  },
+
   // ── 결제 (RevenueCat + Apple/Google IAP) ─────────────
   {
     key: 'REVENUECAT_API_KEY',

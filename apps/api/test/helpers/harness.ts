@@ -60,7 +60,12 @@ export async function assertTestDatabase(client: {
   }
 }
 
-/** FK 역순 — TRUNCATE ... CASCADE 를 쓰므로 순서는 형식적이다. */
+/**
+ * FK 역순 — TRUNCATE ... CASCADE 를 쓰므로 순서는 형식적이다.
+ *
+ * `movie_templates`·`movie_template_slots` 는 **일부러 빠져 있다.** 유저 데이터가 아니라
+ * 마이그레이션이 넣는 제품 데이터라, 비우면 카탈로그·추천 테스트가 근거를 잃는다.
+ */
 const TABLES = [
   'notification_logs',
   'sns_uploads',
@@ -68,6 +73,8 @@ const TABLES = [
   'credit_ledger',
   'ad_rewards',
   'purchases',
+  'movie_recommendation_items',
+  'movie_recommendations',
   'edit_jobs',
   'video_analyses',
   'videos',
