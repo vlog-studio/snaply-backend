@@ -1,25 +1,24 @@
-"""스냅 내용 분석 스파이크의 순수 로직 테스트.
+"""스냅 내용 분석 파이프라인의 순수 로직 테스트.
 
-외부 바이너리(ffmpeg)와 SDK(openai) 없이 돌아야 한다 — 기준선 숫자를 만드는 계산이
-틀리면 스파이크의 결론 전체가 틀리므로, 계산은 호출과 분리해 여기서 잡는다.
+ffmpeg 와 openai SDK 없이 돌아야 한다 — 프레임 시점 계산, 결과 검증, 오류 분류처럼
+"조용히 틀리면 결과가 오염되는" 계산을 외부 호출과 분리해 여기서 잡는다.
 
-    cd apps/ai-worker && python -m unittest tests.test_analysis_spike
+    cd apps/ai-worker && python -m unittest tests.test_video_analysis
 """
 
-import csv
-import io
 import json
 import sys
-import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts" / "analysis-spike"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+# 워커 런타임 의존성 없이 계산 로직만 검증한다 (test_editor.py 와 같은 방식).
+sys.modules.setdefault("loguru", mock.MagicMock())
 
-import frame_sampler  # noqa: E402
-import report  # noqa: E402
-import vision_client  # noqa: E402
-from result_schema import ResultSchemaError, validate_result  # noqa: E402
+from pipeline.video_analysis import analyzer, frame_sampler, openai_client  # noqa: E402
+from pipeline.video_analysis.errors import AnalysisError, classify_failure, is_retryable  # noqa: E402
+from pipeline.video_analysis.schema import ResultSchemaError, validate_result  # noqa: E402
 
 
 def _valid_payload() -> dict:
@@ -30,42 +29,31 @@ def _valid_payload() -> dict:
         "objects": ["케이크", "커피"],
         "actions": ["디저트를 가까이 보여줌"],
         "moods": ["차분한"],
-        "visualQuality": {"score": 0.86, "issues": [], "usableForEdit": True},
+        "visualQuality": {"score": 0.86, "issues": ["shaky"], "usableForEdit": True},
         "confidence": 0.91,
     }
 
 
-def _row(model: str, status: str = "success", **overrides) -> dict:
-    row = {
-        "video": "a.mp4",
-        "model": model,
-        "status": status,
-        "errorCode": None,
-        "frameCount": 4,
-        "durationMs": 3012,
-        "latencyMs": 1200,
-        "inputTokens": 800,
-        "outputTokens": 120,
-        "costUsd": None,
-        "result": validate_result(_valid_payload()) if status == "success" else None,
+def _response(body: str) -> dict:
+    return {
+        "id": "resp_1",
+        "usage": {"input_tokens": 800, "output_tokens": 110},
+        "output": [{"content": [{"type": "output_text", "text": body}]}],
     }
-    row.update(overrides)
-    return row
 
 
 class FrameTimestampTest(unittest.TestCase):
     def test_three_second_video_matches_planned_positions(self) -> None:
-        # 계획 문서 §7 의 0.3 / 1.1 / 1.9 / 2.7 초.
+        # 0.3 / 1.1 / 1.9 / 2.7 초.
         self.assertEqual(frame_sampler.frame_timestamps_ms(3000), [300, 1101, 1899, 2700])
 
     def test_first_and_last_frame_are_never_used(self) -> None:
+        # 촬영 시작·종료의 흔들림을 피한다.
         timestamps = frame_sampler.frame_timestamps_ms(3000)
         self.assertTrue(all(0 < value < 3000 for value in timestamps))
 
     def test_very_short_video_collapses_near_duplicates(self) -> None:
-        # 400ms 영상은 시점 간격이 최소 간격보다 좁아 4장을 만들지 않는다.
-        timestamps = frame_sampler.frame_timestamps_ms(400)
-        self.assertEqual(timestamps, [40, 253])
+        self.assertEqual(frame_sampler.frame_timestamps_ms(400), [40, 253])
 
     def test_zero_length_video_yields_no_timestamps(self) -> None:
         self.assertEqual(frame_sampler.frame_timestamps_ms(0), [])
@@ -73,8 +61,10 @@ class FrameTimestampTest(unittest.TestCase):
 
 class DurationParseTest(unittest.TestCase):
     def test_parses_ffprobe_json(self) -> None:
-        stdout = json.dumps({"format": {"duration": "3.012000"}})
-        self.assertEqual(frame_sampler.parse_duration_ms(stdout), 3012)
+        self.assertEqual(
+            frame_sampler.parse_duration_ms(json.dumps({"format": {"duration": "3.012000"}})),
+            3012,
+        )
 
     def test_rejects_non_positive_duration(self) -> None:
         with self.assertRaises(ValueError):
@@ -87,14 +77,13 @@ class ExtractCommandTest(unittest.TestCase):
         self.cmd = frame_sampler.build_extract_command("in.mp4", self.frames)
 
     def test_single_ffmpeg_invocation_with_one_input(self) -> None:
-        # 프레임마다 프로세스를 띄우지 않는다 — 계획 문서 §7.
         self.assertEqual(self.cmd.count("-i"), 1)
         self.assertEqual(self.cmd[0], "ffmpeg")
 
     def test_every_frame_has_its_own_seek_and_output(self) -> None:
         self.assertEqual(self.cmd.count("-ss"), 3)
         self.assertEqual(self.cmd.count("-frames:v"), 3)
-        self.assertEqual([self.cmd[self.cmd.index("-ss") + 1]], ["0.300"])
+        self.assertEqual(self.cmd[self.cmd.index("-ss") + 1], "0.300")
         for _, path in self.frames:
             self.assertIn(path, self.cmd)
 
@@ -108,8 +97,7 @@ class ExtractCommandTest(unittest.TestCase):
 
 class FrameDedupeTest(unittest.TestCase):
     def test_average_hash_sets_bits_above_mean(self) -> None:
-        data = bytes([0] * 32 + [255] * 32)
-        value = frame_sampler.ahash_from_gray_bytes(data)
+        value = frame_sampler.ahash_from_gray_bytes(bytes([0] * 32 + [255] * 32))
         self.assertEqual(bin(value).count("1"), 32)
 
     def test_rejects_wrong_frame_size(self) -> None:
@@ -121,26 +109,25 @@ class FrameDedupeTest(unittest.TestCase):
         self.assertEqual(frame_sampler.dedupe_indices([7, 7, 7, 7]), [0])
 
     def test_distinct_frames_are_all_kept(self) -> None:
-        hashes = [0, (1 << 40) - 1, 0xFFFFFFFFFFFFFFFF]
-        self.assertEqual(frame_sampler.dedupe_indices(hashes), [0, 1, 2])
+        self.assertEqual(
+            frame_sampler.dedupe_indices([0, (1 << 40) - 1, 0xFFFFFFFFFFFFFFFF]), [0, 1, 2]
+        )
 
     def test_near_duplicate_within_threshold_is_dropped(self) -> None:
-        base = 0
-        near = 0b1111  # 해밍 거리 4 ≤ 임계값 5
-        self.assertEqual(frame_sampler.dedupe_indices([base, near]), [0])
+        self.assertEqual(frame_sampler.dedupe_indices([0, 0b1111]), [0])
 
 
 class RequestBuildTest(unittest.TestCase):
     def setUp(self) -> None:
         self.urls = ["data:image/jpeg;base64,AAA", "data:image/jpeg;base64,BBB"]
-        self.request = vision_client.build_request("m1", self.urls)
+        self.request = openai_client.build_request(self.urls, model="m1", detail="low")
 
     def test_all_frames_go_in_one_request_in_order(self) -> None:
         content = self.request["input"][1]["content"]
         images = [item["image_url"] for item in content if item["type"] == "input_image"]
         self.assertEqual(images, self.urls)
 
-    def test_every_image_uses_low_detail(self) -> None:
+    def test_every_image_uses_the_configured_detail(self) -> None:
         content = self.request["input"][1]["content"]
         details = {item["detail"] for item in content if item["type"] == "input_image"}
         self.assertEqual(details, {"low"})
@@ -151,15 +138,16 @@ class RequestBuildTest(unittest.TestCase):
         self.assertTrue(fmt["strict"])
         self.assertFalse(fmt["schema"]["additionalProperties"])
 
-    def test_reasoning_is_omitted_unless_requested(self) -> None:
-        # 추론 파라미터를 지원하지 않는 모델도 비교 대상이다.
-        self.assertNotIn("reasoning", self.request)
-        with_effort = vision_client.build_request("m1", self.urls, reasoning_effort="none")
-        self.assertEqual(with_effort["reasoning"], {"effort": "none"})
+    def test_no_audio_is_ever_sent(self) -> None:
+        # 오디오는 이 파이프라인의 범위 밖이다 — 소리에 대한 판단을 하지 않는다.
+        types = {
+            item["type"] for message in self.request["input"] for item in message["content"]
+        }
+        self.assertEqual(types, {"input_text", "input_image"})
 
     def test_request_without_images_is_rejected(self) -> None:
         with self.assertRaises(ValueError):
-            vision_client.build_request("m1", [])
+            openai_client.build_request([])
 
 
 class FailureClassificationTest(unittest.TestCase):
@@ -170,9 +158,10 @@ class FailureClassificationTest(unittest.TestCase):
             (None, "APITimeoutError", "TIMEOUT"),
             (None, "APIConnectionError", "NETWORK"),
         ):
-            code, retryable = vision_client.classify_failure(status, name, "")
+            code, retryable = classify_failure(status, name, "")
             self.assertEqual(code, expected)
             self.assertTrue(retryable, expected)
+            self.assertTrue(is_retryable(code), expected)
 
     def test_non_retryable_failures(self) -> None:
         for status, name, message, expected in (
@@ -181,43 +170,30 @@ class FailureClassificationTest(unittest.TestCase):
             (404, "NotFoundError", "", "MODEL_NOT_FOUND"),
             (400, "BadRequestError", "content_policy violation", "SAFETY_REFUSED"),
         ):
-            code, retryable = vision_client.classify_failure(status, name, message)
+            code, retryable = classify_failure(status, name, message)
             self.assertEqual(code, expected)
             self.assertFalse(retryable, expected)
+            self.assertFalse(is_retryable(code), expected)
 
-
-class CostTest(unittest.TestCase):
-    def test_missing_price_returns_none_instead_of_guessing(self) -> None:
-        # 스냅당 단가가 스파이크의 산출물이므로 임의 값을 채우면 결론이 오염된다.
-        self.assertIsNone(vision_client.compute_cost_usd(1000, 100, None, None))
-        self.assertIsNone(vision_client.compute_cost_usd(1000, 100, 1.0, None))
-
-    def test_computes_from_per_million_prices(self) -> None:
-        cost = vision_client.compute_cost_usd(1_000_000, 500_000, 0.3, 1.2)
-        self.assertAlmostEqual(cost, 0.9)
-
-    def test_missing_token_counts_are_treated_as_zero(self) -> None:
-        self.assertAlmostEqual(vision_client.compute_cost_usd(None, None, 1.0, 1.0), 0.0)
+    def test_frame_extraction_failure_is_terminal(self) -> None:
+        # 손상된 영상은 다시 넣어도 같은 결과다 — API 의 재시도 안내와 같아야 한다.
+        self.assertFalse(is_retryable("FRAME_EXTRACTION_FAILED"))
 
 
 class ResponseReadTest(unittest.TestCase):
-    def test_reads_output_text_from_response_payload(self) -> None:
-        payload = {
-            "id": "resp_1",
-            "usage": {"input_tokens": 700, "output_tokens": 90},
-            "output": [{"content": [{"type": "output_text", "text": '{"a":1}'}]}],
-        }
-        self.assertEqual(vision_client.extract_output_text(payload), '{"a":1}')
-        self.assertEqual(vision_client.read_usage(payload), (700, 90, "resp_1"))
+    def test_reads_output_text_and_usage(self) -> None:
+        payload = _response('{"a":1}')
+        self.assertEqual(openai_client.extract_output_text(payload), '{"a":1}')
+        self.assertEqual(openai_client.read_usage(payload), (800, 110, "resp_1"))
 
     def test_empty_output_is_a_classified_failure(self) -> None:
-        with self.assertRaises(vision_client.VisionCallError) as caught:
-            vision_client.extract_output_text({"output": []})
+        with self.assertRaises(AnalysisError) as caught:
+            openai_client.extract_output_text({"output": []})
         self.assertEqual(caught.exception.code, "EMPTY_OUTPUT")
 
     def test_non_json_body_is_retryable_schema_failure(self) -> None:
-        with self.assertRaises(vision_client.VisionCallError) as caught:
-            vision_client.parse_output_json("not json")
+        with self.assertRaises(AnalysisError) as caught:
+            openai_client.parse_output_json("not json")
         self.assertEqual(caught.exception.code, "SCHEMA_INVALID")
         self.assertTrue(caught.exception.retryable)
 
@@ -267,92 +243,77 @@ class ResultValidationTest(unittest.TestCase):
             validate_result(payload)
 
 
-class AggregateTest(unittest.TestCase):
-    def test_percentile_uses_nearest_rank(self) -> None:
-        self.assertEqual(report.percentile([10, 20, 30, 40], 0.5), 30)
-        self.assertEqual(report.percentile([10, 20, 30, 40], 0.95), 40)
-        self.assertIsNone(report.percentile([], 0.5))
+class AnalyzeOrchestrationTest(unittest.TestCase):
+    """analyze() 는 ffmpeg·모델 호출을 감싸는 순서다. 스텁으로 순서와 오류 매핑만 본다."""
 
-    def test_success_rate_and_error_codes_per_model(self) -> None:
-        rows = [
-            _row("m1"),
-            _row("m1", status="failed", errorCode="RATE_LIMITED"),
-            _row("m2"),
-        ]
-        summary = report.aggregate(rows)
-        self.assertEqual(summary["m1"]["successRate"], 0.5)
-        self.assertEqual(summary["m1"]["errorCodes"], {"RATE_LIMITED": 1})
-        self.assertEqual(summary["m2"]["successRate"], 1.0)
-
-    def test_cost_is_averaged_only_over_priced_rows(self) -> None:
-        rows = [_row("m1", costUsd=0.002), _row("m1", costUsd=None)]
-        stats = report.aggregate(rows)["m1"]
-        self.assertAlmostEqual(stats["meanCostUsdPerSnap"], 0.002)
-        self.assertEqual(stats["costSampleSize"], 1)
-
-    def test_cost_stays_none_when_no_price_was_configured(self) -> None:
-        stats = report.aggregate([_row("m1"), _row("m1")])["m1"]
-        self.assertIsNone(stats["meanCostUsdPerSnap"])
-
-    def test_failed_rows_do_not_pollute_latency(self) -> None:
-        rows = [_row("m1", latencyMs=1000), _row("m1", status="failed", errorCode="TIMEOUT")]
-        self.assertEqual(report.aggregate(rows)["m1"]["latencyP50Ms"], 1000)
-
-
-class LabelSheetTest(unittest.TestCase):
-    def test_sheet_has_empty_human_columns(self) -> None:
-        with tempfile.TemporaryDirectory() as work_dir:
-            path = str(Path(work_dir) / "labels.csv")
-            report.write_label_sheet([_row("m1")], path)
-            with open(path, encoding="utf-8", newline="") as handle:
-                rows = list(csv.DictReader(handle))
-        self.assertEqual(len(rows), 1)
-        self.assertEqual(rows[0]["objects"], "케이크 | 커피")
-        for column in report.LABEL_COLUMNS:
-            self.assertEqual(rows[0][column], "")
-
-    def test_failed_row_still_appears_for_review(self) -> None:
-        with tempfile.TemporaryDirectory() as work_dir:
-            path = str(Path(work_dir) / "labels.csv")
-            report.write_label_sheet([_row("m1", status="failed", errorCode="TIMEOUT")], path)
-            content = Path(path).read_text(encoding="utf-8")
-        self.assertIn("TIMEOUT", content)
-
-
-class ScoreLabelsTest(unittest.TestCase):
-    def _labeled(self, **overrides) -> dict:
-        row = {
-            "model": "m1",
-            "status": "success",
-            "summary_factual": "1",
-            "objects_expected": "4",
-            "objects_missed": "1",
-            "actions_correct": "1",
-            "hallucinated": "0",
-            "usable_correct": "1",
+    def _patch(self, **overrides):
+        defaults = {
+            "probe_duration_ms": mock.Mock(return_value=3012),
+            "extract_frames": mock.Mock(),
+            "frame_ahash": mock.Mock(side_effect=[0, 0xFFFFFFFF00000000, 0xFFFFFFFF, 0xF0F0F0F0F0F0F0F0]),
         }
-        row.update(overrides)
-        return row
+        defaults.update(overrides)
+        return mock.patch.multiple(frame_sampler, **defaults)
 
-    def test_computes_quality_metrics(self) -> None:
-        scored = report.score_labels([self._labeled(), self._labeled(hallucinated="1")])["m1"]
-        self.assertEqual(scored["labeledRows"], 2)
-        self.assertEqual(scored["summaryFactualRate"], 1.0)
-        self.assertAlmostEqual(scored["objectCoverage"], 0.75)
-        self.assertEqual(scored["hallucinationRate"], 0.5)
+    def setUp(self) -> None:
+        # 추출된 프레임이 실제로 존재하는 것처럼 보이게 한다.
+        self.exists = mock.patch("os.path.exists", return_value=True)
+        self.exists.start()
+        self.addCleanup(self.exists.stop)
+        self.encode = mock.patch.object(
+            openai_client, "encode_data_url", side_effect=lambda path: f"data:{path}"
+        )
+        self.encode.start()
+        self.addCleanup(self.encode.stop)
 
-    def test_unlabeled_rows_are_skipped_not_counted_as_zero(self) -> None:
-        # 덜 채점한 만큼 품질이 나쁜 것처럼 보이면 모델 비교가 왜곡된다.
-        scored = report.score_labels(
-            [self._labeled(), self._labeled(summary_factual="", hallucinated="")]
-        )["m1"]
-        self.assertEqual(scored["labeledRows"], 1)
-        self.assertEqual(scored["summaryFactualRate"], 1.0)
-        self.assertEqual(scored["hallucinationRate"], 0.0)
+    def test_happy_path_returns_measured_duration_and_tokens(self) -> None:
+        call = mock.Mock(return_value=(_response(json.dumps(_valid_payload())), 1234))
+        with self._patch(), mock.patch.object(openai_client, "call_vision", call):
+            outcome = analyzer.analyze("/tmp/source.mp4", "/tmp/work")
 
-    def test_metric_is_none_without_any_label(self) -> None:
-        scored = report.score_labels([self._labeled(usable_correct="")])["m1"]
-        self.assertIsNone(scored["usableForEditAccuracy"])
+        self.assertEqual(outcome.duration_ms, 3012)
+        self.assertEqual(outcome.frame_timestamps_ms, [301, 1105, 1907, 2711])
+        self.assertEqual((outcome.input_tokens, outcome.output_tokens), (800, 110))
+        self.assertEqual(outcome.latency_ms, 1234)
+        self.assertEqual(outcome.result["objects"], ["케이크", "커피"])
+        # 프레임 4장이 한 요청에 들어갔다.
+        request = call.call_args.args[0]
+        images = [
+            item for item in request["input"][1]["content"] if item["type"] == "input_image"
+        ]
+        self.assertEqual(len(images), 4)
+
+    def test_unreadable_video_is_terminal_extraction_failure(self) -> None:
+        probe = mock.Mock(side_effect=RuntimeError("moov atom not found"))
+        with self._patch(probe_duration_ms=probe):
+            with self.assertRaises(AnalysisError) as caught:
+                analyzer.analyze("/tmp/source.mp4", "/tmp/work")
+        self.assertEqual(caught.exception.code, "FRAME_EXTRACTION_FAILED")
+        self.assertFalse(caught.exception.retryable)
+
+    def test_ffmpeg_failure_is_terminal_extraction_failure(self) -> None:
+        extract = mock.Mock(side_effect=frame_sampler.FrameExtractionError("ffmpeg 실패"))
+        with self._patch(extract_frames=extract):
+            with self.assertRaises(AnalysisError) as caught:
+                analyzer.analyze("/tmp/source.mp4", "/tmp/work")
+        self.assertEqual(caught.exception.code, "FRAME_EXTRACTION_FAILED")
+
+    def test_out_of_contract_values_become_retryable_schema_error(self) -> None:
+        broken = {**_valid_payload(), "confidence": 3.0}
+        call = mock.Mock(return_value=(_response(json.dumps(broken)), 10))
+        with self._patch(), mock.patch.object(openai_client, "call_vision", call):
+            with self.assertRaises(AnalysisError) as caught:
+                analyzer.analyze("/tmp/source.mp4", "/tmp/work")
+        self.assertEqual(caught.exception.code, "SCHEMA_INVALID")
+        self.assertTrue(caught.exception.retryable)
+
+    def test_duplicate_frames_reduce_the_request_size(self) -> None:
+        # 4장이 모두 같은 화면이면 1장만 올린다.
+        same = mock.Mock(return_value=7)
+        call = mock.Mock(return_value=(_response(json.dumps(_valid_payload())), 10))
+        with self._patch(frame_ahash=same), mock.patch.object(openai_client, "call_vision", call):
+            outcome = analyzer.analyze("/tmp/source.mp4", "/tmp/work")
+        self.assertEqual(len(outcome.frame_timestamps_ms), 1)
 
 
 if __name__ == "__main__":

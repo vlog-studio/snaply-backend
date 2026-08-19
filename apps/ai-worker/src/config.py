@@ -70,6 +70,16 @@ WHISPER_MODEL = os.environ.get("WHISPER_MODEL", "small")
 EDIT_TIMEOUT_SECONDS = int(os.environ.get("EDIT_TIMEOUT_SECONDS", "600"))
 BGM_DIR = os.environ.get("BGM_DIR", "assets/bgm")
 
+# 스냅 내용 분석 (analysis_worker.py 전용)
+# 결과는 자동 편집 추천의 입력이다 — docs/decisions/snap-content-analysis.md
+VIDEO_ANALYSIS_QUEUE_NAME = os.environ.get("VIDEO_ANALYSIS_QUEUE_NAME", "video-analysis")
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
+OPENAI_VISION_MODEL = os.environ.get("OPENAI_VISION_MODEL", "gpt-5.6-luna")
+OPENAI_IMAGE_DETAIL = os.environ.get("OPENAI_IMAGE_DETAIL", "low")
+VIDEO_ANALYSIS_TIMEOUT_SECONDS = int(os.environ.get("VIDEO_ANALYSIS_TIMEOUT_SECONDS", "90"))
+VIDEO_ANALYSIS_CONCURRENCY = int(os.environ.get("VIDEO_ANALYSIS_CONCURRENCY", "3"))
+VIDEO_ANALYSIS_PROMPT_VERSION = os.environ.get("VIDEO_ANALYSIS_PROMPT_VERSION", "v1")
+
 
 def edit_progress_channel(job_id: str) -> str:
     return f"edit-progress:{job_id}"

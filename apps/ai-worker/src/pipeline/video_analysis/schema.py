@@ -1,10 +1,10 @@
 """분석 결과 계약 — Structured Outputs 용 JSON Schema + 애플리케이션 검증.
 
 모델이 스키마를 지켰다고 값이 쓸 만하다는 뜻은 아니다(0~1 범위, 목록 길이, 빈 문자열).
-그래서 스키마 강제와 별개로 애플리케이션에서 한 번 더 검증한다 — 계획 문서 §6.
+그래서 스키마 강제와 별개로 애플리케이션에서 한 번 더 검증한다.
 """
 
-from prompt import VISUAL_ISSUE_CODES
+from pipeline.video_analysis.prompt import VISUAL_ISSUE_CODES
 
 SCHEMA_NAME = "snap_analysis"
 
@@ -52,7 +52,7 @@ LIST_FIELDS = ("topics", "places", "objects", "actions", "moods")
 
 
 class ResultSchemaError(ValueError):
-    """모델 출력이 계약을 벗어남 — 1회 재시도 대상(계획 문서 §12.1)."""
+    """모델 출력이 계약을 벗어남 — 재시도 대상으로 분류한다."""
 
 
 def _validate_string_list(field: str, value: object) -> list[str]:

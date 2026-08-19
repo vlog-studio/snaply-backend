@@ -1,10 +1,12 @@
-"""분석 프롬프트 — 버전을 값으로 고정해 리포트에 함께 기록한다.
+"""분석 프롬프트 — 버전을 결과에 함께 기록한다.
 
-프롬프트를 고치면 PROMPT_VERSION 도 올린다. 버전 없이 프롬프트만 바꾸면
-이전 실행의 품질 수치와 비교할 근거가 사라진다.
+프롬프트를 고치면 `VIDEO_ANALYSIS_PROMPT_VERSION` 도 올린다. 버전 없이 프롬프트만 바꾸면
+이미 저장된 결과가 어떤 프롬프트에서 나왔는지 구분할 수 없다.
 """
 
-PROMPT_VERSION = "v1"
+import config
+
+PROMPT_VERSION = config.VIDEO_ANALYSIS_PROMPT_VERSION
 
 # 결과는 추천 입력으로만 쓰고 사용자에게 노출하지 않는다
 # (docs/decisions/snap-content-analysis.md §2). 그래서 "보기 좋은 문장"이 아니라

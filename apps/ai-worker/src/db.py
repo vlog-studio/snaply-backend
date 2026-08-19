@@ -34,6 +34,11 @@ def _pool_or_raise() -> asyncpg.Pool:
     return _pool
 
 
+def pool() -> asyncpg.Pool:
+    """다른 워커 모듈(analysis_db)이 같은 풀을 쓰기 위한 접근자."""
+    return _pool_or_raise()
+
+
 async def fetch_job_context(job_id: str) -> dict | None:
     """edit_jobs에서 결과물 video_id, user_id 조회."""
     async with _pool_or_raise().acquire() as conn:

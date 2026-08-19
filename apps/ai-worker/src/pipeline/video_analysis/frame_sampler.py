@@ -51,7 +51,7 @@ def frame_timestamps_ms(
 ) -> list[int]:
     """실측 길이에 대한 상대 위치를 ms 시점으로. 너무 가까운 시점은 접는다.
 
-    3초 영상이면 300 / 1101 / 1899 / 2700 ms 가 나온다(계획 문서 §7).
+    3초 영상이면 300 / 1101 / 1899 / 2700 ms 가 나온다.
     """
     timestamps: list[int] = []
     for position in positions:
