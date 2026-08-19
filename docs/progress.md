@@ -997,3 +997,45 @@ A-2의 마지막 미결 값이었다. 근거는
 
 **검증**: `npm test -w apps/api` — 16 파일 196 테스트 통과 + tsc + storage 테스트.
 기본값 300 은 이전 항목에서 추가한 `sessionTtlSeconds <= cooldownSeconds` 테스트가 계속 지킨다.
+
+---
+
+## 스냅 내용 분석 — 방향 확정 + 스파이크 하네스 (2026-08-19)
+
+기능 방향과 착수 범위를 정하고, 기준선을 낼 하네스까지 구현했다. 결정과 기각한 대안은
+[decisions/snap-content-analysis.md](./decisions/snap-content-analysis.md).
+
+**확정된 방향**
+- 분석 결과는 **내부 추천 입력 전용** — 사용자에게 요약·태그를 노출하지 않는다
+- 분석은 **추천 요청 시점의 후보 스냅만**. 계획 문서의 "업로드 즉시 전량"을 채택하지 않았다 —
+  버려질 스냅까지 과금되고, 스냅당 단가 실측이 없는 상태에서 비용을 업로드량에 비례시킬 근거가 없다
+- 엔진은 외부 vision API(프레임 4장 단일 요청, 오디오 미전송), 추천 실행은 **비동기 job**
+- 이번 사이클은 **스파이크만** — 스키마·API·큐는 만들지 않았다
+
+**구현 (`apps/ai-worker/scripts/analysis-spike/`)**
+- `frame_sampler.py` — FFprobe 실측 길이 기준 상대 위치(10/36.7/63.3/90%), **한 번의 ffmpeg
+  호출**로 4장 추출, 8x8 평균 해시로 유사 프레임 제거. 계획 문서 §7 그대로
+- `vision_client.py` — 프레임 전체를 한 요청에 시간순으로, `detail=low`, Structured Outputs
+  strict. 오류를 재시도 가능/불가로 분류(`RATE_LIMITED`·`TIMEOUT`·`AUTH_FAILED`·`SAFETY_REFUSED` …)
+- `result_schema.py` — JSON Schema 강제와 별개로 애플리케이션에서 범위·목록 길이·빈 문자열을
+  다시 검증한다. `visualIssues` 는 코드 enum 으로 고정 — 자유 텍스트를 받으면 집계가 불가능하다
+- `report.py` — 모델별 성공률·지연 p50/p95·평균 토큰·스냅당 단가·`usableForEdit` 비율,
+  사람이 채점할 `labels.csv` 생성과 채점 집계
+- **단가가 비어 있으면 비용을 추측하지 않고 `null`** 로 남긴다. 스냅당 단가가 이 스파이크의
+  산출물이라 임의 값을 채우면 결론이 오염된다
+- `OPENAI_API_KEY` 는 셸 환경에서만 읽는다 — `env-spec.ts`·`.env.example` 선언은 본구현 착수와
+  같은 변경에서 한다(아무도 읽지 않는 변수를 원천 문서에 먼저 남기지 않는다)
+
+**검증**
+- `cd apps/ai-worker && python3 -m unittest tests.test_config tests.test_edit_spec
+  tests.test_render_spec tests.test_editor tests.test_analysis_spike` — **64개 통과**
+  (신규 45개). 프레임 시점 계산·유사 프레임 제거·요청 구성·오류 분류·단가 계산·결과 검증·
+  집계·채점을 ffmpeg·SDK 없이 검증한다
+- 오케스트레이션(`run_spike.py`)은 ffmpeg·모델 호출을 스텁으로 바꿔 스모크 확인 — 성공/
+  `RATE_LIMITED`/`SCHEMA_INVALID` 3경로가 각각 행으로 남고, 단가 없는 모델의 비용이 `null` 로
+  집계되며, 요청 하나에 텍스트 1 + 이미지 4가 담기는 것을 확인했다
+- **실제 모델 호출과 ffmpeg 경로는 아직 돌리지 않았다** — 이 개발 머신에 ffmpeg 가 없고
+  평가셋(팀원 폰 촬영 30~100편)과 API 키가 아직 없다. 남은 일은 backlog A-3
+
+**아직 없는 것**: 품질·단가 기준선 숫자. 그것이 나와야 운영 모델 고정과 비용 한도를 정하고
+본구현을 승인할 수 있다.

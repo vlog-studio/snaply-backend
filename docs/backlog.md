@@ -101,11 +101,17 @@ export 예약/환급, 레거시 Stripe·`subscriptions` 제거가 반영됐다
 [plans/video-analysis-implementation-plan.md](./plans/video-analysis-implementation-plan.md)는
 여전히 본구현 제안이며, **분석 시점(§8.2·§16)은 위 결정이 대체한다.**
 
-**막힌 이유**: 본구현 승인의 입력인 품질·단가 실측이 아직 없다.
+**막힌 이유**: 본구현 승인의 입력인 품질·단가 실측이 아직 없다. **하네스는 준비됐다** —
+`apps/ai-worker/scripts/analysis-spike/`([README](../apps/ai-worker/scripts/analysis-spike/README.md),
+단위 테스트 45개 통과). 남은 것은 사람 손이 필요한 세 가지다.
 
-**스파이크 완료 조건**: 팀원 폰 촬영 30~100편(계획안 §14.4 카테고리 커버) 확보 →
-모델 2개 × 프레임 4장·detail low 로 실행 → 요약 사실성·핵심 사물/행동 포함률·환각 비율·
-`usableForEdit` 정확도·스냅당 처리시간·입출력 토큰·**스냅당 단가**·실패율 기준선 기록.
+**스파이크 완료 조건**
+- [ ] 팀원 폰으로 3초 내외 세로 영상 **30~100편** 촬영 (계획안 §14.4 카테고리 커버) → `samples/`
+- [ ] 모델 2개 × 프레임 4장·detail low 실행 (`run_spike.py`). 실행에 필요한 것:
+      셸 환경의 `OPENAI_API_KEY`, `models.json` 에 채운 모델별 단가, PATH 의 ffmpeg
+- [ ] `labels.csv` 채점 후 `score_spike.py` — 요약 사실성·핵심 사물/행동 포함률·환각 비율·
+      `usableForEdit` 정확도. 처리시간·토큰·**스냅당 단가**·실패율은 자동 집계된다
+- [ ] 기준선을 [progress.md](./progress.md)에 기록
 
 **스파이크 후에 결정할 것**: 운영 모델 고정 · 스냅당 단가 상한과 추천 1회당 후보 수 상한 ·
 프레임 수·detail 재탐색 여부 · 본구현 승인과 시점.
