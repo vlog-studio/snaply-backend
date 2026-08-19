@@ -30,6 +30,7 @@
     "db:migrate": "npm run prisma:migrate -w apps/api",
     "db:seed": "npm run seed:locations -w apps/api",
     "db:studio": "npm run prisma:studio -w apps/api",
+    "analysis:run": "node scripts/analysis-run.mjs",
     "media:e2e": "node scripts/media-e2e.mjs",
     "media:cleanup": "node scripts/media-cleanup.mjs"
   },
