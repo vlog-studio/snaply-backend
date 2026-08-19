@@ -34,6 +34,12 @@ apps/ai-worker/assets/bgm/**/*.wav
 apps/ai-worker/assets/bgm/**/*.ogg
 apps/ai-worker/assets/bgm/**/*.flac
 
+# 스냅 내용 분석 스파이크 — 평가 영상·추출 프레임·리포트는 커밋하지 않는다
+# (원본은 팀 촬영분이고 결과 리포트는 재생성 가능하다)
+apps/ai-worker/scripts/analysis-spike/samples/
+apps/ai-worker/scripts/analysis-spike/out/
+apps/ai-worker/scripts/analysis-spike/models.json
+
 # misc
 .DS_Store
 *.log
