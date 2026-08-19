@@ -60,6 +60,14 @@ def build_request(
             }
         },
         "max_output_tokens": max_output_tokens,
+        # Responses API 의 `store` 기본값은 true 다 — 끄지 않으면 우리가 보낸 프레임과 응답이
+        # 30일간 저장되고 제공자 대시보드에 남는다. 남용 모니터링 보관과는 별개의 축이라,
+        # 켜 두면 개인정보처리방침에 보관 축을 하나 더 적어야 한다.
+        #
+        # 끄는 데 따르는 손실은 대시보드 로그뿐이다. 이 파이프라인은 `previous_response_id` 를
+        # 쓰지 않는 단발 호출이고, 품질·단가 기준선은 `video_analyses` 테이블 집계로 낸다
+        # (docs/decisions/snap-content-analysis.md §9.3).
+        "store": False,
     }
 
 

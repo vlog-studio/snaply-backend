@@ -145,6 +145,11 @@ class RequestBuildTest(unittest.TestCase):
         }
         self.assertEqual(types, {"input_text", "input_image"})
 
+    def test_responses_are_not_stored_by_the_provider(self) -> None:
+        # 기본값이 true 라서 명시하지 않으면 프레임이 30일간 제공자 쪽에 남는다.
+        # 개인정보처리방침의 보유 기간 문장이 이 값에 걸려 있다.
+        self.assertIs(self.request["store"], False)
+
     def test_request_without_images_is_rejected(self) -> None:
         with self.assertRaises(ValueError):
             openai_client.build_request([])
