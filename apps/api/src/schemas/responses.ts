@@ -289,6 +289,107 @@ export const EDIT_JOB_SCHEMA = {
   },
 } as const;
 
+const VIDEO_VISUAL_QUALITY_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['score', 'issues', 'usableForEdit'],
+  properties: {
+    score: { type: 'number', minimum: 0, maximum: 1 },
+    issues: { type: 'array', items: { type: 'string' } },
+    usableForEdit: {
+      type: 'boolean',
+      description: '자동 편집 후보로 쓸 수 있는지. 추천이 1차로 보는 값이다.',
+    },
+  },
+} as const;
+
+const VIDEO_ANALYSIS_RESULT_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: [
+    'durationMs',
+    'frameTimestampsMs',
+    'summary',
+    'topics',
+    'places',
+    'objects',
+    'actions',
+    'moods',
+    'visualQuality',
+    'confidence',
+  ],
+  properties: {
+    durationMs: {
+      type: 'integer',
+      nullable: true,
+      description: '워커가 FFprobe 로 실측한 길이. 클라이언트가 보고한 값이 아니다.',
+    },
+    frameTimestampsMs: { type: 'array', items: { type: 'integer' } },
+    summary: { type: 'string' },
+    topics: { type: 'array', items: { type: 'string' } },
+    places: { type: 'array', items: { type: 'string' } },
+    objects: { type: 'array', items: { type: 'string' } },
+    actions: { type: 'array', items: { type: 'string' } },
+    moods: { type: 'array', items: { type: 'string' } },
+    visualQuality: VIDEO_VISUAL_QUALITY_SCHEMA,
+    confidence: { type: 'number', nullable: true, minimum: 0, maximum: 1 },
+  },
+} as const;
+
+export const VIDEO_ANALYSIS_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: [
+    'id',
+    'videoId',
+    'version',
+    'status',
+    'result',
+    'error',
+    'modelVersion',
+    'promptVersion',
+    'attempts',
+    'createdAt',
+    'completedAt',
+  ],
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    videoId: { type: 'string', format: 'uuid' },
+    version: { type: 'integer', minimum: 1 },
+    status: { type: 'string', enum: ['queued', 'processing', 'done', 'failed'] },
+    result: { ...VIDEO_ANALYSIS_RESULT_SCHEMA, nullable: true },
+    error: {
+      type: 'object',
+      nullable: true,
+      additionalProperties: false,
+      required: ['code', 'retryable'],
+      properties: {
+        code: { type: 'string' },
+        retryable: {
+          type: 'boolean',
+          description: 'false 면 다시 요청해도 같은 결과다(손상된 영상·정책 거절 등).',
+        },
+      },
+    },
+    modelVersion: { type: 'string', nullable: true },
+    promptVersion: { type: 'string', nullable: true },
+    attempts: { type: 'integer', minimum: 0 },
+    createdAt: { type: 'string', format: 'date-time' },
+    completedAt: { type: 'string', format: 'date-time', nullable: true },
+  },
+} as const;
+
+export const ANALYSIS_QUEUED_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['analysisId', 'version', 'status'],
+  properties: {
+    analysisId: { type: 'string', format: 'uuid' },
+    version: { type: 'integer', minimum: 1 },
+    status: { type: 'string', enum: ['queued', 'processing', 'done'] },
+  },
+} as const;
+
 export const NEARBY_LOCATION_SCHEMA = {
   type: 'object',
   additionalProperties: false,

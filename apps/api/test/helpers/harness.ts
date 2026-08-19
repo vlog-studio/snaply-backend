@@ -14,6 +14,7 @@ import { loadConfig } from '../../src/config.js';
 import { buildApp } from '../../src/app.js';
 import { getPrisma, disconnectPrisma } from '../../src/db/client.js';
 import { closeEditQueue } from '../../src/queue/edit-queue.js';
+import { closeVideoAnalysisQueue } from '../../src/queue/video-analysis-queue.js';
 import { disconnectRedis } from '../../src/lib/redis.js';
 
 export interface TestUser {
@@ -68,6 +69,7 @@ const TABLES = [
   'ad_rewards',
   'purchases',
   'edit_jobs',
+  'video_analyses',
   'videos',
   'users',
   'locations',
@@ -141,6 +143,7 @@ export async function createHarness(env: Record<string, string> = {}): Promise<H
     try {
       await app.close();
       await closeEditQueue();
+      await closeVideoAnalysisQueue();
       await disconnectRedis();
       await disconnectPrisma();
       await stub.close();

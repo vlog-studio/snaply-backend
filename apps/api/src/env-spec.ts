@@ -177,6 +177,52 @@ export const ENV_VARS = [
     origin: 'shared',
     description: '편집 큐 이름. 기본 edit-jobs. API 와 워커가 일치해야 한다',
   },
+  {
+    key: 'VIDEO_ANALYSIS_QUEUE_NAME',
+    required: false,
+    origin: 'shared',
+    description: '스냅 분석 큐 이름. 기본 video-analysis. API 와 분석 워커가 일치해야 한다',
+  },
+
+  // ── 스냅 내용 분석 (분석 워커 전용) ──────────────────
+  // API 서버는 큐 이름만 읽는다. 아래 값들은 apps/ai-worker 의 analysis_worker.py 가 소비한다.
+  {
+    key: 'OPENAI_API_KEY',
+    required: false,
+    origin: 'shared',
+    description:
+      'vision 분석 키. 분석 워커만 소비하며 API 서버는 읽지 않는다. 없으면 분석 워커가 기동 단계에서 실패한다',
+  },
+  {
+    key: 'OPENAI_VISION_MODEL',
+    required: false,
+    origin: 'shared',
+    description: '분석에 사용할 vision 모델. 기본 gpt-5.6-luna',
+  },
+  {
+    key: 'OPENAI_IMAGE_DETAIL',
+    required: false,
+    origin: 'shared',
+    description: '프레임 업로드 해상도 모드. 기본 low (스냅 4장 기준 토큰을 낮게 유지)',
+  },
+  {
+    key: 'VIDEO_ANALYSIS_TIMEOUT_SECONDS',
+    required: false,
+    origin: 'shared',
+    description: '분석 1건의 타임아웃. 기본 90',
+  },
+  {
+    key: 'VIDEO_ANALYSIS_CONCURRENCY',
+    required: false,
+    origin: 'shared',
+    description: '분석 워커가 동시에 처리하는 작업 수. 기본 3',
+  },
+  {
+    key: 'VIDEO_ANALYSIS_PROMPT_VERSION',
+    required: false,
+    origin: 'shared',
+    description: '결과에 기록되는 프롬프트 버전 태그. 기본 v1. 프롬프트를 바꾸면 올린다',
+  },
 
   // ── 결제 (RevenueCat + Apple/Google IAP) ─────────────
   {
