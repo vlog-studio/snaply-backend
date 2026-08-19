@@ -120,6 +120,64 @@ export interface EditJob {
   createdAt: string;
 }
 
+export type VideoAnalysisStatus = 'queued' | 'processing' | 'done' | 'failed';
+
+/**
+ * 분석 실패 분류. `retryable` 이 true 인 코드만 재요청에 의미가 있다.
+ * 워커의 `pipeline/video_analysis/errors.py` 와 같은 목록을 유지한다.
+ */
+export type VideoAnalysisErrorCode =
+  | 'TIMEOUT'
+  | 'RATE_LIMITED'
+  | 'UPSTREAM_ERROR'
+  | 'NETWORK'
+  | 'SCHEMA_INVALID'
+  | 'AUTH_FAILED'
+  | 'BAD_REQUEST'
+  | 'MODEL_NOT_FOUND'
+  | 'SAFETY_REFUSED'
+  | 'EMPTY_OUTPUT'
+  | 'SOURCE_UNAVAILABLE'
+  | 'FRAME_EXTRACTION_FAILED'
+  | 'INTERNAL';
+
+/** 자동 편집 후보로 쓸 수 있는지의 판단. 오디오는 반영하지 않는다. */
+export interface VideoVisualQuality {
+  score: number;
+  issues: string[];
+  usableForEdit: boolean;
+}
+
+export interface VideoAnalysisResult {
+  /** 워커가 FFprobe 로 실측한 길이. 클라이언트가 보고한 값이 아니다. */
+  durationMs: number | null;
+  frameTimestampsMs: number[];
+  summary: string;
+  topics: string[];
+  places: string[];
+  objects: string[];
+  actions: string[];
+  moods: string[];
+  visualQuality: VideoVisualQuality;
+  confidence: number | null;
+}
+
+export interface VideoAnalysis {
+  id: string;
+  videoId: string;
+  version: number;
+  status: VideoAnalysisStatus;
+  /** status 가 'done' 일 때만 채워진다. */
+  result: VideoAnalysisResult | null;
+  error: { code: VideoAnalysisErrorCode; retryable: boolean } | null;
+  /** 어떤 모델·프롬프트로 얻은 결과인지. 완료 전에는 null. */
+  modelVersion: string | null;
+  promptVersion: string | null;
+  attempts: number;
+  createdAt: string;
+  completedAt: string | null;
+}
+
 export interface EditProgressEvent {
   progress: number;
   step: string;
