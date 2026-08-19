@@ -1039,3 +1039,70 @@ A-2의 마지막 미결 값이었다. 근거는
 
 **아직 없는 것**: 품질·단가 기준선 숫자. 그것이 나와야 운영 모델 고정과 비용 한도를 정하고
 본구현을 승인할 수 있다.
+
+> **같은 날 후속**: 스파이크를 실행하지 않고 본구현으로 진행했다. 이 하네스의 모듈은
+> `apps/ai-worker/src/pipeline/video_analysis/` 로 옮겨졌고 스파이크 디렉터리는 제거됐다 —
+> 아래 "스냅 내용 분석 본구현" 항목.
+
+---
+
+## 스냅 내용 분석 본구현 — 스키마·API·분석 워커·docker (2026-08-19)
+
+`POST /videos/:videoId/analysis` 로 요청하면 분석 워커가 스냅의 대표 프레임을 vision 모델에
+보내고, 결과가 `video_analyses` 에 남는다. 방향과 계획 대비 차이는
+[decisions/snap-content-analysis.md](./decisions/snap-content-analysis.md) §9.
+
+**DB** — `video_analyses` (마이그레이션 `20260819000000_add_video_analyses`)
+- `(video_id, analysis_version)` unique 가 **버전당 1행**을 보장한다. 같은 스냅이 두 번
+  분석되지 않는 것은 성능이 아니라 **과금** 문제다
+- 결과 컬럼 외에 `model_version`·`prompt_version`·`input_tokens`·`output_tokens`·`attempts`·
+  `error_code` 를 남긴다 — 기준선(처리시간·토큰·실패율)을 이 테이블 집계로 낸다
+- `videos.status` 와 분리했다. 분석이 실패해도 원본은 `ready` 를 유지한다
+- RLS 는 **select 만** 본인 것으로 허용한다. 생성·갱신은 service_role(API·워커)뿐
+
+**API** — 라우트 2개, 재시도 전용 엔드포인트는 만들지 않았다
+- `POST /videos/:videoId/analysis` → 202. 멱등: 진행 중이면 같은 `analysisId`,
+  재시도 가능한 실패는 같은 행을 `queued` 로 되돌림, `done` 은 그대로,
+  되돌릴 수 없는 실패는 **409**
+- `GET /videos/:videoId/analysis` → 최신 버전 1건. 실패도 200 + `{ code, retryable }`,
+  모델 원문 메시지는 노출하지 않는다
+- 큐 적재 실패는 레코드를 `failed` 로 만들지 않고 `queued` 로 남긴 뒤 503 — 다음 요청이 다시 넣는다
+- 기존 `Video` 응답에는 필드를 추가하지 않았다(테스트로 고정)
+
+**워커** — `analysis_worker.py` (편집 워커와 별도 프로세스, 같은 이미지)
+- `OPENAI_API_KEY` 가 없으면 **기동 단계에서 종료**한다. 작업을 받아놓고 전부 실패시키는
+  것보다 낫다
+- 프레임: FFprobe 실측 길이의 10/36.7/63.3/90% 시점을 **한 번의 ffmpeg 호출**로 뽑고,
+  8x8 평균 해시로 유사 프레임을 제거한다. 실제 사용 장수는 `frame_timestamps_ms` 에 남는다
+- 결과 반영은 `status='processing' AND videos.deleted_at IS NULL` 조건부 UPDATE 다.
+  분석 중 영상이 삭제되면 모델 응답을 버린다
+- 같은 트랜잭션에서 `videos.duration_seconds` 를 실측값으로 교정한다
+- 재시도 가능한 실패만 다시 던져 BullMQ 백오프를 태운다. `AUTH_FAILED`·`SAFETY_REFUSED`·
+  `FRAME_EXTRACTION_FAILED` 등은 기록만 하고 재시도하지 않는다
+- `visualIssues` 는 코드 enum 으로 고정 — 자유 텍스트를 받으면 "왜 못 쓰는 스냅인가"를 집계할 수 없다
+
+**docker** — `analysis-worker` 서비스 추가 (`docker-compose.yml`).
+편집 워커와 같은 이미지에 `command: python analysis_worker.py`. `openai==1.68.2` 를
+워커 requirements 에 고정했다.
+
+**검증**
+- `npm test -w apps/api` — 17 파일 **216 테스트 통과**(신규 `video-analysis.test.ts` 18개) + tsc + storage 테스트
+- `cd apps/ai-worker && python3 -m unittest tests.test_video_analysis` — **38개 통과**
+  (프레임 시점·유사 프레임 제거·요청 구성·오류 분류·결과 검증·analyze 오케스트레이션).
+  ffmpeg·openai SDK 없이 돈다
+- **docker 스택 실검증** (`docker compose up -d --build`):
+  - 마이그레이션 적용 확인, `GET /health` 200
+  - `OPENAI_API_KEY` 없이 뜬 `analysis-worker` 가 의도대로 기동 단계에서 종료
+  - 더미 키로 기동 → 큐 구독 → 실제 mp4(MinIO)를 내려받아 ffprobe·프레임 추출까지 수행 →
+    모델 호출에서 `AUTH_FAILED`(재시도 불가)로 분류 → DB 에
+    `status=failed, error_code=AUTH_FAILED, attempts=1`, **원본 영상은 `ready` 유지**
+  - 모델 응답만 스텁으로 바꾼 완료 경로: `status=done` 과 결과 전 컬럼·토큰(812/96)·
+    `model_version`·`prompt_version` 기록, `videos.duration_seconds` 가 잘못된 값 99 →
+    실측 3 으로 교정, 완료된 분석 재실행은 **모델 호출 0회로 skip**
+  - 검증용으로 만든 행·MinIO 객체는 정리했다
+- **실제 모델 응답으로 끝까지 돌린 적은 없다** — 유효한 `OPENAI_API_KEY` 가 필요하다.
+  남은 작업은 [backlog.md](./backlog.md) A-3
+
+**아직 켜지 않는 이유**: 생산 스냅의 프레임이 외부로 나가므로 약관 개정·제3자 제공 고지가
+선행이고, 운영 모델과 단가 상한이 정해지지 않았다. 분석은 호출하지 않으면 돌지 않으므로
+배포 자체는 안전하다(자동 적재 경로가 없다).

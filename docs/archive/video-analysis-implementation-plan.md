@@ -1,14 +1,18 @@
-# 영상 분석 및 자동 편집 추천 기반 구현 계획
+# 영상 분석 및 자동 편집 추천 기반 구현 계획 (구현됨·보관)
 
-> **착수 전 계획 문서 — 아직 승인·구현되지 않았다.** 이 문서의 API·스키마는 제안이며 현행 사실이 아니다.
-> 진행 승인 여부는 [backlog.md](../backlog.md) A-3, 현행 API 계약은 [api-spec.md](../api-spec.md).
+> ✅ **2026-08-19 구현 완료로 보관됐다.** 이 문서는 착수 전 제안이며 **현행 사실이 아니다** —
+> 판단 근거로 인용하지 말 것.
 >
-> **2026-08-19 — 이 문서와 어긋나는 결정이 있다**:
-> [decisions/snap-content-analysis.md](../decisions/snap-content-analysis.md).
-> 분석은 업로드 시 전량이 아니라 **추천 요청 시점의 후보 스냅만** 수행하므로
-> §8.2(`POST /videos` 자동 적재)·§10의 `VIDEO_ANALYSIS_AUTO_ENQUEUE` 의미·§16의 배포 순서는
-> 그 결정 문서가 대체한다. 결과는 **내부 추천 입력 전용**이며 사용자에게 노출하지 않는다.
-> 이번 사이클 범위는 **스파이크뿐**이다 — §5·§8·§9의 스키마·API·워커는 본구현 단계 제안이다.
+> 현행 원천:
+> - 정책·범위: [decisions/snap-content-analysis.md](../decisions/snap-content-analysis.md)
+> - API 계약: `/docs`(Swagger) + [api-spec.md](../api-spec.md)
+> - 스키마: `apps/api/prisma/schema.prisma` (`VideoAnalysis`)
+> - 파이프라인: `apps/ai-worker/src/pipeline/video_analysis/`, `analysis_worker.py`
+> - 구현·검증 내역: [progress.md](../progress.md) 2026-08-19
+> - 남은 작업: [backlog.md](../backlog.md) A-3
+>
+> 실제 구현이 이 제안과 다른 지점(분석 시점, 재시도 API, `Video.durationMs`, 오디오 범위 등)은
+> 결정 문서 §9에 정리돼 있다. §17(후속 자동 영상 선택)은 아직 구현되지 않은 방향 제안이다.
 
 ## 1. 목적
 

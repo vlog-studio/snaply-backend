@@ -29,6 +29,7 @@ API 명세는 [docs/api-spec.md](./docs/api-spec.md).
 ```
 apps/api/          Fastify + TypeScript API 서버 (:3000)
 apps/ai-worker/    Python 워커 — BullMQ 큐 구독, FFmpeg/faster-whisper (HTTP 포트 없음)
+                   편집 워커(worker.py)와 스냅 분석 워커(analysis_worker.py) 두 프로세스
 packages/shared-types/  FE와 공유하는 API 타입
 
 인프라: Supabase(DB+Auth) · MinIO(S3 호환, :9100) · Redis(:6379)
@@ -109,6 +110,15 @@ brew install ffmpeg
 npm run worker:install                   # python3.11 venv + requirements
 npm run worker                           # edit-jobs 큐 구독 시작
 ```
+스냅 내용 분석 워커는 **별도 프로세스**다(같은 venv, 다른 큐).
+```bash
+export OPENAI_API_KEY=sk-...             # 없으면 기동 단계에서 종료된다
+npm run worker:analysis                  # video-analysis 큐 구독 시작
+```
+> 분석은 `POST /videos/:videoId/analysis` 를 호출할 때만 돈다 — 업로드 시 자동 분석은 없다
+> ([decisions/snap-content-analysis.md](docs/decisions/snap-content-analysis.md)).
+> 편집 워커와 분리한 이유는 Whisper 를 안고 있는 프로세스와 모델 호출 대기가 대부분인
+> 프로세스의 동시성·재배포를 따로 두기 위해서다.
 > 워커는 `apps/api/.env` 를 그대로 읽는다 — 사본을 만들지 않는다.
 > 워커만 다른 값을 써야 할 때만 `apps/ai-worker/.env` 를 두면 그쪽이 우선한다.
 > 워커의 `DATABASE_URL`은 asyncpg 호환을 위해 **DIRECT_URL(세션 풀러, 5432)** 값이어야 한다.
@@ -125,7 +135,8 @@ npm run worker                           # edit-jobs 큐 구독 시작
 | `npm run stack` / `stack:down` | 전체 컨테이너 스택 빌드·migration·기동 / 중지 |
 | `npm run stack:up` / `stack:migrate` | API만 기동 / migration 수동 재실행 |
 | `npm run dev:api` | API 서버(watch) |
-| `npm run worker` | AI 워커 |
+| `npm run worker` | AI 편집 워커 (`edit-jobs` 큐) |
+| `npm run worker:analysis` | 스냅 분석 워커 (`video-analysis` 큐, `OPENAI_API_KEY` 필요) |
 | `npm run build` / `typecheck` / `lint` | 전체 빌드/검사 |
 | `npm run db:migrate` / `db:seed` / `db:studio` | 마이그레이션 / 시드 / Prisma Studio |
 | `npm test -w apps/api` | 통합 테스트 (실제 Postgres/Redis/MinIO 사용, `snaply_test` DB 자동 생성) |

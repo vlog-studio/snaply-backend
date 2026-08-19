@@ -74,6 +74,7 @@ npm run dev:api                 # http://localhost:3000 · /docs
 
 RLS 정책은 최초 1회 `apps/api/prisma/rls-policies.sql`을 Supabase SQL Editor에서 실행한다.
 AI 워커(미디어 트랙)는 `npm run worker:install` 후 `npm run worker`.
+스냅 분석 워커는 같은 venv 에서 `npm run worker:analysis` — `OPENAI_API_KEY` 가 없으면 기동 단계에서 종료된다.
 
 ## 스크립트 (루트)
 

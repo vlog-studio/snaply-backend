@@ -91,34 +91,32 @@ export 예약/환급, 레거시 Stripe·`subscriptions` 제거가 반영됐다
 등록 + RevenueCat 프로젝트·웹훅 URL 연결 → 구독 entitlement 반영과 한도 집행(유예 → 읽기 전용
 전이 포함) → 결제·편집 e2e 실검증.
 
-### A-3. 스냅 내용 분석 — 스파이크 진행 중, 본구현 미승인
+### A-3. 스냅 내용 분석 — 구현 완료, 생산 활성화 대기
 
-**2026-08-19 확정**: 방향과 착수 범위가 결정됐다 —
-[decisions/snap-content-analysis.md](./decisions/snap-content-analysis.md).
-결과는 **내부 추천 입력 전용**, 분석은 **추천 요청 시점의 후보 스냅만**(업로드 시 전량 분석
-안 함), 엔진은 **외부 vision API**(프레임 4장 단일 요청), 추천은 **비동기 job**.
-이번 사이클은 **스파이크만** 하고 스키마·API·큐는 만들지 않는다.
-[plans/video-analysis-implementation-plan.md](./plans/video-analysis-implementation-plan.md)는
-여전히 본구현 제안이며, **분석 시점(§8.2·§16)은 위 결정이 대체한다.**
+**2026-08-19 구현 완료**: 스키마·API·분석 워커·docker 배선이 들어갔다. 검증 내역은
+[progress.md](./progress.md), 방향과 계획 대비 차이는
+[decisions/snap-content-analysis.md](./decisions/snap-content-analysis.md) (§9).
+착수 전 계획 문서는 [archive/](./archive/video-analysis-implementation-plan.md)로 옮겼다.
 
-**막힌 이유**: 본구현 승인의 입력인 품질·단가 실측이 아직 없다. **하네스는 준비됐다** —
-`apps/ai-worker/scripts/analysis-spike/`([README](../apps/ai-worker/scripts/analysis-spike/README.md),
-단위 테스트 45개 통과). 남은 것은 사람 손이 필요한 세 가지다.
+분석은 `POST /videos/:videoId/analysis` 로만 시작된다 — **업로드 시 자동 분석은 없다.**
 
-**스파이크 완료 조건**
-- [ ] 팀원 폰으로 3초 내외 세로 영상 **30~100편** 촬영 (계획안 §14.4 카테고리 커버) → `samples/`
-- [ ] 모델 2개 × 프레임 4장·detail low 실행 (`run_spike.py`). 실행에 필요한 것:
-      셸 환경의 `OPENAI_API_KEY`, `models.json` 에 채운 모델별 단가, PATH 의 ffmpeg
-- [ ] `labels.csv` 채점 후 `score_spike.py` — 요약 사실성·핵심 사물/행동 포함률·환각 비율·
-      `usableForEdit` 정확도. 처리시간·토큰·**스냅당 단가**·실패율은 자동 집계된다
-- [ ] 기준선을 [progress.md](./progress.md)에 기록
+**막힌 이유**: 생산 스냅에 켤 수 없다. 아래 세 가지가 남았다.
 
-**스파이크 후에 결정할 것**: 운영 모델 고정 · 스냅당 단가 상한과 추천 1회당 후보 수 상한 ·
-프레임 수·detail 재탐색 여부 · 본구현 승인과 시점.
+- [ ] **약관 개정·제3자 제공 고지** — 사용자 프레임이 외부 모델 제공자로 나가는 처리다.
+      이것 없이 생산 스냅에 켜지 않는다 (결정 문서 §6)
+- [ ] **운영 모델 고정** — `OPENAI_VISION_MODEL` 기본값 `gpt-5.6-luna` 는 잠정값이다.
+      실제 스냅으로 모델을 비교해 고정한다
+- [ ] **품질·단가 기준선** — 요약 사실성·핵심 사물/행동 포함률·환각 비율·`usableForEdit`
+      정확도는 사람이 채점해야 한다. 처리시간·토큰·실패율·모델별 비교는 `video_analyses`
+      테이블 집계로 나온다 (결정 문서 §9.3)
 
-**본구현의 선행 조건**: ① A-1(`Movie` 구조) 남은 정책 확정 — 추천 job의 트리거가 무비 생성
-흐름에 붙는다 ② 생산 스냅에 켜기 전 **약관 개정·제3자 제공 고지** (사용자 프레임이 외부 모델
-제공자로 나가는 처리다. 스파이크는 팀 촬영분만 쓰므로 해당 없음).
+**기준선이 나오면 정할 것**: 스냅당 단가 상한 · 추천 1회당 후보 수 상한 ·
+프레임 수(현재 최대 4)·`OPENAI_IMAGE_DETAIL`(현재 low) 재탐색 여부 ·
+유사 프레임 제거 임계값(`DUPLICATE_HAMMING_THRESHOLD`) 적정성 — 실제 스냅에서 4장이
+2장으로 줄어드는 비율을 `frame_timestamps_ms` 로 확인한다.
+
+**후속 기능(별도 항목으로 열 것)**: 대주제 기반 자동 스냅 선택. `usableForEdit=true` 인
+분석 결과를 점수화해 `ClipSpec[]` 을 만드는 경로이며, 무비 생성 흐름에 붙으므로 A-1 확정이 먼저다.
 
 ### A-4. 스냅 서버 원천 전환의 미결 항목
 

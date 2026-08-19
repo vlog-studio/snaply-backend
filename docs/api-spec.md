@@ -88,6 +88,71 @@ Query: `kind`(`source | result`, 선택), `cursor`(선택), `limit`(기본 20, �
 
 ---
 
+## 스냅 내용 분석
+
+업로드된 source 스냅의 대표 프레임을 AI 워커가 분석해 주제·장소·사물·행동·분위기와 **편집 사용
+가능 여부**를 남긴다. 결과는 **자동 편집 추천의 입력**이며 사용자에게 보여주기 위한 문구가 아니다.
+정책: [decisions/snap-content-analysis.md](./decisions/snap-content-analysis.md)
+
+**업로드 시 자동으로 분석하지 않는다.** 편집에 쓸 후보가 정해진 시점에 앱(또는 이후의 추천 경로)이
+분석을 요청한다. 스냅은 대량으로 올라오고 실제 편집에 쓰이는 것은 일부라, 업로드마다 분석하면
+버려질 스냅까지 과금된다.
+
+### POST /videos/:videoId/analysis  🔒
+분석 요청. **비동기** — `202` + `{ analysisId, version, status }` 만 돌려주고 실제 분석은 분석
+워커가 큐에서 꺼내 처리한다. 상태는 아래 조회 API 로 폴링한다.
+
+**멱등하다.** 같은 영상에 여러 번 호출해도 분석은 버전당 한 번만 돈다.
+- 진행 중(`queued`/`processing`) → 같은 `analysisId` 를 그대로 반환
+- `failed` 이고 `error.retryable: true` → 같은 레코드를 `queued` 로 되돌려 재시도 (**별도 retry API 는 없다**)
+- `done` → 다시 돌리지 않고 그대로 반환
+- `failed` 이고 재시도 무의미(손상된 영상·정책 거절) → **409**
+
+에러: 업로드 미확정(`status != ready`) 400 · 타 유저·`kind=result`·없는 영상 404 ·
+되돌릴 수 없는 실패 409 · 큐 접근 불가 503(`QUEUE_UNAVAILABLE`, 잠시 후 재요청)
+
+### GET /videos/:videoId/analysis  🔒
+최신 버전 분석 1건. 분석을 요청한 적이 없으면 404.
+
+```json
+{ "success": true, "data": {
+  "id": "uuid", "videoId": "uuid", "version": 1, "status": "done",
+  "result": {
+    "durationMs": 3012, "frameTimestampsMs": [301, 1105, 1907, 2711],
+    "summary": "카페에서 디저트와 커피를 촬영한 영상",
+    "topics": ["카페", "디저트"], "places": ["카페"],
+    "objects": ["케이크", "커피"], "actions": ["디저트를 가까이 보여줌"],
+    "moods": ["차분한"],
+    "visualQuality": { "score": 0.86, "issues": [], "usableForEdit": true },
+    "confidence": 0.91
+  },
+  "error": null,
+  "modelVersion": "gpt-5.6-luna", "promptVersion": "v1", "attempts": 1,
+  "createdAt": "2026-08-19T02:00:00.000Z", "completedAt": "2026-08-19T02:00:04.000Z"
+}}
+```
+
+`status`: `queued | processing | done | failed`
+- `result` 는 `done` 일 때만 채워진다. 그 전에는 `null`
+- `error` 는 `failed` 일 때만 채워진다: `{ code, retryable }`.
+  모델의 원문 오류 메시지는 노출하지 않는다
+- `error.code`: `TIMEOUT | RATE_LIMITED | UPSTREAM_ERROR | NETWORK | SCHEMA_INVALID |
+  AUTH_FAILED | BAD_REQUEST | MODEL_NOT_FOUND | SAFETY_REFUSED | EMPTY_OUTPUT |
+  SOURCE_UNAVAILABLE | FRAME_EXTRACTION_FAILED | INTERNAL`
+- `error.retryable: false` 면 다시 요청해도 같은 결과다 (요청 시 409)
+- `durationMs` 는 워커가 FFprobe 로 **실측한** 길이다. 클라이언트가 보고한
+  `Video.durationSeconds` 도 이 값으로 교정된다
+- `frameTimestampsMs` 는 실제로 모델에 보낸 프레임 시점이다. 거의 같은 화면은 제거하므로
+  최대 4장보다 적을 수 있다
+- `visualQuality.usableForEdit` 가 추천이 1차로 보는 값이다.
+  `issues` 는 고정 코드: `shaky | blurry | out_of_focus | too_dark | overexposed |
+  black_frame | obstructed | subject_unclear | repetitive_frames`
+
+**분석 실패는 원본 영상에 영향을 주지 않는다** — `Video.status` 는 `ready` 로 남고,
+조회 자체는 성공이므로 HTTP 200 이다. 기존 `Video` 응답에는 분석 관련 필드가 추가되지 않았다.
+
+---
+
 ## AI 편집
 
 ### POST /edit-jobs  🔒  (5req/분)

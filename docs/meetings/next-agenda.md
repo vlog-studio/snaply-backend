@@ -8,7 +8,7 @@
 > [plan-limits.md](../decisions/plan-limits.md) ·
 > [credit-payment-model.md](../decisions/credit-payment-model.md) ·
 > [snap-source-of-truth.md](../decisions/snap-source-of-truth.md)
-> **관련 제안**: [video-analysis-implementation-plan.md](../plans/video-analysis-implementation-plan.md)
+> **관련 제안**: [video-analysis-implementation-plan.md](../archive/video-analysis-implementation-plan.md)
 
 회의 날짜가 확정되기 전까지 이 파일은 `next-agenda.md`로 둔다. 회의가 끝나면 확정 내용을
 반영하고 `YYYY-MM-DD-<주제>.md`로 이름을 바꿔 회의록으로 보관한다. 다음 회의가 필요하면
@@ -278,7 +278,7 @@ B를 선택한 경우 폐기 판단 조건:
 - 초기 제안은 Responses API, `gpt-5.6-luna`, image detail `low`, reasoning `none`이다.
 - 모델·detail·timeout·동시성은 환경변수로 관리하고 평가 후 버전을 고정한다.
 
-근거: [video-analysis-implementation-plan.md](../plans/video-analysis-implementation-plan.md)
+근거: [video-analysis-implementation-plan.md](../archive/video-analysis-implementation-plan.md)
 공식 자료 확인일: 2026-08-12 —
 [OpenAI 모델](https://developers.openai.com/api/docs/models) ·
 [모델 비교와 가격](https://developers.openai.com/api/docs/models/compare) ·
