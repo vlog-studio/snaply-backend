@@ -13,10 +13,13 @@
  *   node scripts/analysis-run.mjs --list           # 최근 스냅 10건과 분석 상태만 보고 종료
  *   node scripts/analysis-run.mjs --show           # 요청하지 않고 현재 결과만 출력
  *   node scripts/analysis-run.mjs --reset          # 막힌 실패 행을 지우고 다시 요청
- *   node scripts/analysis-run.mjs --redis redis://localhost:6380   # 워커가 컨테이너 스택일 때
+ *   node scripts/analysis-run.mjs --redis redis://localhost:6380   # 워커가 로컬 컨테이너 스택일 때
+ *   node scripts/analysis-run.mjs --host 192.168.0.58              # 원격 배포 기기의 스택 전체
  *
- * 주의: 워커를 `npm run stack` 으로 띄웠다면 큐는 스택 Redis(호스트 6380)다. `.env` 의
- * REDIS_URL(개발 인프라 6379)로 넣으면 아무도 그 작업을 가져가지 않는다 — --redis 로 맞춘다.
+ * 주의: **DB 와 큐가 같은 스택을 가리켜야 한다.** 워커를 `npm run stack` 으로 띄웠다면 큐는
+ * 스택 Redis(호스트 6380)이고 DB 도 스택 Postgres(호스트 5433)다. `.env` 의 값(개발 인프라)을
+ * 그대로 쓰면 분석 행은 이쪽 DB 에 생기고 작업은 저쪽 워커가 가져가 서로 못 찾는다.
+ * `--host` 는 그 짝을 한 번에 맞춘다 — docker-compose.yml 이 게시하는 포트(5433/6380) 기준.
  */
 import { readFile } from 'node:fs/promises';
 import { setTimeout as sleep } from 'node:timers/promises';
@@ -39,7 +42,17 @@ for (const line of raw.split('\n')) {
   process.env[m[1]] = v;
 }
 
-const REDIS_URL = value('--redis', process.env.REDIS_URL ?? 'redis://localhost:6379');
+// --host 는 docker-compose.yml 이 호스트에 게시하는 포트로 DB·큐 주소를 한 번에 만든다.
+// 계정이 compose 에 고정돼 있어(postgres/postgres) 파생이 안전하다. 다르면 개별 옵션으로 덮는다.
+const STACK_HOST = value('--host', null);
+const DATABASE_URL = value(
+  '--database-url',
+  STACK_HOST ? `postgresql://postgres:postgres@${STACK_HOST}:5433/snaply` : process.env.DATABASE_URL,
+);
+const REDIS_URL = value(
+  '--redis',
+  STACK_HOST ? `redis://${STACK_HOST}:6380` : (process.env.REDIS_URL ?? 'redis://localhost:6379'),
+);
 const QUEUE_NAME = process.env.VIDEO_ANALYSIS_QUEUE_NAME ?? 'video-analysis';
 const TIMEOUT_MS = Number(value('--timeout', '120')) * 1000;
 const ANALYSIS_VERSION = 1;
@@ -53,7 +66,14 @@ const { PrismaClient } = await import(
   new URL('../node_modules/@prisma/client/default.js', import.meta.url).href
 );
 const { Queue } = await import('bullmq');
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({ datasourceUrl: DATABASE_URL });
+
+/** 비밀번호를 가린 접속 주소. 어디를 보고 있는지 매번 찍는다 — 짝이 어긋나면 여기서 보인다. */
+function safeUrl(url) {
+  return String(url ?? '(미설정)').replace(/\/\/([^:]+):[^@]*@/, '//$1:***@');
+}
+console.log(`DB  ${safeUrl(DATABASE_URL)}`);
+console.log(`큐  ${QUEUE_NAME} @ ${safeUrl(REDIS_URL)}`);
 
 function line(label, text) {
   console.log(`  ${label.padEnd(10)}${text}`);
@@ -219,14 +239,33 @@ async function main() {
     });
   }
 
-  const queue = new Queue(QUEUE_NAME, { connection: { url: REDIS_URL } });
+  const queue = new Queue(QUEUE_NAME, {
+    // 원격 스택을 겨냥할 때 주소가 틀리면 ioredis 가 조용히 무한 재시도한다 — 몇 초 만에 포기시킨다.
+    connection: {
+      url: REDIS_URL,
+      connectTimeout: 5000,
+      maxRetriesPerRequest: 3,
+      retryStrategy: (times) => (times > 3 ? null : 200),
+    },
+  });
+  // ioredis 가 재시도마다 스택을 찍는다. 연결 실패는 아래에서 한 줄로 보고하므로 기본 출력을 끈다.
+  queue.on('error', () => {});
   try {
+    try {
+      await queue.waitUntilReady();
+    } catch (err) {
+      console.error(`\nRedis 에 접속할 수 없습니다: ${safeUrl(REDIS_URL)}`);
+      console.error(`  ${err.message}`);
+      console.error('  → 스택이 그 주소에 떠 있는지, 6380 포트가 게시·개방돼 있는지 확인하세요.');
+      process.exitCode = 1;
+      return;
+    }
     // 워커가 없으면 작업은 큐에 쌓이기만 한다 — 폴링으로 기다리기 전에 알려준다.
     const workers = await queue.getWorkers().catch(() => []);
-    console.log(`큐 ${QUEUE_NAME} @ ${REDIS_URL} · 연결된 워커 ${workers.length}개`);
+    console.log(`연결된 분석 워커: ${workers.length}개`);
     if (workers.length === 0) {
-      console.log('⚠ 이 Redis 에 분석 워커가 없습니다. 워커를 띄우거나 --redis 로 주소를 맞추세요.');
-      console.log('  스택으로 띄웠다면: --redis redis://localhost:6380');
+      console.log('⚠ 이 Redis 에 분석 워커가 없습니다. 작업이 쌓이기만 합니다.');
+      console.log('  로컬 스택: --redis redis://localhost:6380 / 원격 스택: --host <ip>');
     }
     await queue.add(
       'analyze',
@@ -271,6 +310,17 @@ async function main() {
 
 try {
   await main();
+} catch (err) {
+  // Prisma 초기화 오류는 번들 전체를 토해낸다. 원격 주소 오타에서 가장 흔한 실패라 짧게 줄인다.
+  const unreachable =
+    err?.name === 'PrismaClientInitializationError' ||
+    /Can't reach database server/.test(err?.message ?? '');
+  if (!unreachable) throw err;
+  console.error(`\nDB 에 접속할 수 없습니다: ${safeUrl(DATABASE_URL)}`);
+  console.error('  → 스택이 그 주소에 떠 있는지, 5433 포트가 게시·개방돼 있는지 확인하세요.');
+  console.error('     원격 기기라면 방화벽과 compose 의 포트 게시(5433:5432)를 함께 봅니다.');
+  console.error('     계정·DB 이름이 compose 기본값과 다르면 --database-url 로 직접 지정하세요.');
+  process.exitCode = 1;
 } finally {
   await prisma.$disconnect();
 }
