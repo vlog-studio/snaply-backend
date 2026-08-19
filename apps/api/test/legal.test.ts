@@ -77,6 +77,18 @@ describe('공개 페이지', () => {
     expect(res.body.match(/OpenAI/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
   });
 
+  it('국외에 있는 수탁자를 이전 표에서 빠뜨리지 않는다', async () => {
+    const res = await h.app.inject({ method: 'GET', url: '/legal/privacy' });
+    const transfer = res.body.slice(res.body.indexOf('개인정보의 국외 이전'));
+
+    // 위탁 표와 이전 표가 갈라지는 것이 이 문서에서 가장 생기기 쉬운 오류다.
+    for (const processor of ['OpenAI', 'Supabase', 'Firebase', 'RevenueCat', 'Sentry']) {
+      expect(transfer).toContain(processor);
+    }
+    // 영상 파일은 서울 리전이라 이전 대상이 아니다 — 리전을 옮기면 이 문장부터 거짓이 된다.
+    expect(transfer).toContain('국내(서울) 리전');
+  });
+
   it('이용약관도 분석과 추천을 다룬다', async () => {
     const res = await h.app.inject({ method: 'GET', url: '/legal/terms' });
 
