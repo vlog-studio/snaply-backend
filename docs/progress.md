@@ -1106,3 +1106,111 @@ A-2의 마지막 미결 값이었다. 근거는
 **아직 켜지 않는 이유**: 생산 스냅의 프레임이 외부로 나가므로 약관 개정·제3자 제공 고지가
 선행이고, 운영 모델과 단가 상한이 정해지지 않았다. 분석은 호출하지 않으면 돌지 않으므로
 배포 자체는 안전하다(자동 적재 경로가 없다).
+
+---
+
+## 무비 템플릿 카탈로그 서버 이관 (2026-08-19)
+
+템플릿 4개가 앱의 로컬 상수에 있었다. 슬롯의 **매칭 규칙**이 생기는 순간 정의와 규칙이 서로
+다른 저장소에 있게 되고, 그러면 한쪽만 고쳐진다. 그래서 카탈로그를 서버로 옮겼다 —
+[decisions/template-snap-recommendation.md](./decisions/template-snap-recommendation.md) §2.
+템플릿 기반 스냅 자동 추천(backlog A-6)의 1단계다.
+
+**DB** — `movie_templates` · `movie_template_slots` (마이그레이션 `20260819010000_add_movie_templates`)
+- 유저 데이터가 아니라 제품 데이터다. `user_id` 가 없고 **행은 마이그레이션이 넣는다**.
+  시드 스크립트를 두지 않은 이유: 수동 실행을 빠뜨리면 앱이 조용히 내장 폴백으로 돌아가
+  "서버가 카탈로그를 소유한다"가 사실이 아니게 된다
+- 시드는 앱이 지금 내장한 4개(`walk`·`day`·`cafe`·`trip`)와 **id·label·hint 가 같다**.
+  같아야 서버 응답과 오프라인 폴백이 같은 템플릿을 가리키고, 이 변경이 화면을 바꾸지 않는다
+- 슬롯의 `match_hints`(jsonb)에 `{places, objects, actions, topics, temporalPrior}` 를 함께
+  시드했다. **아직 읽는 쪽이 없다** — 2단계 점수화가 읽는다. jsonb 라 형태가 바뀌어도
+  마이그레이션이 필요 없다
+- `(template_id, position)` unique — 한 자리에 두 슬롯이 오면 장면 순서가 비결정적이 된다
+- `retired_at` 으로 내린다. 행을 지우면 그 템플릿으로 만든 과거 추천이 고아가 된다
+- RLS 는 **켜고 정책을 만들지 않았다.** 소유자 컬럼이 없어 "본인 것만" 규칙이 성립하지 않고,
+  클라이언트에 직접 select 를 열면 점수화 내부값이 그대로 나간다. service_role 만 읽는다
+
+**API** — `GET /movie-templates` 🔒 하나. 생성·수정 경로는 두지 않았다
+- 내리지 않은 템플릿을 `sort_order` 순, 슬롯은 `position` 순
+- `updatedAt` 은 목록에서 가장 최근에 바뀐 템플릿의 시각이다. 한 템플릿의 문구만 고쳐도
+  앱 캐시가 갱신돼야 한다
+- **`matchHints` 는 응답에 없다.** 응답 스키마의 `additionalProperties: false` 와 테스트가
+  이걸 고정한다 — 앱이 읽기 시작하면 가중치 조정이 다시 앱 릴리스에 묶인다
+- `style` 은 `POST /edit-jobs` 가 받는 프리셋 이름 그대로 내려간다. 서버가 새 프리셋을
+  추가했을 때 **거르는 쪽은 앱**이다. 서버가 거르면 새 프리셋을 아는 앱에도 안 보인다
+
+**검증**
+- `npm test -w apps/api` — 18 파일 **223 테스트 통과**(신규 `movie-templates.test.ts` 7개) +
+  tsc + storage 테스트. 신규 테스트가 고정하는 것: 401, 시드 4개의 id·순서, 슬롯 순서와
+  label·hint, `style` 이 편집 프리셋 집합 안에 있음, `matchHints`·`temporalPrior` 문자열이
+  응답 본문에 없음, `retired_at` 제외, `updatedAt` 이 갱신 시각을 따라감
+- `npm run lint` · `npm run typecheck` 통과
+- 마이그레이션은 테스트 DB(`snaply_test`)에 `migrate deploy` 로 적용돼 위 테스트가 그 위에서 돌았다
+- 카탈로그 행은 하네스의 TRUNCATE 대상이 아니다(제품 데이터). 테스트가 행을 건드릴 때는
+  `finally` 로 원복한다 — 다음 테스트 파일이 같은 DB 를 물려받는다
+
+**로컬 dev DB 에는 적용하지 않았다**: `.env` 의 `DATABASE_URL`(`127.0.0.1:5433`)에 아무것도
+떠 있지 않고, 로컬 `snaply`(5432)는 이번 것을 포함해 **7개 마이그레이션이 밀려 있는 상태**다.
+이번 변경 이전부터 그랬고, 어느 쪽도 임의로 건드리지 않았다.
+
+**다음**: 2단계 추천 job(`POST`/`GET /movie-recommendations`) — backlog A-6.
+
+---
+
+## 템플릿 스냅 추천 API — 규칙 기반 점수화 (2026-08-19)
+
+`POST /movie-recommendations` 로 후보 스냅과 템플릿을 주면, 후보의 분석 결과를 모아 슬롯에
+배정한 결과를 `GET /movie-recommendations/:id` 로 돌려준다. backlog A-6 의 2단계이며,
+방향과 기각안은
+[decisions/template-snap-recommendation.md](./decisions/template-snap-recommendation.md).
+
+**새 큐를 만들지 않았다** — 계획( `snap-content-analysis.md` §4)과 다른 지점
+- 비싼 일(분석)은 이미 `video-analysis` 큐가 진다. 추천은 그 결과를 모으는 오케스트레이션이라
+  두 번째 큐의 워커는 첫 번째 큐를 기다리는 것 말고 할 일이 없다
+- **접수 시점에 후보 분석을 적재하고, 채점은 조회(폴링) 시점에** 한다. 아무도 폴링하지 않으면
+  채점도 돌지 않는다 — 낭비가 아니라 절약이다
+- 동시 폴링은 `status='processing'` 조건부 갱신으로 하나만 이긴다. 채점이 순수 함수라 진 쪽이
+  버린 계산의 결과도 같다
+- **마감 시한**(3분)을 둔다. 분석 워커가 죽어도 추천이 영원히 `processing` 에 머물지 않는다
+
+**DB** — `movie_recommendations` · `movie_recommendation_items` (`20260819020000_add_movie_recommendations`)
+- `candidate_video_ids` 는 **배열**이다. 앱이 보낸 촬영 시간 순서가 점수화의 시간 사전값이라
+  집합으로 뭉갤 수 없다
+- `candidate_hash` 는 **정렬한** 후보 집합의 해시다. 순서만 다른 재요청이 재분석을 돌리면 안 된다
+- 영상이 삭제되면 `video_id` 만 `SET NULL` — 그 자리는 비고 추천은 남는다
+- 템플릿 FK 는 `RESTRICT`. 템플릿은 지우지 않고 `retired_at` 으로 내린다
+
+**점수화** — `services/recommendation/score-slots.ts`, DB 없이 도는 순수 함수
+- `0.5×keyword + 0.2×visualQuality + 0.2×temporal + 0.1×confidence`, greedy 배정(1스냅 1슬롯)
+- `temporal` 이 현행 시간순 배치를 계승하므로 **키워드가 하나도 맞지 않아도 지금보다
+  나빠지지 않는다**. 이게 규칙 기반으로 시작할 수 있는 근거다
+- `usableForEdit=false` 는 배정에서 빠지고 남는 슬롯은 **비운다**. 못 쓸 스냅으로 채우는 것보다
+  빈 슬롯과 `지금 찍기` 가 정직하다
+- 힌트 jsonb 는 방어적으로 읽는다 — 한 행의 오타가 추천 전체를 무너뜨리지 않는다
+
+**정책** — `services/recommendation/recommendation-policy.ts`
+- 후보 12개 · 최근 24시간 20회 · 재사용 창 24시간 · 마감 3분. **전부 서버가 집행한다**
+- 달력 하루가 아니라 직전 24시간이다. 자정 리셋은 서버 시간대를 사용자 시간대로 가정하게 된다
+- 크레딧 차감 없음. 채택할지 모르는 제안에 과금하지 않는다
+- `MOVIE_RECOMMENDATION_ENABLED` **기본 false** — 이 경로는 생산 스냅 프레임을 외부 모델로
+  보내므로 약관 개정·제3자 제공 고지 전에는 켜지 않는다. 꺼져 있으면 503 `RECOMMENDATION_DISABLED`
+
+**전역 에러 핸들러 순서를 바꿨다** (`app.ts`)
+- `AppError` 판정이 rate limit 판정보다 **앞**으로 왔다. 전에는 모든 429 가 `RATE_LIMITED` 로
+  뭉개져, 앱이 "잠시 후 다시"(`RATE_LIMITED`)와 "오늘은 끝"(`RECOMMENDATION_LIMIT`)을 구분할
+  수 없었다. 플러그인 제한은 `AppError` 가 아니므로 그대로 `RATE_LIMITED` 다
+- 라우트별 rate limit 테스트 2건이 이 순서로도 그대로 통과한다
+
+**검증**
+- `npm test -w apps/api` — 20 파일 **257 테스트 통과**. 신규: `recommendation-score.test.ts` 14개
+  (인프라 없이 도는 순수 테스트), `movie-recommendations.test.ts` 20개
+- 통합 테스트가 고정하는 것: 멱등 재요청(순서만 다른 경우 포함) · 템플릿별 분리 ·
+  후보 상한과 `max` 동봉 · 타 유저/미확정 스냅 403 · 내린 템플릿 404 · 24시간 한도 429와
+  **재사용은 한도에 안 걸림** · 플래그 off 시 503 + 행 미생성 · 분석 미완료 시 `processing` ·
+  완료 시 슬롯 배정 · `usableForEdit=false` 제외 · 분석 실패 후보 제외 후 나머지로 채움 ·
+  마감 시한 초과 시 부분 채점 · 굳은 결과 재채점 안 함 · 남의 추천 404 · 영상 삭제 시 자리만 빔
+- `npm run lint` · `npm run typecheck` 통과
+- **실제 모델 응답으로 끝까지 돌린 적은 없다.** 통합 테스트는 분석 결과 행을 직접 만들어
+  채점 경로를 검증한다. 유효한 `OPENAI_API_KEY` 로 도는 e2e 는 A-3 과 함께 남아 있다
+
+**다음**: 앱 연동(카탈로그 원격화 + 2단계 병합) — backlog A-6.

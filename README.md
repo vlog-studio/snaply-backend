@@ -55,6 +55,7 @@ packages/
 | [decisions/payment-channel-iap.md](docs/decisions/payment-channel-iap.md) | 결제 채널을 Apple/Google IAP + RevenueCat으로 확정, Stripe 제거 |
 | [decisions/movie-model.md](docs/decisions/movie-model.md) | 영상 묶음 구조 3안 비교와 `Movie` 엔티티 채택 결정 |
 | [decisions/snap-content-analysis.md](docs/decisions/snap-content-analysis.md) | 스냅 내용 분석의 소비자·분석 시점(추천 요청 시점)·스파이크 착수 범위 결정 |
+| [decisions/template-snap-recommendation.md](docs/decisions/template-snap-recommendation.md) | 템플릿 기반 스냅 자동 추천 — 2단계 실행 구조, 카탈로그를 서버가 소유, 추천 1회는 무료 |
 
 작업을 고를 때는 [docs/backlog.md](docs/backlog.md)에서 시작한다. 결정 문서는 선택한 항목의
 배경과 제약을 확인할 때만 따라간다. 구현을 마치면 백로그에서 닫고

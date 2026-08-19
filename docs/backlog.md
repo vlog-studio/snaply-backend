@@ -115,8 +115,8 @@ export 예약/환급, 레거시 Stripe·`subscriptions` 제거가 반영됐다
 유사 프레임 제거 임계값(`DUPLICATE_HAMMING_THRESHOLD`) 적정성 — 실제 스냅에서 4장이
 2장으로 줄어드는 비율을 `frame_timestamps_ms` 로 확인한다.
 
-**후속 기능(별도 항목으로 열 것)**: 대주제 기반 자동 스냅 선택. `usableForEdit=true` 인
-분석 결과를 점수화해 `ClipSpec[]` 을 만드는 경로이며, 무비 생성 흐름에 붙으므로 A-1 확정이 먼저다.
+**후속 기능**: 대주제 기반 자동 스냅 선택은 **A-6** 으로 열렸다(2026-08-19).
+`usableForEdit=true` 인 분석 결과를 점수화해 슬롯을 채우는 경로다.
 
 ### A-4. 스냅 서버 원천 전환의 미결 항목
 
@@ -141,6 +141,30 @@ FE 담당 개발자가 백엔드 저장소의 문서·환경설정·API/worker �
 
 **완료 조건**: [meetings/next-agenda.md](./meetings/next-agenda.md) §4에서 기능별 FE 변경·BE 변경·
 구현 담당·통합 검증일을 확정하고, 실기기 필요 항목은 검증 기기와 담당자까지 지정한다.
+
+---
+
+### A-6. 템플릿 기반 스냅 자동 추천 — 백엔드 완료, 앱 연동·활성화 대기
+
+템플릿으로 무비를 시작할 때 슬롯에 들어갈 스냅을 분석 결과 기반으로 고른다. A-3의 후속 항목이며
+방향·기각안은 [decisions/template-snap-recommendation.md](./decisions/template-snap-recommendation.md).
+
+**2026-08-19 완료 (백엔드 1·2단계)**: 카탈로그를 서버로 옮기고(`movie_templates`,
+`GET /movie-templates`) 추천 API 를 붙였다(`movie_recommendations`,
+`POST`/`GET /movie-recommendations`, 규칙 기반 점수화, 후보 12개·최근 24시간 20회 상한).
+검증 내역은 [progress.md](./progress.md).
+
+**남은 것**
+- [ ] **앱 연동**: 카탈로그 원격화(캐시 + 내장 폴백), 로컬 매칭 위에 서버 결과를 얹는 2단계
+      병합, `NN%` 의 의미 변경에 따른 문구. 사용자가 뺐거나·직접 찍었거나·순서를 바꾼 슬롯은
+      덮지 않는다
+- [ ] **활성화**: `MOVIE_RECOMMENDATION_ENABLED` 는 **기본 꺼짐**이다. 켜는 조건은 A-3 과 같다 —
+      약관 개정·제3자 제공 고지·운영 모델 고정. 켜지 않으면 추천 경로에서 분석이 돌지 않는다
+- [ ] **상한 값 재조정**: 후보 12개·24시간 20회는 잠정값이다(결정 문서 §4). A-3 의 단가 실측이
+      나오면 `services/recommendation/recommendation-policy.ts` 의 숫자만 바꾼다
+
+**후속 후보(아직 열지 않음)**: 스튜디오의 템플릿 카드를 서버가 사용자 라이브러리 기준으로
+정렬하는 안, `다른 조합`(같은 템플릿에 다른 외출 제안). 둘 다 앱 연동이 끝난 뒤에 판단한다.
 
 ---
 
