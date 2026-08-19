@@ -30,6 +30,7 @@ model User {
   notificationLogs NotificationLog[]
   videos           Video[]
   editJobs         EditJob[]
+  videoAnalyses    VideoAnalysis[]
   snsConnections   SnsConnection[]
   snsUploads       SnsUpload[]
   purchases        Purchase[]
@@ -94,9 +95,10 @@ model Video {
   createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(6)
 
-  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   editJobs   EditJob[]
   snsUploads SnsUpload[]
+  analyses   VideoAnalysis[]
 
   @@index([userId, createdAt])
   @@index([userId, kind, createdAt])
@@ -124,6 +126,58 @@ model EditJob {
 
   @@index([userId, createdAt])
   @@map("edit_jobs")
+}
+
+// 스냅 내용 분석 — AI 워커가 대표 프레임을 vision 모델에 보내 얻은 결과.
+// 결과는 자동 편집 추천의 입력이며 사용자에게 노출하지 않는다.
+// 결정: docs/decisions/snap-content-analysis.md
+model VideoAnalysis {
+  id              String @id @default(uuid()) @db.Uuid
+  videoId         String @map("video_id") @db.Uuid
+  userId          String @map("user_id") @db.Uuid
+  // 모델·프롬프트가 바뀌었을 때 기존 결과를 덮지 않고 새 버전으로 비교하기 위한 값.
+  analysisVersion Int    @default(1) @map("analysis_version")
+  status          String @default("queued") @db.VarChar(20)
+
+  // 이 분석이 사용한 FFprobe 실측값의 스냅샷. 길이의 원천은 videos 쪽이다.
+  durationMs        Int?  @map("duration_ms")
+  frameTimestampsMs Int[] @default([]) @map("frame_timestamps_ms")
+
+  summary String?
+  topics  String[] @default([])
+  places  String[] @default([])
+  objects String[] @default([])
+  actions String[] @default([])
+  moods   String[] @default([])
+
+  visualQualityScore Float?   @map("visual_quality_score")
+  visualIssues       String[] @default([]) @map("visual_issues")
+  usableForEdit      Boolean? @map("usable_for_edit")
+  confidence         Float?
+
+  provider String  @default("openai") @db.VarChar(30)
+  // 레코드는 워커가 모델을 고르기 전에 만들어지므로 완료 시점에 채워진다.
+  modelVersion  String? @map("model_version") @db.VarChar(100)
+  promptVersion String? @map("prompt_version") @db.VarChar(30)
+
+  inputTokens  Int?    @map("input_tokens")
+  outputTokens Int?    @map("output_tokens")
+  attempts     Int     @default(0)
+  errorCode    String? @map("error_code") @db.VarChar(40)
+  errorMessage String? @map("error_message")
+
+  startedAt   DateTime? @map("started_at") @db.Timestamptz(6)
+  completedAt DateTime? @map("completed_at") @db.Timestamptz(6)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([videoId, analysisVersion])
+  @@index([userId, status])
+  @@index([status, createdAt])
+  @@map("video_analyses")
 }
 
 // SNS 연동 계정

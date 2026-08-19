@@ -59,6 +59,14 @@ create policy "videos_update_own" on public.videos
 create policy "videos_delete_own" on public.videos
   for delete using (user_id = public.current_app_user_id());
 
+-- ── video_analyses ─────────────────────────────────────
+-- 분석 결과는 추천 입력이라 앱이 직접 쓸 일이 없다. 조회만 본인 것으로 허용하고
+-- INSERT/UPDATE 정책은 두지 않는다 — 생성·갱신은 service_role(API·워커)만 한다.
+alter table public.video_analyses enable row level security;
+
+create policy "video_analyses_select_own" on public.video_analyses
+  for select using (user_id = public.current_app_user_id());
+
 -- ── edit_jobs ──────────────────────────────────────────
 alter table public.edit_jobs enable row level security;
 
