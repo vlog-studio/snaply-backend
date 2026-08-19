@@ -82,11 +82,28 @@ describe('공개 페이지', () => {
     const transfer = res.body.slice(res.body.indexOf('개인정보의 국외 이전'));
 
     // 위탁 표와 이전 표가 갈라지는 것이 이 문서에서 가장 생기기 쉬운 오류다.
-    for (const processor of ['OpenAI', 'Supabase', 'Firebase', 'RevenueCat', 'Sentry']) {
+    for (const processor of [
+      'OpenAI',
+      'Supabase',
+      'Firebase',
+      'RevenueCat',
+      'Sentry',
+      'Instagram',
+      'TikTok',
+    ]) {
       expect(transfer).toContain(processor);
     }
     // 영상 파일은 서울 리전이라 이전 대상이 아니다 — 리전을 옮기면 이 문장부터 거짓이 된다.
     expect(transfer).toContain('국내(서울) 리전');
+  });
+
+  it('외부 플랫폼 이전이 사용자의 요청에 걸려 있다고 적는다', async () => {
+    const res = await h.app.inject({ method: 'GET', url: '/legal/privacy' });
+
+    // 코드가 그렇게 동작한다 — SNS 업로드는 사용자가 부르지 않으면 실행되지 않는다.
+    // 이 조건이 빠지면 "영상이 상시 외부로 나간다"로 읽힌다.
+    // 문서가 줄바꿈으로 감싸므로 공백을 접고 본다 — 문장은 고정하되 조판은 자유롭게 둔다.
+    expect(res.body.replace(/\s+/g, ' ')).toContain('게시를 요청한 경우에만');
   });
 
   it('이용약관도 분석과 추천을 다룬다', async () => {
