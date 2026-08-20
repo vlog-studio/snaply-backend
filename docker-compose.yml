@@ -111,8 +111,10 @@ services:
       - "${API_HOST_PORT:-3000}:3000"   # 호스트 포트가 점유됐다면 API_HOST_PORT로 변경
 
   ai-worker:
+    # 컨텍스트가 루트인 이유는 packages/shared-types 의 앵커 사전이다 — Dockerfile 상단 주석 참고.
     build:
-      context: ./apps/ai-worker
+      context: .
+      dockerfile: apps/ai-worker/Dockerfile
     depends_on:
       migrate: { condition: service_completed_successfully }
       redis: { condition: service_healthy }
@@ -138,8 +140,11 @@ services:
   # OPENAI_API_KEY 가 없으면 이 컨테이너는 기동 단계에서 종료된다(의도된 동작).
   # 작업 적재는 API 의 POST /videos/:id/analysis 만 한다 — 업로드 시 자동 분석은 없다.
   analysis-worker:
+    # 편집 워커와 같은 이미지라 컨텍스트도 같이 바뀐다. 다만 앵커 사전은 편집 파이프라인만 쓰므로
+    # 사전이 없어도 이 컨테이너는 뜬다 — pipeline.anchor 를 임포트하지 않는다.
     build:
-      context: ./apps/ai-worker
+      context: .
+      dockerfile: apps/ai-worker/Dockerfile
     depends_on:
       migrate: { condition: service_completed_successfully }
       redis: { condition: service_healthy }

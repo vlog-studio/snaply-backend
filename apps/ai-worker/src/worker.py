@@ -18,7 +18,7 @@ from loguru import logger
 import config
 import db
 import storage
-from pipeline import editor, music, subtitle
+from pipeline import anchor, editor, invalidation, music, seed, subtitle, vocabulary
 from pipeline.edit_spec import parse_job_clips
 from pipeline.editor import get_preset
 from pipeline.render_spec import parse_render_spec
@@ -198,6 +198,11 @@ async def process_edit_job(job, _job_token) -> dict:
 
 async def main() -> None:
     global _publisher
+    # 사전이 하나라도 없으면 여기서 멈춘다 — DB·Redis 를 건드리기 **전**이다.
+    # 소비 모듈을 임포트했는지와 무관하게 도는 것이 요점이다. 임포트에만 기대면 사전을 늘릴
+    # 때마다 이 파일도 같이 고쳐야 하고, 실제로 두 번 빠뜨렸다. 넷째가 생겨도 이 줄은 그대로다.
+    loaded = vocabulary.verify_all()
+
     _init_sentry()
     await db.init_pool()
     _publisher = aioredis.from_url(config.REDIS_URL, decode_responses=True)
@@ -205,7 +210,18 @@ async def main() -> None:
     # 기본 플로우(자막 없음)에서는 로드하지 않아 기동이 빠르고 메모리를 아낀다.
 
     worker = Worker(config.EDIT_QUEUE_NAME, process_edit_job, {"connection": config.REDIS_URL})
-    logger.info("edit-jobs 워커 시작 (queue={})", config.EDIT_QUEUE_NAME)
+    # 이미지에 어떤 사전이 들어 있는지는 렌더 결과를 되짚을 때 첫 단서라 기동 로그에 남긴다.
+    # 버전 항목은 모듈을 임포트해야 나오므로 사전이 늘면 이 줄도 늘어난다 — 다만 **기동 검증은
+    # 위 verify_all() 이 이미 마쳤다.** 로그가 빠뜨려도 없는 사전으로 뜨지는 않는다.
+    logger.info(
+        "edit-jobs 워커 시작 (queue={} 사전={}종 anchor=v{} derivation=v{} stage=v{} invalidation=v{})",
+        config.EDIT_QUEUE_NAME,
+        len(loaded),
+        anchor.VOCABULARY_VERSION,
+        anchor.DERIVATION_VERSION,
+        seed.STAGE_VOCABULARY_VERSION,
+        invalidation.INVALIDATION_VOCABULARY_VERSION,
+    )
 
     stop_event = asyncio.Event()
     loop = asyncio.get_running_loop()

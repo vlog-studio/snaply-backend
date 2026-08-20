@@ -1,0 +1,483 @@
+{
+  "_note": "파생 공식의 계약. 계수를 손대면 이 값들이 바뀐다 — DERIVATION_VERSION 을 올리고 이 파일을 다시 만들 것. 좌표는 전부 소스 정규화(0~1)이고 bbox 는 [x, y, w, h] 다. boundary=true 케이스는 동률·0.0/1.0 경계처럼 부동소수와 클램프 판단이 드러나는 입력이다 — beside 의 동률 버그가 이런 입력에서만 나왔기 때문에 일부러 넣는다. 파생은 프레임 밖 좌표를 클램프하지 않는다: 배치 가능 여부는 세이프에어리어를 아는 배치 단계가 정하고, 안 되면 다음 폴백으로 간다.",
+  "derivationVersion": 1,
+  "tieEpsilon": 1e-09,
+  "face": [
+    {
+      "name": "정면 · 중간 샷",
+      "boundary": false,
+      "bbox": [
+        0.3,
+        0.2,
+        0.28,
+        0.34
+      ],
+      "keypoints": {
+        "eyeL": [
+          0.365,
+          0.3292
+        ],
+        "eyeR": [
+          0.505,
+          0.3292
+        ]
+      },
+      "expected": {
+        "eyes": [
+          0.435,
+          0.3292
+        ],
+        "forehead": [
+          0.435,
+          0.251
+        ],
+        "aboveHead": [
+          0.435,
+          0.166
+        ],
+        "chin": [
+          0.435,
+          0.54
+        ],
+        "cheekL": [
+          0.365,
+          0.3972
+        ],
+        "cheekR": [
+          0.505,
+          0.3972
+        ],
+        "bboxCenter": [
+          0.44,
+          0.37
+        ]
+      },
+      "expectedRollDegrees": 0.0,
+      "expectedFaceWidth": 0.28
+    },
+    {
+      "name": "좌로 기울어진 얼굴 — 축이 roll 을 따라가는지",
+      "boundary": false,
+      "bbox": [
+        0.3,
+        0.2,
+        0.28,
+        0.34
+      ],
+      "keypoints": {
+        "eyeL": [
+          0.36,
+          0.345
+        ],
+        "eyeR": [
+          0.5,
+          0.315
+        ]
+      },
+      "expected": {
+        "eyes": [
+          0.43,
+          0.33
+        ],
+        "forehead": [
+          0.413614825,
+          0.253535851
+        ],
+        "aboveHead": [
+          0.395804853,
+          0.170422646
+        ],
+        "chin": [
+          0.474168732,
+          0.536120749
+        ],
+        "cheekL": [
+          0.375801809,
+          0.4111576
+        ],
+        "cheekR": [
+          0.512694147,
+          0.381823528
+        ],
+        "bboxCenter": [
+          0.44,
+          0.37
+        ]
+      },
+      "expectedRollDegrees": -12.094757077,
+      "expectedFaceWidth": 0.28
+    },
+    {
+      "name": "클로즈업 · 프레임 대부분을 채움",
+      "boundary": false,
+      "bbox": [
+        0.08,
+        0.05,
+        0.8,
+        0.72
+      ],
+      "keypoints": {
+        "eyeL": [
+          0.28,
+          0.3236
+        ],
+        "eyeR": [
+          0.68,
+          0.3236
+        ]
+      },
+      "expected": {
+        "eyes": [
+          0.48,
+          0.3236
+        ],
+        "forehead": [
+          0.48,
+          0.158
+        ],
+        "aboveHead": [
+          0.48,
+          -0.022
+        ],
+        "chin": [
+          0.48,
+          0.77
+        ],
+        "cheekL": [
+          0.28,
+          0.4676
+        ],
+        "cheekR": [
+          0.68,
+          0.4676
+        ],
+        "bboxCenter": [
+          0.48,
+          0.41
+        ]
+      },
+      "expectedRollDegrees": 0.0,
+      "expectedFaceWidth": 0.8
+    },
+    {
+      "name": "경계 · 프레임 상단에 붙은 얼굴 — aboveHead 가 음수여야 한다(클램프 금지)",
+      "boundary": true,
+      "bbox": [
+        0.36,
+        0.0,
+        0.28,
+        0.34
+      ],
+      "keypoints": {
+        "eyeL": [
+          0.425,
+          0.1292
+        ],
+        "eyeR": [
+          0.565,
+          0.1292
+        ]
+      },
+      "expected": {
+        "eyes": [
+          0.495,
+          0.1292
+        ],
+        "forehead": [
+          0.495,
+          0.051
+        ],
+        "aboveHead": [
+          0.495,
+          -0.034
+        ],
+        "chin": [
+          0.495,
+          0.34
+        ],
+        "cheekL": [
+          0.425,
+          0.1972
+        ],
+        "cheekR": [
+          0.565,
+          0.1972
+        ],
+        "bboxCenter": [
+          0.5,
+          0.17
+        ]
+      },
+      "expectedRollDegrees": 0.0,
+      "expectedFaceWidth": 0.28
+    },
+    {
+      "name": "경계 · 턱이 프레임 아래로 잘린 얼굴 — chin 이 1.0 을 넘어야 한다",
+      "boundary": true,
+      "bbox": [
+        0.36,
+        0.7,
+        0.28,
+        0.34
+      ],
+      "keypoints": {
+        "eyeL": [
+          0.425,
+          0.8292
+        ],
+        "eyeR": [
+          0.565,
+          0.8292
+        ]
+      },
+      "expected": {
+        "eyes": [
+          0.495,
+          0.8292
+        ],
+        "forehead": [
+          0.495,
+          0.751
+        ],
+        "aboveHead": [
+          0.495,
+          0.666
+        ],
+        "chin": [
+          0.495,
+          1.04
+        ],
+        "cheekL": [
+          0.425,
+          0.8972
+        ],
+        "cheekR": [
+          0.565,
+          0.8972
+        ],
+        "bboxCenter": [
+          0.5,
+          0.87
+        ]
+      },
+      "expectedRollDegrees": 0.0,
+      "expectedFaceWidth": 0.28
+    },
+    {
+      "name": "경계 · 눈이 수직으로 선 얼굴(카메라 90° 회전) — roll = ±90°",
+      "boundary": true,
+      "bbox": [
+        0.3,
+        0.2,
+        0.28,
+        0.34
+      ],
+      "keypoints": {
+        "eyeL": [
+          0.435,
+          0.259
+        ],
+        "eyeR": [
+          0.435,
+          0.399
+        ]
+      },
+      "expected": {
+        "eyes": [
+          0.435,
+          0.329
+        ],
+        "forehead": [
+          0.5132,
+          0.329
+        ],
+        "aboveHead": [
+          0.5982,
+          0.329
+        ],
+        "chin": [
+          0.2242,
+          0.329
+        ],
+        "cheekL": [
+          0.367,
+          0.259
+        ],
+        "cheekR": [
+          0.367,
+          0.399
+        ],
+        "bboxCenter": [
+          0.44,
+          0.37
+        ]
+      },
+      "expectedRollDegrees": 90.0,
+      "expectedFaceWidth": 0.28
+    }
+  ],
+  "hand": [
+    {
+      "name": "손 bbox",
+      "boundary": false,
+      "bbox": [
+        0.55,
+        0.48,
+        0.14,
+        0.16
+      ],
+      "expected": {
+        "bboxCenter": [
+          0.62,
+          0.56
+        ],
+        "above": [
+          0.62,
+          0.44
+        ]
+      }
+    },
+    {
+      "name": "경계 · 프레임 최상단에 붙은 손 — above 가 음수",
+      "boundary": true,
+      "bbox": [
+        0.55,
+        0.0,
+        0.14,
+        0.16
+      ],
+      "expected": {
+        "bboxCenter": [
+          0.62,
+          0.08
+        ],
+        "above": [
+          0.62,
+          -0.04
+        ]
+      }
+    }
+  ],
+  "object": [
+    {
+      "name": "왼쪽에 붙은 객체 — beside 는 오른쪽",
+      "boundary": false,
+      "bbox": [
+        0.1,
+        0.4,
+        0.2,
+        0.3
+      ],
+      "expected": {
+        "bboxCenter": [
+          0.2,
+          0.55
+        ],
+        "above": [
+          0.2,
+          0.325
+        ],
+        "beside": [
+          0.35,
+          0.55
+        ]
+      }
+    },
+    {
+      "name": "오른쪽에 붙은 객체 — beside 는 왼쪽",
+      "boundary": false,
+      "bbox": [
+        0.7,
+        0.4,
+        0.2,
+        0.3
+      ],
+      "expected": {
+        "bboxCenter": [
+          0.8,
+          0.55
+        ],
+        "above": [
+          0.8,
+          0.325
+        ],
+        "beside": [
+          0.65,
+          0.55
+        ]
+      }
+    },
+    {
+      "name": "경계 · 좌우 여유가 정확히 같음 — 동률이면 오른쪽 (잡음이 갈라선 안 된다)",
+      "boundary": true,
+      "bbox": [
+        0.4,
+        0.4,
+        0.2,
+        0.3
+      ],
+      "expected": {
+        "bboxCenter": [
+          0.5,
+          0.55
+        ],
+        "above": [
+          0.5,
+          0.325
+        ],
+        "beside": [
+          0.65,
+          0.55
+        ]
+      }
+    },
+    {
+      "name": "경계 · 프레임 폭을 가득 채운 객체 — 양쪽 여유 0, 역시 동률. 결과가 프레임 밖이라 배치 단계가 폴백해야 한다",
+      "boundary": true,
+      "bbox": [
+        0.0,
+        0.3,
+        1.0,
+        0.4
+      ],
+      "expected": {
+        "bboxCenter": [
+          0.5,
+          0.5
+        ],
+        "above": [
+          0.5,
+          0.2
+        ],
+        "beside": [
+          1.25,
+          0.5
+        ]
+      }
+    },
+    {
+      "name": "경계 · 폭이 0 인 bbox — 검출 잡음이 만들 수 있다",
+      "boundary": true,
+      "bbox": [
+        0.5,
+        0.4,
+        0.0,
+        0.3
+      ],
+      "expected": {
+        "bboxCenter": [
+          0.5,
+          0.55
+        ],
+        "above": [
+          0.5,
+          0.325
+        ],
+        "beside": [
+          0.5,
+          0.55
+        ]
+      }
+    }
+  ]
+}
