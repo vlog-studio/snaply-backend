@@ -1,0 +1,246 @@
+{
+  "_note": "재생성 무효화 규칙의 단일 원본. TypeScript(invalidation.ts)와 워커(pipeline/invalidation.py)가 같은 파일을 읽는다. 표를 문서에만 두면 구현과 갈라지므로 데이터로 둔다 — 액션마다 모든 레이어의 상태를 빠짐없이 적는 이유도 같다. 레이어를 새로 추가하면 모든 액션에서 판단을 강제한다. grade 는 2026-08-20 에 look/match 로 나뉘었다 — 프리셋 스왑이 매칭 재계산 없이 끝나려면 따로 무효화될 수 있어야 한다(edit-spec-v3.md §11).",
+  "invalidationVocabularyVersion": 1,
+  "states": {
+    "invalidated": "레이어를 다시 계산한다. 결과가 달라질 수 있다.",
+    "retimed": "구성은 그대로 두고 시각만 다시 투영한다. 컷 목록·스티커 종류는 바뀌지 않는다.",
+    "preserved": "손대지 않는다. 바이트 단위로 같아야 한다."
+  },
+  "layers": [
+    "grade.look",
+    "grade.match",
+    "music",
+    "timeline.cuts",
+    "timeline.transitions",
+    "overlays.stickers",
+    "overlays.captions",
+    "audio.bgm",
+    "audio.sfx",
+    "audio.mix"
+  ],
+  "actions": {
+    "expired-regenerate": {
+      "order": 0,
+      "label": "만료 후 재생성",
+      "layers": {
+        "grade.look": "preserved",
+        "grade.match": "preserved",
+        "music": "preserved",
+        "timeline.cuts": "preserved",
+        "timeline.transitions": "preserved",
+        "overlays.stickers": "preserved",
+        "overlays.captions": "preserved",
+        "audio.bgm": "preserved",
+        "audio.sfx": "preserved",
+        "audio.mix": "preserved"
+      },
+      "reinterpretedRefs": [],
+      "pinPromotion": [],
+      "attemptBump": [],
+      "note": "핀을 하나도 바꾸지 않는 순수 재렌더다. storage-and-subscription-policy.md §3 이 크레딧 없는 무료 재생성을 약속했으므로 산출물이 바이트 단위로 같아야 한다. 바로 아래 행과 attempt 열만 다르고, 그 차이가 재현과 재생성을 가른다."
+    },
+    "user-regenerate": {
+      "order": 1,
+      "label": "사용자 \"다시 생성\"",
+      "layers": {
+        "grade.look": "preserved",
+        "grade.match": "preserved",
+        "music": "invalidated",
+        "timeline.cuts": "invalidated",
+        "timeline.transitions": "invalidated",
+        "overlays.stickers": "invalidated",
+        "overlays.captions": "invalidated",
+        "audio.bgm": "invalidated",
+        "audio.sfx": "invalidated",
+        "audio.mix": "preserved"
+      },
+      "reinterpretedRefs": [],
+      "pinPromotion": [
+        "analysis"
+      ],
+      "attemptBump": [
+        "music-director",
+        "edit-director",
+        "style-director"
+      ],
+      "note": "위 행과 무효화 범위가 아니라 attempt 로 갈린다. attempt 를 올리지 않으면 사용자가 '다시 생성'을 눌러도 같은 영상이 나오고, 그건 명백한 버그로 인식된다. 더 나은 analysisVersion 이 그 사이 생겼다면 여기서 핀을 올린다 — 만료 재생성은 올리지 않는다."
+    },
+    "bgm-swap": {
+      "order": 2,
+      "label": "BGM 교체 (재투영 ≤ ±20%)",
+      "layers": {
+        "grade.look": "preserved",
+        "grade.match": "preserved",
+        "music": "invalidated",
+        "timeline.cuts": "retimed",
+        "timeline.transitions": "retimed",
+        "overlays.stickers": "retimed",
+        "overlays.captions": "retimed",
+        "audio.bgm": "invalidated",
+        "audio.sfx": "retimed",
+        "audio.mix": "preserved"
+      },
+      "reinterpretedRefs": [],
+      "pinPromotion": [],
+      "attemptBump": [
+        "music-director"
+      ],
+      "note": "beatLength 가 권위이고 길이는 파생이다(B-6). 컷 구성은 그대로 두고 비트 그리드에 다시 투영한다. attempt 증가는 시스템이 번들 필터 안에서 다시 고를 때만이고, 사용자가 트랙을 직접 지정하면 trackId 가 곧 핀이라 선택이 없다."
+    },
+    "bgm-swap-beyond-guard": {
+      "order": 3,
+      "label": "BGM 교체 (재투영 > ±20%)",
+      "layers": {
+        "grade.look": "preserved",
+        "grade.match": "preserved",
+        "music": "invalidated",
+        "timeline.cuts": "invalidated",
+        "timeline.transitions": "invalidated",
+        "overlays.stickers": "invalidated",
+        "overlays.captions": "invalidated",
+        "audio.bgm": "invalidated",
+        "audio.sfx": "invalidated",
+        "audio.mix": "preserved"
+      },
+      "reinterpretedRefs": [],
+      "pinPromotion": [],
+      "attemptBump": [
+        "music-director",
+        "edit-director",
+        "style-director"
+      ],
+      "note": "92→128 BPM 이면 28% 짧아진다. 그 정도면 재투영이 아니라 컷 구성을 다시 짜는 게 맞다. 사용자 주도 교체는 BPM 이 임의라 이 경로가 상시 걸리므로, '곡만 바꿨는데 컷이 달라졌다'가 UI 에 드러나야 한다."
+    },
+    "sticker-pack-swap": {
+      "order": 4,
+      "label": "스티커 팩 교체",
+      "layers": {
+        "grade.look": "preserved",
+        "grade.match": "preserved",
+        "music": "preserved",
+        "timeline.cuts": "preserved",
+        "timeline.transitions": "preserved",
+        "overlays.stickers": "invalidated",
+        "overlays.captions": "preserved",
+        "audio.bgm": "preserved",
+        "audio.sfx": "invalidated",
+        "audio.mix": "preserved"
+      },
+      "reinterpretedRefs": [
+        "assetRefs.stickerPack"
+      ],
+      "pinPromotion": [],
+      "attemptBump": [
+        "style-director"
+      ],
+      "note": "팩 교체는 새 packId 를 핀하는 재생성이다 — '재렌더는 레지스트리·번들을 다시 조회하지 않는다'는 규칙은 핀을 바꾸지 않는 재렌더에만 적용된다. audio.sfx 는 다시 계산하되 전환 파생분은 transitions 가 그대로라 같은 값이 나온다."
+    },
+    "transition-style-swap": {
+      "order": 5,
+      "label": "전환 스타일 스왑",
+      "layers": {
+        "grade.look": "preserved",
+        "grade.match": "preserved",
+        "music": "preserved",
+        "timeline.cuts": "preserved",
+        "timeline.transitions": "invalidated",
+        "overlays.stickers": "preserved",
+        "overlays.captions": "preserved",
+        "audio.bgm": "preserved",
+        "audio.sfx": "invalidated",
+        "audio.mix": "preserved"
+      },
+      "reinterpretedRefs": [],
+      "pinPromotion": [],
+      "attemptBump": [
+        "edit-director"
+      ],
+      "note": "컷 경계는 그대로고 그 사이를 잇는 방법만 바뀐다. timeline.cuts 가 유지되는 것이 이 액션의 전부다."
+    },
+    "cut-reorder": {
+      "order": 6,
+      "label": "컷 순서 수동 변경",
+      "layers": {
+        "grade.look": "preserved",
+        "grade.match": "preserved",
+        "music": "preserved",
+        "timeline.cuts": "retimed",
+        "timeline.transitions": "invalidated",
+        "overlays.stickers": "retimed",
+        "overlays.captions": "retimed",
+        "audio.bgm": "preserved",
+        "audio.sfx": "invalidated",
+        "audio.mix": "preserved"
+      },
+      "reinterpretedRefs": [],
+      "pinPromotion": [],
+      "attemptBump": [],
+      "note": "사용자가 순서를 정했으므로 디렉터에 선택이 없다 — attempt 를 올리지 않는다. 전환은 이어지는 컷 쌍이 달라져 다시 고른다. 스티커는 앵커 컷이 살아 있어 따라간다(B-7)."
+    },
+    "cut-remove": {
+      "order": 7,
+      "label": "컷 삭제",
+      "layers": {
+        "grade.look": "preserved",
+        "grade.match": "preserved",
+        "music": "preserved",
+        "timeline.cuts": "retimed",
+        "timeline.transitions": "invalidated",
+        "overlays.stickers": "invalidated",
+        "overlays.captions": "invalidated",
+        "audio.bgm": "preserved",
+        "audio.sfx": "invalidated",
+        "audio.mix": "preserved"
+      },
+      "reinterpretedRefs": [],
+      "pinPromotion": [],
+      "attemptBump": [],
+      "note": "삭제된 컷에 매인 오버레이는 함께 사라지고 나머지는 따라 이동한다 — 레이어를 다시 계산하면 둘 다 처리된다. 남은 컷의 내용은 그대로라 cuts 는 retimed 다."
+    },
+    "clip-add": {
+      "order": 8,
+      "label": "클립 추가",
+      "layers": {
+        "grade.look": "preserved",
+        "grade.match": "invalidated",
+        "music": "preserved",
+        "timeline.cuts": "invalidated",
+        "timeline.transitions": "invalidated",
+        "overlays.stickers": "invalidated",
+        "overlays.captions": "invalidated",
+        "audio.bgm": "preserved",
+        "audio.sfx": "invalidated",
+        "audio.mix": "preserved"
+      },
+      "reinterpretedRefs": [
+        "analysis"
+      ],
+      "pinPromotion": [],
+      "attemptBump": [
+        "edit-director",
+        "style-director"
+      ],
+      "note": "새 클립의 analysis 핀만 추가하고 **기존 클립의 분석은 그대로 쓴다** — analysis 를 스펙 밖 참조로 뺀 것의 실질 이득이 여기서 나온다. music 은 트랙이 유지되므로 건드리지 않는다. grade.match 는 무효화한다: 색 통계가 결정적이라 기존 클립은 같은 값이 나오지만, **referenceClipId 가 바뀔 수 있다.** 추가된 클립이 기존 레퍼런스보다 노출·품질이 좋으면 레퍼런스가 그 클립으로 옮겨가고 그러면 모든 클립의 보정량이 실제로 달라진다. 유지하면 낡은 레퍼런스 기준 보정이 남고, 새 클립만 따로 계산하면 색이 갈린다 — 그래서 '어차피 같은 값인데 유지하면 안 되나' 가 아니다. grade.look 은 번들에서 오므로 클립 추가와 무관하다."
+    },
+    "output-profile-change": {
+      "order": 9,
+      "label": "출력 프로필·fitMode 변경",
+      "layers": {
+        "grade.look": "preserved",
+        "grade.match": "preserved",
+        "music": "preserved",
+        "timeline.cuts": "preserved",
+        "timeline.transitions": "preserved",
+        "overlays.stickers": "preserved",
+        "overlays.captions": "preserved",
+        "audio.bgm": "preserved",
+        "audio.sfx": "preserved",
+        "audio.mix": "preserved"
+      },
+      "reinterpretedRefs": [],
+      "pinPromotion": [],
+      "attemptBump": [],
+      "note": "무효화가 하나도 없다. resolved.xy 가 소스 정규화라 성립한다(B-1) — 캔버스 정규화였다면 fitMode 가 바뀔 때마다 오버레이를 전부 다시 계산해야 했다. 좌표가 0~1 을 벗어날 수 있다는 사실도 여기에 걸려 있다: '0~1 정규화'는 좌표계 진술이지 범위 보장이 아니다."
+    }
+  }
+}

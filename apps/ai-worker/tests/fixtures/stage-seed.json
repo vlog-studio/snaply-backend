@@ -1,0 +1,171 @@
+{
+  "_note": "스테이지 시드의 계약. sha256(\"{root}:{stage}:{attempt}\") 상위 8바이트 빅엔디언. 이 값이 바뀌면 과거 스펙이 다른 영상을 낸다 — 알고리즘·템플릿·바이트 수·바이트 순서 중 하나라도 손대면 스펙 버전이 올라가야 한다. 파이썬 내장 hash() 를 쓰면 PYTHONHASHSEED 때문에 프로세스마다 값이 달라지므로, 이 픽스처는 그 실수를 막는 장치이기도 하다.",
+  "algorithm": "sha256",
+  "template": "{root}:{stage}:{attempt}",
+  "bytes": 8,
+  "byteOrder": "big",
+  "cases": [
+    {
+      "root": 0,
+      "stage": "music-director",
+      "attempt": 0,
+      "expected": 10333864166528400157
+    },
+    {
+      "root": 0,
+      "stage": "music-director",
+      "attempt": 1,
+      "expected": 9258312854445868267
+    },
+    {
+      "root": 0,
+      "stage": "music-director",
+      "attempt": 2,
+      "expected": 7792066739560069561
+    },
+    {
+      "root": 0,
+      "stage": "edit-director",
+      "attempt": 0,
+      "expected": 6923807938787423239
+    },
+    {
+      "root": 0,
+      "stage": "edit-director",
+      "attempt": 1,
+      "expected": 14924186181295692437
+    },
+    {
+      "root": 0,
+      "stage": "edit-director",
+      "attempt": 2,
+      "expected": 12449608212220036041
+    },
+    {
+      "root": 0,
+      "stage": "style-director",
+      "attempt": 0,
+      "expected": 9852333285287411163
+    },
+    {
+      "root": 0,
+      "stage": "style-director",
+      "attempt": 1,
+      "expected": 12660383950468794764
+    },
+    {
+      "root": 0,
+      "stage": "style-director",
+      "attempt": 2,
+      "expected": 11713740261294998452
+    },
+    {
+      "root": 1837462,
+      "stage": "music-director",
+      "attempt": 0,
+      "expected": 7997822527856451899
+    },
+    {
+      "root": 1837462,
+      "stage": "music-director",
+      "attempt": 1,
+      "expected": 18082957937591098648
+    },
+    {
+      "root": 1837462,
+      "stage": "music-director",
+      "attempt": 2,
+      "expected": 3656680610130464787
+    },
+    {
+      "root": 1837462,
+      "stage": "edit-director",
+      "attempt": 0,
+      "expected": 1342417341983035441
+    },
+    {
+      "root": 1837462,
+      "stage": "edit-director",
+      "attempt": 1,
+      "expected": 12381119609627170188
+    },
+    {
+      "root": 1837462,
+      "stage": "edit-director",
+      "attempt": 2,
+      "expected": 11672066319255814029
+    },
+    {
+      "root": 1837462,
+      "stage": "style-director",
+      "attempt": 0,
+      "expected": 10306310200398800035
+    },
+    {
+      "root": 1837462,
+      "stage": "style-director",
+      "attempt": 1,
+      "expected": 13798225138243235131
+    },
+    {
+      "root": 1837462,
+      "stage": "style-director",
+      "attempt": 2,
+      "expected": 1117407630315848758
+    },
+    {
+      "root": 9007199254740991,
+      "stage": "music-director",
+      "attempt": 0,
+      "expected": 7085348839795836145
+    },
+    {
+      "root": 9007199254740991,
+      "stage": "music-director",
+      "attempt": 1,
+      "expected": 3157171637026962139
+    },
+    {
+      "root": 9007199254740991,
+      "stage": "music-director",
+      "attempt": 2,
+      "expected": 11998281213003312147
+    },
+    {
+      "root": 9007199254740991,
+      "stage": "edit-director",
+      "attempt": 0,
+      "expected": 5159532274386338328
+    },
+    {
+      "root": 9007199254740991,
+      "stage": "edit-director",
+      "attempt": 1,
+      "expected": 482071622055671679
+    },
+    {
+      "root": 9007199254740991,
+      "stage": "edit-director",
+      "attempt": 2,
+      "expected": 6385598214634765521
+    },
+    {
+      "root": 9007199254740991,
+      "stage": "style-director",
+      "attempt": 0,
+      "expected": 14711197363651935565
+    },
+    {
+      "root": 9007199254740991,
+      "stage": "style-director",
+      "attempt": 1,
+      "expected": 17397101810712796408
+    },
+    {
+      "root": 9007199254740991,
+      "stage": "style-director",
+      "attempt": 2,
+      "expected": 546258770284102287
+    }
+  ]
+}
