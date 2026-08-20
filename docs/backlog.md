@@ -508,6 +508,24 @@ api 만 스모크하고 워커는 빌드 성공까지만 볼지 판단이 필요
 
 ---
 
+### E-6. 낡은 Prisma 클라이언트가 테스트 72건을 무의미하게 실패시킨다
+
+[AGENTS.md](../AGENTS.md)·[team.md](./team.md) §4 가 "스키마 변경을 pull 한 뒤 `npm run db:generate`
+필수"라고 경고하는데, **경고가 작동하지 않는다.** 2026-08-20 에 다시 걸렸다 —
+`prisma.videoAnalysis` 가 `undefined` 라 72건이 실패했고, 증상(`Cannot read properties of
+undefined`)만으로는 원인이 스키마 동기화라는 것이 드러나지 않는다. 원인 파악에 시간이 든다.
+
+문서에 적힌 주의는 다음에도 같은 방식으로 실패한다. 기계가 잡아야 한다.
+
+**선택지**: ① `apps/api` 의 `test` 스크립트에 `prisma generate` 를 선행시킨다(가장 단순하지만
+매 실행에 수백 ms 가 붙는다) ② `schema.prisma` 해시와 생성된 클라이언트를 대조해 불일치면
+**"`npm run db:generate` 를 실행하세요"** 를 내고 종료하는 프리체크. ②가 낫다 —
+비용이 없고 메시지가 곧 해결 방법이다.
+
+**완료 조건**: 스키마를 고친 뒤 `db:generate` 없이 테스트를 돌리면 명확한 한 줄로 멈춘다.
+
+---
+
 ### E-5. BGM 무작위 선택이 레시피 재생성 결정론을 깬다 ⚠️
 
 [decisions/storage-and-subscription-policy.md](./decisions/storage-and-subscription-policy.md) §3.2 는
