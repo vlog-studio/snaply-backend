@@ -182,6 +182,35 @@ class DocumentedRulesTest(unittest.TestCase):
             invalidation.layer_state("clip-add", "grade.look"), invalidation.PRESERVED
         )
 
+    def test_accents_follow_the_cuts_not_the_look(self) -> None:
+        """grade 아래 있지만 축이 다르다 — 이름 때문에 별개 레이어로 안 세는 오분류가 있었다."""
+        # 컷 순서가 바뀌면 어느 컷이 hook 인지가 바뀐다. retimed 로는 표현할 수 없다.
+        self.assertEqual(
+            invalidation.layer_state("cut-reorder", "grade.accents"), invalidation.INVALIDATED
+        )
+        self.assertEqual(
+            invalidation.layer_state("cut-remove", "grade.accents"), invalidation.INVALIDATED
+        )
+        # 액센트는 음악 sections 에서도 나오므로 트랙이 바뀌면 강조할 컷이 달라진다 —
+        # 같은 액션에서 오버레이는 retimed 인데 여기만 invalidated 인 이유다.
+        self.assertEqual(
+            invalidation.layer_state("bgm-swap", "grade.accents"), invalidation.INVALIDATED
+        )
+        self.assertEqual(
+            invalidation.layer_state("bgm-swap", "overlays.stickers"), invalidation.RETIMED
+        )
+        # 색·스티커 도메인 변화에는 반응하지 않는다.
+        self.assertEqual(
+            invalidation.layer_state("sticker-pack-swap", "grade.accents"),
+            invalidation.PRESERVED,
+        )
+
+    def test_every_layer_is_explained(self) -> None:
+        # grade 세 갈래는 이름만으로 구분이 안 된다. 사전이 각각의 축을 적어 둬야 한다.
+        for layer in ("grade.look", "grade.match", "grade.accents"):
+            with self.subTest(layer=layer):
+                self.assertTrue(invalidation.VOCABULARY["layerNotes"][layer].strip())
+
     def test_grade_survives_everything_except_a_full_reroll(self) -> None:
         # 룩은 번들이 정하고 번들은 핀돼 있다. 컷을 지웠다고 색이 변하면 안 된다.
         for action in ("cut-remove", "cut-reorder", "sticker-pack-swap", "bgm-swap"):

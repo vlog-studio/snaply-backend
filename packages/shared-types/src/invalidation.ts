@@ -31,6 +31,7 @@ export type LayerState = (typeof LAYER_STATES)[number];
 export const SPEC_LAYERS = [
   'grade.look',
   'grade.match',
+  'grade.accents',
   'music',
   'timeline.cuts',
   'timeline.transitions',
