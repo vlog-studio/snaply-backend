@@ -1,0 +1,59 @@
+{
+  "_note": "파이프라인 스테이지 이름의 단일 원본. TypeScript(seed.ts)와 워커(pipeline/seed.py)가 같은 파일을 읽는다. 이름이 갈리면 조용히 실패한다 — `attempt` 키가 디렉터의 실제 이름과 한 글자라도 다르면 그 디렉터는 attempt=0 을 보고, 사용자가 '다시 생성'을 눌러도 같은 결과가 나온다. 그래서 열린 문자열이 아니라 닫힌 집합이다.",
+
+  "stageVocabularyVersion": 1,
+
+  "_seedNote": "스테이지 시드 = sha256(\"{root}:{stage}:{attempt}\") 의 **상위 8바이트를 빅엔디언**으로 읽은 정수. 함수·바이트 수·바이트 순서를 전부 이름으로 박아 둔다. 언어 기본 해시를 쓰면 안 된다 — 파이썬 `hash()` 는 PYTHONHASHSEED 때문에 프로세스마다 다른 값을 내고, 그러면 같은 스펙이 실행할 때마다 다른 영상을 만든다.",
+  "seedAlgorithm": "sha256",
+  "seedTemplate": "{root}:{stage}:{attempt}",
+  "seedBytes": 8,
+  "seedByteOrder": "big",
+
+  "_rootNote": "root 는 JSON 을 오가므로 JS 가 정확히 표현할 수 있는 범위여야 한다. 2^53 을 넘으면 JavaScript 가 값을 반올림해 워커가 받는 root 가 API 가 쓴 root 와 달라지고, 재현성이 소리 없이 깨진다.",
+  "rootMax": 9007199254740991,
+
+  "stages": {
+    "ingest": {
+      "order": 0,
+      "kind": "ingest",
+      "seeded": false,
+      "description": "output·assetRefs·source·intent 를 쓴다"
+    },
+    "visual-reader": {
+      "order": 1,
+      "kind": "reader",
+      "seeded": false,
+      "description": "얼굴·손·모션·품질. MediaPipe 라 결정적이다"
+    },
+    "audio-reader": {
+      "order": 2,
+      "kind": "reader",
+      "seeded": false,
+      "description": "발화 구간·라우드니스. VAD 라 결정적이다"
+    },
+    "semantic-reader": {
+      "order": 3,
+      "kind": "reader",
+      "seeded": false,
+      "description": "장면·무드·스티커 힌트. 결과는 video_analyses 에 핀되므로 시드를 쓰지 않는다"
+    },
+    "music-director": {
+      "order": 4,
+      "kind": "director",
+      "seeded": true,
+      "description": "번들 필터 안에서 트랙을 고른다 — 선택이 있으므로 시드가 필요하다"
+    },
+    "edit-director": {
+      "order": 5,
+      "kind": "director",
+      "seeded": true,
+      "description": "컷·전환. transitionWeights 가 가중치라 선택이 있다"
+    },
+    "style-director": {
+      "order": 6,
+      "kind": "director",
+      "seeded": true,
+      "description": "스티커·자막·효과음·믹스. 팩 안에서 에셋을 고른다"
+    }
+  }
+}
