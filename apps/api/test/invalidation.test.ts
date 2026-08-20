@@ -188,6 +188,17 @@ describe('계획이 약속한 규칙', () => {
     expect(layerState('clip-add', 'grade.look')).toBe('preserved');
   });
 
+  it('액센트는 룩이 아니라 컷을 따라간다', () => {
+    // grade 아래 있지만 축이 다르다 — 이름 때문에 별개 레이어로 안 세는 오분류가 있었고,
+    // 그래서 컷을 지워도 없는 컷을 가리키는 액센트가 스펙에 남았다.
+    expect(layerState('cut-reorder', 'grade.accents')).toBe('invalidated');
+    expect(layerState('cut-remove', 'grade.accents')).toBe('invalidated');
+    // 액센트는 음악 sections 에서도 나온다 — 같은 액션에서 오버레이는 retimed 인데 여기만 다르다.
+    expect(layerState('bgm-swap', 'grade.accents')).toBe('invalidated');
+    expect(layerState('bgm-swap', 'overlays.stickers')).toBe('retimed');
+    expect(layerState('sticker-pack-swap', 'grade.accents')).toBe('preserved');
+  });
+
   it('색보정은 전면 재생성 외에는 살아남는다', () => {
     // 룩은 번들이 정하고 번들은 핀돼 있다. 컷을 지웠다고 색이 변하면 안 된다.
     for (const action of [

@@ -9,6 +9,7 @@
   "layers": [
     "grade.look",
     "grade.match",
+    "grade.accents",
     "music",
     "timeline.cuts",
     "timeline.transitions",
@@ -25,6 +26,7 @@
       "layers": {
         "grade.look": "preserved",
         "grade.match": "preserved",
+        "grade.accents": "preserved",
         "music": "preserved",
         "timeline.cuts": "preserved",
         "timeline.transitions": "preserved",
@@ -45,6 +47,7 @@
       "layers": {
         "grade.look": "preserved",
         "grade.match": "preserved",
+        "grade.accents": "invalidated",
         "music": "invalidated",
         "timeline.cuts": "invalidated",
         "timeline.transitions": "invalidated",
@@ -71,6 +74,7 @@
       "layers": {
         "grade.look": "preserved",
         "grade.match": "preserved",
+        "grade.accents": "invalidated",
         "music": "invalidated",
         "timeline.cuts": "retimed",
         "timeline.transitions": "retimed",
@@ -85,7 +89,7 @@
       "attemptBump": [
         "music-director"
       ],
-      "note": "beatLength 가 권위이고 길이는 파생이다(B-6). 컷 구성은 그대로 두고 비트 그리드에 다시 투영한다. attempt 증가는 시스템이 번들 필터 안에서 다시 고를 때만이고, 사용자가 트랙을 직접 지정하면 trackId 가 곧 핀이라 선택이 없다."
+      "note": "beatLength 가 권위이고 길이는 파생이다(B-6). 컷 구성은 그대로 두고 비트 그리드에 다시 투영한다. attempt 증가는 시스템이 번들 필터 안에서 다시 고를 때만이고, 사용자가 트랙을 직접 지정하면 trackId 가 곧 핀이라 선택이 없다. grade.accents 는 무효화한다 — 오버레이와 달리 액센트는 음악 sections 에서 나오므로 트랙이 바뀌면 강조할 컷이 달라진다."
     },
     "bgm-swap-beyond-guard": {
       "order": 3,
@@ -93,6 +97,7 @@
       "layers": {
         "grade.look": "preserved",
         "grade.match": "preserved",
+        "grade.accents": "invalidated",
         "music": "invalidated",
         "timeline.cuts": "invalidated",
         "timeline.transitions": "invalidated",
@@ -117,6 +122,7 @@
       "layers": {
         "grade.look": "preserved",
         "grade.match": "preserved",
+        "grade.accents": "preserved",
         "music": "preserved",
         "timeline.cuts": "preserved",
         "timeline.transitions": "preserved",
@@ -141,6 +147,7 @@
       "layers": {
         "grade.look": "preserved",
         "grade.match": "preserved",
+        "grade.accents": "preserved",
         "music": "preserved",
         "timeline.cuts": "preserved",
         "timeline.transitions": "invalidated",
@@ -163,6 +170,7 @@
       "layers": {
         "grade.look": "preserved",
         "grade.match": "preserved",
+        "grade.accents": "invalidated",
         "music": "preserved",
         "timeline.cuts": "retimed",
         "timeline.transitions": "invalidated",
@@ -183,6 +191,7 @@
       "layers": {
         "grade.look": "preserved",
         "grade.match": "preserved",
+        "grade.accents": "invalidated",
         "music": "preserved",
         "timeline.cuts": "retimed",
         "timeline.transitions": "invalidated",
@@ -203,6 +212,7 @@
       "layers": {
         "grade.look": "preserved",
         "grade.match": "invalidated",
+        "grade.accents": "invalidated",
         "music": "preserved",
         "timeline.cuts": "invalidated",
         "timeline.transitions": "invalidated",
@@ -228,6 +238,7 @@
       "layers": {
         "grade.look": "preserved",
         "grade.match": "preserved",
+        "grade.accents": "preserved",
         "music": "preserved",
         "timeline.cuts": "preserved",
         "timeline.transitions": "preserved",
@@ -242,5 +253,10 @@
       "attemptBump": [],
       "note": "무효화가 하나도 없다. resolved.xy 가 소스 정규화라 성립한다(B-1) — 캔버스 정규화였다면 fitMode 가 바뀔 때마다 오버레이를 전부 다시 계산해야 했다. 좌표가 0~1 을 벗어날 수 있다는 사실도 여기에 걸려 있다: '0~1 정규화'는 좌표계 진술이지 범위 보장이 아니다."
     }
+  },
+  "layerNotes": {
+    "grade.look": "영상 전체 하나. 번들에서 오므로 컷·클립 변화와 무관하다.",
+    "grade.match": "클립 단위. 색 통계에서 나오며 referenceClipId 재선정에 반응한다.",
+    "grade.accents": "컷 단위 — grade 아래 있지만 look·match 와 축이 다르다. anchorCutId 로 컷에 매이고 role(hook)·sections(drop 진입)에서 나오므로 컷 구성이나 음악 구간이 바뀌면 어느 컷이 강조 대상인지가 바뀐다. 이름이 grade. 아래라 별개 레이어로 세지 않는 오분류가 실제로 있었다 — 컷을 지워도 없는 컷을 가리키는 액센트가 남았다. cut-reorder 가 retimed 가 아니라 invalidated 인 이유도 같다: 순서가 바뀌면 어느 컷이 hook 인지가 바뀐다."
   }
 }
