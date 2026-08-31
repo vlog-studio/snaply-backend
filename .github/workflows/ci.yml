@@ -7,14 +7,14 @@ on:
 
 jobs:
   node:
-    name: Build / Typecheck / Lint (Node)
+    name: Build / Typecheck / Lint (API)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version-file: .nvmrc
           cache: npm
 
       - name: Install dependencies
@@ -25,13 +25,30 @@ jobs:
         working-directory: apps/api
 
       - name: Build
-        run: npm run build
+        run: npm run build -- --filter=@vlog-studio/api
 
       - name: Typecheck
-        run: npm run typecheck
+        run: npm run typecheck -- --filter=@vlog-studio/api
 
       - name: Lint
-        run: npm run lint
+        run: npm run lint -- --filter=@vlog-studio/api
+
+  mobile:
+    name: Verify (Mobile)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify
+        run: npm run verify:mobile
 
   api-tests:
     name: Integration tests (API)
@@ -82,7 +99,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version-file: .nvmrc
           cache: npm
 
       - name: Install dependencies
@@ -98,7 +115,7 @@ jobs:
       # "Failed to resolve entry for package" 로 실패한다(실제로 CI 에서 발생).
       # turbo 는 스크립트를 패키지 디렉터리에서 실행하므로 apps/api/vitest.config.ts 도 정상 적용된다.
       - name: Integration tests
-        run: npm test
+        run: npm test -- --filter=@vlog-studio/api
 
   python:
     name: Syntax check (AI Worker)

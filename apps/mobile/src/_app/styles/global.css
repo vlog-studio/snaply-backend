@@ -1,0 +1,14 @@
+/* The two families `Fonts` resolves to on web (see `shared/ui/theme`); the three
+   stacks that stood here for `serif`, `rounded`, and `display` went with the
+   token entries that read them. The app ships to iOS and Android only, where
+   Pretendard GOV is embedded by the `expo-font` plugin — nothing serves it here,
+   so it is named first for a browser that happens to have it installed and the
+   rest of the stack is what `npm run web` actually renders in. Deliberate: a
+   webfont would mean shipping ~5MB per weight for a surface no user reaches. */
+:root {
+  --font-body:
+    'Pretendard GOV', 'Noto Sans KR', Inter, ui-sans-serif, system-ui, sans-serif,
+    Apple Color Emoji, Segoe UI Emoji;
+  --font-mono:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace;
+}

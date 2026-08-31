@@ -4,6 +4,18 @@ name: Deploy
 on:
   push:
     branches: [main]
+    paths:
+      - 'apps/api/**'
+      - 'apps/ai-worker/**'
+      - 'packages/**'
+      - 'scripts/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig.base.json'
+      - 'turbo.json'
+      - 'docker-compose.yml'
+      - '.dockerignore'
+      - '.github/workflows/deploy.yml'
 
 concurrency:
   group: deploy-${{ github.ref }}
@@ -50,7 +62,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: npm }
+        with: { node-version-file: .nvmrc, cache: npm }
 
       - run: npm ci
       - name: Apply Prisma migrations

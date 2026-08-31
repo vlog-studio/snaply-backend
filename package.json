@@ -1,9 +1,9 @@
 {
-  "name": "vlog-studio",
+  "name": "snaply",
   "private": true,
-  "packageManager": "npm@10.8.2",
+  "packageManager": "npm@11.19.1",
   "engines": {
-    "node": ">=20"
+    "node": ">=22.13.0"
   },
   "workspaces": [
     "apps/*",
@@ -12,6 +12,8 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
+    "dev:mobile": "npm run start -w snaply-app",
+    "verify:mobile": "npm run verify -w snaply-app",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
@@ -39,5 +41,21 @@
     "turbo": "^2.5.4",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.35.0"
+  },
+  "overrides": {
+    "openapi-typescript": {
+      "typescript": "~6.0.3"
+    }
+  },
+  "allowScripts": {
+    "@firebase/util@1.15.1": true,
+    "@prisma/client@6.19.3": true,
+    "@prisma/engines@6.19.3": true,
+    "esbuild@0.28.1": true,
+    "fsevents@2.3.3": true,
+    "msgpackr-extract@3.0.4": true,
+    "prisma@6.19.3": true,
+    "protobufjs@7.6.5": true,
+    "unrs-resolver@1.12.2": true
   }
 }

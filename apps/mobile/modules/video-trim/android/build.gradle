@@ -1,0 +1,21 @@
+apply plugin: 'com.android.library'
+apply plugin: 'expo-module-gradle-plugin'
+
+group = 'expo.modules.videotrim'
+version = '1.0.0'
+
+android {
+  namespace 'expo.modules.videotrim'
+  defaultConfig {
+    versionCode 1
+    versionName '1.0.0'
+  }
+}
+
+dependencies {
+  // Trimming runs on androidx media3's Transformer; the versions move together.
+  def media3Version = '1.8.0'
+  implementation "androidx.media3:media3-common:$media3Version"
+  implementation "androidx.media3:media3-effect:$media3Version"
+  implementation "androidx.media3:media3-transformer:$media3Version"
+}

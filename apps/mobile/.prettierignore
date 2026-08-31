@@ -1,0 +1,30 @@
+/dist
+/node_modules
+/.expo
+/android
+/ios
+/.claude
+package-lock.json
+
+# Local Expo modules: their gradle build output is generated, not authored.
+modules/*/android/build
+modules/*/android/.gradle
+
+# Docs are maintained by hand (bilingual, table-aligned) — don't reflow.
+**/*.md
+
+# Interactive guide mockups are hand-authored and frozen as a record of an
+# earlier screen layout, so reflowing them only costs review noise.
+docs/guides/**/*.html
+
+# Downloaded from the Firebase console verbatim. Formatting it here would be
+# undone by the next download, so leave it exactly as the console produces it.
+google-services.json
+
+# Generated verbatim by openapi-typescript (npm run api:gen). Formatting it
+# would be undone by the next regeneration.
+src/shared/api/schema.d.ts
+
+# Fetched verbatim from the backend's Swagger endpoint (npm run api:pull).
+# Formatting it would be undone by the next pull.
+docs/api/openapi.json

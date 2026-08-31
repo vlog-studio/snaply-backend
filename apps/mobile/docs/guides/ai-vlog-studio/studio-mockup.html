@@ -1,0 +1,748 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Snaply 스튜디오 — 확정 기획 목업</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #16110D; --surface: #211910; --surface2: #2C2118; --line: #3A2C20;
+    --ink: #F1E6DA; --dim: #A8927E; --ember: #EA5E38; --ember2: #F2734E;
+    --lumen: #82D6CE; --lumen-soft: #16302E; --film: #0E0B08; --danger: #F26D6D;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  }
+  html { background: #0A0807; }
+  body {
+    background: radial-gradient(120% 80% at 50% -10%, #1A1411 0%, #0A0807 60%);
+    color: var(--ink); min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Apple SD Gothic Neo", "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page { max-width: 1160px; margin: 0 auto; padding: 40px 28px 80px;
+          display: grid; grid-template-columns: minmax(0,1fr) 400px; gap: 48px; align-items: start; }
+  @media (max-width: 940px) { .page { grid-template-columns: 1fr; } .stage { position: static !important; } }
+
+  .brief { padding-top: 8px; }
+  .kicker { font-family: var(--mono); font-size: 11px; letter-spacing: .18em; color: var(--lumen); text-transform: uppercase; }
+  .brief h1 { font-size: 34px; line-height: 1.2; margin: 10px 0 12px; letter-spacing: -.02em; }
+  .bet { font-size: 16px; line-height: 1.65; color: #D9C8B7; max-width: 52ch; }
+  .bet b { color: var(--ink); font-weight: 600; }
+  .block { margin-top: 28px; border-top: 1px solid var(--line); padding-top: 20px; }
+  .block h2 { font-size: 12px; letter-spacing: .14em; font-family: var(--mono); color: var(--dim); text-transform: uppercase; margin-bottom: 12px; }
+  .block p, .block li { font-size: 14.5px; line-height: 1.7; color: #CDBBA9; }
+  .block ul { list-style: none; }
+  .block li { padding-left: 18px; position: relative; margin-bottom: 6px; }
+  .block li::before { content: ''; position: absolute; left: 2px; top: 10px; width: 5px; height: 5px; border-radius: 50%; background: var(--line); }
+  .block li.good::before { background: var(--lumen); }
+  .block li.bad::before { background: var(--danger); }
+  .block strong { color: var(--ink); }
+  .flow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-family: var(--mono); font-size: 12px; color: var(--dim); }
+  .flow span { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 5px 9px; color: #D9C8B7; }
+  .flow i { font-style: normal; color: var(--lumen); }
+  .try { display: grid; gap: 8px; }
+  .try button { text-align: left; background: var(--surface); border: 1px solid var(--line); color: #D9C8B7;
+                border-radius: 10px; padding: 11px 13px; font-size: 13.5px; cursor: pointer; font-family: inherit;
+                transition: border-color .15s, background .15s; }
+  .try button:hover { border-color: var(--lumen); background: var(--surface2); color: var(--ink); }
+  .try button b { color: var(--lumen); font-family: var(--mono); font-size: 11px; letter-spacing: .08em; display: block; margin-bottom: 2px; }
+
+  .stage { position: sticky; top: 32px; }
+  .device { width: 390px; height: min(844px, calc(100vh - 72px)); border-radius: 46px;
+            background: var(--bg); position: relative; overflow: hidden;
+            box-shadow: 0 0 0 11px #0D0A08, 0 0 0 12px #2A211A, 0 50px 90px rgba(0,0,0,.65);
+            display: flex; flex-direction: column; }
+  .statusbar { height: 46px; flex: none; display: flex; align-items: flex-end; justify-content: space-between;
+               padding: 0 26px 6px; font-size: 13px; font-weight: 600; }
+  .statusbar .sig { display: flex; gap: 4px; align-items: center; opacity: .85; }
+  .statusbar .bar { width: 3px; background: var(--ink); border-radius: 1px; }
+  .statusbar .batt { width: 22px; height: 11px; border: 1.2px solid var(--ink); border-radius: 3px; position: relative; opacity: .85; }
+  .statusbar .batt::after { content: ''; position: absolute; inset: 1.5px; right: 6px; background: var(--ink); border-radius: 1px; }
+
+  .viewport { flex: 1; position: relative; overflow: hidden; }
+  .screen { position: absolute; inset: 0; display: flex; flex-direction: column; }
+  .scroll { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding-bottom: 22px; }
+  .scroll::-webkit-scrollbar { width: 0; }
+
+  .appbar { flex: none; padding: 6px 20px 12px; display: flex; align-items: flex-end; justify-content: space-between; }
+  .appbar h1 { font-size: 27px; letter-spacing: -.02em; }
+  .appbar .sub { font-family: var(--mono); font-size: 11px; color: var(--dim); letter-spacing: .06em; margin-top: 3px; }
+  .iconbtn { width: 34px; height: 34px; border-radius: 50%; background: var(--surface); border: 1px solid var(--line);
+             display: grid; place-items: center; cursor: pointer; color: var(--ink); }
+  .txtbtn { background: none; border: none; color: var(--ember); font-size: 14.5px; font-weight: 600; cursor: pointer; font-family: inherit; padding: 6px 2px; }
+
+  .tabbar { flex: none; height: 78px; border-top: 1px solid var(--line); background: rgba(18,14,11,.94);
+            backdrop-filter: blur(12px); display: grid; grid-template-columns: repeat(5, 1fr); align-items: start; padding-top: 9px; }
+  .tab { display: grid; justify-items: center; gap: 4px; cursor: pointer; color: var(--dim); background: none; border: none; font-family: inherit; }
+  .tab span { font-size: 10.5px; }
+  .tab.on { color: var(--ink); }
+  .tab.on svg { color: var(--ember); }
+  .rec { justify-self: center; width: 52px; height: 52px; border-radius: 50%; margin-top: -6px;
+         background: var(--ember); border: 3px solid #35150C; cursor: pointer; display: grid; place-items: center;
+         box-shadow: 0 6px 20px rgba(234,94,56,.4); }
+  .rec::after { content: ''; width: 17px; height: 17px; border-radius: 5px; background: #2A0F07; }
+
+  .sect { padding: 0 20px; margin-top: 20px; }
+  .sect-h { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 11px; }
+  .sect-h h2 { font-size: 15.5px; letter-spacing: -.01em; }
+  .sect-h em { font-style: normal; font-family: var(--mono); font-size: 11px; color: var(--dim); letter-spacing: .05em; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; }
+  .chip { display: inline-flex; align-items: center; gap: 5px; height: 25px; padding: 0 10px; border-radius: 999px;
+          background: var(--surface2); border: 1px solid var(--line); font-size: 11.5px; color: #CBB8A6; }
+  .chip.ai { background: var(--lumen-soft); border-color: #235049; color: var(--lumen); }
+  .btn { border: none; border-radius: 12px; font-family: inherit; font-size: 14.5px; font-weight: 600; cursor: pointer;
+         padding: 12px 16px; background: var(--ember); color: #240E07; }
+  .btn.ghost { background: transparent; border: 1px solid var(--line); color: var(--ink); }
+  .btn.lumen { background: var(--lumen); color: #08201E; }
+  .btn.full { width: 100%; }
+  .btn[disabled] { opacity: .35; cursor: not-allowed; }
+
+  .thumb { position: relative; border-radius: 10px; overflow: hidden; background: var(--film); }
+  .thumb::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 55%, rgba(0,0,0,.55)); }
+  .thumb .dur { position: absolute; right: 5px; bottom: 4px; z-index: 2; font-family: var(--mono); font-size: 9.5px; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.8); }
+
+  /* tray */
+  .tray { margin: 0 20px; border: 1px dashed #4A3828; border-radius: 18px; background: rgba(44,33,24,.5); padding: 14px; }
+  .tray.filled { border-style: solid; border-color: var(--ember); background: rgba(234,94,56,.07); }
+  .tray-h { display: flex; align-items: center; justify-content: space-between; margin-bottom: 11px; }
+  .tray-h .t { font-size: 14.5px; font-weight: 600; }
+  .tray-h .c { font-family: var(--mono); font-size: 11px; color: var(--dim); }
+  .tray-strip { display: flex; gap: 7px; overflow-x: auto; padding-bottom: 4px; }
+  .tray-strip::-webkit-scrollbar { height: 0; }
+  .tray-strip .thumb { flex: none; width: 50px; height: 70px; }
+  .tray-strip .x { position: absolute; top: 3px; right: 3px; z-index: 3; width: 16px; height: 16px; border-radius: 50%;
+                   background: rgba(0,0,0,.65); display: grid; place-items: center; cursor: pointer; }
+  .tray-empty { font-size: 13px; color: var(--dim); line-height: 1.6; }
+  .tray-act { display: flex; gap: 8px; margin-top: 12px; }
+  .tray-act .btn { flex: 1; padding: 11px 0; font-size: 14px; }
+  .tray-act .btn.ghost { flex: 0 0 78px; font-size: 13px; }
+
+  /* board */
+  .work { display: flex; gap: 12px; padding: 13px; align-items: center; margin-bottom: 10px; cursor: pointer; }
+  .work .stackwrap { position: relative; width: 62px; height: 82px; flex: none; }
+  .work .stackwrap .thumb { position: absolute; inset: 0; }
+  .work .stackwrap .thumb:nth-child(1) { transform: translate(6px,-3px) rotate(4deg); opacity: .45; }
+  .work .stackwrap .thumb:nth-child(2) { transform: translate(3px,-1px) rotate(2deg); opacity: .7; }
+  .work .info { flex: 1; min-width: 0; }
+  .work .info .t { font-size: 15px; font-weight: 600; letter-spacing: -.01em; }
+  .work .info .m { font-family: var(--mono); font-size: 10.5px; color: var(--dim); margin-top: 3px; letter-spacing: .04em; }
+  .work .info .tags { display: flex; gap: 5px; margin-top: 8px; flex-wrap: wrap; }
+  .prog { height: 4px; border-radius: 2px; background: var(--surface2); margin-top: 9px; overflow: hidden; }
+  .prog i { display: block; height: 100%; background: var(--lumen); border-radius: 2px; transition: width .4s; }
+  .statepill { font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; padding: 3px 7px; border-radius: 6px; }
+  .statepill.draft { background: var(--surface2); color: var(--dim); }
+  .statepill.gen { background: var(--lumen-soft); color: var(--lumen); }
+  .statepill.ready { background: rgba(234,94,56,.16); color: var(--ember2); }
+
+  /* snaps */
+  .daygroup { padding: 0 20px; margin-top: 18px; }
+  .daygroup h3 { font-size: 13px; color: var(--dim); font-weight: 600; margin-bottom: 9px; display: flex; justify-content: space-between; }
+  .daygroup h3 em { font-style: normal; font-family: var(--mono); font-size: 11px; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+  .grid3 .thumb { aspect-ratio: 3/4; cursor: pointer; }
+  .pick { position: absolute; top: 6px; right: 6px; z-index: 3; width: 21px; height: 21px; border-radius: 50%;
+          border: 1.6px solid rgba(255,255,255,.85); background: rgba(0,0,0,.25); display: grid; place-items: center; }
+  .on .pick { background: var(--ember); border-color: var(--ember); }
+  .thumb.on { outline: 2px solid var(--ember); outline-offset: -2px; }
+  .pick b { display: none; font-family: var(--mono); font-size: 11px; color: #240E07; font-weight: 700; }
+  .on .pick b { display: block; }
+  .intray { position: absolute; left: 5px; bottom: 4px; z-index: 3; font-family: var(--mono); font-size: 9px;
+            background: var(--ember); color: #240E07; padding: 1px 5px; border-radius: 4px; font-weight: 700; }
+
+  .selbar { position: absolute; left: 12px; right: 12px; bottom: 12px; z-index: 40; border-radius: 18px;
+            background: rgba(38,29,22,.97); border: 1px solid #4A382A; backdrop-filter: blur(14px);
+            padding: 12px 12px 12px 16px; display: flex; align-items: center; gap: 10px;
+            box-shadow: 0 16px 40px rgba(0,0,0,.55); transform: translateY(130%); transition: transform .26s cubic-bezier(.2,.9,.3,1); }
+  .selbar.up { transform: none; }
+  .selbar .n { font-size: 14px; font-weight: 600; }
+  .selbar .n em { font-style: normal; color: var(--dim); font-family: var(--mono); font-size: 12px; }
+  .selbar .btn { padding: 10px 14px; font-size: 13.5px; }
+  .shake { animation: sh .32s; }
+  @keyframes sh { 0%,100%{transform:none} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
+
+  /* editor wizard */
+  .steps { flex: none; display: flex; align-items: center; gap: 8px; padding: 2px 20px 14px; }
+  .steps .s { flex: 1; display: grid; gap: 5px; }
+  .steps .s .bar { height: 3px; border-radius: 2px; background: var(--surface2); }
+  .steps .s.on .bar, .steps .s.done .bar { background: var(--ember); }
+  .steps .s span { font-size: 10.5px; color: var(--dim); font-family: var(--mono); letter-spacing: .05em; }
+  .steps .s.on span { color: var(--ink); }
+
+  .cutrow { display: flex; align-items: center; gap: 11px; padding: 10px 12px; border-radius: 14px;
+            background: var(--surface); border: 1px solid var(--line); margin-bottom: 8px; }
+  .cutrow .thumb { width: 44px; height: 60px; flex: none; }
+  .cutrow .meta { flex: 1; min-width: 0; }
+  .cutrow .meta .t { font-size: 13.5px; font-weight: 600; }
+  .cutrow .meta .m { font-family: var(--mono); font-size: 10px; color: var(--dim); margin-top: 2px; }
+  .cutrow .grip { color: var(--dim); cursor: grab; }
+  .arrow { width: 26px; height: 26px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface2);
+           color: var(--dim); display: grid; place-items: center; cursor: pointer; font-size: 12px; }
+  .arrow:hover { color: var(--ink); border-color: var(--ember); }
+  .trimwrap { margin-top: 7px; height: 18px; border-radius: 5px; background: var(--surface2); position: relative; overflow: hidden; }
+  .trimwrap i { position: absolute; top: 0; bottom: 0; background: rgba(234,94,56,.35); border-left: 2px solid var(--ember); border-right: 2px solid var(--ember); }
+
+  .stylegrid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+  .stylecard { border-radius: 14px; border: 1px solid var(--line); background: var(--surface); padding: 12px; cursor: pointer; text-align: left; font-family: inherit; color: var(--ink); }
+  .stylecard.on { border-color: var(--ember); background: rgba(234,94,56,.1); }
+  .stylecard .n { font-size: 14px; font-weight: 600; }
+  .stylecard .d { font-size: 11.5px; color: var(--dim); margin-top: 3px; line-height: 1.5; }
+  .stylecard .sw { height: 26px; border-radius: 7px; margin-bottom: 9px; }
+
+  .row { display: flex; align-items: center; justify-content: space-between; padding: 13px 16px; border-bottom: 1px solid var(--line); }
+  .row:last-child { border-bottom: none; }
+  .row .l { font-size: 14.5px; }
+  .row .r { font-size: 14px; color: var(--dim); display: flex; align-items: center; gap: 7px; cursor: pointer; }
+  .switch { width: 44px; height: 26px; border-radius: 999px; background: var(--surface2); border: 1px solid var(--line); position: relative; cursor: pointer; }
+  .switch i { position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: var(--dim); transition: .18s; }
+  .switch.on { background: var(--ember); border-color: var(--ember); }
+  .switch.on i { left: 20px; background: #fff; }
+
+  .footbar { flex: none; padding: 12px 20px 16px; border-top: 1px solid var(--line); background: rgba(18,14,11,.96); display: flex; gap: 9px; }
+  .footbar .btn { flex: 1; white-space: nowrap; }
+  .footbar .btn.prev { flex: 0 0 84px; }
+
+  .genwrap { padding: 26px 24px; text-align: center; }
+  .ring { width: 116px; height: 116px; margin: 6px auto 20px; border-radius: 50%; position: relative;
+          background: conic-gradient(var(--lumen) var(--p,0%), var(--surface2) 0); display: grid; place-items: center; }
+  .ring::after { content: ''; position: absolute; inset: 9px; border-radius: 50%; background: var(--bg); }
+  .ring b { position: relative; z-index: 2; font-family: var(--mono); font-size: 21px; }
+  .gsteps { display: grid; gap: 9px; text-align: left; margin-top: 18px; }
+  .gstep { display: flex; align-items: center; gap: 10px; font-size: 13.5px; color: var(--dim); }
+  .gstep .dot { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--line); flex: none; display: grid; place-items: center; }
+  .gstep.done { color: var(--ink); } .gstep.done .dot { background: var(--lumen); border-color: var(--lumen); }
+  .gstep.now { color: var(--ink); } .gstep.now .dot { border-color: var(--lumen); border-right-color: transparent; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; padding: 0 20px; }
+  .mcard { cursor: pointer; }
+  .mcard .thumb { aspect-ratio: 9/13; border-radius: 14px; }
+  .mcard .t { font-size: 13.5px; font-weight: 600; margin-top: 7px; }
+  .mcard .m { font-family: var(--mono); font-size: 10.5px; color: var(--dim); margin-top: 2px; }
+  .badge { position: absolute; top: 8px; left: 8px; z-index: 3; font-family: var(--mono); font-size: 9.5px; padding: 3px 7px; border-radius: 6px; background: rgba(0,0,0,.6); color: #fff; }
+
+  .toast { position: absolute; left: 20px; right: 20px; bottom: 96px; z-index: 80; background: #3A2C20; border: 1px solid #4E3B2C;
+           border-radius: 12px; padding: 12px 14px; font-size: 13px; text-align: center; opacity: 0; transform: translateY(8px); transition: .2s; pointer-events: none; }
+  .toast.on { opacity: 1; transform: none; }
+
+  .prof { display: flex; align-items: center; gap: 13px; padding: 4px 20px 18px; }
+  .avatar { width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(140deg,#C4562A,#6B4A2F); display: grid; place-items: center; font-size: 21px; font-weight: 700; color: #2A0F07; }
+  .prof .nm { font-size: 18px; font-weight: 600; }
+  .prof .em { font-size: 12.5px; color: var(--dim); margin-top: 2px; }
+  .stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 9px; padding: 0 20px; }
+  .stat { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px 10px; text-align: center; }
+  .stat b { display: block; font-size: 20px; } .stat span { font-size: 11px; color: var(--dim); }
+  .listcard { margin: 0 20px; }
+  .grouplabel { font-family: var(--mono); font-size: 10.5px; letter-spacing: .12em; color: var(--dim); padding: 20px 22px 8px; text-transform: uppercase; }
+  .empty { padding: 36px 24px; text-align: center; color: var(--dim); font-size: 13.5px; line-height: 1.7; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="brief">
+    <div class="kicker">확정 기획 · 2026-08-03</div>
+    <h1>스튜디오 — 작업대형</h1>
+    <p class="bet">
+      <b>전제:</b> 사용자는 결과물을 <b>자기 손으로 통제</b>하고 싶어한다. AI는 주인공이 아니라
+      마지막에 붙는 <b>강력한 도구</b>다. 홈은 “내 작업대” — 담아둔 재료와 진행 중인 무비가
+      항상 여기 놓여 있고, 앱을 다시 열면 하던 작업을 이어서 한다.
+    </p>
+    <p class="bet" style="margin-top:12px;font-size:14px;color:var(--dim)">
+      세 방향(오늘 / 스튜디오 / 레시피)을 비교해 <b style="color:var(--ink)">이 방향으로 확정</b>했다.
+      기획 전문은 <a href="concept.md" style="color:var(--lumen)">concept.md</a>. 이 목업은 확정된 화면과 플로우를
+      눌러볼 수 있게 만든 것이고, 데이터는 전부 가짜다. 아직 <code>src</code>에는 반영되지 않았다.
+    </p>
+
+    <div class="block">
+      <h2>탭 구성</h2>
+      <div class="flow"><span>스튜디오</span><i>·</i><span>스냅</span><i>·</i><span>● 촬영</span><i>·</i><span>무비</span><i>·</i><span>나</span></div>
+      <p style="margin-top:10px">
+        핵심 발명은 <strong>“담기 트레이”</strong>다. 스냅 탭에서 고른 스냅은 곧바로 무비가 되지 않고
+        스튜디오의 트레이에 쌓인다 — 장바구니처럼. 여러 날에 걸쳐 재료를 모을 수 있다.
+      </p>
+    </div>
+
+    <div class="block">
+      <h2>무비를 만드는 경로</h2>
+      <div class="flow" style="margin-bottom:8px">
+        <span>스냅</span><i>→</i><span>선택 → 담기</span><i>→</i><span>스튜디오 트레이</span><i>→</i><span>새 무비 시작</span>
+      </div>
+      <div class="flow"><span>편집기</span><i>①</i><span>조립(순서·길이)</span><i>②</i><span>스타일·음악</span><i>③</i><span>AI 생성</span></div>
+      <p style="margin-top:10px">초안은 언제든 저장되고, 스튜디오 보드에서 <strong>이어서 작업</strong>할 수 있다.</p>
+    </div>
+
+    <div class="block">
+      <h2>이 방향을 고른 이유</h2>
+      <ul>
+        <li class="good">“내가 만들었다”는 소유감이 가장 강하다 — 공유 동기가 붙는다.</li>
+        <li class="good">AI 결과가 마음에 안 들 때 <strong>사용자가 고칠 손잡이</strong>가 있다.</li>
+        <li class="good">트레이 덕분에 여러 날짜에 걸친 무비를 자연스럽게 만든다.</li>
+        <li class="good">콜드 스타트에 강하다 — 스냅 0개여도 홈이 “뭘 하면 되는지” 말한다.</li>
+        <li class="good"><strong>운영 비용이 0에 가깝다</strong> — 백엔드는 합성 잡 하나로 출발할 수 있다.</li>
+      </ul>
+    </div>
+
+    <div class="block">
+      <h2>감수하는 것</h2>
+      <ul>
+        <li class="bad">단계가 많다. 첫 무비까지 탭 6–8번 — 이탈 지점이 많다.</li>
+        <li class="bad">AI가 “도구”로 밀려나서 제품 차별점이 흐려질 수 있다. 차별화는 <strong>트레이와 재료 관리 경험</strong>이 진다.</li>
+        <li class="bad">트레이라는 개념을 사용자가 학습해야 한다 — 온보딩 한 장이 필요하다.</li>
+      </ul>
+      <p style="margin-top:10px">
+        폐기한 두 방향은 뒤 단계로 밀어뒀다 — <strong>제안 카드</strong>는 v1.2에 스튜디오 상단으로,
+        <strong>레시피</strong>는 카탈로그를 운영할 사람이 생기면 v1.3으로.
+      </p>
+    </div>
+
+    <div class="block">
+      <h2>백엔드에 필요한 것</h2>
+      <ul>
+        <li><strong>초안 저장</strong> — <code>PATCH /movies/:id</code>로 순서·트림·스타일을 서버에 유지(기기 교체 대응).</li>
+        <li><strong>합성 잡</strong> — 사용자가 정한 순서/트림을 <em>그대로 지키는</em> 모드가 필요. AI가 순서를 다시 짜면 안 된다.</li>
+        <li><strong>무비 완성 푸시</strong> — 합성이 40초씩 걸리면 사용자는 앱을 나간다. 기존 FCM 인프라 재사용.</li>
+        <li>스타일/BGM 카탈로그 API.</li>
+      </ul>
+    </div>
+
+    <div class="block">
+      <h2>이렇게 눌러보세요</h2>
+      <div class="try">
+        <button data-go="snaps"><b>01</b>스냅 탭 → 몇 개 골라 [트레이에 담기]</button>
+        <button data-go="studio"><b>02</b>스튜디오 → 트레이 [이 스냅으로 새 무비]</button>
+        <button data-go="editor"><b>03</b>편집기 3단계 — 순서 바꾸기 → 스타일 → 생성</button>
+        <button data-go="movies"><b>04</b>무비 탭 / 나 탭 확인</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="stage"><div class="device" id="device"></div></div>
+</div>
+
+<script>
+const SCENES = [
+  ['#6B4A2F','#241408'], ['#2E4A6B','#0E1725'], ['#C4562A','#390F04'], ['#2F4A32','#0F180E'],
+  ['#4A2F5C','#150C1C'], ['#1F5A5F','#0A1E20'], ['#A8562F','#2C1207'], ['#525C68','#14181D'],
+];
+function thumbCSS(i, seed) {
+  const s = SCENES[i % SCENES.length], a = (seed ?? i) * 37 % 60 + 20;
+  return `background-image:
+    radial-gradient(90% 55% at ${a}% 12%, rgba(255,255,255,.20), transparent 62%),
+    linear-gradient(${150 + (i%4)*14}deg, ${s[0]} 0%, ${s[1]} 78%);`;
+}
+const SNAPS = [
+  { id:'s01', day:'today', time:'08:12', dur:3, sc:1, place:'집 앞' },
+  { id:'s02', day:'today', time:'08:40', dur:4, sc:0, place:'카페' },
+  { id:'s03', day:'today', time:'12:35', dur:3, sc:6, place:'점심' },
+  { id:'s04', day:'today', time:'15:02', dur:5, sc:7, place:'사무실' },
+  { id:'s05', day:'today', time:'18:20', dur:4, sc:2, place:'퇴근길' },
+  { id:'s06', day:'yest', time:'09:05', dur:3, sc:1, place:'집 앞' },
+  { id:'s07', day:'yest', time:'11:30', dur:4, sc:0, place:'성수동' },
+  { id:'s08', day:'yest', time:'11:52', dur:3, sc:3, place:'성수동' },
+  { id:'s09', day:'yest', time:'12:10', dur:5, sc:7, place:'성수동' },
+  { id:'s10', day:'yest', time:'12:44', dur:4, sc:0, place:'성수동' },
+  { id:'s11', day:'yest', time:'13:20', dur:3, sc:6, place:'성수동' },
+  { id:'s12', day:'yest', time:'19:40', dur:5, sc:4, place:'밤거리' },
+  { id:'s13', day:'d26', time:'08:20', dur:3, sc:1, place:'집 앞' },
+  { id:'s14', day:'d26', time:'10:15', dur:4, sc:5, place:'한강' },
+  { id:'s15', day:'d26', time:'10:38', dur:5, sc:5, place:'한강' },
+  { id:'s16', day:'d26', time:'11:02', dur:3, sc:3, place:'한강' },
+  { id:'s17', day:'d26', time:'17:55', dur:4, sc:2, place:'노을' },
+  { id:'s18', day:'d26', time:'21:12', dur:3, sc:4, place:'집' },
+  { id:'s19', day:'d25', time:'08:30', dur:3, sc:1, place:'집 앞' },
+  { id:'s20', day:'d25', time:'13:10', dur:4, sc:0, place:'연남동' },
+  { id:'s21', day:'d25', time:'13:35', dur:5, sc:6, place:'연남동' },
+  { id:'s22', day:'d25', time:'14:20', dur:3, sc:7, place:'연남동' },
+  { id:'s23', day:'d25', time:'16:00', dur:4, sc:3, place:'연남동' },
+  { id:'s24', day:'d25', time:'20:05', dur:5, sc:4, place:'밤거리' },
+];
+const DAY_LABEL = { today:'오늘 · 7월 28일', yest:'어제 · 7월 27일', d26:'7월 26일 (일)', d25:'7월 25일 (토)' };
+const snapById = id => SNAPS.find(s => s.id === id);
+
+const STYLES = [
+  { n:'잔잔한', d:'긴 컷 · 페이드 · 로파이', g:'linear-gradient(120deg,#3E5C6B,#1B2A32)' },
+  { n:'경쾌한', d:'짧은 컷 · 비트 싱크', g:'linear-gradient(120deg,#C4562A,#6B2A12)' },
+  { n:'담백한', d:'컷 편집 없음 · 무음악', g:'linear-gradient(120deg,#5C6470,#252A31)' },
+  { n:'감성적인', d:'슬로우 · 필름 그레인', g:'linear-gradient(120deg,#7A5A8C,#301F3C)' },
+];
+const BGMS = ['Lo-fi Walk','Sunny Side','Night Drift','Morning Tape','무음'];
+const MAX = 10;
+
+let MOVIES = [
+  { id:'m1', title:'연남동 토요일', snaps:['s20','s21','s22','s23'], style:'경쾌한', bgm:'Sunny Side', status:'ready', date:'7월 25일', prog:100 },
+  { id:'m2', title:'성수동 산책', snaps:['s07','s08','s09','s10','s11'], style:'잔잔한', bgm:'Lo-fi Walk', status:'draft', date:'어제', prog:40 },
+  { id:'m3', title:'한강 오전', snaps:['s14','s15','s16'], style:'잔잔한', bgm:'Morning Tape', status:'generating', date:'오늘', prog:65 },
+];
+
+const S = {
+  tab:'studio', overlay:null, selecting:false, sel:[], tray:['s02','s05'],
+  editId:null, step:0, cutIdx:0, gen:null, toastT:null, settings:{ loc:true, done:true },
+};
+
+const I = {
+  studio:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="7" width="18" height="12" rx="2.5"/><path d="M7 7V5.5A1.5 1.5 0 018.5 4h7A1.5 1.5 0 0117 5.5V7M3 12h18"/></svg>',
+  snaps:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 9h18M9 4v16"/></svg>',
+  movies:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 9.5l5 2.5-5 2.5z" fill="currentColor" stroke="none"/></svg>',
+  me:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="8.5" r="3.6"/><path d="M4.5 20c1.2-3.6 4-5.4 7.5-5.4s6.3 1.8 7.5 5.4"/></svg>',
+  back:'<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 5l-7 7 7 7"/></svg>',
+  plus:'<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>',
+  chev:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5l7 7-7 7"/></svg>',
+  check:'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#08201E" stroke-width="3.4"><path d="M4 12.5l5.5 5.5L20 7"/></svg>',
+  checkE:'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#240E07" stroke-width="3.4"><path d="M4 12.5l5.5 5.5L20 7"/></svg>',
+  x:'<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M5 5l14 14M19 5L5 19"/></svg>',
+  grip:'<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>',
+  spark:'<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.9 6.1L20 10l-6.1 1.9L12 18l-1.9-6.1L4 10l6.1-1.9z"/></svg>',
+  play:'<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5l12 7-12 7z"/></svg>',
+};
+
+const el = document.getElementById('device');
+function render() {
+  el.innerHTML = statusbar() + `<div class="viewport">${viewport()}</div>`
+    + (S.overlay ? '' : tabbar()) + `<div class="toast" id="toast"></div>`;
+}
+function statusbar() {
+  return `<div class="statusbar"><span>9:41</span><span class="sig">
+    <span class="bar" style="height:5px"></span><span class="bar" style="height:7px"></span>
+    <span class="bar" style="height:9px"></span><span class="bar" style="height:11px"></span>
+    <span style="width:6px"></span><span class="batt"></span></span></div>`;
+}
+function viewport() {
+  if (S.overlay === 'editor') return screenEditor();
+  if (S.tab === 'studio') return screenStudio();
+  if (S.tab === 'snaps') return screenSnaps();
+  if (S.tab === 'movies') return screenMovies();
+  return screenMe();
+}
+function tabbar() {
+  const t = (k,l) => `<button class="tab ${S.tab===k?'on':''}" data-tab="${k}">${I[k]}<span>${l}</span></button>`;
+  return `<div class="tabbar">${t('studio','스튜디오')}${t('snaps','스냅')}
+    <button class="rec" data-act="rec"></button>${t('movies','무비')}${t('me','나')}</div>`;
+}
+function thumb(sn, cls='', extra='') {
+  return `<div class="thumb ${cls}" style="${thumbCSS(sn.sc, sn.id.charCodeAt(2))}">${extra}<span class="dur">${sn.dur}s</span></div>`;
+}
+const totalSec = ids => ids.reduce((a,id)=>a+snapById(id).dur,0);
+
+/* ---- 스튜디오 ---- */
+function screenStudio() {
+  const tray = S.tray.map(id => {
+    const sn = snapById(id);
+    return thumb(sn, '', `<span class="x" data-untray="${id}">${I.x}</span>`);
+  }).join('');
+  const trayBlock = S.tray.length ? `
+    <div class="tray filled">
+      <div class="tray-h"><span class="t">담아둔 스냅</span><span class="c">${S.tray.length} / ${MAX} · 약 ${totalSec(S.tray)}초</span></div>
+      <div class="tray-strip">${tray}
+        <button class="thumb" style="width:50px;height:70px;border:1px dashed var(--line);background:none;color:var(--dim);cursor:pointer;display:grid;place-items:center" data-act="addtray">${I.plus}</button></div>
+      <div class="tray-act">
+        <button class="btn" data-act="startnew">이 스냅으로 새 무비</button>
+        <button class="btn ghost" data-act="cleartray">비우기</button></div>
+    </div>` : `
+    <div class="tray">
+      <div class="tray-h"><span class="t">담아둔 스냅</span><span class="c">0 / ${MAX}</span></div>
+      <p class="tray-empty">스냅 탭에서 쓸 만한 장면을 골라 <b style="color:var(--ink)">담기</b>를 누르면<br/>여기 모여요. 여러 날짜에 걸쳐 모아도 돼요.</p>
+      <div class="tray-act"><button class="btn" data-act="addtray">스냅 고르러 가기</button></div>
+    </div>`;
+
+  const inProgress = MOVIES.filter(m => m.status !== 'ready');
+  const board = inProgress.map(m => {
+    const sn = snapById(m.snaps[0]);
+    const pill = m.status === 'generating'
+      ? '<span class="statepill gen">생성 중</span>' : '<span class="statepill draft">초안</span>';
+    const stack = m.snaps.slice(0,3).map(id => {
+      const x = snapById(id);
+      return `<div class="thumb" style="${thumbCSS(x.sc, x.id.charCodeAt(2))}"></div>`;
+    }).join('');
+    return `<div class="card work" data-edit="${m.id}">
+      <div class="stackwrap">${stack}</div>
+      <div class="info">
+        <div class="t">${m.title}</div>
+        <div class="m">스냅 ${m.snaps.length} · ${totalSec(m.snaps)}초 · ${m.style}</div>
+        <div class="tags">${pill}<span class="statepill draft">${m.date}</span></div>
+        <div class="prog"><i style="width:${m.prog}%"></i></div>
+      </div>
+      <span style="color:var(--dim)">${I.chev}</span>
+    </div>`;
+  }).join('');
+
+  const ready = MOVIES.filter(m => m.status === 'ready').slice(0,2).map(m => {
+    const sn = snapById(m.snaps[0]);
+    return `<div class="mcard" data-edit="${m.id}">
+      <div class="thumb" style="${thumbCSS(sn.sc, sn.id.charCodeAt(2))}"><span class="dur">${totalSec(m.snaps)}s</span></div>
+      <div class="t">${m.title}</div><div class="m">${m.date}</div></div>`;
+  }).join('');
+
+  return `<div class="screen"><div class="appbar">
+      <div><h1>스튜디오</h1><div class="sub">작업 중 ${inProgress.length} · 담은 스냅 ${S.tray.length}</div></div>
+      <div class="iconbtn" data-act="newempty">${I.plus}</div></div>
+    <div class="scroll">
+      ${trayBlock}
+      <div class="sect"><div class="sect-h"><h2>작업 중</h2><em>${inProgress.length}</em></div>
+        ${inProgress.length ? board : '<div class="empty">진행 중인 무비가 없어요.</div>'}</div>
+      <div class="sect"><div class="sect-h"><h2>최근 완성</h2><em data-tab="movies" style="cursor:pointer;color:var(--ember)">전체 보기</em></div></div>
+      <div class="grid2">${ready}</div>
+      <div style="height:22px"></div>
+    </div></div>`;
+}
+
+/* ---- 스냅 ---- */
+function screenSnaps() {
+  const groups = ['today','yest','d26','d25'].map(d => {
+    const list = SNAPS.filter(s => s.day === d);
+    const cells = list.map(s => {
+      const on = S.sel.includes(s.id);
+      const pick = S.selecting ? `<span class="pick"><b>${on ? S.sel.indexOf(s.id)+1 : ''}</b></span>` : '';
+      const inTray = S.tray.includes(s.id) && !S.selecting ? '<span class="intray">담김</span>' : '';
+      return `<div data-snap="${s.id}" class="thumb ${on?'on':''}" style="${thumbCSS(s.sc, s.id.charCodeAt(2))}">${pick}${inTray}<span class="dur">${s.dur}s</span></div>`;
+    }).join('');
+    return `<div class="daygroup"><h3>${DAY_LABEL[d]}<em>${list.length}</em></h3><div class="grid3">${cells}</div></div>`;
+  }).join('');
+  return `<div class="screen"><div class="appbar">
+      <div><h1>스냅</h1><div class="sub">${SNAPS.length}개 · 3–5초 원본</div></div>
+      <button class="txtbtn" data-act="togglesel">${S.selecting ? '취소' : '선택'}</button></div>
+    <div class="scroll">${groups}<div style="height:70px"></div></div>
+    <div class="selbar ${S.selecting && S.sel.length ? 'up':''}" id="selbar">
+      <div class="n">${S.sel.length}개 <em>/ ${MAX}</em></div><div style="flex:1"></div>
+      <button class="btn ghost" style="padding:10px 12px" data-act="clearsel">해제</button>
+      <button class="btn" data-act="totray">트레이에 담기</button></div></div>`;
+}
+
+/* ---- 편집기 (3-step wizard) ---- */
+function screenEditor() {
+  const m = MOVIES.find(x => x.id === S.editId);
+  const stepNames = ['조립','스타일','생성'];
+  const steps = stepNames.map((n,i) =>
+    `<div class="s ${i===S.step?'on':i<S.step?'done':''}"><div class="bar"></div><span>${i+1}. ${n}</span></div>`).join('');
+
+  let body = '';
+  if (S.step === 0) {
+    const rows = m.snaps.map((id,i) => {
+      const sn = snapById(id);
+      return `<div class="cutrow">
+        <span class="grip">${I.grip}</span>
+        <div class="thumb" style="${thumbCSS(sn.sc, sn.id.charCodeAt(2))}"></div>
+        <div class="meta"><div class="t">컷 ${i+1} · ${sn.place}</div>
+          <div class="m">${sn.time} · 원본 ${sn.dur}s → 사용 ${Math.max(2, sn.dur-1)}s</div>
+          <div class="trimwrap"><i style="left:8%;right:14%"></i></div></div>
+        <div style="display:grid;gap:4px">
+          <button class="arrow" data-mv="${i}:-1">▲</button>
+          <button class="arrow" data-mv="${i}:1">▼</button></div>
+        <button class="arrow" style="color:var(--danger)" data-rm="${i}">✕</button>
+      </div>`;
+    }).join('');
+    body = `<div class="scroll"><div style="padding:0 20px">
+      <div class="sect-h"><h2>컷 순서와 길이</h2><em>${m.snaps.length} / ${MAX} · ${totalSec(m.snaps)}초</em></div>
+      ${rows}
+      <button class="btn ghost full" style="margin-top:4px" data-act="addcut">${I.plus} &nbsp;스냅 더 넣기</button>
+      <p style="font-size:12.5px;color:var(--dim);margin-top:14px;line-height:1.6">
+        여기서 정한 순서와 트림은 <b style="color:var(--ink)">그대로 유지</b>돼요.
+        AI는 전환·색보정·음악만 맡습니다.</p>
+      <div style="height:16px"></div></div></div>`;
+  } else if (S.step === 1) {
+    const cards = STYLES.map(s => `<button class="stylecard ${m.style===s.n?'on':''}" data-style="${s.n}">
+      <div class="sw" style="background:${s.g}"></div>
+      <div class="n">${s.n}</div><div class="d">${s.d}</div></button>`).join('');
+    body = `<div class="scroll"><div style="padding:0 20px">
+      <div class="sect-h"><h2>스타일</h2><em>1개 선택</em></div>
+      <div class="stylegrid">${cards}</div>
+      <div class="sect-h" style="margin-top:22px"><h2>세부</h2></div>
+      <div class="card">
+        <div class="row"><span class="l">배경 음악</span><span class="r" data-act="cyclebgm">${m.bgm} ${I.chev}</span></div>
+        <div class="row"><span class="l">자동 자막</span><div class="switch on" data-act="nop"><i></i></div></div>
+        <div class="row"><span class="l">비율</span><span class="r">9:16 ${I.chev}</span></div>
+        <div class="row"><span class="l">목표 길이</span><span class="r">자동 (${totalSec(m.snaps)}초) ${I.chev}</span></div>
+      </div><div style="height:16px"></div></div></div>`;
+  } else {
+    const g = S.gen;
+    const names = ['업로드','장면 분석','컷 다듬기','음악·자막','렌더'];
+    const pct = g ? Math.round(g.step / names.length * 100) : 0;
+    const done = g && g.step >= names.length;
+    const gsteps = names.map((n,i) => {
+      const st = !g ? '' : i < g.step ? 'done' : i === g.step ? 'now' : '';
+      return `<div class="gstep ${st}"><span class="dot">${g && i < g.step ? I.check : ''}</span>${n}</div>`;
+    }).join('');
+    body = `<div class="scroll"><div class="genwrap">
+      ${!g ? `
+        <div style="font-size:19px;font-weight:600;margin-bottom:6px">준비됐어요</div>
+        <p style="font-size:13.5px;color:var(--dim);line-height:1.7">
+          컷 ${m.snaps.length}개 · ${totalSec(m.snaps)}초<br/>${m.style} · ${m.bgm}</p>
+        <div style="height:20px"></div>
+        <button class="btn lumen full" data-act="rungen">${I.spark} &nbsp;AI로 생성 시작</button>
+        <p style="font-size:12px;color:var(--dim);margin-top:12px">보통 40초쯤 걸려요. 앱을 나가도 계속됩니다.</p>
+      ` : `
+        <div class="ring" style="--p:${done?100:pct}%"><b>${done?'100':pct}%</b></div>
+        <div style="font-size:18px;font-weight:600">${done ? '완성됐어요' : '만드는 중…'}</div>
+        <div class="gsteps">${gsteps}</div>
+        ${done ? '<div style="height:18px"></div><button class="btn full" data-act="finish">무비 보기</button>' : ''}
+      `}
+      <div style="height:16px"></div></div></div>`;
+  }
+
+  const canNext = S.step < 2;
+  return `<div class="screen">
+    <div class="appbar" style="padding-top:2px">
+      <div style="display:flex;align-items:center;gap:11px">
+        <div class="iconbtn" data-act="closeeditor">${I.back}</div>
+        <div><div style="font-size:17px;font-weight:600">${m.title}</div>
+          <div class="sub">초안 자동 저장됨</div></div></div>
+      <button class="txtbtn" data-act="rename">이름</button></div>
+    <div class="steps">${steps}</div>
+    ${body}
+    <div class="footbar">
+      <button class="btn ghost prev" data-act="prevstep" ${S.step===0?'disabled':''}>이전</button>
+      ${canNext ? `<button class="btn" data-act="nextstep">${S.step===1?'생성 단계로':'다음'}</button>`
+                : `<button class="btn ghost" data-act="closeeditor">나중에 하기</button>`}
+    </div></div>`;
+}
+
+/* ---- 무비 ---- */
+function screenMovies() {
+  const cards = MOVIES.map(m => {
+    const sn = snapById(m.snaps[0]);
+    const badge = m.status === 'draft' ? '<span class="badge">초안</span>'
+      : m.status === 'generating' ? '<span class="badge" style="background:#16302E;color:#82D6CE">생성 중</span>' : '';
+    return `<div class="mcard" data-edit="${m.id}">
+      <div class="thumb" style="${thumbCSS(sn.sc, sn.id.charCodeAt(2))}">${badge}<span class="dur">${totalSec(m.snaps)}s</span></div>
+      <div class="t">${m.title}</div><div class="m">${m.date} · 스냅 ${m.snaps.length} · ${m.style}</div></div>`;
+  }).join('');
+  return `<div class="screen"><div class="appbar">
+      <div><h1>무비</h1><div class="sub">${MOVIES.length}편</div></div>
+      <div class="iconbtn" data-act="newempty">${I.plus}</div></div>
+    <div class="scroll"><div style="height:4px"></div><div class="grid2">${cards}</div><div style="height:24px"></div></div></div>`;
+}
+
+/* ---- 나 ---- */
+function screenMe() {
+  const sw = k => `<div class="switch ${S.settings[k]?'on':''}" data-sw="${k}"><i></i></div>`;
+  return `<div class="screen"><div class="appbar"><div><h1>나</h1></div>
+      <div class="iconbtn" data-act="nop"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></div></div>
+    <div class="scroll">
+      <div class="prof"><div class="avatar">홍</div>
+        <div><div class="nm">youngtaek</div><div class="em">youngtaek_hong@dweax.com</div></div></div>
+      <div class="stats">
+        <div class="stat"><b>${SNAPS.length}</b><span>스냅</span></div>
+        <div class="stat"><b>${MOVIES.length}</b><span>무비</span></div>
+        <div class="stat"><b>${S.tray.length}</b><span>트레이</span></div></div>
+      <div class="grouplabel">촬영 리마인더</div>
+      <div class="card listcard">
+        <div class="row"><span class="l">아침 · 점심 · 저녁</span><span class="r">3회 / 일 ${I.chev}</span></div>
+        <div class="row"><span class="l">관심사</span><span class="r">카페, 산책, 운동 ${I.chev}</span></div></div>
+      <div class="grouplabel">알림</div>
+      <div class="card listcard">
+        <div class="row"><span class="l">위치 알림 받기</span>${sw('loc')}</div>
+        <div class="row"><span class="l">조용한 시간</span><span class="r">23:00 – 08:00 ${I.chev}</span></div>
+        <div class="row"><span class="l">무비 완성 알림</span>${sw('done')}</div></div>
+      <div class="grouplabel">연결된 계정</div>
+      <div class="card listcard">
+        <div class="row"><span class="l">TikTok</span><span class="r">연결됨 ${I.chev}</span></div>
+        <div class="row"><span class="l">Instagram</span><span class="r">연결하기 ${I.chev}</span></div></div>
+      <div class="grouplabel">계정</div>
+      <div class="card listcard">
+        <div class="row"><span class="l">비밀번호 변경</span><span class="r">${I.chev}</span></div>
+        <div class="row"><span class="l" style="color:var(--dim)">로그아웃</span><span class="r">${I.chev}</span></div>
+        <div class="row"><span class="l" style="color:var(--danger)">계정 삭제</span><span class="r">${I.chev}</span></div></div>
+      <div style="height:26px"></div></div></div>`;
+}
+
+/* ---- actions ---- */
+function toast(msg) {
+  const t = document.getElementById('toast'); if (!t) return;
+  t.textContent = msg; t.classList.add('on');
+  clearTimeout(S.toastT); S.toastT = setTimeout(() => t.classList.remove('on'), 1900);
+}
+function openEditor(id, step = 0) { S.editId = id; S.step = step; S.gen = null; S.overlay = 'editor'; render(); }
+function runGen() {
+  const names = 5;
+  S.gen = { step: 0 };
+  render();
+  const tick = () => {
+    if (!S.gen) return;
+    S.gen.step++;
+    render();
+    if (S.gen.step < names) setTimeout(tick, 850);
+    else {
+      const m = MOVIES.find(x => x.id === S.editId);
+      m.status = 'ready'; m.prog = 100;
+    }
+  };
+  setTimeout(tick, 700);
+}
+
+el.addEventListener('click', e => {
+  const t = e.target.closest('[data-tab],[data-act],[data-snap],[data-edit],[data-untray],[data-style],[data-mv],[data-rm],[data-sw]');
+  if (!t) return;
+
+  if (t.dataset.tab) { S.tab = t.dataset.tab; S.overlay = null; S.selecting = false; S.sel = []; return render(); }
+  if (t.dataset.edit) return openEditor(t.dataset.edit, 0);
+  if (t.dataset.untray) { S.tray = S.tray.filter(x => x !== t.dataset.untray); return render(); }
+  if (t.dataset.sw) { S.settings[t.dataset.sw] = !S.settings[t.dataset.sw]; return render(); }
+  if (t.dataset.style) { MOVIES.find(x=>x.id===S.editId).style = t.dataset.style; return render(); }
+  if (t.dataset.mv) {
+    const [i, d] = t.dataset.mv.split(':').map(Number);
+    const m = MOVIES.find(x => x.id === S.editId), j = i + d;
+    if (j < 0 || j >= m.snaps.length) return;
+    [m.snaps[i], m.snaps[j]] = [m.snaps[j], m.snaps[i]];
+    return render();
+  }
+  if (t.dataset.rm) {
+    const m = MOVIES.find(x => x.id === S.editId);
+    if (m.snaps.length <= 1) return toast('컷이 최소 1개는 있어야 해요');
+    m.snaps.splice(+t.dataset.rm, 1); return render();
+  }
+  if (t.dataset.snap) {
+    if (!S.selecting) S.selecting = true;
+    const id = t.dataset.snap, i = S.sel.indexOf(id);
+    if (i >= 0) S.sel.splice(i,1);
+    else if (S.sel.length + S.tray.length >= MAX) {
+      render(); const bar = document.getElementById('selbar');
+      bar.classList.add('up','shake'); setTimeout(()=>bar.classList.remove('shake'),340);
+      return toast(`트레이는 최대 ${MAX}개예요 (현재 ${S.tray.length}개 담김)`);
+    } else S.sel.push(id);
+    return render();
+  }
+
+  switch (t.dataset.act) {
+    case 'togglesel': S.selecting = !S.selecting; S.sel = []; return render();
+    case 'clearsel': S.sel = []; return render();
+    case 'totray': {
+      const added = S.sel.filter(id => !S.tray.includes(id));
+      S.tray = [...S.tray, ...added].slice(0, MAX);
+      const n = added.length; S.sel = []; S.selecting = false;
+      S.tab = 'studio'; render();
+      return toast(`${n}개를 트레이에 담았어요 · 총 ${S.tray.length}개`);
+    }
+    case 'addtray': S.tab = 'snaps'; S.selecting = true; S.sel = []; return render();
+    case 'cleartray': S.tray = []; render(); return toast('트레이를 비웠어요');
+    case 'startnew': {
+      if (!S.tray.length) return;
+      const id = 'm' + Date.now().toString().slice(-5);
+      MOVIES.unshift({ id, title:'새 무비', snaps:[...S.tray], style:'잔잔한', bgm:'Lo-fi Walk', status:'draft', date:'오늘', prog:20 });
+      S.tray = []; return openEditor(id, 0);
+    }
+    case 'newempty': S.tab = 'snaps'; S.selecting = true; S.sel = []; render(); return toast('무비에 넣을 스냅부터 골라주세요');
+    case 'nextstep': S.step = Math.min(2, S.step + 1); return render();
+    case 'prevstep': S.step = Math.max(0, S.step - 1); return render();
+    case 'closeeditor': S.overlay = null; S.gen = null; S.tab = 'studio'; render(); return toast('초안으로 저장했어요');
+    case 'rungen': return runGen();
+    case 'finish': S.overlay = null; S.gen = null; S.tab = 'movies'; render(); return toast('무비가 완성됐어요');
+    case 'addcut': S.overlay = null; S.tab = 'snaps'; S.selecting = true; render(); return toast('추가할 스냅을 골라 담아주세요');
+    case 'cyclebgm': {
+      const m = MOVIES.find(x=>x.id===S.editId);
+      m.bgm = BGMS[(BGMS.indexOf(m.bgm)+1) % BGMS.length]; return render();
+    }
+    case 'rec': return toast('촬영 화면 — 3초 / 5초 스냅');
+    case 'rename': return toast('이름 변경 시트');
+    default: return;
+  }
+});
+
+document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => {
+  const g = b.dataset.go;
+  if (g === 'editor') { openEditor(MOVIES.find(m=>m.status==='draft')?.id ?? MOVIES[0].id, 0); }
+  else { S.overlay = null; S.tab = g; S.selecting = g === 'snaps'; S.sel = []; render(); }
+  document.getElementById('device').scrollIntoView({ behavior:'smooth', block:'center' });
+}));
+
+render();
+</script>
+</body>
+</html>
