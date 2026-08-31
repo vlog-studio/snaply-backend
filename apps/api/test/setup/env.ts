@@ -48,3 +48,6 @@ process.env.TIKTOK_POLL_TIMEOUT_MS = '2000';
 
 // 웹훅 인증 값. mock 모드에서도 그대로 검증되므로 테스트는 이 값을 헤더에 실어 보낸다.
 process.env.REVENUECAT_WEBHOOK_AUTH_TOKEN = 'test-webhook-token';
+// 가입 보너스도 호출 시점에 읽힌다. 개인 .env 가 로컬 export 용으로 값을 켜두면
+// (README 가 권하는 설정) 크레딧 잔액 단언이 전부 어긋난다 — 0 으로 고정한다.
+process.env.CREDIT_SIGNUP_BONUS = '0';

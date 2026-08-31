@@ -12,7 +12,8 @@
 const EXTERNAL_CREDENTIAL_KEYS = [
   'REVENUECAT_API_KEY',
   'BILLING_MOCK',
-  'CREDIT_SIGNUP_BONUS',
+  // CREDIT_SIGNUP_BONUS 는 여기 두면 안 된다 — 지우면 dotenv 가 개인 .env 값으로 되살린다.
+  // env.ts 가 '0' 으로 박아두고(존재하는 값은 dotenv 가 덮지 않음), 필요한 테스트만 직접 덮는다.
   'SNS_MOCK',
   'INSTAGRAM_APP_ID',
   'INSTAGRAM_APP_SECRET',
