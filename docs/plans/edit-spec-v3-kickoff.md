@@ -18,8 +18,9 @@
 
 **담지 않는 것**
 
-- **스키마 본문** — `editSpec` v3 와 에셋 매니페스트의 필드 정의는 개정될 두 초안이 원천이다.
-  이 문서는 그 개정에 **무엇을 반영해야 하는가**만 기록한다.
+- **스키마 본문** — 필드 정의는 [edit-spec-v3.md](./edit-spec-v3.md) 와
+  [asset-pack-manifest.md](./asset-pack-manifest.md) 가 원천이다. 이 문서는 그 개정에
+  **무엇을 반영해야 하는가**와 착수 순서만 기록한다.
 - **미결 결정** — [backlog.md](../backlog.md) A-7 에만 둔다. 여기에 체크리스트를 만들지 않는다.
 
 ---
@@ -296,10 +297,10 @@ B-6 의 "재투영"이 세 번째 상태를 요구했다. 무효화/유지 두 �
 
 ## 6. 커밋 4 — 잔여 개정
 
-- **editSpec 초안** — §1.1 의 A·B 잔여 전부. 여기에 더해 §7 의 `fallback` 예시에서
-  **`prefer` 를 `ref` 로** 고친다(`[{ "kind": "freezone", "prefer": "topRight" }, …]`)
-- **매니페스트 초안** — §1.2 의 C·D 전부 + anchor 사전을 별도 절로 분리. 여기에 더해 §3 의
-  `defaultAnchor` 를 지우고(`anchorAffinity[0]` 이 기본값이다) 남은 `prefer` 를 `ref` 로 고친다
+- ~~**editSpec 초안** — §1.1 의 A·B 잔여 전부 + `prefer` → `ref`~~ **완료 (2026-08-20)** —
+  [edit-spec-v3.md](./edit-spec-v3.md)
+- ~~**매니페스트 초안** — §1.2 의 C·D 전부 + anchor 사전 분리 + `defaultAnchor` 제거~~
+  **완료 (2026-08-20)** — [asset-pack-manifest.md](./asset-pack-manifest.md)
 
 > `prefer` → `ref` 통일은 커밋 1 에서 사전에 이미 반영됐다. `freezone` 만 다른 필드 이름을 쓸
 > 근거가 없고, 같은 것을 두 이름으로 부르면 어긋난다 — `defaultAnchor` 를 지운 것과 같은 논리다.
