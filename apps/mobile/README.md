@@ -8,10 +8,13 @@ Expo SDK 57(React Native 0.86, Expo Router)을 사용하며, Feature-Sliced Desi
 
 ## 시작하기
 
+통합 모노레포를 처음 설정한다면 저장소 루트의 [`ONBOARDING.md`](../../ONBOARDING.md)를 먼저
+따르세요. 의존성 설치와 lockfile은 저장소 루트에서 한 번만 관리합니다. 아래 명령은
+`apps/mobile` 디렉터리에서 직접 실행할 때의 형태입니다.
+
 의존성을 설치하고, Android 기기(또는 에뮬레이터)에 개발 빌드를 올린 뒤 Metro를 붙입니다. **이 앱은 Expo Go에서 Android가 부팅되지 않습니다** — 시작 시 `expo-notifications`를 import하는데 SDK 53부터 Android Expo Go에서 제거된 모듈이라 렌더 이전에 죽습니다. 따라서 Android의 기준 런타임은 dev build입니다.
 
 ```bash
-npm install
 npm run android:device     # 실기기. 에뮬레이터는 npm run android
 npx expo start --dev-client
 ```
@@ -81,7 +84,8 @@ src/
 | `npm run format:check` | 포맷 위반 여부만 검사 |
 | `npm run typecheck` | TypeScript 타입 검사 실행 |
 | `npm run api:check` | 스펙과 생성된 API 타입의 동기화 검사 |
-| `npm test` | Jest 워치 모드로 테스트 실행 |
+| `npm test` | Jest 단일 실행 테스트(`--runInBand`) |
+| `npm run test:watch` | Jest 워치 모드 |
 | `npm run test:ci` | 단일 실행 테스트(`--runInBand`) |
 
 ## 런타임 의존성

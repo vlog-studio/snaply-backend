@@ -1,17 +1,19 @@
-# vlog-studio (Snaply)
+# Snaply
 
-20~30대를 위한 숏폼 브이로그 AI 자동 편집 앱 — 백엔드 모노레포.
+20~30대를 위한 숏폼 브이로그 AI 자동 편집 앱 — 모바일·API·AI worker 통합 모노레포.
 
-**처음 왔다면 [ONBOARDING.md](ONBOARDING.md)** — clone부터 `GET /health` 200 + Swagger `/docs`까지.
+**처음 왔다면 [ONBOARDING.md](ONBOARDING.md)** — clone부터 API와 모바일 dev client 실행까지
+순서대로 안내한다.
 
 ## 구조
 
 ```
 apps/
+  mobile/       # Expo SDK 57 + React Native 모바일 앱
   api/          # Fastify + TypeScript API 서버 (:3000)
   ai-worker/    # Python 워커 — edit-jobs 큐 구독 (HTTP 포트 없음)
 packages/
-  shared-types/ # FE와 공유하는 API 요청/응답 타입
+  shared-types/ # 앱·API가 공유하는 요청/응답 타입
 ```
 
 인프라: Supabase(DB+Auth) · MinIO(S3 호환, :9100) · Redis(:6379).
@@ -26,8 +28,9 @@ packages/
 | DB 스키마 | `apps/api/prisma/schema.prisma` | 마이그레이션 `prisma/migrations/`, RLS `prisma/rls-policies.sql` |
 | API 계약 | `/docs` (Swagger, 코드에서 생성) | [docs/api-spec.md](docs/api-spec.md)는 FE 전달용 요약 + WebSocket — **라우트를 바꾸면 같이 갱신** |
 | 로컬 셋업·명령·트러블슈팅 | [ONBOARDING.md](ONBOARDING.md) | |
-| 환경변수 — 변수 목록 | `apps/api/src/env-spec.ts` | `.env.example`은 이 목록의 복사용 표현. 어긋나면 테스트가 실패 |
-| 환경변수 — 배치·주입 방식 | [docs/decisions/env-management.md](docs/decisions/env-management.md) | 로컬은 `apps/api/.env` 파일 하나, 운영은 주입 |
+| 서버 환경변수 — 변수 목록 | `apps/api/src/env-spec.ts` | `.env.example`은 이 목록의 복사용 표현. 어긋나면 테스트가 실패 |
+| 모바일 공개 환경변수 | `apps/mobile/.env.example` | `EXPO_PUBLIC_*`만 허용. 서버 시크릿 금지 |
+| 서버 환경변수 — 배치·주입 방식 | [docs/decisions/env-management.md](docs/decisions/env-management.md) | 로컬은 `apps/api/.env`, 운영은 주입 |
 | 커밋·PR·코드 규칙 | [AGENTS.md](AGENTS.md) | 상세: [docs/commit-guidelines.md](docs/commit-guidelines.md) · [docs/pull-request-guidelines.md](docs/pull-request-guidelines.md) |
 | 다음에 결정·구현할 일 | [docs/backlog.md](docs/backlog.md) | 닫히지 않은 작업은 여기에만 둔다. `decisions/` 전체를 훑지 않는다 |
 | 완료된 구현·검증 내역 | [docs/progress.md](docs/progress.md) | 완료된 것만 |
@@ -66,15 +69,21 @@ packages/
 전체 절차와 환경변수는 [ONBOARDING.md](ONBOARDING.md)에 있다. 요약:
 
 ```bash
-npm install
-cp .env.example apps/api/.env   # .env는 저장소에 이 하나뿐 — 루트에 두지 않는다
+nvm use                         # .nvmrc: Node 26
+npm ci
+cp .env.example apps/api/.env
+cp apps/mobile/.env.example apps/mobile/.env
 npm run infra:up                # MinIO(:9100/:9101) + Redis(:6379) + 로컬 Postgres
-npm run db:generate && npm run db:migrate && npm run db:seed
+npm run db:generate
+npm run db:migrate
+npm run db:seed
 npm run dev:api                 # http://localhost:3000 · /docs
+npm run dev:mobile              # Android dev client용 Metro
 ```
 
+두 환경파일에 넣을 값과 최초 네이티브 앱 빌드 순서는 [ONBOARDING.md](ONBOARDING.md)를 따른다.
 RLS 정책은 최초 1회 `apps/api/prisma/rls-policies.sql`을 Supabase SQL Editor에서 실행한다.
-AI 워커(미디어 트랙)는 `npm run worker:install` 후 `npm run worker`.
+AI 편집 워커는 `npm run worker:install` 후 `npm run worker`.
 스냅 분석 워커는 같은 venv 에서 `npm run worker:analysis` — `OPENAI_API_KEY` 가 없으면 기동 단계에서 종료된다.
 
 ## 스크립트 (루트)
@@ -85,8 +94,10 @@ AI 워커(미디어 트랙)는 `npm run worker:install` 후 `npm run worker`.
 | `npm run stack` / `stack:down` | 전체 컨테이너 스택 빌드·migration·기동 / 중지 (기본 mock) |
 | `npm run stack:up` / `stack:migrate` | API만 기동 / migration 수동 재실행 |
 | `npm run dev:api` | API 서버(watch) |
+| `npm run dev:mobile` | Android dev client용 Expo Metro |
+| `npm run verify:mobile` | 모바일 포맷·린트·타입·API 타입·Jest 검증 |
 | `npm run worker` / `worker:install` | AI 워커 |
 | `npm run build` / `typecheck` / `lint` | 전체 빌드·검사 |
 | `npm run db:generate` / `db:migrate` / `db:seed` / `db:studio` | Prisma |
-| `npm test -w apps/api` | 통합 테스트 — **반드시 `-w apps/api`로 실행** ([이유](AGENTS.md)) |
+| `npm test -w apps/api` | API 통합 테스트 — **반드시 API workspace 기준으로 실행** ([이유](AGENTS.md)) |
 | `npm run media:e2e` / `media:cleanup` | 업로드→편집→결과 e2e / 테스트 데이터 정리 |
