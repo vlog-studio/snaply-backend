@@ -11,7 +11,7 @@
 apps/
   mobile/       # Expo SDK 57 + React Native 모바일 앱
   api/          # Fastify + TypeScript API 서버 (:3000)
-  ai-worker/    # Python 워커 — edit-jobs 큐 구독 (HTTP 포트 없음)
+  ai-worker/    # Python 워커 2개 — edit-jobs·video-analysis 큐 구독 (HTTP 포트 없음)
 packages/
   shared-types/ # 앱·API가 공유하는 요청/응답 타입
 ```
@@ -61,6 +61,8 @@ packages/
 | [decisions/movie-model.md](docs/decisions/movie-model.md) | 영상 묶음 구조 3안 비교와 `Movie` 엔티티 채택 결정 |
 | [decisions/snap-content-analysis.md](docs/decisions/snap-content-analysis.md) | 스냅 내용 분석의 소비자·분석 시점(추천 요청 시점)·스파이크 착수 범위 결정 |
 | [decisions/template-snap-recommendation.md](docs/decisions/template-snap-recommendation.md) | 템플릿 기반 스냅 자동 추천 — 2단계 실행 구조, 카탈로그를 서버가 소유, 추천 1회는 무료 |
+| [decisions/ad-reward-credits.md](docs/decisions/ad-reward-credits.md) | 보상형 광고 크레딧 — 지급 경로(AdMob SSV)·검증 규칙·정책 값(§7) 확정 |
+| [decisions/account-deletion.md](docs/decisions/account-deletion.md) | 계정 삭제 — 30일 유예·복구·purge 정책 |
 
 작업을 고를 때는 [docs/backlog.md](docs/backlog.md)에서 시작한다. 결정 문서는 선택한 항목의
 배경과 제약을 확인할 때만 따라간다. 구현을 마치면 백로그에서 닫고
@@ -98,7 +100,8 @@ AI 편집 워커는 `npm run worker:install` 후 `npm run worker`.
 | `npm run dev:api` | API 서버(watch) |
 | `npm run dev:mobile` | Android dev client용 Expo Metro |
 | `npm run verify:mobile` | 모바일 포맷·린트·타입·API 타입·Jest 검증 |
-| `npm run worker` / `worker:install` | AI 워커 |
+| `npm run worker` / `worker:analysis` / `worker:install` | AI 편집 워커 / 스냅 분석 워커 / venv 설치 |
+| `npm run analysis:run` | 분석 워커 단발 실행(디버그) |
 | `npm run build` / `typecheck` / `lint` | 전체 빌드·검사 |
 | `npm run db:generate` / `db:migrate` / `db:seed` / `db:studio` | Prisma |
 | `npm test -w apps/api` | API 통합 테스트 — **반드시 API workspace 기준으로 실행** ([이유](AGENTS.md)) |

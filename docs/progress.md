@@ -44,6 +44,8 @@
 - Turborepo 모노레포: `apps/api`(Fastify+TS), `apps/ai-worker`(Python), `packages/shared-types`(FE 공유 타입)
 - Prisma 스키마 8개 테이블(users, locations, notification_logs, videos, edit_jobs, sns_connections, sns_uploads, subscriptions) + snake_case 매핑
 - RLS 정책 SQL (`supabase_uid = auth.uid()` 본인 확인, locations 공용 읽기, subscriptions 웹훅 전용)
+  > ❌ 당시 기록. `subscriptions` 테이블은 2026-08-14 마이그레이션
+  > (`20260814000000_add_credit_ledger_drop_subscriptions`)에서 **DROP**됐고, 현재 스키마는 모델 15개다.
 - 공통 응답 포맷(`{success, data}`/`{success, error}`) 전역 에러/404 핸들러, `.env` 자동 로딩
 
 **특이사항**
@@ -98,7 +100,9 @@
 ## Phase 4 — AI 편집 큐 시스템 ✅
 
 > 아래 월 3편 제한은 당시 구현·검증 기록이다. 2026-08-05 로직에서 제거됐으며,
-> 현재 정책은 [decisions/plan-limits.md](./decisions/plan-limits.md)를 따른다.
+> 현재 결제 정책은 [decisions/credit-payment-model.md](./decisions/credit-payment-model.md),
+> 미결 상태는 [backlog.md](./backlog.md) A-2를 따른다
+> ([decisions/plan-limits.md](./decisions/plan-limits.md)는 대체된 과거 결정이다).
 
 **목표**: 편집 요청을 큐에 넣고 Python 워커가 처리하는 비동기 파이프라인.
 
@@ -180,7 +184,7 @@
 - `lib/crypto.ts`: **AES-256-GCM**로 access/refresh 토큰 암호화 저장, OAuth **state HMAC 서명**(CSRF 방지, userId+nonce)
 - `services/sns/*.client.ts`: 인스타그램(Graph API 릴스 컨테이너→게시)·틱톡(Content Posting API v2) 클라이언트. **실키 있으면 실제 호출 / 없으면 mock** 분기
 - `services/sns.service.ts`: connect URL 생성, 콜백(토큰 교환→암호화 저장→앱 딥링크 리다이렉트), 업로드(소유권·편집완료 확인→업로드→이력), 틱톡 **토큰 만료 임박 시 refresh 자동 갱신**
-- 인스타그램 **비즈니스/크리에이터 계정만 허용** (PERSONAL이면 `snaply://sns/error?reason=account_type` 리다이렉트, 미저장)
+- 인스타그램 **비즈니스/크리에이터 계정만 허용** (PERSONAL이면 `sns/error?reason=account_type` 딥링크 리다이렉트, 미저장 — 스킴은 `APP_DEEPLINK_SCHEME`, 현재 기본 `snaplyapp://`)
 
 **특이사항 / 가이드와 다른 점**
 - 실제 업로드는 인스타/틱톡 앱 등록 + 비즈니스 계정 + 실키 필요. 개발은 mock으로 OAuth·암호화·업로드 이력·자동 갱신 로직을 모두 검증 (운영에서 `INSTAGRAM_APP_ID`/`TIKTOK_CLIENT_KEY` 등 설정 시 실제 호출로 전환)
@@ -193,8 +197,12 @@
 
 **목표**: Stripe 구독 결제 완성 및 플랜별 기능 제한 적용.
 
-> 아래 월 3편 연동은 당시 구현·검증 기록이다. 2026-08-05 제거됐고 현재는 집행하지 않는다.
-> 크레딧 기반 재설계 상태는 [decisions/plan-limits.md](./decisions/plan-limits.md)를 따른다.
+> ❌ **이 Phase의 구현물은 2026-08-13~14에 전부 제거됐다** (아래 "구독 폐기·크레딧 전환" 기록 참조).
+> `stripe.client.ts`, `subscriptions` 테이블, `GET /billing/plans`·`GET /billing/subscription`·
+> `POST /billing/checkout`·`POST /billing/cancel` 라우트, `request.user.plan`, 월 3편 제한은
+> **현재 코드에 존재하지 않는다.** 현행 결제는 크레딧+IAP —
+> [decisions/credit-payment-model.md](./decisions/credit-payment-model.md)·
+> [decisions/payment-channel-iap.md](./decisions/payment-channel-iap.md), 미결은 [backlog.md](./backlog.md) A-2.
 
 **완료 조건 검증** (mock 모드 통합 테스트 13/13)
 - 결제 완료(webhook created) → `subscriptions.plan='standard'` ✅
@@ -230,6 +238,7 @@
 - `lib/sentry.ts` + `index.ts`: SENTRY_DSN 있을 때만 초기화, 전역 에러 핸들러에서 5xx `captureException`. 워커도 `SENTRY_DSN` 시 init + 편집 실패 캡처
 - 전역 에러 핸들러: rate limit(429)·AppError·검증(400)·5xx(500+Sentry) 분기, 공통 응답 포맷 유지
 - 로그 PII 마스킹: `authorization`/`stripe-signature`/`token`/`accessToken`/`refreshToken`/`fcmToken` redact
+  *(현재 목록은 [app.ts](../apps/api/src/app.ts)가 원천 — Stripe 제거 후 `stripe-signature` 대신 `*.access_token`이 들어갔다)*
 - Rate limiting(`@fastify/rate-limit`): 전역 IP 60/분, `/edit-jobs` 토큰당 5/분, `/notifications/geofence-enter` 토큰당 10/분
 - `docs/api-spec.md`: 전 엔드포인트 요청/응답 예시 + 에러 코드 + rate limit
 - `apps/api/Dockerfile`(모노레포 빌드), `docker-compose.yml`(api+ai-worker+redis+postgres+minio), `.dockerignore`
@@ -241,6 +250,7 @@
 - 인증 전 단계(onRequest)라 유저별 제한 키는 `request.user` 대신 Authorization 토큰 기준
 - compose 빠른 검증은 core 스택(api+인프라)까지 실기동 확인. ai-worker 이미지는 torch/faster-whisper로 용량이 커서 이 검증에선 빌드 생략(워커 자체는 Phase 5에서 네이티브 실행 검증 완료)
 - 컨테이너 최초 1회 마이그레이션: `docker compose exec api npx prisma migrate deploy --schema prisma/schema.prisma`
+  *(당시 방식. 현재는 전용 `migrate` 서비스가 api보다 먼저 자동 실행되고, 수동 재실행은 `npm run stack:migrate` — [ONBOARDING.md](../ONBOARDING.md) 참조)*
 
 ---
 
@@ -380,7 +390,7 @@ Content Posting 형태(`{error:{code,message}}`) 둘 다 검사하고, `access_t
 
 **(2) 콜백 실패 시 사용자가 JSON 에러 페이지에 갇혔다** — `handleCallback` 이 던지는 예외가
 전역 핸들러로 가서 JSON 400/500 이 브라우저에 그대로 표시됐다. OAuth 도중이라 앱으로 돌아갈 방법이 없다.
-→ 라우트에서 catch 후 `snaply://sns/error?platform=<p>&reason=exchange_failed` 로 302. 에러는 로그로 남긴다.
+→ 라우트에서 catch 후 `sns/error?platform=<p>&reason=exchange_failed` 딥링크(현 스킴 `snaplyapp://`)로 302. 에러는 로그로 남긴다.
 
 회귀 테스트 7개 추가(`test/sns-realkey.test.ts`). **남은 것은 브라우저 로그인 1회뿐이다.**
 
@@ -605,8 +615,8 @@ stripe trigger customer.subscription.created --api-key $STRIPE_SECRET_KEY
 - `.env` 를 `apps/api/.env` 하나로 통일. compose 는 그 파일을 `env_file` 로 읽고 인프라 주소만
   `environment` 로 덮는다(compose 규격상 `environment` 가 우선).
 - 컨테이너 테스트 서버를 1급 시나리오로 지원 — `npm run stack:up` / `stack:migrate` / `stack:down`.
-  외부 연동은 기본 mock(`SNS_MOCK`/`STRIPE_MOCK`), `CLOUDFRONT_DOMAIN=""` 로 미디어 URL 을
-  스택 MinIO 로 고정.
+  외부 연동은 기본 mock(`SNS_MOCK`/`STRIPE_MOCK` — 후자는 Stripe 제거 후 `BILLING_MOCK`으로 개명),
+  `CLOUDFRONT_DOMAIN=""` 로 미디어 URL 을 스택 MinIO 로 고정.
 - 워커가 `apps/ai-worker/.env` → 없으면 `apps/api/.env` 순으로 찾는다. `cp` 지시 삭제.
 - 변수 목록의 단일 원천 `apps/api/src/env-spec.ts` 신설. `requireEnv` 의 인자 타입이 스펙에서
   파생돼(`RequiredEnvKey`) 강제 목록과 스펙이 어긋나면 타입체크에서 걸린다.
@@ -643,7 +653,7 @@ stripe trigger customer.subscription.created --api-key $STRIPE_SECRET_KEY
   살아 있다는 뜻이다. 잘못된 토큰으로 `/auth/me` → `UNAUTHORIZED`(토큰 검증 실패), 토큰 없이 →
   `UNAUTHORIZED`(토큰 없음)로 분기도 정상 ✅
 - `NODE_ENV=development` 가 주입돼 `/docs` 200, `securitySchemes` 에 `devLogin` 등록 확인 ✅
-- 컨테이너 안 `SNS_MOCK=true` / `STRIPE_MOCK=true` / `CLOUDFRONT_DOMAIN=""` 확인 ✅
+- 컨테이너 안 `SNS_MOCK=true` / `STRIPE_MOCK=true`(현 `BILLING_MOCK`) / `CLOUDFRONT_DOMAIN=""` 확인 ✅
 - 주석 유입 회귀 확인 — `LEGAL_CONTACT_EMAIL`·`SITE_VERIFICATION_META`·`STRIPE_PRICE_*` 가 모두
   빈 값이고, `/legal/terms` 의 `<head>` 에 검증 메타 태그가 들어가지 않는다 ✅
 
@@ -852,7 +862,7 @@ stripe trigger customer.subscription.created --api-key $STRIPE_SECRET_KEY
 ## 보상형 광고 크레딧 (2026-08-14)
 
 앱 팀의 계약 요청을 [decisions/ad-reward-credits.md](./decisions/ad-reward-credits.md)로 확정하고
-구현했다. 초안([meetings/2026-08-12-rewarded-credit-review.md](./meetings/2026-08-12-rewarded-credit-review.md) §4)의
+구현했다. 초안([archive/2026-08-12-rewarded-credit-review.md](./archive/2026-08-12-rewarded-credit-review.md) §4)의
 출처별 버킷·만료·차감 우선순위는 **v1에서 채택하지 않았다** — 평면 델타 원장 위에
 `reason: 'ad_reward'` 한 줄을 더하는 것으로 끝낸다.
 

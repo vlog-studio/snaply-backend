@@ -11,6 +11,8 @@
 [storage-and-subscription-policy.md](storage-and-subscription-policy.md). 아래 §"기각한
 대안 — 월 정기 구독 유지"는 **생성 축(크레딧 지급형 구독)에 한해** 유효하며, 스토리지 보관에
 대응하는 구독은 그 결정으로 도입된다. 두 축을 섞지 않는 경계 규칙은 그 문서 §4.3에 있다.
+같은 결정에서 **Free 원본 스냅 한도가 5GB → 2GB로 축소**됐다 — 아래 결정 4의 "5GB"는
+그 문서가 대체한다(스토리지 한도의 원천은 storage-and-subscription-policy.md).
 
 **후속 확정 (2026-08-14)**: 아래 5번이 미루었던 항목 중 **기본 단위가 확정됐다 —
 Movie export 1회 = 100크레딧**. 100 단위는 광고 보상·가입 보너스·프로모션처럼 지급 사유가
@@ -25,7 +27,8 @@ Movie export 1회 = 100크레딧**. 100 단위는 광고 보상·가입 보너�
 2. 무비 생성 비용은 사용자가 보유한 크레딧에서 차감한다.
 3. 기존 Stripe 구독 Checkout, 구독 조회·해지, `subscriptions` 기반 플랜 판정,
    `past_due` 처리는 현행 정책이 아니라 제거·대체할 레거시 구현이다.
-4. Free 원본 스냅 5GB 정책은 결제 모델과 별도로 유지한다.
+4. Free 원본 스냅 한도 정책은 결제 모델과 별도로 유지한다. *(결정 당시 5GB.
+   2026-08-14 [storage-and-subscription-policy.md](storage-and-subscription-policy.md)에서 2GB로 축소)*
 5. export 1회는 100크레딧이며 예약·환급 규칙은 구현됐다. 팩 수량·가격·유효기간과 최초
    지급량처럼 남은 값은 [backlog.md](../backlog.md) A-2에서만 관리한다.
 

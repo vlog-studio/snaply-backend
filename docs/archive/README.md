@@ -11,6 +11,7 @@
 | [video-analysis-implementation-plan.md](./video-analysis-implementation-plan.md) | 스냅 내용 분석 착수 전 구현 계획. 2026-08-19 구현 완료 | 정책 [decisions/snap-content-analysis.md](../decisions/snap-content-analysis.md) · 코드 `apps/ai-worker/src/pipeline/video_analysis/` · 계약 [api-spec.md](../api-spec.md) |
 | [iap-migration.md](./iap-migration.md) | Stripe 제거와 RevenueCat 전환 계획. 2026-08-14 구현 완료 | 정책 [decisions/payment-channel-iap.md](../decisions/payment-channel-iap.md) · 미결 [backlog.md](../backlog.md) A-2·C-1 |
 | [2026-08-12-backend-decision-workshop.md](./2026-08-12-backend-decision-workshop.md) | 열리지 않은 회의의 사전 워크시트. 이후 결정과 미결 항목이 각각 원천 문서로 이동 | 결정 [decisions/](../decisions/) · 미결 [backlog.md](../backlog.md) |
+| [2026-08-12-rewarded-credit-review.md](./2026-08-12-rewarded-credit-review.md) | 열리지 않은 회의의 광고 보상 제안(한도 3회·쿨다운 5~15분 등). 다른 값으로 확정됨 | 정책 [decisions/ad-reward-credits.md](../decisions/ad-reward-credits.md) §7 · 미결 [backlog.md](../backlog.md) C-6 |
 
 ## 왜 옮겼는지
 

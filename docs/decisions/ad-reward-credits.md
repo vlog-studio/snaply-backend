@@ -5,7 +5,7 @@
 > **원천**: 광고 보상 지급 경로·검증 규칙·v1 정책 범위
 > **관련 문서**: [credit-payment-model.md](./credit-payment-model.md) ·
 > [payment-channel-iap.md](./payment-channel-iap.md) ·
-> [meetings/2026-08-12-rewarded-credit-review.md](../meetings/2026-08-12-rewarded-credit-review.md)
+> [archive/2026-08-12-rewarded-credit-review.md](../archive/2026-08-12-rewarded-credit-review.md)(채택되지 않은 초안)
 > **정책 값**: §7 (전부 확정) · 남은 블로커는 콘솔 설정 [backlog.md](../backlog.md) C-6
 
 ---
@@ -70,7 +70,7 @@ AdMob이 실패한 콜백을 재전송한다고 가정하지 않는다. IAP의 `
 
 | 후보 | 기각 이유 |
 |---|---|
-| UTC 자정 | 한국 사용자에게 오전 9시다. "오늘 3번"이 하루 중간에 초기화된다 |
+| UTC 자정 | 한국 사용자에게 오전 9시다. "오늘 5번"이 하루 중간에 초기화된다 |
 | 롤링 24시간 | 앱이 "언제 다시 볼 수 있는지"를 한 문장으로 설명할 수 없다 |
 | **KST 자정** | **채택.** 한국은 서머타임이 없어 고정 오프셋(UTC+9)으로 계산해도 어긋나지 않는다 |
 

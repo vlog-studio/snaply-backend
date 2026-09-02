@@ -35,7 +35,8 @@
 | 루트 `.env` | `docker compose` 의 `${VAR}` 보간 | **어느 문서에도 없음.** `apps/api/.env` 와 바이트 단위로 동일한 사본이었다 |
 | `apps/ai-worker/.env` | AI 워커 | ONBOARDING 이 `cp` 로 만들라고 지시 — 세 번째 사본 |
 
-[AGENTS.md](../../AGENTS.md) 는 "루트에 두면 동작하지 않는다"고 단언했지만 compose 관점에서는 사실이
+당시의 [AGENTS.md](../../AGENTS.md) 는 "루트에 두면 동작하지 않는다"고 단언했지만(이 문장은 이 결정
+이후 삭제됐다) compose 관점에서는 사실이
 아니었다. 루트 `.env` 가 없으면 `SUPABASE_URL` 이 fallback(`https://example.supabase.co`)으로 떨어져
 **JWKS 조회가 실패하고 인증이 전부 죽는다.** `/health` 는 200 이라 겉으로는 정상으로 보인다.
 

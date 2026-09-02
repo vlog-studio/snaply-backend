@@ -9,6 +9,8 @@
 
 - 서버 환경변수는 **`apps/api/.env`** 하나를 API 서버·Prisma CLI·AI 워커·compose·e2e
   스크립트가 함께 읽는다. 루트나 `apps/ai-worker/`에 사본을 만들지 않는다.
+  유일한 예외: pgbouncer URL이 asyncpg와 충돌할 때 `apps/ai-worker/.env`에
+  `DATABASE_URL=<DIRECT_URL 값>` 한 줄만 두어 덮어쓸 수 있다([ONBOARDING.md](ONBOARDING.md) §3-8).
 - 모바일의 공개 빌드 변수(`EXPO_PUBLIC_*`)는 **`apps/mobile/.env`**에 둔다. 서버 시크릿을
   이 파일에 복사하면 앱 번들에 노출되므로 금지한다.
 - **운영에는 `.env` 파일이 가지 않는다.** 값은 배포 플랫폼의 시크릿에서 주입된다
@@ -40,7 +42,8 @@
   체크리스트를 새로 만들지 않는다 — 여러 곳에 있으면 하나를 닫아도 나머지가 낡는다.
 - 완료된 구현·검증은 [`docs/progress.md`](docs/progress.md)에 기록한다.
 - 정책·설계 결정은 [`docs/decisions/`](docs/decisions/)에 배경·기각한 대안과 함께 남긴다.
-- [`docs/archive/`](docs/archive/)의 문서는 지난 기록이다. **판단 근거로 인용하지 말고, 수정하지 않는다.**
+- [`docs/archive/`](docs/archive/)의 문서는 지난 기록이다. **판단 근거로 인용하지 말고,
+  archive로 옮기는 시점에 붙이는 상단 상태 배너 외에는 수정하지 않는다.**
 
 ## 문서 컨벤션
 
@@ -60,13 +63,14 @@
 
 판단 기준: **"이 문서를 계속 고칠 것인가?"** 계속 고친다면 `docs/` 직하,
 한 시점의 기록으로 굳는다면 `decisions/`·`plans/`·`meetings/`.
-어느 것도 아니게 되면 `archive/`로 옮기고 상단에 상태 배너를 남긴다(원본은 고치지 않는다).
+어느 것도 아니게 되면 `archive/`로 옮기면서 상단에 상태 배너를 붙인다(배너 외의 본문은 고치지 않는다).
 
 ### 이름
 
 - **kebab-case 소문자 + `.md`** — `api-spec.md`, `commit-guidelines.md`, `snap-source-of-truth.md`.
   저장소 코드 컨벤션(파일명 kebab-case)과 같은 규칙이다.
-- 예외는 루트 진입점 4개와 디렉터리 인덱스 `README.md`뿐. 그 밖에 대문자·`UPPER_SNAKE`를 쓰지 않는다.
+- 예외는 루트 진입점 4개, 각 워크스페이스 루트의 진입점(`apps/mobile/AGENTS.md`·`CLAUDE.md`·`README.md` 등),
+  디렉터리 인덱스 `README.md`뿐. 그 밖에 대문자·`UPPER_SNAKE`를 쓰지 않는다.
 - 이름은 **주제**로 짓는다. `notes.md`·`temp.md`·`new-doc.md`처럼 내용을 알 수 없는 이름을 쓰지 않는다.
 - `docs/meetings/`는 **날짜 접두사**를 쓴다: `YYYY-MM-DD-<주제>.md` (예: `2026-08-14-backend-review.md`).
   아직 날짜가 안 잡힌 예정 회의는 `next-agenda.md`로 두고, 날짜가 정해지면 위 형식으로 rename한다.
@@ -93,7 +97,7 @@
 ## 공유 파일
 
 `config.ts`, `app.ts`, `schema.prisma`, `packages/shared-types`는 두 트랙이 함께 건드리는
-파일이라 별도 규칙이 있다 — [`docs/team.md`](docs/team.md) §3. 특히 `app.ts`에서
+파일이라 별도 규칙이 있다 — [`docs/team.md`](docs/team.md) §2. 특히 `app.ts`에서
 **에러/404 핸들러는 라우트 등록보다 앞**이라는 순서를 바꾸지 않는다.
 
 ## 커밋

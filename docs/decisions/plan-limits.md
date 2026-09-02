@@ -3,7 +3,9 @@
 **작성일**: 2026-08-05 (2026-08-11 갱신)
 **상태**: 대체됨 — 플랜 차등 집행 보류 후 정기 구독을 제거했다.
 **범위**: 플랜 차등 집행 보류와 기존 월 3편 제한을 복원하지 않는 근거를 기록한다.
-**원천**: 이 결정을 대체하는 새 정책이 나오기 전까지 플랜 제한 집행 여부의 원천이다.
+**원천**: 아니다 — 현행 결제 정책의 원천은 [credit-payment-model.md](./credit-payment-model.md),
+미결 상태는 [backlog.md](../backlog.md) A-2다. 단, **§1의 기능적/기술적 제한 표는 지금도 유효한
+현행 사실**이며 각 값의 원천은 표의 "위치" 열이 가리키는 코드다.
 **후속 작업의 원천**: [backlog.md](../backlog.md) A-2
 
 > 2026-08-12 [credit-payment-model.md](./credit-payment-model.md)가 이 결정을 대체했다.
@@ -22,7 +24,9 @@
 1. 기능적·기술적 보호 제한은 플랜과 무관하게 유지한다.
 2. 기존 월 3편 제한은 제거하고 기계적으로 복원하지 않는다.
 3. 편집 횟수·해상도·워터마크 등 플랜 차등은 새 수익화 정책이 확정될 때까지 집행하지 않는다.
-4. Free 스토리지 5GB 정책은 별도 결정인 [snap-source-of-truth.md](./snap-source-of-truth.md)를 따른다.
+4. Free 스토리지 한도 정책은 별도 결정을 따른다. *(결정 당시 5GB —
+   [snap-source-of-truth.md](./snap-source-of-truth.md). 2026-08-14
+   [storage-and-subscription-policy.md](./storage-and-subscription-policy.md)에서 2GB로 축소)*
 5. 새 플랜 정책의 결정·구현 상태는 이 문서가 아니라 [backlog.md](../backlog.md) A-2에서만 관리한다.
 
 ### 결정 시점의 집행 상태 (2026-08-11)
@@ -32,7 +36,7 @@
 | 기능적/기술적 제한 (§1) | **집행 중** — 플랜과 무관 |
 | 편집 횟수 제한 | **집행하지 않음** — 월 3편 모델 제거(§3) |
 | 해상도 차등 · 워터마크 | **미구현** |
-| 스토리지 용량 한도 (Free 5GB) | **정책 결정됨, 미구현** — [snap-source-of-truth.md](./snap-source-of-truth.md) §6 |
+| 스토리지 용량 한도 (당시 Free 5GB — 현행 2GB) | **정책 결정됨, 미구현** — 현행 한도는 [storage-and-subscription-policy.md](./storage-and-subscription-policy.md) |
 | `GET /billing/plans` 의 `features` 문구 | FE 표시용 문구일 뿐 **백엔드가 집행하지 않음**. 현재 실동작과 불일치 |
 
 즉 **지금 유료 플랜을 결제해도 무료 플랜과 기능 차이가 없다.** 이 상태를 전제로 개발·검증한다.
@@ -56,8 +60,9 @@
 ## 2. 채택하지 않은 초기 플랜안
 
 아래 표는 **초기 기획안이며 채택된 정책이 아니다**. 월 3편 모델은 제거했고,
-스토리지 용량 한도(Free 5GB)는 [snap-source-of-truth.md](./snap-source-of-truth.md) §6에서
-별도로 결정했다. 이를 현재 또는 향후 플랜 계약으로 사용하지 않는다.
+스토리지 용량 한도(당시 Free 5GB, 현행 2GB)는 별도 결정
+([storage-and-subscription-policy.md](./storage-and-subscription-policy.md))을 따른다.
+이를 현재 또는 향후 플랜 계약으로 사용하지 않는다.
 
 초기 기획안(착수 시점 계획서 §Phase 8, `billing.service.ts`의 `features` 문구):
 

@@ -21,7 +21,7 @@ API 명세는 [docs/api-spec.md](./docs/api-spec.md).
 | **FFmpeg** | 6+ | 영상 컷편집/BGM/자막 (워커) | `brew install ffmpeg` |
 | **JDK** | 17 | Android 네이티브 빌드 | Android Studio 번들 JDK 또는 Temurin 17 |
 | **Android Studio** | 최신 안정판 | Android SDK·에뮬레이터·adb | developer.android.com |
-| **Supabase** | 클라우드 | PostgreSQL DB + Auth(JWT) | supabase.com 프로젝트 |
+| **Supabase** | 클라우드 | Auth(JWT) — DB는 로컬 PostgreSQL | supabase.com 프로젝트 |
 | Prisma | (npm 포함) | ORM/마이그레이션 | 설치 불필요 |
 
 Python·FFmpeg는 AI 편집까지 실행할 때 필요하다. 모바일 UI와 API만 개발할 때는 나중에 설치해도 된다.
@@ -38,7 +38,7 @@ apps/ai-worker/       Python 워커 — BullMQ 큐 구독, FFmpeg/faster-whisper
                       편집 워커(worker.py)와 스냅 분석 워커(analysis_worker.py) 두 프로세스
 packages/shared-types/ 앱·API가 공유하는 요청/응답 타입
 
-인프라: Supabase(DB+Auth) · MinIO(S3 호환, :9100) · Redis(:6379)
+인프라: 로컬 PostgreSQL(DB, :5432) · Supabase(Auth) · MinIO(S3 호환, :9100) · Redis(:6379)
 ```
 > 워커는 `edit-jobs` Redis 큐를 구독하는 백그라운드 프로세스(`src/worker.py`)이고 HTTP 포트를 열지 않는다.
 > `src/main.py`의 FastAPI(:8000)는 Phase 1 뼈대의 잔재로, compose·npm 스크립트 어디에서도 실행하지 않는다.
@@ -221,7 +221,7 @@ npm run verify:mobile
 npm run build -- --filter=@vlog-studio/api
 npm run typecheck -- --filter=@vlog-studio/api
 npm run lint -- --filter=@vlog-studio/api
-npm test -- --filter=@vlog-studio/api
+npm test -w apps/api
 ```
 
 API 테스트는 `infra:up`으로 띄운 로컬 PostgreSQL·Redis를 사용하고 `snaply_test` DB를 자동
@@ -241,16 +241,17 @@ cd ../..
 
 | 명령 | 설명 |
 |---|---|
-| `npm run infra:up` / `infra:down` | 개발 인프라 기동/중지 |
+| `npm run infra:up` / `infra:down` / `infra:logs` | 개발 인프라 기동/중지/로그 |
 | `npm run stack` / `stack:down` | 전체 컨테이너 스택 빌드·migration·기동 / 중지 |
 | `npm run stack:up` / `stack:migrate` | API만 기동 / migration 수동 재실행 |
 | `npm run dev:api` | API 서버(watch) |
 | `npm run dev:mobile` | Android dev client용 Metro |
 | `npm run verify:mobile` | 모바일 포맷·린트·타입·API 타입·Jest 검증 |
-| `npm run worker` | AI 편집 워커 (`edit-jobs` 큐) |
+| `npm run worker` / `worker:install` | AI 편집 워커 (`edit-jobs` 큐) / venv 설치 |
 | `npm run worker:analysis` | 스냅 분석 워커 (`video-analysis` 큐, `OPENAI_API_KEY` 필요) |
 | `npm run build` / `typecheck` / `lint` | 전체 빌드/검사 |
-| `npm run db:migrate` / `db:seed` / `db:studio` | 마이그레이션 / 시드 / Prisma Studio |
+| `npm run db:generate` / `db:migrate` / `db:seed` / `db:studio` | Prisma 클라이언트 생성 / 마이그레이션 / 시드 / Studio |
+| `npm run media:e2e` / `media:cleanup` | 업로드→편집→결과 e2e / 테스트 데이터 정리 |
 | `npm test -w apps/api` | 통합 테스트 (실제 Postgres/Redis/MinIO 사용, `snaply_test` DB 자동 생성) |
 | `npm run auth:stub -w apps/api` | 로컬 Supabase Auth 스텁 — 수동 테스트용 JWT 발급 |
 | `npm run analysis:run` | 앱으로 올린 스냅 1건을 분석 요청·대기·결과 출력 (분석 워커가 떠 있어야 한다) |
@@ -306,7 +307,7 @@ curl -H "Authorization: Bearer <출력된 토큰>" http://localhost:3000/auth/me
 - **휴대폰에서 MinIO 접근 실패**: `S3_PUBLIC_ENDPOINT`를 `http://<PC의 LAN IP>:9100`으로 설정하고 OS/WSL 방화벽에서 MinIO API 포트를 허용한다. 관리 콘솔 포트(9101)는 필요한 관리자 대역에만 연다.
 - **휴대폰에서 API 연결 실패**: `apps/mobile/.env`의 `EXPO_PUBLIC_API_BASE_URL`에 `localhost`가 아니라 개발 PC의 LAN IP를 쓰고, API가 `0.0.0.0`에 bind됐는지와 방화벽의 3000 포트를 확인한다.
 - **Android Expo Go 부팅 실패**: 정상적인 제한이다. `expo-notifications`가 포함돼 있으므로 `npm run android:device -w snaply-app`으로 dev build를 설치한다.
-- **`db: not_configured`**: `DATABASE_URL` 미설정. Supabase 값 확인.
+- **`db: not_configured`**: `DATABASE_URL` 미설정. `apps/api/.env`에 로컬 PostgreSQL 값(`postgresql://postgres:postgres@localhost:5432/snaply`)이 있는지 확인.
 - **워커 DB 연결 실패**: `DATABASE_URL`에 pgbouncer 파라미터가 있으면 asyncpg가 실패 → DIRECT_URL(5432) 사용.
 - **Supabase 무료 프로젝트 일시정지**: 1주일 미사용 시 자동 정지. 대시보드에서 재개.
 - **테스트 데이터 정리**: 공유 Supabase를 쓸 땐 통합 테스트 후 자기 데이터 정리(닉네임/이메일 접두사로 구분).

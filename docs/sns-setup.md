@@ -352,6 +352,7 @@ sns_uploads: status=success, uploaded_at 기록
   · API 호스트 `.../legal/` — 약관·개인정보 URL (콘솔 저장용) → `routes/legal.ts` 가 서빙
   · MinIO 호스트 `.../snaply-dev/` — 영상 URL (PULL_FROM_URL) → 버킷에 파일 업로드
   운영에서 CloudFront 도메인 하나로 합쳐지면 검증도 한 번으로 줄어든다.
+  (재등록의 미결 상태·완료 조건은 [backlog D-3](./backlog.md)가 원천이다 — 이 절은 실측 기록.)
 
 ### (참고) 이전 진행 기록 — authorize 에서 막혀 있던 시점
 
@@ -411,7 +412,7 @@ npm run auth:stub -w apps/api          # 토큰 발급
 curl -H "Authorization: Bearer <토큰>" http://localhost:3000/sns/instagram/connect
 
 # 3) 그 URL을 브라우저에서 열어 인스타 로그인 → 승인
-#    → 콜백이 터널로 들어와 snaply://sns/connected?platform=instagram 로 리다이렉트되면 성공
+#    → 콜백이 터널로 들어와 snaplyapp://sns/connected?platform=instagram 로 리다이렉트되면 성공
 #    (딥링크는 브라우저가 열지 못하므로 주소창에서 확인하면 된다)
 
 # 4) 연동 확인

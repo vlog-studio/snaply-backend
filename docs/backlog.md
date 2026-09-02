@@ -15,6 +15,7 @@
 ## A. 기획/제품 결정 대기
 
 가장 앞단의 병목. 아래가 정해지지 않으면 구현을 시작할 수 없다.
+(번호는 재사용하지 않는다 — **A-5는 결번**이며, 누락된 문서가 아니다.)
 
 ### A-1. 영상 묶음(프로젝트) 구조 ★ 최우선
 
@@ -34,6 +35,10 @@
 [decisions/storage-and-subscription-policy.md](./decisions/storage-and-subscription-policy.md) §3.
 재생성의 원천은 이미 영구 저장되는 `EditJob.editSpec`/`renderSpec`이라 추가 스키마가 필요 없다.
 S3 삭제 실패분은 E-3의 정리 배치 경로를 쓴다.
+
+같은 결정 §3.5의 "생성 완료 FCM 알림에 보관 기간 명시"에는 선행 조건이 있다 —
+**현재 무비 생성 완료 알림은 앱의 로컬 알림이고, 서버 FCM 파이프라인은 geofence 전용이다.**
+만료 안내를 넣으려면 완료 알림의 FCM 전환(또는 로컬 알림에 보관 기간 문구 주입)을 이 항목에서 함께 결정한다.
 
 ### A-2. 크레딧 결제 세부 정책 확정
 
@@ -212,7 +217,7 @@ export 예약/환급, 레거시 Stripe·`subscriptions` 제거가 반영됐다
 
 - [ ] 번인 자막 전환 여부 (소프트 자막 폐기 = 사용자에게 보이는 변경, 재인코딩 1회 증가)
 - [ ] BGM 조달 경로와 예산 — Uppbeat / Epidemic Sound / Artlist 등, 위 라이선스 조항 확인 포함
-- [ ] `bgm_tracks` 스키마 신설 — `schema.prisma` 는 공유 파일이라 [team.md](./team.md) §3·§4 적용
+- [ ] `bgm_tracks` 스키마 신설 — `schema.prisma` 는 공유 파일이라 [team.md](./team.md) §2·§3 적용
 - [ ] 골든 프레임·ffprobe 계약 테스트를 위한 **CI 의 ffmpeg 설치** — 현행 파이썬 테스트는
       "ffmpeg 없이 돈다"가 설계 원칙이라 CI 구조가 바뀐다
 - [ ] **스티커 팩 매니페스트 스키마** — 에셋 URL·앵커 적합성·무드 태그·스케일 범위·기본 모션.
@@ -370,7 +375,8 @@ quiet hours 판정 → 기기 푸시 수신을 한 번 통과하고, 실패 시 
 ### C-6. AdMob 콘솔 설정 → 보상형 광고 지급 실검증
 
 **현재**: 백엔드, 앱 SDK/provider, Android AdMob 앱·광고 단위·SSV URL 설정은 끝났다
-(2026-08-19, [모바일 기능 문서](../apps/mobile/docs/features/credits-and-rewarded-ads.md)).
+(2026-08-19 — 구현 상세는 [모바일 기능 문서](../apps/mobile/docs/features/credits-and-rewarded-ads.md),
+**미결 상태·완료 조건의 원천은 이 항목이다**).
 그러나 Snaply의 공개 Play 스토어 등록이 없어 AdMob 앱 검토를 통과할 수 없고, 자체 광고 단위가
 `no-fill`을 반환한다. Google 공개 테스트 단위는 Snaply의 SSV URL을 갖지 않아 크레딧 지급을
 검증할 수 없다.
@@ -385,6 +391,8 @@ quiet hours 판정 → 기기 푸시 수신을 한 번 통과하고, 실패 시 
   형식을 **둘 다 넣고 시작**한 뒤, 첫 지급이 통과하면 실제로 온 값을 `ad_rewards.ad_unit` 에서
   확인해 정리한다. 거절 시에도 수신한 `ad_unit` 을 기록하므로 로그 없이 판정할 수 있다.
 - 앱의 `customData = nonce`, `userId = ssvUserId` 배선은 완료됐다. 변경 시 이 계약을 유지한다.
+- 앱의 무비 생성 화면이 생성 버튼을 누르기 **전에** 잔액과 100크레딧 비용을 보여주지 않는다 —
+  유료 플로우 활성화 전에 붙인다(현재는 부족 시 402 안내로만 드러난다).
 - 보상량 20·한도 5는 확정됐다(A-2). 콘솔 설정이 끝날 때까지 `AD_REWARD_ENABLED=false`다.
 - Google UMP와 iOS ATT 동의 흐름, iOS AdMob App ID·광고 단위·SKAdNetwork 설정이 필요하다.
 - App Store Connect 개인정보와 Play Console 광고·데이터 안전성 신고를 실제 SDK 수집 범위와 맞춘다.
@@ -513,24 +521,6 @@ api 만 스모크하고 워커는 빌드 성공까지만 볼지 판단이 필요
 
 ---
 
-### E-6. 낡은 Prisma 클라이언트가 테스트 72건을 무의미하게 실패시킨다
-
-[AGENTS.md](../AGENTS.md)·[team.md](./team.md) §4 가 "스키마 변경을 pull 한 뒤 `npm run db:generate`
-필수"라고 경고하는데, **경고가 작동하지 않는다.** 2026-08-20 에 다시 걸렸다 —
-`prisma.videoAnalysis` 가 `undefined` 라 72건이 실패했고, 증상(`Cannot read properties of
-undefined`)만으로는 원인이 스키마 동기화라는 것이 드러나지 않는다. 원인 파악에 시간이 든다.
-
-문서에 적힌 주의는 다음에도 같은 방식으로 실패한다. 기계가 잡아야 한다.
-
-**선택지**: ① `apps/api` 의 `test` 스크립트에 `prisma generate` 를 선행시킨다(가장 단순하지만
-매 실행에 수백 ms 가 붙는다) ② `schema.prisma` 해시와 생성된 클라이언트를 대조해 불일치면
-**"`npm run db:generate` 를 실행하세요"** 를 내고 종료하는 프리체크. ②가 낫다 —
-비용이 없고 메시지가 곧 해결 방법이다.
-
-**완료 조건**: 스키마를 고친 뒤 `db:generate` 없이 테스트를 돌리면 명확한 한 줄로 멈춘다.
-
----
-
 ### E-5. BGM 무작위 선택이 레시피 재생성 결정론을 깬다 ⚠️
 
 [decisions/storage-and-subscription-policy.md](./decisions/storage-and-subscription-policy.md) §3.2 는
@@ -545,6 +535,24 @@ undefined`)만으로는 원인이 스키마 동기화라는 것이 드러나지 
 
 **완료 조건**: 선택된 트랙 ID·난수 시드를 `editSpec` 에 핀으로 남기고, 재생성이 같은 산출물을
 내는 것을 테스트로 고정한다. 트랙 ID 를 가지려면 `bgm_tracks` 가 필요하므로 A-7 과 함께 간다.
+
+---
+
+### E-6. 낡은 Prisma 클라이언트가 테스트 72건을 무의미하게 실패시킨다
+
+[AGENTS.md](../AGENTS.md)·[team.md](./team.md) §3 이 "스키마 변경을 pull 한 뒤 `npm run db:generate`
+필수"라고 경고하는데, **경고가 작동하지 않는다.** 2026-08-20 에 다시 걸렸다 —
+`prisma.videoAnalysis` 가 `undefined` 라 72건이 실패했고, 증상(`Cannot read properties of
+undefined`)만으로는 원인이 스키마 동기화라는 것이 드러나지 않는다. 원인 파악에 시간이 든다.
+
+문서에 적힌 주의는 다음에도 같은 방식으로 실패한다. 기계가 잡아야 한다.
+
+**선택지**: ① `apps/api` 의 `test` 스크립트에 `prisma generate` 를 선행시킨다(가장 단순하지만
+매 실행에 수백 ms 가 붙는다) ② `schema.prisma` 해시와 생성된 클라이언트를 대조해 불일치면
+**"`npm run db:generate` 를 실행하세요"** 를 내고 종료하는 프리체크. ②가 낫다 —
+비용이 없고 메시지가 곧 해결 방법이다.
+
+**완료 조건**: 스키마를 고친 뒤 `db:generate` 없이 테스트를 돌리면 명확한 한 줄로 멈춘다.
 
 ---
 

@@ -14,7 +14,7 @@
   - 실패: `{ "success": false, "error": { "code": "STRING", "message": "..." } }`
     - 일부 에러는 `error` 에 부가 필드를 더 싣는다(예: `403 ACCOUNT_PENDING_DELETION` 의 `purgeAfter`).
 - **에러 코드**: `UNAUTHORIZED`(401), `FORBIDDEN`(403), `ACCOUNT_PENDING_DELETION`(403, 삭제 대기 계정 — 복구는 `POST /auth/me/restore`), `NOT_FOUND`(404), `BAD_REQUEST`/`VALIDATION_ERROR`(400), `RATE_LIMITED`(429), `INTERNAL_SERVER_ERROR`(500)
-- **Rate limit**: 기본 IP당 60req/분. `POST /edit-jobs` 유저당 5req/분, `POST /notifications/geofence-enter` 유저당 10req/분. 초과 시 429.
+- **Rate limit**: 기본 IP당 60req/분. `POST /edit-jobs` 유저당 5req/분, `POST /notifications/geofence-enter` 유저당 10req/분, `POST /movie-recommendations` 유저당 10req/분. 초과 시 429.
 
 ---
 
@@ -74,6 +74,7 @@ Query: `filename`, `contentType`. presigned 업로드 URL 발급 + pending 레�
 
 ### POST /videos  🔒
 업로드 완료 후 등록. Body: `{ "videoId": "uuid", "durationSeconds": 12 }` → 201, `status: "ready"`인 영상 반환.
+- S3에 업로드된 객체가 없으면 400. 객체가 500MB를 초과하면 S3 객체와 pending 레코드를 삭제하고 400.
 
 ### GET /videos  🔒
 Query: `kind`(`source | result`, 선택), `cursor`(선택), `limit`(기본 20, 최대 50). `kind`를 생략하면 전체 영상을 반환합니다. `{ "data": { "items": [Video...], "nextCursor": "uuid|null" } }`
@@ -176,7 +177,7 @@ Query: `kind`(`source | result`, 선택), `cursor`(선택), `limit`(기본 20, �
 - 이전 클라이언트의 `{ "videoIds": [...] }` 요청도 지원하지만 전체 영상을 사용하며, `clips`와 동시에 보낼 수 없습니다.
 - `subtitles`(선택, 기본 false): true면 한국어 음성 인식으로 소프트 자막(mov_text 트랙) 삽입. 영상에 굽지 않으므로 플레이어에서 켜야 보이며, 처리 시간이 늘어난다.
 
-`outputProfile` 기본값은 `short_vertical`(1080×1920), `fitMode` 기본값은 `blur_background`입니다. 작업 상태 응답에는 재현 가능한 `pipelineVersion`, `editSpec`, `renderSpec` 스냅샷이 포함됩니다.
+`outputProfile`은 `short_vertical`(기본, 1080×1920) | `youtube_landscape` | `instagram_portrait` | `square`, `fitMode`는 `contain` | `cover` | `blur_background`(기본)만 허용합니다(그 외 값은 400). 작업 상태 응답에는 재현 가능한 `pipelineVersion`, `editSpec`, `renderSpec` 스냅샷이 포함됩니다.
 - 소유·`source`·`ready` 상태 영상만 허용(아니면 403).
 - **크레딧 100을 예약(차감)한다.** 잔액이 모자라면 `402 INSUFFICIENT_CREDITS` 이며 작업 자체가
   만들어지지 않는다(예약과 작업 생성이 한 트랜잭션). 에러 응답에 `required`·`balance`가 함께 온다:
@@ -191,7 +192,8 @@ Query: `kind`(`source | result`, 선택), `cursor`(선택), `limit`(기본 20, �
 ```json
 { "success": true, "data": {
   "id":"uuid","videoId":"uuid","status":"processing","progress":70,
-  "errorMessage":null,"errorCode":null,"startedAt":"...","completedAt":null,"createdAt":"..."
+  "errorMessage":null,"errorCode":null,"startedAt":"...","completedAt":null,"createdAt":"...",
+  "pipelineVersion":"v2","editSpec":{...},"renderSpec":{...}
 }}
 ```
 `status`: `queued | processing | done | failed | canceled`
@@ -209,19 +211,20 @@ Query: `kind`(`source | result`, 선택), `cursor`(선택), `limit`(기본 20, �
 - 최종 상태는 `canceled`. 결과물 영상 레코드는 삭제 처리되어 목록에 나타나지 않는다.
 - 대기 중 작업은 큐에서 제거되고, 처리 중 작업은 워커가 다음 진행률 갱신 시점에 감지해 중단한다.
   업로드 직전에 취소하면 산출물이 만들어질 수 있으나 `canceled`가 `done`으로 되살아나지는 않는다.
-- 열려 있는 진행률 WebSocket에는 `{"status":"canceled"}` 후 연결 종료.
+- 열려 있는 진행률 WebSocket에는 취소 이벤트 `{"progress":0,"step":"취소됨","status":"canceled"}` 후 연결 종료.
+  (이미 종료된 작업에 새로 연결한 경우에는 `{"status":"canceled"}` 한 건만 온다.)
 - 이미 `canceled`인 작업의 재취소는 200(멱등). `done`/`failed`는 409 `CONFLICT`. 남의 작업은 404.
-- 크레딧 차감/환급 규칙 확정 전이므로 취소에 따른 환급 동작은 아직 없다
-  ([decisions/credit-payment-model.md](./decisions/credit-payment-model.md) 확정 후 연결).
+- 취소 시 예약 크레딧 100은 전액 자동 환급된다(위 POST 절의 환급 규칙과 동일).
 
 ### WebSocket /edit-jobs/:id/progress
 연결: `ws(s)://.../edit-jobs/{id}/progress?token={supabase_jwt}` (쿼리 파라미터 토큰).
 서버 → 클라이언트 메시지(JSON):
 ```
+{ "progress": 12, "step": "연결됨" }                     ← 연결 직후 현재 진행률 스냅샷 1건
 { "progress": 30, "step": "음악 매칭 중..." }
 { "progress": 100, "step": "완료", "outputUrl": "https://..." }
 { "status": "failed", "error": "편집 중 오류가 발생했습니다.", "code": "INTERNAL" }
-{ "status": "canceled" }
+{ "progress": 0, "step": "취소됨", "status": "canceled" }
 ```
 완료/실패/취소 시 서버가 연결을 종료. `code`는 GET 응답의 `errorCode`와 같은 분류 코드.
 
@@ -376,7 +379,8 @@ Body: `{ "locationId": "uuid" }` → 200
 
 ### GET /sns/{instagram|tiktok}/callback  (인증 불필요)
 OAuth 콜백. 완료 후 앱 딥링크로 302 리다이렉트:
-`snaply://sns/connected?platform=instagram` (성공) / `snaply://sns/error?platform=...&reason=<사유>` (실패).
+`snaplyapp://sns/connected?platform=instagram` (성공) / `snaplyapp://sns/error?platform=...&reason=<사유>` (실패).
+스킴은 `APP_DEEPLINK_SCHEME`(기본 `snaplyapp://`)이며 앱(`apps/mobile/app.json`)의 `scheme: "snaplyapp"`과 같아야 한다.
 `reason`: `invalid_state`(state 위조) | `account_type`(인스타 개인계정) | `missing_params` | `access_denied`(사용자 취소) | `exchange_failed`(토큰 교환 실패).
 ※ 콜백은 **항상 302 딥링크**로 응답한다 — 실패해도 JSON을 반환하지 않으므로 앱은 딥링크만 처리하면 된다.
 ※ 인스타그램은 비즈니스/크리에이터 계정만 허용.
@@ -575,6 +579,10 @@ FE가 호출할 일은 없지만, 앱 내 링크로 노출할 수 있다.
 | `GET /` | 서비스 소개 |
 | `GET /legal/terms` | 이용약관 |
 | `GET /legal/privacy` | 개인정보처리방침 |
+| `GET /:filename` · `GET /legal/:filename` | 플랫폼 URL/도메인 소유권 검증 파일 (`SITE_VERIFICATION_FILE_NAME`/`_CONTENT`로 구동, 미설정 시 404) |
+
+> ⚠️ `GET /:filename`은 최상위 파라미터 라우트다. 새 최상위 경로를 추가할 때 라우팅 충돌 여부를
+> [`routes/legal.ts`](../apps/api/src/routes/legal.ts)와 함께 확인한다.
 
 > ⚠️ 약관·개인정보처리방침은 **법률 검토를 받지 않은 출시 전 초안**이다(페이지 상단에도 표기).
 > 앱 심사 제출·서비스 출시 전 정식 문서로 교체해야 한다.

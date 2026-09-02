@@ -157,6 +157,9 @@ Closes #123
    ```
 
    전체 검증이 과도하면 변경된 workspace의 관련 명령을 실행하고 그 범위를 기록한다.
+   API 코드를 바꿨다면 관련 테스트도 실행한다 — 반드시 `npm test -w apps/api`
+   (다른 형태로 실행하지 않는다, [AGENTS.md](../AGENTS.md) §테스트).
+   모바일은 `npm run verify:mobile`.
 
 3. 커밋 목적에 해당하는 파일만 명시적으로 스테이징한다.
 
