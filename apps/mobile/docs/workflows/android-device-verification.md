@@ -112,7 +112,9 @@ The debug build is debuggable, so `run-as` grants read access to the app sandbox
 
 ```bash
 adb -s "$DEVICE" shell run-as "$PKG" ls -la files/store/
-adb -s "$DEVICE" shell run-as "$PKG" cat files/store/snaply.rolls.json
+# Store files are per-account: snaply.snaps.<userId>.json, snaply.movies.<userId>.json,
+# snaply.snap-sync.<userId>.json, plus snaply.deleted-accounts.json. List first, then cat one:
+adb -s "$DEVICE" shell run-as "$PKG" cat "files/store/snaply.snaps.<userId>.json"
 adb -s "$DEVICE" shell run-as "$PKG" ls cache/
 ```
 

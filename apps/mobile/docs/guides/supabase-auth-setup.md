@@ -18,8 +18,8 @@
 
 | 값 | 위치 | 어디서 얻나 | 필수 |
 | --- | --- | --- | --- |
-| `EXPO_PUBLIC_SUPABASE_URL` | 프로젝트 루트 `.env` | Supabase → Project Settings → API → Project URL | ✅ |
-| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | 프로젝트 루트 `.env` | Supabase → Project Settings → API → `anon` `public` 키 | ✅ |
+| `EXPO_PUBLIC_SUPABASE_URL` | `apps/mobile/.env` (모노레포 루트에 `.env`를 만들지 않는다 — 루트 `AGENTS.md`) | Supabase → Project Settings → API → Project URL | ✅ |
+| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | `apps/mobile/.env` | Supabase → Project Settings → API → `anon` `public` 키 | ✅ |
 | Google OAuth client id/secret | Supabase Dashboard(값 입력), Google Cloud Console(값 발급) | Google Cloud Console → Credentials | Google 쓸 때 |
 | Apple Service ID / Key | Supabase Dashboard(값 입력), Apple Developer(값 발급) | Apple Developer → Identifiers/Keys | Apple 쓸 때 |
 | Redirect URL `snaplyapp://auth/callback` | Supabase → Auth → URL Configuration | 고정값(앱 scheme 기준) | ✅ |
@@ -34,10 +34,12 @@
 2. **Project Settings → API** 로 이동해 다음 두 값을 복사합니다.
    - **Project URL** (예: `https://abcdxyz.supabase.co`)
    - **`anon` `public`** 키
-3. 프로젝트 루트의 `.env.example`을 복사해 `.env`를 만들고 값을 채웁니다.
+3. `apps/mobile/.env.example`을 복사해 `apps/mobile/.env`를 만들고 값을 채웁니다.
+   (**모노레포 루트가 아니라 `apps/mobile` 안입니다** — 루트 `.env`는 만들지 않는 것이 저장소 규칙입니다.)
 
    ```bash
-   cp .env.example .env
+   # 모노레포 루트에서
+   cp apps/mobile/.env.example apps/mobile/.env
    ```
 
    ```bash

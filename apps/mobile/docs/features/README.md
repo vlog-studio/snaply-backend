@@ -26,11 +26,11 @@ Root stack
 ├── /auth/callback     Sign-up confirmation + OAuth deep-link landing (unguarded)
 ├── /auth/reset        Password-recovery deep-link landing (unguarded)
 │
+├── (pending-deletion guard: isAuthenticated && isPendingDeletion && !isRecovering — declared first: declaration order is fallback priority)
+│   └── /account-restore   Grace-period block: restore the account or sign out
+│
 ├── (recovery guard: isRecovering)
 │   └── /update-password   Set a new password; blocks the app until saved
-│
-├── (pending-deletion guard: isAuthenticated && isPendingDeletion)
-│   └── /account-restore   Grace-period block: restore the account or sign out
 │
 ├── (signed-out guard)
 │   ├── /sign-in       Email/password + Google sign-in
@@ -65,7 +65,7 @@ The tab bar hosts four tabs with a floating ember capture button centered over t
 
 There is no separate capture-setup screen: `/capture` opens straight into the viewfinder and the clip length is tuned inline while it is idle.
 
-Access control: `src/_app/routes/root-layout.tsx` composes the five groups above with `Stack.Protected`. The two `auth/*` deep-link landings sit outside every guard so an email link always resolves; the recovery group takes precedence over the authenticated one, so a recovery link cannot reach the app until the new password is set, and the pending-deletion group takes precedence the same way, so an account inside its deletion grace period only ever sees the restore screen. See [Authentication](authentication.md) for the deep-link and restore flows.
+Access control: `src/_app/routes/root-layout.tsx` composes the five groups above with `Stack.Protected`. **Declaration order in that file is also fallback priority** (guarded groups first, most-specific state first — pending-deletion, then recovery, then authenticated, then signed-out) and the two unguarded `auth/*` deep-link landings are declared **last** so they never become the fallback, while still always resolving for an email link. The pending-deletion guard is `isAuthenticated && isPendingDeletion && !isRecovering` and the authenticated guard excludes both states, so a recovery link cannot reach the app until the new password is set and an account inside its deletion grace period only ever sees the restore screen. The map above groups routes conceptually and is not the declaration order. See [Authentication](authentication.md) for the deep-link and restore flows.
 
 Headless behavior: while authenticated, `src/_app/providers` mounts `PushTokenGate`, `GeofenceGate`, `MovieGenerationBridge`, `SnapDurationBackfill`, `TrayDraftMigration`, and `SnapUploadGate` (the snap upload worker — see [Snap library](snaps.md#backend-upload-sync)), and `src/_app/routes/register-background-tasks.ts` defines the background geofence task at startup. `LibraryScopeGate` is mounted before all of them and runs signed out as well as signed in, because it is what decides whose data the rest of them see: it binds the snap, sync, and movie stores to the signed-in account's own files and drops the query cache when the account changes ([Authentication](authentication.md), [Snap library](snaps.md#file-model-and-storage-boundary)). `DeletedLibraryPurgeGate` follows it and collects what a deleted account left on the device, once its 30-day restore window has passed. These have no route (see [Location alerts and push notifications](location-and-push-notifications.md), [The movie screen](movie.md), and [Snap library](snaps.md#data-model)). The three gates are the same shape: an app-layer component that reads a preference from `features/notification-settings` and hands it to the feature that acts on it, because features must not import each other — `PushTokenGate` wraps `register-push-token`'s `PushTokenRegistrar` this way. The remaining two are one-per-start repairs rather than gates: `SnapDurationBackfill` corrects snaps that recorded the capture option they were shot with instead of how long their file actually runs, and `TrayDraftMigration` promotes a leftover `snaply.tray` from an older build into a draft movie and deletes the key ([Studio and movies](studio.md)).
 

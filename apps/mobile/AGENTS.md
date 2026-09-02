@@ -4,7 +4,7 @@ This file is an index of task-specific documentation, not the full body of the p
 
 Paths in this file and the linked documents are relative to `apps/mobile` unless stated otherwise.
 Commands may be run from that directory, but agents working from the monorepo root should prefer the
-root workspace aliases documented below.
+root workspace aliases (`npm run verify:mobile`, documented below, and `npm run dev:mobile` for Metro).
 
 | Task category | Required document | Scope |
 | --- | --- | --- |
@@ -15,7 +15,7 @@ root workspace aliases documented below.
 | Animations, transitions, and gesture-driven interactions (Reanimated / Gesture Handler) | [`docs/frameworks/animations-and-gestures.md`](docs/frameworks/animations-and-gestures.md) | Canonical motion/gesture implementations, UI-thread rules, reduced motion, remount-blink and React Compiler pitfalls, motion values |
 | Integrating a backend that publishes an OpenAPI/Swagger spec | [`docs/workflows/openapi-api-integration.md`](docs/workflows/openapi-api-integration.md) | Type-only codegen approach, tooling, layered data flow, and setup procedure for the API layer |
 | New features, refactoring, and code review | [`docs/workflows/feature-development.md`](docs/workflows/feature-development.md) | Classification order, implementation workflow, and completion checklist |
-| Running, testing, or verifying changes on a device or simulator | [`docs/workflows/local-development-and-testing.md`](docs/workflows/local-development-and-testing.md) | macOS environment constraints and the iOS Simulator + Android emulator (Expo Go / EAS Build) procedure |
+| Running, testing, or verifying changes on a device or simulator | [`docs/workflows/local-development-and-testing.md`](docs/workflows/local-development-and-testing.md) | macOS environment constraints; iOS Simulator via Expo Go, Android via dev build (Expo Go no longer boots this app on Android), and EAS Build |
 | Verifying a change on the physical Android device (the default verification surface) | [`docs/workflows/android-device-verification.md`](docs/workflows/android-device-verification.md) | Wireless-adb toolkit: screenshots, UI hierarchy, input injection, app-private state, logs, permissions, and the limits of each |
 | Writing or updating Jest unit tests | [`docs/workflows/writing-unit-tests.md`](docs/workflows/writing-unit-tests.md) | What to test, where a test file lives, and the authoring conventions; the per-module-kind skeletons live in the cookbook |
 | App icon, display name, splash screen, adaptive-icon colors, or other native-baked branding | [`docs/workflows/app-branding-and-native-config.md`](docs/workflows/app-branding-and-native-config.md) | CNG source-of-truth model, prebuild + rebuild procedure, per-platform verification, and known pitfalls |

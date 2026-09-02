@@ -37,7 +37,7 @@ The project does not prohibit `expo run:ios` on every development machine. The r
   `package 'apple' is using Swift tools version 6.2.0 but the installed version is 6.1.0`.
 - A machine running a current macOS version with an Xcode release that provides Swift 6.2 is not subject to this limitation and may use `expo run:ios`.
 
-On a legacy machine limited to Xcode 16.4, use **Expo Go** (below) as the default runtime on both platforms. Use **EAS Build** when a feature depends on native modules that Expo Go does not include.
+On a legacy machine limited to Xcode 16.4, use **Expo Go** (below) as the default runtime — **on the iOS simulator only**: Expo Go no longer boots this app on Android ([below](#expo-go-limitations)), so Android runs on a dev build instead. Use **EAS Build** when a feature depends on native modules that Expo Go does not include.
 
 The command examples below were validated with this legacy-machine profile. Adjust simulator names, SDK paths, and AVD names for the machine in use:
 
