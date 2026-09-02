@@ -8,8 +8,7 @@
 > 진행 기록([progress.md](./progress.md))은 **완료된 것**만 담는다.
 >
 > 각 항목은 `왜 막혀 있는지` + `무엇이 있으면 닫히는지(완료 조건)` 형식이다.
-> 마지막 정리: 2026-08-12 (출처: 구 `integrations-backlog.md`, `plan-limits.md` §5,
-> `snap-source-of-truth.md` §7, `progress.md` 남은 것, `meetings/next-agenda.md`)
+> 마지막 정리: 2026-09-02 (모노레포 통합 뒤 코드·기능 문서와 재대조)
 
 ---
 
@@ -149,40 +148,26 @@ export 예약/환급, 레거시 Stripe·`subscriptions` 제거가 반영됐다
 
 - [ ] 위치(`place`) 정보의 서버 저장 여부 — 프라이버시/약관 검토 선행
 - [ ] 비로그인 사용자의 스냅 지위 (현행: 업로드 워커가 로그인 시에만 동작)
+- [ ] 앱이 이미 보유한 `capturedAt`을 `POST /videos`와 DB에 전달·저장 — API 계약·마이그레이션·
+      업로드 워커를 같은 변경에서 갱신하고 기존 행은 `createdAt`으로만 폴백
 - [x] 삭제 유예 기간 값 — **30일 확정**, 계정 삭제에 먼저 적용
       ([decisions/account-deletion.md](./decisions/account-deletion.md))
 - [ ] egress 비용 실측 후 렌디션 기본 다운로드 정책 재평가
 - [ ] 앱 선행 과제: 촬영 스냅 해상도 하드코딩(1080×1920) 해소 — 틀린 값이 서버 원천이 되면 백필 불가
 
-### A-5. FE-BE 연동 범위·일정 확정
-
-FE 담당 개발자가 백엔드 저장소의 문서·환경설정·API/worker 작업에도 직접 참여하기 시작했으므로,
-이 항목을 별도 외부 팀에 대한 **FE 의존**으로 취급하지 않는다. 기능별로 FE 변경, BE 변경,
-통합 검증을 나누고 같은 개발자가 양쪽 작업을 맡는 것도 허용한다.
-
-다만 FCM 실기기 검증(C-4), SNS 사용자 안내, `capturedAt`·실제 해상도 전달처럼 앱이나
-실기기가 있어야 닫히는 작업은 여전히 FE-BE 연동 순서가 필요하다. 위치 정보는 A-4에서 저장이
-결정된 경우에만 전달 범위에 포함한다.
-
-**완료 조건**: [meetings/next-agenda.md](./meetings/next-agenda.md) §4에서 기능별 FE 변경·BE 변경·
-구현 담당·통합 검증일을 확정하고, 실기기 필요 항목은 검증 기기와 담당자까지 지정한다.
-
----
-
-### A-6. 템플릿 기반 스냅 자동 추천 — 백엔드 완료, 앱 연동·활성화 대기
+### A-6. 템플릿 기반 스냅 자동 추천 — 앱·백엔드 완료, 생산 활성화 대기
 
 템플릿으로 무비를 시작할 때 슬롯에 들어갈 스냅을 분석 결과 기반으로 고른다. A-3의 후속 항목이며
 방향·기각안은 [decisions/template-snap-recommendation.md](./decisions/template-snap-recommendation.md).
 
-**2026-08-19 완료 (백엔드 1·2단계)**: 카탈로그를 서버로 옮기고(`movie_templates`,
+**2026-08-19 완료 (1·2·3단계)**: 카탈로그를 서버로 옮기고(`movie_templates`,
 `GET /movie-templates`) 추천 API 를 붙였다(`movie_recommendations`,
 `POST`/`GET /movie-recommendations`, 규칙 기반 점수화, 후보 12개·최근 24시간 20회 상한).
+앱도 원격 카탈로그 캐시·내장 폴백, 로컬 매칭 위 서버 결과 병합, 사용자 변경 슬롯 보호까지
+연동했다. 현재 동작은 [모바일 기능 문서](../apps/mobile/docs/features/movie-templates.md),
 검증 내역은 [progress.md](./progress.md).
 
 **남은 것**
-- [ ] **앱 연동**: 카탈로그 원격화(캐시 + 내장 폴백), 로컬 매칭 위에 서버 결과를 얹는 2단계
-      병합, `NN%` 의 의미 변경에 따른 문구. 사용자가 뺐거나·직접 찍었거나·순서를 바꾼 슬롯은
-      덮지 않는다
 - [ ] **활성화**: `MOVIE_RECOMMENDATION_ENABLED` 는 **기본 꺼짐**이다. 켜는 조건은 A-3 과 같다 —
       법무 검토를 마친 약관·방침(초안은 2026-08-19 작성 완료)과 운영 모델 고정. 켜지 않으면
       추천 경로에서 분석이 돌지 않는다
@@ -209,13 +194,13 @@ FE 담당 개발자가 백엔드 저장소의 문서·환경설정·API/worker �
 
 **막힌 이유**: 선행 결정 세 가지와 음원 조달이 모두 열려 있다.
 
-- **부착 지점 미정** — v3 를 `POST /edit-jobs` 에 붙일지 Movie export 에 붙일지가
-  [meetings/next-agenda.md](./meetings/next-agenda.md) §1-5 의 미결 안건이다(권장안 B = Movie
-  export 로 흡수). 타임라인 모델 설계는 진행할 수 있으나 **요청 스키마·라우트는 §1-5 이후**다
+- **부착 지점 미정** — v3 를 `POST /edit-jobs` 에 붙일지 Movie export 에 붙일지는 A-1의
+  기존 직접 편집 API 공존·폐기 판단에 달려 있다. 타임라인 모델 설계는 진행할 수 있으나
+  **요청 스키마·라우트는 A-1 확정 이후**다
 - **번인 자막 전환은 FE 계약 변경** — 단어 단위 애니메이션은 ASS/libass 로만 되고, 그러면
   현행 mov_text 소프트 자막이 번인으로 바뀐다. [api-spec.md](./api-spec.md) 가 "플레이어에서
   켜야 보인다"고 이미 고지했다. 새 라이브러리는 0이지만 **결정 문서가 선행**이다
-- **워터마크 결정이 레이어 설계 입력** — next-agenda §2-5. 넣기로 하면 v3 `layers` 가 표현해야 한다
+- **워터마크 결정이 레이어 설계 입력** — A-2에서 넣기로 하면 v3 `layers` 가 표현해야 한다
 - **BGM 음원이 없다** — `assets/bgm/` 에 README 뿐이라 비트 싱크·덕킹·무드 매칭이 전부 검증
   불가다. 15~20트랙이면 착수 가능하며, **최종 사용자의 소셜 업로드 허용**과 Content ID 클레임
   면제 조항이 있는 상업 라이선스여야 한다(없으면 사용자 영상이 무음 처리되고 CS 로 돌아온다).
@@ -253,7 +238,7 @@ FE 담당 개발자가 백엔드 저장소의 문서·환경설정·API/worker �
 1단계(출력 옵션 · ASS 자막 · VAD 무음 컷 · 비트 스냅) 구현 → 계약·골든 프레임 테스트 위에서
 e2e 실검증.
 
-**의존**: A-1(Movie) · next-agenda §1-5 · §2-5 · E-5.
+**의존**: A-1(Movie와 직접 편집 API 수명) · A-2(해상도·워터마크) · E-5.
 
 ---
 
@@ -356,7 +341,7 @@ RevenueCat 프로젝트·웹훅 URL 설정 → sandbox 구매 → 웹훅 수신 
 TIKTOK_SCOPES=user.info.basic,video.publish
 ```
 엔드포인트는 코드가 자동 분기한다(`/inbox/video/init/` → `/video/init/`).
-`requiresUserAction` 이 응답에서 사라지므로 **FE 안내 문구도 함께 정리**해야 한다
+  `requiresUserAction` 이 응답에서 사라지므로 **모바일 안내 문구도 함께 정리**해야 한다
 ([api-spec.md](./api-spec.md) SNS 업로드 절).
 
 ### C-4. FCM 실기기 수신
@@ -364,10 +349,11 @@ TIKTOK_SCOPES=user.info.basic,video.publish
 **이미 검증된 것**: 실크리덴셜로 FCM API 호출, 미등록 토큰 →
 `registration-token-not-registered` → `users.fcm_token` 자동 정리까지 실동작 확인.
 
-**막힌 이유**: 실기기 FCM 토큰이 필요하고, 그건 FE 앱에서만 나온다.
+**막힌 이유**: 앱의 FCM 토큰 발급·`POST /auth/fcm-token` 등록과 서버 발송 파이프라인은
+구현돼 있지만, 실기기 토큰으로 geofence 진입부터 수신까지 한 번에 검증하지 않았다.
 
-**완료 조건**: FE 앱에서 발급한 토큰을 `POST /auth/fcm-token` 으로 등록 →
-geofence 진입 → 기기에서 푸시 수신 확인.
+**완료 조건**: dev/release build에서 발급한 토큰 등록 → geofence 진입 보고 → 서버 쿨다운·
+quiet hours 판정 → 기기 푸시 수신을 한 번 통과하고, 실패 시 Firebase·서버 로그를 함께 남긴다.
 
 ### C-5. Meta 앱 검수용 URL 2개
 
@@ -383,12 +369,13 @@ geofence 진입 → 기기에서 푸시 수신 확인.
 
 ### C-6. AdMob 콘솔 설정 → 보상형 광고 지급 실검증
 
-**막힌 이유**: 백엔드 구현은 끝났다(2026-08-14, [progress.md](./progress.md) ·
-[decisions/ad-reward-credits.md](./decisions/ad-reward-credits.md)). 남은 것은 저장소 밖 설정이다 —
-AdMob 앱 등록, 보상형 광고 단위 생성, SSV 콜백 URL 입력, 생성된 광고 단위 ID 전달이 없으면
-검증이 통과할 수 없다. C-1(스토어 등록)과 같은 성격의 외부 블로커다.
+**현재**: 백엔드, 앱 SDK/provider, Android AdMob 앱·광고 단위·SSV URL 설정은 끝났다
+(2026-08-19, [모바일 기능 문서](../apps/mobile/docs/features/credits-and-rewarded-ads.md)).
+그러나 Snaply의 공개 Play 스토어 등록이 없어 AdMob 앱 검토를 통과할 수 없고, 자체 광고 단위가
+`no-fill`을 반환한다. Google 공개 테스트 단위는 Snaply의 SSV URL을 갖지 않아 크레딧 지급을
+검증할 수 없다.
 
-**설정 시 맞춰야 할 것**
+**출시·검증 전에 남은 것**
 - SSV 콜백 URL은 **`GET {고정 도메인}/billing/webhook/admob`** — 쿼리 파라미터를 임의로 덧붙이지
   않는다(서명 대상이 쿼리스트링 원문이다). 고정 도메인은 D-1에 걸려 있다.
 - 생성된 광고 단위 ID를 `ADMOB_SSV_ALLOWED_AD_UNITS`(쉼표 구분)에 넣어야 한다. **비어 있으면
@@ -397,13 +384,14 @@ AdMob 앱 등록, 보상형 광고 단위 생성, SSV 콜백 URL 입력, 생성�
   `2747237135` 같은 숫자다(전체 형식 `ca-app-pub-…/2747237135` 가 아니다). 숫자 부분과 전체
   형식을 **둘 다 넣고 시작**한 뒤, 첫 지급이 통과하면 실제로 온 값을 `ad_rewards.ad_unit` 에서
   확인해 정리한다. 거절 시에도 수신한 `ad_unit` 을 기록하므로 로그 없이 판정할 수 있다.
-- 앱은 SDK에 `customData = nonce`, `userId = ssvUserId`를 그대로 넣어야 한다
-  (`POST /billing/ad-rewards` 응답값). 값이 어긋나면 세션을 못 찾아 지급되지 않는다.
+- 앱의 `customData = nonce`, `userId = ssvUserId` 배선은 완료됐다. 변경 시 이 계약을 유지한다.
 - 보상량 20·한도 5는 확정됐다(A-2). 콘솔 설정이 끝날 때까지 `AD_REWARD_ENABLED=false`다.
+- Google UMP와 iOS ATT 동의 흐름, iOS AdMob App ID·광고 단위·SKAdNetwork 설정이 필요하다.
+- App Store Connect 개인정보와 Play Console 광고·데이터 안전성 신고를 실제 SDK 수집 범위와 맞춘다.
 
-**완료 조건**: AdMob 앱·보상형 광고 단위 생성 → SSV 콜백 URL 등록 →
-`ADMOB_SSV_ALLOWED_AD_UNITS`·`AD_REWARD_ENABLED=true` 주입 → 테스트 광고 시청 →
-실제 SSV 수신 → 크레딧 지급 → 같은 트랜잭션 재전송 시 중복 지급 없음까지 통과하면 닫힌다.
+**완료 조건**: 공개 스토어 등록 → AdMob 앱 검토 통과 → 운영 도메인·allowlist·동의 흐름 주입 →
+등록한 테스트 기기에서 자체 광고 단위 시청 → 실제 SSV 수신 → 크레딧 지급 → 같은 트랜잭션
+재전송 시 중복 지급 없음까지 통과하면 닫힌다. iOS 출시 전에는 iOS 설정과 수신도 별도로 통과한다.
 
 ---
 

@@ -121,7 +121,7 @@ POST /movies → PATCH /movies/:id (클립 추가/순서/구간) → POST /movie
 
 `Movie`의 클립 순서·재내보내기·삭제 연동·자동 그룹핑·기존 `POST /edit-jobs`와의 관계는
 [backlog.md](../backlog.md) A-1에서만 관리한다. Movie/영상 개수 제한은 요금 정책이므로 A-2,
-위치 저장은 A-4, 결정된 `capturedAt`의 FE 전달 일정은 A-5가 원천이다.
+위치 저장과 결정된 `capturedAt`의 서버 전달·저장은 [backlog.md](../backlog.md) A-4가 원천이다.
 
 이 문서는 후속 작업의 상태를 갱신하지 않는다. 결정을 변경하면 새 결정 기록에서 이 문서를
 대체하고, 실제 작업 상태는 `backlog.md`만 갱신한다.

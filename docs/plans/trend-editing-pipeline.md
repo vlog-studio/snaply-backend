@@ -65,8 +65,8 @@ v3 는 스냅 여부(`snapToBeat`)와 허용 오차를 클립 단위로 명시�
 ### 2.4 v3 를 어디에 붙일지가 아직 회의 안건이다 ⚠️
 
 `Movie` 엔티티([backlog.md](../backlog.md) A-1)가 없고, **기존 `POST /edit-jobs` 의 수명**이
-[meetings/next-agenda.md](../meetings/next-agenda.md) §1-5 의 미결 안건이다. 권장안
-B(Movie export 내부에서 재사용한 뒤 공개 API 폐기를 판단)가 채택되면 v3 의 부착 지점은
+A-1의 미결 안건이다. Movie export 내부에서 재사용한 뒤 공개 API 폐기를 판단하는 안이 채택되면
+v3 의 부착 지점은
 `POST /edit-jobs` 가 아니라 Movie export 가 된다.
 
 **타임라인 모델 자체(§3)는 부착 지점과 무관하므로 설계는 지금 진행할 수 있다.** 다만 요청
@@ -74,8 +74,8 @@ B(Movie export 내부에서 재사용한 뒤 공개 API 폐기를 판단)가 채
 
 ### 2.5 워터마크 결정이 레이어 설계의 입력이다
 
-[next-agenda.md](../meetings/next-agenda.md) §2-5 는 해상도·워터마크를 미결로 두고 있고
-권장안은 "1차는 모든 크레딧 export 를 1080×1920, 워터마크 없음"이다. 워터마크를 넣기로 하면
+[backlog.md](../backlog.md) A-2는 해상도·워터마크를 미결로 두고 있다. 이 계획은
+"1차는 모든 크레딧 export를 1080×1920, 워터마크 없음"을 가정한다. 워터마크를 넣기로 하면
 그것도 오버레이 레이어이므로 §3 의 `layers` 가 이를 표현할 수 있어야 한다. 이 계획은 권장안
 (워터마크 없음)을 가정하되, 레이어 타입에 `watermark` 를 넣을 자리를 비워 둔다.
 

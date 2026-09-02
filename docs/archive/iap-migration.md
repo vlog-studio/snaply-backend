@@ -1,4 +1,4 @@
-# IAP 전환 구현 계획 — Stripe 제거와 RevenueCat 연동
+# IAP 전환 구현 계획 — Stripe 제거와 RevenueCat 연동 (구현됨·보관)
 
 > **구현 완료 (2026-08-14).** 이 계획은 실행됐다 — 결과와 계획에서 달라진 점은
 > [progress.md](../progress.md) 2026-08-14 항목에 있다. 현행 API 계약의 원천은

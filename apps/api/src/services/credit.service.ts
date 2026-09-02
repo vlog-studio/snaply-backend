@@ -4,7 +4,7 @@
  * `credit_ledger` 는 append-only 이고 **잔액은 언제나 delta 의 합계**다. 잔액을 따로
  * 들고 있는 컬럼은 없다 — 원장과 잔액이 어긋날 여지를 아예 만들지 않기 위해서다.
  * 합계 쿼리가 병목이 되면 그때 `users.credit_balance` 캐시 컬럼을 트랜잭션 안에서
- * 증분 갱신하는 방식으로 얹는다 (docs/plans/iap-migration.md §3).
+ * 증분 갱신하는 방식으로 얹는다 (docs/archive/iap-migration.md §3).
  *
  * 멱등성의 근거는 두 개의 DB 제약이다.
  * - 구매 지급: `purchases.store_transaction_id` unique
@@ -196,7 +196,7 @@ export async function grantForPurchase(grant: PurchaseGrant): Promise<{ granted:
 /**
  * 스토어 환불 회수. 지급분을 그대로 빼며, **잔액이 음수가 되는 것을 허용한다** —
  * 이미 만들어진 결과물을 회수할 수는 없으므로, 음수 잔액이 신규 export 를 막는 형태로
- * 남는 것이 맞다 (docs/plans/iap-migration.md §4).
+ * 남는 것이 맞다 (docs/archive/iap-migration.md §4).
  *
  * 구독 환불과는 처리가 완전히 다르므로 이 함수에 합치지 않는다.
  */

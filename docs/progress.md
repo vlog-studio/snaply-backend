@@ -1,13 +1,15 @@
-# Snaply 백엔드 개발 진행 기록
+# Snaply 모노레포 개발 진행 기록
 
 각 Phase 완료 시점의 구현 내용, 완료 조건 검증 결과, 특이사항을 기록합니다.
 **이 문서는 완료된 것만 담는다** — 아직 닫히지 않은 작업은 [backlog.md](./backlog.md)에 있다.
 
-**레포**: https://github.com/vlog-studio/snaply-backend
+**저장소**: https://github.com/vlog-studio/snaply-backend — 모바일·API·AI 워커 통합 모노레포
 
 > Phase 1~9의 착수 전 계획서는 [archive/snapvlog-backend-guide.md](./archive/snapvlog-backend-guide.md)에
 > 보관돼 있다(현행 사실과 다름 — 판단 근거로 쓰지 말 것).
 > Dev B → Dev A 인수인계 기록은 [archive/integrations-handover.md](./archive/integrations-handover.md)(확인 완료).
+> 아래 Phase별 표와 기술명은 각 완료 시점의 기록이다. **현재 구조·명령은 README와 ONBOARDING,
+> 현재 스키마·계약은 Prisma와 Swagger를 우선한다.**
 
 ---
 
@@ -15,11 +17,13 @@
 
 | 서비스 | 컨테이너 | 포트 | 비고 |
 |---|---|---|---|
-| PostgreSQL + Auth | Supabase (클라우드) | — | 리전 ap-southeast-1(싱가포르) |
+| PostgreSQL | `snaply-postgres-dev` (PostgreSQL 16) | 5432 | `POSTGRES_HOST_PORT`로 호스트 포트 변경 가능 |
+| 인증 | Supabase Auth (클라우드) | — | DB는 로컬 PostgreSQL과 분리 |
 | 오브젝트 스토리지 | `snaply-minio-dev` (MinIO) | 9100 / 9101 | 9000은 타 프로젝트(skillhub-minio) 점유 |
 | 큐 | `snaply-redis-dev` (Redis 7) | 6379 | |
-| API 서버 | `npm run dev:api` (Node 20) | 3000 | 점유 시 각자 `.env`의 `API_PORT`로 변경 |
-| AI 워커 | `apps/ai-worker/.venv` (Python 3.11) | 8000 | `python src/worker.py` |
+| API 서버 | `npm run dev:api` (Node 26) | 3000 | 점유 시 `apps/api/.env`의 `API_PORT`로 변경 |
+| 모바일 Metro | `npm run dev:mobile` (Expo SDK 57) | 8081 | Android 기준 dev client |
+| 편집·분석 워커 | `apps/ai-worker/.venv` (Python 3.11) | HTTP 포트 없음 | `npm run worker` / `npm run worker:analysis` |
 
 **개발/운영 전환 원칙**: 스토리지·큐는 endpoint/URL만 교체하면 운영으로 전환된다 (코드 분기 없음).
 - S3: `S3_ENDPOINT` 설정 시 MinIO, 비우면 실제 AWS S3 + CloudFront
@@ -787,7 +791,7 @@ stripe trigger customer.subscription.created --api-key $STRIPE_SECRET_KEY
 ## 크레딧 결제 구현 + Stripe·구독 제거 (2026-08-14)
 
 기본 단위 **Movie export 1회 = 100크레딧**과 "유료 구독 없음"이 확정돼
-[plans/iap-migration.md](./plans/iap-migration.md)를 구현했다. 정책 근거는
+[archive/iap-migration.md](./archive/iap-migration.md)를 구현했다. 정책 근거는
 [decisions/credit-payment-model.md](./decisions/credit-payment-model.md) ·
 [decisions/payment-channel-iap.md](./decisions/payment-channel-iap.md).
 
@@ -1470,3 +1474,28 @@ progress.md 에 주의를 적는 것으로는 세 번째를 못 막는다. E-6(�
 쪽에서는 거부되는 것을 테스트가 한 줄로 고정한다.
 
 **검증**: 워커 **125 테스트**, API **317 테스트** 통과. `lint`·`typecheck` 통과.
+
+---
+
+## 모노레포 문서 정합성 및 모바일 의존성 단일화 (2026-09-02)
+
+분리 저장소 시절의 경로와 역할 설명을 현재 모노레포 구조에 맞춰 정리했다. 루트 문서 지도를
+모바일 문서까지 확장하고, 환경변수·팀 소유권·API 계약·기능 상태 문서가 실제 코드와 같은 내용을
+가리키도록 갱신했다. 완료된 IAP 전환 계획과 더 이상 현행 회의 입력으로 쓰지 않는 백엔드 결정
+워크시트는 `docs/archive/`로 옮겼다.
+
+계정 삭제 문서와 화면에 남아 있던 "구독 즉시 해지" 설명은 실제 서버 동작인 소셜·FCM 정리,
+진행 중 작업 취소, 예약 크레딧 환급에 맞췄다. 영화 완료 알림과 위치 기반 추천 알림은 현재 구현
+범위와 남은 실기기 검증을 구분해 기록했고, OpenAPI 스냅샷과 모바일 생성 타입도 다시 동기화했다.
+
+모바일 타입 검증 실패는 루트와 `apps/mobile`에 서로 다른 React Native 타입이 설치된 것이
+원인이었다. 루트 override로 Expo SDK 57 호환 버전인 `react-native@0.86.3`과
+`@react-native/jest-preset@0.86.3`을 단일화하고 의존성을 dedupe했다. 화면 코드에 타입 단언을
+추가하지 않고 `app-tabs.tsx`의 `PressableProps` 충돌을 제거했다.
+
+**검증**
+- `npm run verify:mobile`: **123 suites, 943 tests 통과**, format·lint·typecheck·API 스냅샷 검사 통과
+  (`notification-settings-store.ts`의 기존 미사용 값 경고 1건은 유지)
+- `npm test -w apps/api`: Vitest **23 files, 319 tests 통과**, 스토리지 Node 테스트 1건 통과
+- `npm run typecheck -w apps/api`, `npm run lint -w apps/api`, `git diff --check` 통과
+- 루트·`docs/`·모바일 문서 **77개**의 로컬 Markdown 링크 검사 통과

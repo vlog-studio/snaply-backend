@@ -94,7 +94,7 @@ export function parseWebhookEvent(body: unknown): RevenueCatEvent {
  * 웹훅 처리. **이벤트 타입으로 먼저 분기**한다 — 지금 크레딧이 받는 것은
  * `NON_RENEWING_PURCHASE` / `REFUND` 둘뿐이지만, 보관 축 구독이 붙으면
  * `RENEWAL`·`EXPIRATION` 같은 이벤트가 여기로 함께 들어온다. 그때 구조를 뒤집지 않도록
- * 크레딧 경로를 좁게 잡아 둔다 (docs/plans/iap-migration.md §10).
+ * 크레딧 경로를 좁게 잡아 둔다 (docs/archive/iap-migration.md §10).
  *
  * 처리하지 않는 이벤트는 조용히 무시한다(200). RevenueCat 에 재시도를 시켜 봐야
  * 결과가 같기 때문이다.

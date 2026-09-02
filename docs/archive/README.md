@@ -9,6 +9,8 @@
 | [integrations-handover.md](./integrations-handover.md) | Dev B → Dev A 인수인계 4건. "Dev A 확인 결과"로 상호 확인 완료 | 미결 항목은 [backlog.md](../backlog.md) |
 | [integrations-backlog.md](./integrations-backlog.md) | 연동/수익화 트랙 미결 목록 | [backlog.md](../backlog.md) 로 통합됨 |
 | [video-analysis-implementation-plan.md](./video-analysis-implementation-plan.md) | 스냅 내용 분석 착수 전 구현 계획. 2026-08-19 구현 완료 | 정책 [decisions/snap-content-analysis.md](../decisions/snap-content-analysis.md) · 코드 `apps/ai-worker/src/pipeline/video_analysis/` · 계약 [api-spec.md](../api-spec.md) |
+| [iap-migration.md](./iap-migration.md) | Stripe 제거와 RevenueCat 전환 계획. 2026-08-14 구현 완료 | 정책 [decisions/payment-channel-iap.md](../decisions/payment-channel-iap.md) · 미결 [backlog.md](../backlog.md) A-2·C-1 |
+| [2026-08-12-backend-decision-workshop.md](./2026-08-12-backend-decision-workshop.md) | 열리지 않은 회의의 사전 워크시트. 이후 결정과 미결 항목이 각각 원천 문서로 이동 | 결정 [decisions/](../decisions/) · 미결 [backlog.md](../backlog.md) |
 
 ## 왜 옮겼는지
 
@@ -20,3 +22,7 @@
 - **연동 백로그**: 미결 항목이 5개 문서에 흩어져 있던 문제를 [backlog.md](../backlog.md) 하나로 합쳤다.
 - **영상 분석 계획**: 구현이 끝나 계획 문서의 수명이 끝났다. 실제 구현이 제안과 다른 지점이
   여러 곳이라(분석 시점·재시도 API·스키마), 남겨 두면 두 문서 중 어느 쪽이 현행인지 헷갈린다.
+- **IAP 계획**: 구현이 완료된 계획을 `plans/`에 두면 아직 착수 전인 것처럼 보인다. 결과는
+  진행 기록과 결제 결정 문서로 이동했다.
+- **의사결정 워크시트**: 회의 전 제안 상태로 남은 `next-agenda.md`가 이미 확정된 정책과 오래된
+  FE/BE 분리를 다시 미결처럼 보이게 했다. 실제 미결만 backlog에 남겼다.

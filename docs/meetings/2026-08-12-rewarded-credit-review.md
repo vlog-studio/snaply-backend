@@ -4,7 +4,7 @@
 > **상태**: 예정 회의 안건·의견 기록용 제안 — 아직 승인·구현되지 않았으며 현행 정책이 아니다.
 > **미결 작업 원천**: [backlog.md](../backlog.md) A-2, C-1
 > **관련 결정**: [credit-payment-model.md](../decisions/credit-payment-model.md)
-> **관련 통합 회의 자료**: [next-agenda.md](./next-agenda.md) §2
+> **관련 과거 제안**: [2026-08-12 의사결정 워크시트](../archive/2026-08-12-backend-decision-workshop.md) §2
 
 ## 1. 한 줄 제안
 
