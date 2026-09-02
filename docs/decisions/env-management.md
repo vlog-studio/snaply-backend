@@ -2,8 +2,9 @@
 
 **작성일**: 2026-08-11
 **상태**: 결정 (구현 완료)
-**범위**: 환경변수 파일의 위치, 운영 주입 방식, 변수 목록의 관리 원칙을 기록한다.
-**원천**: 환경변수의 위치·주입 경로·목록 관리 방식은 이 문서가 원천이다.
+**범위**: API·AI 워커·compose가 공유하는 **서버 환경변수**의 위치, 운영 주입 방식, 변수 목록의 관리 원칙을 기록한다.
+**원천**: 서버 환경변수의 위치·주입 경로·목록 관리 방식은 이 문서가 원천이다. 모바일의
+`EXPO_PUBLIC_*`는 `apps/mobile/.env`와 `apps/mobile/.env.example`이 별도로 관리한다.
 **후속 작업의 원천**: [backlog.md](../backlog.md) B-1(배포 플랫폼·시크릿 연결)
 변수 하나하나의 목록은 [`apps/api/src/env-spec.ts`](../../apps/api/src/env-spec.ts),
 사람이 복사해 쓰는 표현은 [`.env.example`](../../.env.example).
@@ -14,7 +15,8 @@
 
 ## 결정
 
-1. **로컬 개발용 `.env` 는 저장소에 하나만 둔다 — `apps/api/.env`.**
+1. **로컬 서버용 `.env` 는 저장소에 하나만 둔다 — `apps/api/.env`.** 모바일 공개 빌드 변수는
+   `apps/mobile/.env`에 두며 서버 시크릿을 복사하지 않는다.
 2. **운영은 파일을 쓰지 않는다.** 값은 배포 플랫폼의 시크릿에서 프로세스 환경변수로 주입된다.
 3. **`docker-compose.yml` 로 컨테이너 테스트 서버를 띄우는 것을 1급 시나리오로 지원한다.**
    compose 는 `apps/api/.env` 를 `env_file` 로 읽고, 인프라 주소는 `environment` 로 덮는다.
@@ -57,20 +59,20 @@
 
 ```yaml
 env_file:
-  - path: apps/api/.env      # 개인 자격증명(Supabase·Stripe·SNS)의 베이스
+  - path: apps/api/.env      # 개인 자격증명(Supabase·SNS·외부 서비스)의 베이스
     required: false
 environment:
   DATABASE_URL: postgresql://postgres:postgres@postgres:5432/snaply   # 인프라는 덮는다
   CLOUDFRONT_DOMAIN: ""
   SNS_MOCK: "true"
-  STRIPE_MOCK: "true"
+  BILLING_MOCK: "true"
 ```
 
 compose 규격상 `environment` 가 `env_file` 보다 우선한다. 그래서 개인 `.env` 의 `localhost:9100`
 같은 로컬 주소가 컨테이너 네트워크 주소를 덮지 않는다.
 
-**테스트 서버는 기본 mock 이다.** `env_file` 로 실키가 들어오지만 `SNS_MOCK`·`STRIPE_MOCK` 이
-외부 호출을 막는다. 잠깐 띄운 서버가 실제 Stripe·Instagram 을 호출하면 안 되기 때문이다.
+**테스트 서버는 기본 mock 이다.** `env_file` 로 실키가 들어오지만 `SNS_MOCK`·`BILLING_MOCK` 이
+외부 호출을 막는다. 잠깐 띄운 서버가 실제 RevenueCat·Instagram 을 호출하면 안 되기 때문이다.
 실키 경로를 확인할 때만 해당 줄을 지운다. 테스트 하네스의
 [hermetic.ts](../../apps/api/test/setup/hermetic.ts) 와 같은 원칙이다.
 

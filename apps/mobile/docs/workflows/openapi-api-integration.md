@@ -1,6 +1,6 @@
 # Integrating an OpenAPI/Swagger backend
 
-This document records the approach for consuming the separately developed Snaply backend, which publishes an OpenAPI (Swagger) specification. The API layer exists: `src/shared/api` owns the transport (`apiRequest`), `_app/providers` owns the `QueryClient`, and the first entity/feature slices consume them (see [`state-and-data.md`](../frameworks/state-and-data.md)).
+This document records how the mobile workspace consumes the Snaply API workspace in the same monorepo. The API publishes an OpenAPI (Swagger) specification; `src/shared/api` owns the mobile transport (`apiRequest`), `_app/providers` owns the `QueryClient`, and the entity/feature slices consume them (see [`state-and-data.md`](../frameworks/state-and-data.md)).
 
 For where each piece of state and data code lives, read [`state-and-data.md`](../frameworks/state-and-data.md). For import direction and Public API rules, read [`module-boundaries.md`](../conventions/module-boundaries.md).
 
@@ -62,12 +62,12 @@ The cost of the chosen approach is that `openapi-typescript` produces **no Zod s
 
 Commit the spec file into the repository at `docs/api/openapi.json` rather than generating from a live URL. The backend server does not need to be running to regenerate types, and every spec change lands as a reviewable diff. Two `package.json` scripts implement this:
 
-- `npm run api:pull` (`scripts/pull-api-spec.sh`) refreshes the committed spec from the backend's live Swagger JSON endpoint at `${EXPO_PUBLIC_API_BASE_URL}/docs/json`. The origin comes from `.env` — the same `EXPO_PUBLIC_API_BASE_URL` the app uses at runtime, so there is a single place to update when the backend moves (currently the backend developer's laptop on the local network; later a shared dev server).
+- `npm run api:pull` (`scripts/pull-api-spec.sh`) refreshes the committed spec from the API workspace's live Swagger JSON endpoint at `${EXPO_PUBLIC_API_BASE_URL}/docs/json`. The origin comes from `apps/mobile/.env` — the same `EXPO_PUBLIC_API_BASE_URL` the app uses at runtime, so there is a single place to update for a local API, tunnel, or shared environment.
 - `npm run api:gen` regenerates `src/shared/api/schema.d.ts` from the committed spec.
 
 When the backend contract changes, run `npm run api:pull && npm run api:gen` and commit the spec and the regenerated `schema.d.ts` together.
 
-The edit-progress WebSocket (`/edit-jobs/:id/progress`) is not representable in OpenAPI; its contract lives in the backend repository's `docs/api-spec.md`.
+The edit-progress WebSocket (`/edit-jobs/:id/progress`) is not representable in OpenAPI; its contract lives in the monorepo's [root API contract](../../../../docs/api-spec.md).
 
 ## Generated types
 

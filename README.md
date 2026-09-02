@@ -16,7 +16,7 @@ packages/
   shared-types/ # 앱·API가 공유하는 요청/응답 타입
 ```
 
-인프라: Supabase(DB+Auth) · MinIO(S3 호환, :9100) · Redis(:6379).
+인프라: 로컬 PostgreSQL(DB) · Supabase(Auth) · MinIO(S3 호환, :9100) · Redis(:6379).
 개발/운영 전환은 endpoint/URL만 교체하고 코드 분기는 없다.
 
 ## 어디를 봐야 하는가 (원천 문서)
@@ -32,6 +32,8 @@ packages/
 | 모바일 공개 환경변수 | `apps/mobile/.env.example` | `EXPO_PUBLIC_*`만 허용. 서버 시크릿 금지 |
 | 서버 환경변수 — 배치·주입 방식 | [docs/decisions/env-management.md](docs/decisions/env-management.md) | 로컬은 `apps/api/.env`, 운영은 주입 |
 | 커밋·PR·코드 규칙 | [AGENTS.md](AGENTS.md) | 상세: [docs/commit-guidelines.md](docs/commit-guidelines.md) · [docs/pull-request-guidelines.md](docs/pull-request-guidelines.md) |
+| 모바일 에이전트 규칙 | [apps/mobile/AGENTS.md](apps/mobile/AGENTS.md) | `apps/mobile/**` 작업에 추가 적용. 경로는 별도 표기가 없으면 `apps/mobile` 기준 |
+| 모바일의 현재 사용자 동작 | [apps/mobile/docs/features/README.md](apps/mobile/docs/features/README.md) | 기능별 상태·라우트·소유 계층의 원천 |
 | 다음에 결정·구현할 일 | [docs/backlog.md](docs/backlog.md) | 닫히지 않은 작업은 여기에만 둔다. `decisions/` 전체를 훑지 않는다 |
 | 완료된 구현·검증 내역 | [docs/progress.md](docs/progress.md) | 완료된 것만 |
 | 작업 분담·공유 파일 규칙 | [docs/team.md](docs/team.md) | |

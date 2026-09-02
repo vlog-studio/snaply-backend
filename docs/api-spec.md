@@ -241,7 +241,7 @@ Query: `kind`(`source | result`, 선택), `cursor`(선택), `limit`(기본 20, �
 정책: [decisions/template-snap-recommendation.md](./decisions/template-snap-recommendation.md)
 
 카탈로그는 앱의 로컬 상수에서 서버로 옮겨왔다. 슬롯의 매칭 규칙과 슬롯 정의가 서로 다른
-저장소에 있으면 한쪽만 고쳐지기 때문이다.
+런타임 소유자에 있으면 한쪽만 고쳐지고, 모노레포여도 앱 릴리스와 서버 배포 시점이 갈리기 때문이다.
 
 ### GET /movie-templates  🔒
 내리지 않은 템플릿을 정렬 순서대로.

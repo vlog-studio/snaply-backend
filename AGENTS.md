@@ -1,6 +1,9 @@
 # Repository instructions
 
 이 지침은 저장소 전체에 적용된다. 문서 지도와 각 주제의 원천은 [`README.md`](README.md)를 본다.
+`apps/mobile/**` 아래에서는 [`apps/mobile/AGENTS.md`](apps/mobile/AGENTS.md)의 모바일 전용 지침도
+함께 적용한다. 모바일 문서의 상대 경로는 별도 표기가 없으면 `apps/mobile` 기준이며, 루트에서
+명령을 실행할 때는 workspace 스크립트(`npm run verify:mobile` 등)를 사용한다.
 
 ## 작업 환경
 
@@ -51,6 +54,9 @@
 | `docs/plans/` | 착수 전 구현 계획. **제안이며 현행 사실이 아니다** | 구현 시작까지 |
 | `docs/meetings/` | 회의 안건과 결과 | 회의 단위 |
 | `docs/archive/` | 수명이 끝난 문서 | 보관 |
+
+`apps/mobile/docs/`는 모바일 에이전트 문서 체계이므로 위 `docs/` 배치 규칙의 예외다. 사용자 동작과
+구현 상태는 `apps/mobile/docs/features/`, 모바일 아키텍처·규칙·절차는 해당 하위 디렉터리에 둔다.
 
 판단 기준: **"이 문서를 계속 고칠 것인가?"** 계속 고친다면 `docs/` 직하,
 한 시점의 기록으로 굳는다면 `decisions/`·`plans/`·`meetings/`.

@@ -1,6 +1,6 @@
 # 커밋 지침
 
-이 문서는 Snaply 백엔드 저장소에서 일관된 커밋을 만들기 위한 기준이다. 최근 이력에서
+이 문서는 Snaply 통합 모노레포에서 일관된 커밋을 만들기 위한 기준이다. 최근 이력에서
 사용 중인 Conventional Commits 스타일을 유지하며, 각 커밋이 독립적으로 이해되고
 되돌릴 수 있게 만드는 것을 목표로 한다.
 
@@ -51,6 +51,7 @@ scope는 변경의 주된 소유 영역이 분명할 때 사용한다.
 
 | Scope | 대상 |
 |---|---|
+| `mobile` | `apps/mobile` Expo/React Native 앱 |
 | `api` | `apps/api` Fastify API |
 | `ai-worker` | `apps/ai-worker` Python 워커 |
 | `db` | Prisma 스키마, 마이그레이션, 시드 |

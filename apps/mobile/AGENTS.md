@@ -2,6 +2,10 @@
 
 This file is an index of task-specific documentation, not the full body of the project rules. Before making changes, read the applicable documents from the table below. If a task spans multiple categories, apply all relevant documents.
 
+Paths in this file and the linked documents are relative to `apps/mobile` unless stated otherwise.
+Commands may be run from that directory, but agents working from the monorepo root should prefer the
+root workspace aliases documented below.
+
 | Task category | Required document | Scope |
 | --- | --- | --- |
 | Any change to code under `src` | [`docs/architecture/feature-sliced-design.md`](docs/architecture/feature-sliced-design.md) | FSD v2.1 layers, slices, segments, dependency principles, and the project-standard structure |
@@ -42,7 +46,7 @@ Preserve code identifiers, commands, API names, product names, and other technic
 
 ## Verification
 
-- Run `npm run verify` before finishing any code change. It is the canonical automated verification gate; its check list is defined once, in `package.json`, and CI runs the same command.
+- Run `npm run verify:mobile` from the monorepo root, or `npm run verify` from `apps/mobile`, before finishing any code change. Both invoke the same canonical gate; its check list is defined once in `apps/mobile/package.json`, and CI runs the workspace command.
 - A `verify` failure that pre-exists your change and is unrelated to it: report it with evidence instead of expanding your scope to fix it.
 - On-device and platform verification is separate and stays governed by the workflow documents in the table above.
 

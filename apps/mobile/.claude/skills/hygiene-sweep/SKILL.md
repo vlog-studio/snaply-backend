@@ -71,9 +71,16 @@ Capture four things, because every later phase depends on them:
 
 Run the bundled scanner. It emits *candidates*, never verdicts.
 
+From the Snaply monorepo root, enter the mobile workspace first so source paths quoted inside
+the docs resolve against the same base as the scanner:
+
 ```bash
+cd apps/mobile
 node .claude/skills/hygiene-sweep/scripts/scan.mjs all --src src --docs docs
 ```
+
+Do not run the scanner from the monorepo root with prefixed `--src apps/mobile/src` paths: its
+doc-reference checks resolve unprefixed paths against the current directory and will report false misses.
 
 Adjust `--src`, `--docs`, `--alias`, and `--entry` to the repo (`scan.mjs` with no arguments
 prints the options). `--entry` matters for framework routers: files a router discovers by
