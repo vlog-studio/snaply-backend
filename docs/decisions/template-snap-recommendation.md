@@ -1,11 +1,11 @@
 # 템플릿 기반 스냅 자동 추천 — 실행 구조·카탈로그 소유·비용
 
-> **작성일**: 2026-08-19
-> **상태**: 결정 · **1·2·3단계(카탈로그·추천 API·앱 2단계 병합) 구현 완료**, 생산 활성화 대기
-> **원천**: 추천의 실행 위치·템플릿 카탈로그의 소유·추천 1회의 과금·미업로드 스냅의 취급
-> **관련 문서**: [snap-content-analysis.md](./snap-content-analysis.md) (§3 요청 시점 분석 · §4 비동기) ·
-> [movie-model.md](./movie-model.md) · [credit-payment-model.md](./credit-payment-model.md)
-> **남은 미결**: [backlog.md](../backlog.md) A-6
+**작성일**: 2026-08-19
+**상태**: 결정 · **1·2·3단계(카탈로그·추천 API·앱 2단계 병합) 구현 완료**, 생산 활성화 대기
+**원천**: 추천의 실행 위치·템플릿 카탈로그의 소유·추천 1회의 과금·미업로드 스냅의 취급
+**관련 문서**: [snap-content-analysis.md](./snap-content-analysis.md) (§3 요청 시점 분석 · §4 비동기) ·
+[movie-model.md](./movie-model.md) · [credit-payment-model.md](./credit-payment-model.md)
+**남은 미결**: [backlog.md](../backlog.md) A-6
 
 ---
 

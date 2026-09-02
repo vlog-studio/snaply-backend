@@ -1,12 +1,12 @@
 # 보상형 광고 크레딧 — 지급 경로와 v1 범위
 
-> **작성일**: 2026-08-14 (§4-1 추가·§7 값 확정: 2026-08-18)
-> **상태**: 결정 (구현 완료, 기본 `AD_REWARD_ENABLED=false`)
-> **원천**: 광고 보상 지급 경로·검증 규칙·v1 정책 범위
-> **관련 문서**: [credit-payment-model.md](./credit-payment-model.md) ·
-> [payment-channel-iap.md](./payment-channel-iap.md) ·
-> [archive/2026-08-12-rewarded-credit-review.md](../archive/2026-08-12-rewarded-credit-review.md)(채택되지 않은 초안)
-> **정책 값**: §7 (전부 확정) · 남은 블로커는 콘솔 설정 [backlog.md](../backlog.md) C-6
+**작성일**: 2026-08-14 (§4-1 추가·§7 값 확정: 2026-08-18)
+**상태**: 결정 (구현 완료, 기본 `AD_REWARD_ENABLED=false`)
+**원천**: 광고 보상 지급 경로·검증 규칙·v1 정책 범위
+**관련 문서**: [credit-payment-model.md](./credit-payment-model.md) ·
+[payment-channel-iap.md](./payment-channel-iap.md) ·
+[archive/2026-08-12-rewarded-credit-review.md](../archive/2026-08-12-rewarded-credit-review.md)(채택되지 않은 초안)
+**정책 값**: §7 (전부 확정) · 남은 블로커는 콘솔 설정 [backlog.md](../backlog.md) C-6
 
 ---
 
