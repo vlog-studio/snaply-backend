@@ -203,7 +203,7 @@ function loadSnsConfig(): SnsConfig {
     instagram,
     tiktok,
     tokenEncryptionKey: process.env.SNS_TOKEN_ENCRYPTION_KEY ?? 'dev-insecure-sns-key',
-    appDeepLinkScheme: process.env.APP_DEEPLINK_SCHEME ?? 'snaply://',
+    appDeepLinkScheme: process.env.APP_DEEPLINK_SCHEME ?? 'snaplyapp://',
     instagramWebhookVerifyToken: process.env.INSTAGRAM_WEBHOOK_VERIFY_TOKEN || undefined,
   };
 }

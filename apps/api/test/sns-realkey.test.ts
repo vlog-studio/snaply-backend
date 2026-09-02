@@ -512,7 +512,7 @@ describe('OAuth 콜백은 항상 앱으로 돌려보낸다', () => {
     });
 
     expect(res.statusCode).toBe(302);
-    expect(res.headers.location).toBe('snaply://sns/error?platform=instagram&reason=exchange_failed');
+    expect(res.headers.location).toBe('snaplyapp://sns/error?platform=instagram&reason=exchange_failed');
     expect(await h.prisma.snsConnection.count()).toBe(0);
   });
 
@@ -531,7 +531,7 @@ describe('OAuth 콜백은 항상 앱으로 돌려보낸다', () => {
     });
 
     expect(res.statusCode).toBe(302);
-    expect(res.headers.location).toBe('snaply://sns/error?platform=tiktok&reason=exchange_failed');
+    expect(res.headers.location).toBe('snaplyapp://sns/error?platform=tiktok&reason=exchange_failed');
     expect(await h.prisma.snsConnection.count()).toBe(0);
   });
 });

@@ -440,7 +440,7 @@ export const ENV_VARS = [
     key: 'APP_DEEPLINK_SCHEME',
     required: false,
     origin: 'shared',
-    description: 'OAuth·결제 완료 후 앱으로 돌아가는 스킴. 기본 snaply://',
+    description: 'OAuth·결제 완료 후 앱으로 돌아가는 스킴. 앱(app.json)의 scheme과 같아야 한다. 기본 snaplyapp://',
   },
   {
     key: 'RATE_LIMIT_GLOBAL_MAX',

@@ -36,7 +36,7 @@ process.env.CLOUDFRONT_DOMAIN = '';
 
 // 외부 연동은 기본적으로 mock/dry-run. 개별 테스트가 필요 시 덮어쓴다.
 process.env.SNS_TOKEN_ENCRYPTION_KEY = 'test-encryption-key-do-not-use-in-prod';
-process.env.APP_DEEPLINK_SCHEME = 'snaply://';
+process.env.APP_DEEPLINK_SCHEME = 'snaplyapp://';
 // 플랫폼 처리 대기 폴링을 테스트에서 빠르게 돌리기 위한 값
 process.env.INSTAGRAM_POLL_INTERVAL_MS = '10';
 process.env.INSTAGRAM_POLL_TIMEOUT_MS = '2000';

@@ -86,7 +86,7 @@ describe('GET /sns/:platform/callback', () => {
     const res = await connect(user, 'instagram');
 
     expect(res.statusCode).toBe(302);
-    expect(res.headers.location).toBe('snaply://sns/connected?platform=instagram');
+    expect(res.headers.location).toBe('snaplyapp://sns/connected?platform=instagram');
     const conn = await h.prisma.snsConnection.findUnique({
       where: { userId_platform: { userId: user.id, platform: 'instagram' } },
     });
@@ -103,7 +103,7 @@ describe('GET /sns/:platform/callback', () => {
       url: `/sns/instagram/callback?code=mock-code&state=${encodeURIComponent(tampered)}`,
     });
 
-    expect(res.headers.location).toBe('snaply://sns/error?platform=instagram&reason=invalid_state');
+    expect(res.headers.location).toBe('snaplyapp://sns/error?platform=instagram&reason=invalid_state');
     expect(await h.prisma.snsConnection.count()).toBe(0);
   });
 
@@ -125,7 +125,7 @@ describe('GET /sns/:platform/callback', () => {
 
     const res = await connect(user, 'instagram', 'mock-personal');
 
-    expect(res.headers.location).toBe('snaply://sns/error?platform=instagram&reason=account_type');
+    expect(res.headers.location).toBe('snaplyapp://sns/error?platform=instagram&reason=account_type');
     expect(await h.prisma.snsConnection.count()).toBe(0);
   });
 
