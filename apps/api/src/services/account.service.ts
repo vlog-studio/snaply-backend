@@ -1,7 +1,7 @@
 /**
  * 계정 삭제 수명주기 (docs/decisions/account-deletion.md)
  *
- * 1) deleteAccount   — 소프트 삭제 + 즉시 정리(구독 해지·FCM·SNS 토큰·편집 작업)
+ * 1) deleteAccount   — 소프트 삭제 + 즉시 정리(FCM·SNS 토큰·편집 작업·예약 크레딧)
  * 2) restoreAccount  — 유예 기간(30일) 내 복구
  * 3) purgeExpiredAccounts — 유예 만료분 실삭제(S3 → Supabase Auth → DB Cascade)
  */
@@ -66,7 +66,7 @@ export async function deleteAccount(userId: string): Promise<{ purgeAfter: Date 
   return { purgeAfter: purgeAfterFor(now) };
 }
 
-/** 유예 기간 내 복구. FCM 토큰·SNS 연동·구독은 이미 정리됐으므로 되살아나지 않는다. */
+/** 유예 기간 내 복구. FCM 토큰·SNS 연동은 이미 정리됐으므로 되살아나지 않는다. */
 export async function restoreAccount(userId: string): Promise<void> {
   const prisma = getPrisma();
   const user = await prisma.user.findUnique({

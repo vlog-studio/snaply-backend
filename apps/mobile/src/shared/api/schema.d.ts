@@ -383,7 +383,7 @@ export interface paths {
         post?: never;
         /**
          * 계정 삭제 (30일 유예 후 영구 삭제)
-         * @description 구독 즉시 해지, SNS 연동·FCM 토큰 삭제, 진행 중 편집 작업 취소 후 계정을 삭제 대기 상태로 전환한다. purgeAfter 이전에는 POST /auth/me/restore 로 복구할 수 있다.
+         * @description SNS 연동·FCM 토큰 삭제, 진행 중 편집 작업 취소·예약 크레딧 환급 후 계정을 삭제 대기 상태로 전환한다. purgeAfter 이전에는 POST /auth/me/restore 로 복구할 수 있다.
          */
         delete: {
             parameters: {

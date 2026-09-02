@@ -24,7 +24,7 @@ export function MeDeleteAccountPage() {
       contentContainerStyle={styles.content}
     >
       <SettingsSection>
-        <SettingRow icon="card-outline" title="구독 즉시 해지" />
+        <SettingRow icon="card-outline" title="예약 크레딧 환급" />
         <RowDivider />
         <SettingRow icon="unlink-outline" title="소셜 연결·알림 해제" />
         <RowDivider />
