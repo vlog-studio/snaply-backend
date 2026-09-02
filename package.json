@@ -43,6 +43,8 @@
     "typescript-eslint": "^8.35.0"
   },
   "overrides": {
+    "react-native": "0.86.3",
+    "@react-native/jest-preset": "0.86.3",
     "openapi-typescript": {
       "typescript": "~6.0.3"
     }
