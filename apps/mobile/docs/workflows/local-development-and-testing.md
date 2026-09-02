@@ -35,7 +35,7 @@ The project does not prohibit `expo run:ios` on every development machine. The r
 - An older Intel Mac (`x86_64`) on macOS 15.7.7 is limited to **Xcode 16.4 (Swift 6.1.2)** and cannot install Xcode 26 (Swift 6.2).
 - On that class of machine, a **local native iOS build is not possible**. Running `npx expo run:ios` fails with:
   `package 'apple' is using Swift tools version 6.2.0 but the installed version is 6.1.0`.
-- A machine running a current macOS version with an Xcode release that provides Swift 6.2 is not subject to this limitation and may use `expo run:ios`.
+- A machine running a current macOS version with an Xcode release that provides Swift 6.2 is not subject to this limitation and may use `npm run ios` (`expo run:ios`).
 
 On a legacy machine limited to Xcode 16.4, use **Expo Go** (below) as the default runtime — **on the iOS simulator only**: Expo Go no longer boots this app on Android ([below](#expo-go-limitations)), so Android runs on a dev build instead. Use **EAS Build** when a feature depends on native modules that Expo Go does not include.
 
@@ -123,7 +123,7 @@ Verify each interaction with `xcrun simctl io "iPhone 16" screenshot <path>`. To
 
 ### Expo Go limitations
 
-**Expo Go no longer boots this app on Android** (verified 2026-07-23 on the Pixel_API_35 emulator): the app imports `expo-notifications` at startup (`_app/providers` push-token registrar → `shared/lib/notifications/local.ts`), and on Android Expo Go that import throws a fatal `Uncaught Error: expo-notifications: Android Push notifications … removed from Expo Go with the release of SDK 53` before anything renders. Android verification therefore requires a dev build (`npx expo run:android`) on the owner's wireless device (see the agent verification policy at the top). iOS Expo Go is unaffected.
+**Expo Go no longer boots this app on Android** (verified 2026-07-23 on the Pixel_API_35 emulator): the app imports `expo-notifications` at startup (`_app/providers` push-token registrar → `shared/lib/notifications/local.ts`), and on Android Expo Go that import throws a fatal `Uncaught Error: expo-notifications: Android Push notifications … removed from Expo Go with the release of SDK 53` before anything renders. Android verification therefore requires a dev build (`npm run android:device`; `npm run android` for an emulator) on the owner's wireless device (see the agent verification policy at the top). iOS Expo Go is unaffected.
 
 Only native modules bundled in Expo Go work, and `expo-dev-client` configuration is ignored. Custom native behavior (e.g. `expo-camera` config-plugin options, `expo-glass-effect`) may differ from a real build or be unavailable. When a feature depends on such modules, verify it with EAS Build instead.
 

@@ -95,7 +95,7 @@ iOS 앱스토어 심사 규정상 **소셜 로그인을 제공하면 Apple 로�
 - **Android (이 Mac에서 로컬 가능):**
 
   ```bash
-  npx expo run:android
+  npm run android          # 에뮬레이터. 실기기는 npm run android:device
   ```
 
 - **iOS:** 이 저장소 기준 macOS/Xcode 제약으로 로컬 네이티브 빌드가 어렵습니다. **EAS Build**로 개발 빌드를 만들어 시뮬레이터/기기에 설치하세요. (Expo Go로는 로그인 검증 불가.)

@@ -109,7 +109,7 @@ adb -s 192.168.0.42:40913 shell am start \
 **Android에서는 이 경로가 기본입니다** (위 경고 참고). 무선 adb 연결 상태에서 로컬 네이티브 빌드를 실기기에 설치합니다(iOS와 달리 Android 로컬 빌드는 이 Mac에서 가능):
 
 ```bash
-npx expo run:android --device        # 연결된 기기 목록에서 실기기 선택
+npm run android:device               # expo run:android --device — 연결된 기기 목록에서 실기기 선택
 ```
 
 이후 Metro는 `npx expo start --dev-client`로 붙입니다.

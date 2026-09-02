@@ -151,7 +151,7 @@ Know these before promising a verification result:
 - **Metro is owner-run.** Do not start it in the background and do not kill port 8081. See the verification policy.
 - **FCM push display is unverified.** Geofence gating and local-notification setup are confirmed on device; end-to-end push display stays deferred until a backend notification API exists.
 - **Release-variant behavior differs.** These tools assume the debug dev build. `run-as` and `ReactNativeJS` logging are unavailable on the release APK from `npm run android:device:release`.
-- **A JS-only loop.** Native module changes, config-plugin changes, and `app.json` branding changes need a rebuild (`npx expo run:android`), not Fast Refresh — see [`app-branding-and-native-config.md`](app-branding-and-native-config.md).
+- **A JS-only loop.** Native module changes, config-plugin changes, and `app.json` branding changes need a rebuild (`npm run android:device`), not Fast Refresh — see [`app-branding-and-native-config.md`](app-branding-and-native-config.md).
 
 ## Pending: iOS physical-device verification
 

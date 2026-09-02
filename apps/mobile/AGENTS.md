@@ -5,6 +5,9 @@ This file is an index of task-specific documentation, not the full body of the p
 Paths in this file and the linked documents are relative to `apps/mobile` unless stated otherwise.
 Commands may be run from that directory, but agents working from the monorepo root should prefer the
 root workspace aliases (`npm run verify:mobile`, documented below, and `npm run dev:mobile` for Metro).
+Where `apps/mobile/package.json` defines a script for an action (`npm run android:device`, `npm run ios`, …),
+docs and agents use that script rather than the raw `npx expo run:*` command it wraps; from the monorepo
+root the same script is invoked as `npm run <script> -w snaply-app`.
 
 | Task category | Required document | Scope |
 | --- | --- | --- |
