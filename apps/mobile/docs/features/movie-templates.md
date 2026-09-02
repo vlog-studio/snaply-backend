@@ -52,7 +52,7 @@ The match answers one question — *which snaps were shot on the same outing* �
 
 The app sends the chosen outing's **uploaded** snaps — in capture order, at most twelve, evenly sampled if there are more — and the template id. The server ensures each candidate is analysed, scores every (slot, snap) pair, and answers with one snap per slot.
 
-Scoring is rule-based and lives on the server, so its weights can be tuned without an app release ([backend decision](../../../snaply-backend/docs/decisions/template-snap-recommendation.md) §7). What the app is entitled to rely on:
+Scoring is rule-based and lives on the server, so its weights can be tuned without an app release ([server decision](../../../../docs/decisions/template-snap-recommendation.md) §7). What the app is entitled to rely on:
 
 - A slot the server could fill nothing for comes back empty, and stays empty. **A snap the analysis marked unusable never fills a slot** — a blurred or too-dark clip is worth less than the `지금 찍기` the empty row offers.
 - The answer's own time signal keeps the outing's shape, so a recommendation never scrambles a walk into an order that makes less sense than the clock's.

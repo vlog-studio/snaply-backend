@@ -4,7 +4,7 @@
 
 While signed in, Snaply can notify the user when they arrive near a nearby capture spot ("주변 촬영 스팟"). The device registers for push, monitors the nearest points in the background, and reports arrivals so the backend can send an arrival push. The user's preference for this — the master switch, quiet hours, and interests — lives in [Me tab](me.md); this document owns the mechanism those preferences drive.
 
-The end-to-end product effect (an actual push landing on arrival) is decided and sent by the backend, which does not exist yet. On the client, push-token registration and OS geofence monitoring run for real against mock endpoints.
+The backend owns the arrival decision and FCM send, and that pipeline is implemented. The client also registers push tokens and monitors OS geofences against the real API when an origin is configured. What remains unverified is the complete real-device path from a geofence enter event to a displayed notification.
 
 ## Current behavior
 
@@ -13,8 +13,8 @@ The end-to-end product effect (an actual push landing on arrival) is decided and
 | Register the device for push (FCM) | `Partial` | While authenticated, the app *checks* the notification grant (never prompts — the OS ask belongs to the 무비 완성 알림 switch, see [Me tab](me.md)); with the grant it registers with APNs (iOS), reads the FCM token, and posts it to `POST /auth/fcm-token`, re-posting on token refresh. Without the grant it does nothing until the grant lands (the movie-alert opt-in re-triggers the check) or the next app start. Routes to a mock until an API origin is configured. Native only. |
 | Present a foreground push | `Partial` | A message arriving while the app is foregrounded is re-presented as a local notification (`expo-notifications`), because FCM suppresses the system banner in the foreground. Requires the `expo-notifications` native module to be present in the build. |
 | Start/stop geofence monitoring | `Functional` | Off by default. Turning 위치 알림 받기 on runs the two-stage ask (an in-app sheet, then the OS foreground and background prompts — see [Me tab](me.md)); with the grants stored, monitoring resolves the current position, loads nearby points, and starts OS geofencing on the nearest ones. At app start the gate only *checks* the grants (never prompts): both present → monitoring resumes; revoked → it silently does not start. Turning the switch off stops all monitoring. Native only. |
-| Report an arrival | `Partial` | On a geofence *enter* event the app posts the location id to `POST /notifications/geofence-enter`, even when relaunched headlessly in the background. Routes to a mock until an API origin is configured; the backend that turns a report into a push does not exist yet. |
-| Receive an arrival push | `Not implemented` | The backend owns the authoritative decision (30-minute per-(user, location) dedup, quiet hours, `notification_enabled`) and the send. No backend, so no arrival push is delivered end-to-end. |
+| Report an arrival | `Partial` | On a geofence *enter* event the app posts the location id to `POST /notifications/geofence-enter`, even when relaunched headlessly in the background. It uses the real API when an origin is configured and an in-code mock otherwise. The request and server route are implemented; a headless real-device enter has not been verified end to end. |
+| Receive an arrival push | `Partial` | The backend applies `notification_enabled`, quiet hours, and 30-minute per-(user, location) dedup, composes the message, and sends it through Firebase Admin. Real FCM sending and invalid-token cleanup are verified server-side, but no complete geofence-to-device receipt has been recorded. |
 
 ## Route and entry points
 
@@ -56,11 +56,11 @@ The `GET /locations` response carries `id`, `name`, `lat`, `lng`, `radiusMeters`
 
 ## Known limitations and implementation requirements
 
-- Arrival reports and token registrations call real endpoints (`POST /notifications/geofence-enter`, `POST /auth/fcm-token`) when a backend origin is configured, and in-code mocks under `USE_MOCK_API`. No arrival push is delivered end-to-end yet: the backend has no notification-send pipeline, so foreground presentation is wired but end-to-end FCM display remains unverified.
+- Arrival reports and token registrations call real endpoints (`POST /notifications/geofence-enter`, `POST /auth/fcm-token`) when an API origin is configured, and in-code mocks under `USE_MOCK_API`. The server notification-send pipeline exists; the remaining gap is a recorded end-to-end real-device delivery from geofence enter through foreground/background display.
 - Geofence monitoring needs foreground **and** background ("항상 허용") location permission. Only the 위치 알림 받기 switch requests them (after the in-app sheet's yes); the app-start gate is check-only, so a grant revoked in OS settings means monitoring silently does not start until the switch is toggled again. Resolving the position and nearby points also needs a location/network fix, so there is a short delay before monitoring begins.
 - On Android 13+, presenting a delivered notification also requires the `POST_NOTIFICATIONS` runtime permission (separate from location permission).
 - At most `MAX_MONITORED_REGIONS` (20) points are monitored at once, the nearest to the resolved position; the set is recomputed each time monitoring (re)starts.
 - The 5-minute client cooldown is in-memory only and resets on a cold background relaunch; the authoritative 30-minute per-(user, location) dedup is the backend's responsibility.
 - Quiet hours and interests are collected locally but not synced to the backend (`GET|PATCH /auth/me` are in the API spec, not yet called by the client); they are enforced server-side when the arrival push is decided (see [Me tab](me.md)).
 
-When the backend's notification-send pipeline arrives, verify end-to-end FCM display, move `notification_enabled`/`quiet_start`/`quiet_end`/`interests` to server-backed queries/mutations on `/auth/me`, and update the status of the rows above with the verified success and failure paths.
+To close the partial status, verify end-to-end FCM display on a dev/release build, move `notification_enabled`/`quiet_start`/`quiet_end`/`interests` to server-backed queries/mutations on `/auth/me`, and record the verified success and failure paths here.

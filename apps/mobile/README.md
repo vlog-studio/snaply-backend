@@ -146,6 +146,7 @@ src/
 | `expo-camera` | 영상 촬영. 앱의 핵심 기능입니다. (app.json 플러그인) |
 | `expo-video` | 촬영 원본·결과 영상 재생. |
 | `expo-image` | 이미지 렌더링과 캐싱. (app.json 플러그인) |
+| `expo-image-picker` | 갤러리에서 영상을 골라 스냅으로 추출하는 시스템 피커. |
 | `expo-file-system` | 촬영 영상을 로컬 문서 디렉터리에 저장·관리. |
 | `expo-sharing` | 완성 무비 내보내기용 시스템 공유 시트 호출. 렌더 파일을 캐시에 내려받아 공유합니다. (app.json 플러그인) |
 | `expo-video-thumbnails` | 영상 첫 프레임 썸네일 생성. 스냅 그리드와 타임라인 클립에 사용합니다. |
@@ -161,6 +162,14 @@ src/
 | `@react-native-firebase/messaging` | FCM 토큰 발급과 푸시 메시지 수신. (app.json 플러그인) |
 
 > Firebase 콘솔 준비 절차는 [`docs/guides/fcm-push-setup.md`](docs/guides/fcm-push-setup.md), 현재 동작하는 범위와 소유 계층은 [`docs/features/location-and-push-notifications.md`](docs/features/location-and-push-notifications.md)를 참고합니다.
+
+### 수익화
+
+| 패키지 | 사용 이유 |
+| --- | --- |
+| `react-native-google-mobile-ads` | AdMob 보상형 광고를 표시하고 SSV 세션의 `nonce`·사용자 ID를 광고 요청에 전달합니다. Android 네이티브 설정은 `app.json` 플러그인이 주입합니다. |
+
+> 구현 상태와 출시 전 남은 설정은 [`docs/features/credits-and-rewarded-ads.md`](docs/features/credits-and-rewarded-ads.md)를 참고합니다.
 
 ### UI·애니메이션·피드백
 

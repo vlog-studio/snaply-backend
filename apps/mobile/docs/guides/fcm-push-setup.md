@@ -21,13 +21,13 @@
 | 항목 | 어디서 | 배치 위치 | 필수 |
 | --- | --- | --- | --- |
 | Firebase 프로젝트 | [Firebase Console](https://console.firebase.google.com) | — | ✅ |
-| `google-services.json` (Android) | Firebase → Android 앱 등록 후 다운로드 | 레포 루트 `./google-services.json` | ✅ (Android) |
-| `GoogleService-Info.plist` (iOS) | Firebase → iOS 앱 등록 후 다운로드 | 레포 루트 `./GoogleService-Info.plist` | iOS 쓸 때 |
+| `google-services.json` (Android) | Firebase → Android 앱 등록 후 다운로드 | 모바일 workspace 루트 `apps/mobile/google-services.json` | ✅ (Android) |
+| `GoogleService-Info.plist` (iOS) | Firebase → iOS 앱 등록 후 다운로드 | 모바일 workspace 루트 `apps/mobile/GoogleService-Info.plist` | iOS 쓸 때 |
 | APNs 인증 키 `.p8` | Apple Developer → Keys | Firebase → 프로젝트 설정 → Cloud Messaging 에 업로드 | iOS 실수신 시 |
 
 > **앱 식별자는 이미 정해져 있습니다** (`app.json` 기준): Android `package` / iOS `bundleIdentifier` 모두 **`com.anonymous.snaplyapp`**. Firebase 앱 등록 시 이 값을 그대로 입력하세요.
 
-> **`google-services.json`은 비밀 키가 아닙니다**(클라이언트에 배포되는 공개 설정). 다만 프로젝트 식별자가 담기므로 팀 정책에 따라 커밋 여부를 정하면 됩니다. 커밋하지 않는다면 로컬 루트에 두고, EAS 빌드에는 [EAS 파일 환경변수](https://docs.expo.dev/eas/environment-variables/)로 제공해야 합니다. FCM 자체는 SHA-1 지문이 필요 없습니다(그건 Google 로그인·Dynamic Links용).
+> **`google-services.json`은 비밀 키가 아닙니다**(클라이언트에 배포되는 공개 설정). 다만 프로젝트 식별자가 담기므로 팀 정책에 따라 커밋 여부를 정하면 됩니다. 커밋하지 않는다면 `apps/mobile/`에 두고, EAS 빌드에는 [EAS 파일 환경변수](https://docs.expo.dev/eas/environment-variables/)로 제공해야 합니다. FCM 자체는 SHA-1 지문이 필요 없습니다(그건 Google 로그인·Dynamic Links용).
 
 ---
 
@@ -40,13 +40,13 @@
 
 1. 프로젝트 개요 → **앱 추가 → Android**.
 2. **Android 패키지 이름**에 `com.anonymous.snaplyapp` 입력. (앱 닉네임·SHA-1은 선택, FCM엔 불필요)
-3. **`google-services.json` 다운로드** → 레포 루트에 `google-services.json`으로 저장.
+3. **`google-services.json` 다운로드** → `apps/mobile/google-services.json`으로 저장.
 
 ## 3. iOS 앱 등록 → `GoogleService-Info.plist` (iOS 필요 시)
 
 1. 프로젝트 개요 → **앱 추가 → iOS**.
 2. **Apple 번들 ID**에 `com.anonymous.snaplyapp` 입력.
-3. **`GoogleService-Info.plist` 다운로드** → 레포 루트에 저장.
+3. **`GoogleService-Info.plist` 다운로드** → `apps/mobile/GoogleService-Info.plist`로 저장.
 
 ## 4. APNs 키 등록 (iOS 실수신 필요 시)
 
@@ -70,7 +70,7 @@
 4. `features/register-push-token`: 토큰 발급 → `registerFcmToken` 호출, 토큰 갱신 시 재등록
 5. `expo prebuild --clean` 후 Android dev build로 검증: 실제 FCM 토큰 발급 + Firebase 콘솔 테스트 발송으로 포그라운드/백그라운드 수신 확인
 
-> 남은 미검증 항목은 **end-to-end 푸시 표시**뿐입니다. 백엔드에 알림 발송 파이프라인이 없어 실제 도착 푸시를 띄워본 적이 없습니다.
+> 서버의 알림 판정·FCM 발송 파이프라인까지 구현돼 있습니다. 남은 미검증 항목은 실제 dev/release build의 토큰으로 geofence 진입 보고부터 기기 표시까지 통과하는 **end-to-end 푸시 수신**입니다.
 
 ---
 
