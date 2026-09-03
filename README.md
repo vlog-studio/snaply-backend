@@ -46,7 +46,7 @@ packages/
 | 회의 안건·결과 | [docs/meetings/](docs/meetings/) | |
 | 지난 기록 | [docs/archive/](docs/archive/) | **현행 사실과 다를 수 있음 — 판단 근거로 쓰지 말 것** |
 
-문서를 새로 만들거나 옮길 때의 위치·이름 규칙은 [AGENTS.md](AGENTS.md) §문서 컨벤션에 있다.
+문서를 새로 만들거나 옮길 때의 위치·이름 규칙은 [docs/doc-conventions.md](docs/doc-conventions.md)에 있다.
 요약: `docs/` 직하는 계속 갱신되는 문서, 한 시점에 굳는 문서는 `decisions/`·`plans/`·`meetings/`,
 수명이 끝나면 `archive/`. 파일명은 kebab-case 소문자(루트 진입점 4개와 `README.md`만 예외).
 
