@@ -36,12 +36,22 @@
 
 ## 문서 갱신 의무
 
-- 라우트·요청/응답 스키마를 바꾸면 [`docs/api-spec.md`](docs/api-spec.md)도 같은 커밋에서 갱신한다.
-  Swagger는 코드에서 생성되지만 api-spec은 수동 문서이고 FE 전달용이다.
+동작 계약(사용자가 관찰하는 동작·API 계약·정책 값)을 바꾸는 변경은 아래 표의 해당 행을
+**같은 변경**에서 함께 갱신한다([constitution](docs/constitution.md) 제1조·제3조).
+어디를 고칠지 매번 원칙에서 재조립하지 말고 이 표에서 찾는다.
+
+| 바꾼 것 | 같은 변경에서 갱신할 곳 |
+|---|---|
+| 사용자 가시 동작·정책 값 | [`docs/specs/`](docs/specs/README.md)의 해당 요구 — **구현보다 먼저** 고친다 |
+| 라우트·요청/응답 스키마 | 코드의 스키마 선언(Swagger의 원천) · [`docs/api-spec.md`](docs/api-spec.md)(FE 전달용 수동 문서) · 관련 테스트 |
+| 앱(모바일)의 사용자 가시 동작 | [`apps/mobile/docs/features/`](apps/mobile/docs/features/README.md)의 해당 기능 문서 |
+| 새 정책·설계 결정 | [`docs/decisions/`](docs/decisions/)에 배경·기각한 대안과 함께 |
+| DB 스키마 | 마이그레이션(같은 커밋) — pull 한 쪽은 `npm run db:generate` |
+| 새 환경변수 | [`apps/api/src/env-spec.ts`](apps/api/src/env-spec.ts) 선언 + [`.env.example`](.env.example) 예시 |
+
 - 미결 작업은 [`docs/backlog.md`](docs/backlog.md)에만 기록한다. 결정 문서·진행 기록에 미결
   체크리스트를 새로 만들지 않는다 — 여러 곳에 있으면 하나를 닫아도 나머지가 낡는다.
 - 완료된 구현·검증은 [`docs/progress.md`](docs/progress.md)에 기록한다.
-- 정책·설계 결정은 [`docs/decisions/`](docs/decisions/)에 배경·기각한 대안과 함께 남긴다.
 - [`docs/archive/`](docs/archive/)의 문서는 지난 기록이다. **판단 근거로 인용하지 말고,
   archive로 옮기는 시점에 붙이는 상단 상태 배너 외에는 수정하지 않는다.**
 
@@ -52,7 +62,8 @@
 | 위치 | 담는 것 | 수명 |
 |---|---|---|
 | 저장소 루트 | 진입점 4개(`README` · `ONBOARDING` · `AGENTS` · `CLAUDE`)만. **늘리지 않는다** | 상시 |
-| `docs/` 직하 | 계속 갱신되는 현행 문서 (계약·상태·규칙·절차) | 상시 |
+| `docs/` 직하 | 계속 갱신되는 현행 문서 (계약·상태·규칙·절차). 최상위 원칙은 [`docs/constitution.md`](docs/constitution.md) | 상시 |
+| `docs/specs/` | 제품 요구사항(무엇을·왜) — 요구 ID + 구현 상태 라벨. 동작 계약을 바꾸는 작업은 해당 spec 갱신이 먼저다 | 상시 |
 | `docs/decisions/` | 한 시점에 내린 정책·설계 결정. 배경·기각한 대안 포함 | 결정 시점 고정 |
 | `docs/plans/` | 착수 전 구현 계획. **제안이며 현행 사실이 아니다** | 구현 시작까지 |
 | `docs/meetings/` | 회의 안건과 결과 | 회의 단위 |

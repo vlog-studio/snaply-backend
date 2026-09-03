@@ -25,6 +25,8 @@ packages/
 
 | 알고 싶은 것 | 원천 | 비고 |
 |---|---|---|
+| 저장소 최상위 원칙 | [docs/constitution.md](docs/constitution.md) | 모든 spec·plan·구현·문서에 우선. 개정 절차 포함 |
+| 제품 요구사항 (무엇을·왜) | [docs/specs/](docs/specs/README.md) | 요구 ID + 구현 상태 라벨. 동작 계약 변경은 spec 갱신이 먼저 |
 | DB 스키마 | `apps/api/prisma/schema.prisma` | 마이그레이션 `prisma/migrations/`, RLS `prisma/rls-policies.sql` |
 | API 계약 | `/docs` (Swagger, 코드에서 생성) | [docs/api-spec.md](docs/api-spec.md)는 FE 전달용 요약 + WebSocket — **라우트를 바꾸면 같이 갱신** |
 | 로컬 셋업·명령·트러블슈팅 | [ONBOARDING.md](ONBOARDING.md) | |

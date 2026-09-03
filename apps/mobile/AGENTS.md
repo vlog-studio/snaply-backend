@@ -56,15 +56,20 @@ Preserve code identifiers, commands, API names, product names, and other technic
 ## Rule precedence
 
 1. The user's current request
-2. Project documentation linked from this index
-3. Official, version-specific documentation
-4. General framework conventions
+2. The repository constitution and product specs at the monorepo root —
+   [`docs/constitution.md`](../../docs/constitution.md) and [`docs/specs/`](../../docs/specs/README.md).
+   They bind mobile work too; the documents below are workspace-level detail under them
+3. Project documentation linked from this index
+4. Official, version-specific documentation
+5. General framework conventions
 
 If documentation and implementation diverge, do not spread an undocumented exception. Update the relevant documentation with the implementation or report the discrepancy.
 
 ## Feature documentation maintenance
 
 Treat feature documentation as part of the feature implementation, not as optional follow-up work. Whenever a change adds, modifies, removes, or completes user-visible behavior, update the affected document under `docs/features` in the same change. Keep its routes, behavior, ownership map, platform support, persistence, implementation status, and known limitations consistent with the code. Add a new feature document and link it from `docs/features/README.md` when no existing document owns the behavior.
+
+When the change alters the **behavior contract** — user-visible behavior or a policy value — also update the matching requirement in the monorepo root [`docs/specs/`](../../docs/specs/README.md), in the same change and before (or alongside) the implementation (constitution art. 1 and 3). Feature documents record what the app *does*; the specs own what it *must do*.
 
 ## External sources of truth
 
