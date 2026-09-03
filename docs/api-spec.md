@@ -2,8 +2,9 @@
 
 > 이 문서는 **FE 전달용 요약 + WebSocket 계약**이다. 스키마의 원천은 코드에서 생성되는
 > Swagger(`/docs`)이므로, 라우트나 요청/응답을 바꾸면 **같은 커밋에서 이 문서도 갱신한다.**
-> 과금 정책의 원천은 [decisions/credit-payment-model.md](./decisions/credit-payment-model.md)와
-> [decisions/payment-channel-iap.md](./decisions/payment-channel-iap.md).
+> 제품 요구·정책 값의 원천은 [specs/](./specs/README.md)다 — 이 문서는 계약의 형태
+> (엔드포인트·스키마·에러 코드)와 FE 가 다뤄야 할 동작만 담고, 정책의 배경은 spec 과
+> [decisions/](./decisions/)를 따라간다.
 
 > **인터랙티브 문서(Swagger UI)**: 개발 서버 실행 후 **`http://localhost:3000/docs`** 에서 직접 호출·테스트할 수 있습니다. OpenAPI 스펙 JSON은 `http://localhost:3000/docs/json` (Postman/코드 생성용). 운영에서는 비활성(필요 시 `ENABLE_DOCS=true`). WebSocket은 OpenAPI로 표현되지 않아 아래 문서를 참고하세요.
 
@@ -93,11 +94,9 @@ Query: `kind`(`source | result`, 선택), `cursor`(선택), `limit`(기본 20, �
 
 업로드된 source 스냅의 대표 프레임을 AI 워커가 분석해 주제·장소·사물·행동·분위기와 **편집 사용
 가능 여부**를 남긴다. 결과는 **자동 편집 추천의 입력**이며 사용자에게 보여주기 위한 문구가 아니다.
-정책: [decisions/snap-content-analysis.md](./decisions/snap-content-analysis.md)
-
-**업로드 시 자동으로 분석하지 않는다.** 편집에 쓸 후보가 정해진 시점에 앱(또는 이후의 추천 경로)이
-분석을 요청한다. 스냅은 대량으로 올라오고 실제 편집에 쓰이는 것은 일부라, 업로드마다 분석하면
-버려질 스냅까지 과금된다.
+**업로드 시 자동으로 분석하지 않는다** — 편집에 쓸 후보가 정해진 시점에 요청한다.
+요구·이유: [specs/template-and-recommendation.md](./specs/template-and-recommendation.md) §스냅 내용 분석 ·
+배경: [decisions/snap-content-analysis.md](./decisions/snap-content-analysis.md)
 
 ### POST /videos/:videoId/analysis  🔒
 분석 요청. **비동기** — `202` + `{ analysisId, version, status }` 만 돌려주고 실제 분석은 분석
@@ -241,10 +240,9 @@ Query: `kind`(`source | result`, 선택), `cursor`(선택), `limit`(기본 20, �
 
 사용자가 "템플릿으로 시작"할 때 고르는 무비의 **형태**다. 슬롯의 `label`·`hint` 는 사람에게
 보여주는 **촬영 지시**이지, 그 자리에 들어간 스냅의 내용에 대한 주장이 아니다.
-정책: [decisions/template-snap-recommendation.md](./decisions/template-snap-recommendation.md)
-
-카탈로그는 앱의 로컬 상수에서 서버로 옮겨왔다. 슬롯의 매칭 규칙과 슬롯 정의가 서로 다른
-런타임 소유자에 있으면 한쪽만 고쳐지고, 모노레포여도 앱 릴리스와 서버 배포 시점이 갈리기 때문이다.
+카탈로그는 서버가 소유한다 — 요구:
+[specs/template-and-recommendation.md](./specs/template-and-recommendation.md) §템플릿 ·
+배경: [decisions/template-snap-recommendation.md](./decisions/template-snap-recommendation.md)
 
 ### GET /movie-templates  🔒
 내리지 않은 템플릿을 정렬 순서대로.
@@ -282,7 +280,8 @@ Query: `kind`(`source | result`, 선택), `cursor`(선택), `limit`(기본 20, �
 ## 스냅 추천 (템플릿 슬롯 채우기)
 
 템플릿의 각 슬롯에 어떤 스냅을 넣을지 서버가 제안한다. 결과의 근거는 [스냅 내용 분석](#스냅-내용-분석)이고,
-정책은 [decisions/template-snap-recommendation.md](./decisions/template-snap-recommendation.md).
+요구는 [specs/template-and-recommendation.md](./specs/template-and-recommendation.md) §스냅 자동 추천,
+배경은 [decisions/template-snap-recommendation.md](./decisions/template-snap-recommendation.md).
 
 **앱은 이 결과를 기다리지 않는다.** 로컬 매칭(촬영 시각·좌표)이 먼저 화면을 채우고, 도착한
 추천은 **사용자가 손대지 않은 슬롯에만** 얹힌다. 그래서 이 API 가 느리거나 죽어도, 꺼져 있어도
@@ -419,6 +418,7 @@ Body: `{ "videoId": "uuid", "caption": "문구(선택)" }`
 
 크레딧으로 과금한다. 판매 채널은 앱 내 인앱결제(Apple StoreKit 2 / Google Play Billing)이며,
 두 스토어의 영수증 검증·통지는 RevenueCat을 경유한다. **정기 구독 상품은 없다.**
+과금 요구의 원천: [specs/credits-and-payment.md](./specs/credits-and-payment.md)
 
 **단위**: Movie export 1회 = **100크레딧**.
 
@@ -469,7 +469,8 @@ Body: `{ "videoId": "uuid", "caption": "문구(선택)" }`
 
 ## 보상형 광고 크레딧
 
-정책의 원천은 [decisions/ad-reward-credits.md](./decisions/ad-reward-credits.md).
+요구의 원천은 [specs/credits-and-payment.md](./specs/credits-and-payment.md) §보상형 광고,
+정책 배경은 [decisions/ad-reward-credits.md](./decisions/ad-reward-credits.md).
 
 > **앱이 지급을 요청하는 API는 없다.** 지급의 유일한 트리거는 AdMob SSV 콜백이고, 앱은
 > 세션을 열고 상태를 조회할 뿐이다. 지급량도 앱이 정하지 않는다 — 세션 발급 시점에 서버가

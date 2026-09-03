@@ -8,7 +8,7 @@
 > 진행 기록([progress.md](./progress.md))은 **완료된 것**만 담는다.
 >
 > 각 항목은 `왜 막혀 있는지` + `무엇이 있으면 닫히는지(완료 조건)` 형식이다.
-> 마지막 정리: 2026-09-02 (모노레포 통합 뒤 코드·기능 문서와 재대조)
+> 마지막 정리: 2026-09-03 (specs 신설에 맞춰 확정 경과의 요약을 specs·decisions 링크로 위임)
 
 ---
 
@@ -42,26 +42,13 @@ S3 삭제 실패분은 E-3의 정리 배치 경로를 쓴다.
 
 ### A-2. 크레딧 결제 세부 정책 확정
 
-**결정됨**: 정기 구독과 Free/Standard/Premium 플랜을 제거하고, 무비 생성을 크레딧으로
-과금한다. 근거와 전환 원칙은
-[decisions/credit-payment-model.md](./decisions/credit-payment-model.md).
-결제 채널은 Apple/Google IAP + RevenueCat
-([decisions/payment-channel-iap.md](./decisions/payment-channel-iap.md)).
-
-2026-08-14에 스토리지·구독 정책이 결정됐다 —
-[decisions/storage-and-subscription-policy.md](./decisions/storage-and-subscription-policy.md).
-Free 원본 스냅 한도 **2GB**(5GB에서 축소), 무비 서버 보관 **30일**(만료 후 크레딧 없이 무료
-재생성), 보관 축의 **구독 상품 도입**과 "구독은 크레딧을 지급하지 않는다"는 경계 규칙이
-확정됐다.
-
-**2026-08-14 확정**: 기본 단위는 **Movie export 1회 = 100크레딧**이다. 100 단위를 쓰는 이유는
-광고 보상·가입 보너스·프로모션처럼 지급 사유가 늘어날 때 정수 단위로 조절하기 위해서다.
-**이 단위는 바꾸지 않는다** — 바꾸면 이미 지급된 잔액을 전부 리스케일해야 한다.
-
-**2026-08-14 구현 완료**: 크레딧 원장(`credit_ledger`)·스토어 거래 원장(`purchases`),
-RevenueCat 웹훅의 멱등 지급·환불 회수, `/billing/products`·`/billing/credits`·`/billing/sync`,
-export 예약/환급, 레거시 Stripe·`subscriptions` 제거가 반영됐다
-([progress.md](./progress.md) 2026-08-14). 아래 미결 항목은 **코드가 아니라 값**이며,
+**결정·구현 완료분**: 과금 모델(구독 제거, export 1회 = 100크레딧 불변, 생성/보관 2축 분리),
+결제 채널(IAP + RevenueCat), 스토리지 정책(Free 2GB·무비 30일 보관·무료 재생성)은 확정됐다.
+현행 요구는 [specs/credits-and-payment.md](./specs/credits-and-payment.md)·
+[specs/snap-library.md](./specs/snap-library.md)·[specs/movie.md](./specs/movie.md)가,
+배경은 [decisions/](./decisions/)의 결제·스토리지 결정 3편이 담는다. 크레딧 원장·웹훅
+멱등 지급·export 예약/환급 등 백엔드 구현도 끝났다([progress.md](./progress.md) 2026-08-14).
+아래 미결 항목은 **코드가 아니라 값**이며,
 `apps/api/src/services/billing/credit-policy.ts` 의 숫자만 교체하면 닫힌다.
 
 **결정할 것 — 크레딧(생성 축)**:
@@ -71,15 +58,12 @@ export 예약/환급, 레거시 Stripe·`subscriptions` 제거가 반영됐다
 - 프로모션·운영 보상 지급 기준
 - 고해상도 export의 추가 차감 여부 (현재 전 export 동일 100)
 
-**광고 보상 — 미결 값 없음(2026-08-18 전부 확정)**: 지급 경로·검증 규칙·정책 값이
-[decisions/ad-reward-credits.md](./decisions/ad-reward-credits.md) §7에서 확정됐고 구현·테스트가
-끝났다. **A-2에서 광고 보상은 닫혔다.** 실제 지급은 C-6(AdMob 콘솔 설정)에만 막혀 있다.
-- 보상 크레딧 **20** · 일일 한도 **5** · 쿨다운 **300초** · 세션 TTL **300초** · 만료 **없음**
-- 두 관계를 깨지 않는다(테스트가 잡는다): `20 × 5 = export 1편`,
-  `세션 TTL ≤ 쿨다운`. 어느 값이든 혼자 바꾸면 정책 의미가 조용히 달라진다
-- 다시 열릴 조건은 **파일럿 실측**뿐이다. 원가·eCPM 실측은 아직 없고, 광고 순매출이 20원을
-  밑돌면 한도가 아니라 **보상량을 먼저 내린다** — 한도 인하는 되돌릴 수 없는 혜택 축소다
-- 출처별 버킷·차감 우선순위는 v1 범위 밖이며, 필요해지면 별도 결정 문서로 다룬다
+**광고 보상 — 미결 값 없음(2026-08-18 전부 확정, A-2에서 닫힘)**: 정책 값과 불변 관계는
+[specs/credits-and-payment.md](./specs/credits-and-payment.md) ADR-1·ADR-6, 검증 규칙과 배경은
+[decisions/ad-reward-credits.md](./decisions/ad-reward-credits.md) §7. 실제 지급은 C-6(AdMob
+콘솔 설정)에만 막혀 있다. 다시 열릴 조건은 **파일럿 실측**뿐이며, 광고 순매출이 보상 원가를
+밑돌면 한도가 아니라 **보상량을 먼저 내린다**(한도 인하는 되돌릴 수 없는 혜택 축소).
+출처별 버킷·차감 우선순위는 v1 범위 밖 — 필요해지면 별도 결정 문서로 다룬다.
 
 **결정할 것 — 구독(보관 축)**: 용량 티어와 가격 · 연 구독 여부 · 구독 혜택에 워터마크
 제거·고해상도 export를 포함할지 · 무비 만료 알림 발송 시점.
@@ -165,11 +149,9 @@ export 예약/환급, 레거시 Stripe·`subscriptions` 제거가 반영됐다
 템플릿으로 무비를 시작할 때 슬롯에 들어갈 스냅을 분석 결과 기반으로 고른다. A-3의 후속 항목이며
 방향·기각안은 [decisions/template-snap-recommendation.md](./decisions/template-snap-recommendation.md).
 
-**2026-08-19 완료 (1·2·3단계)**: 카탈로그를 서버로 옮기고(`movie_templates`,
-`GET /movie-templates`) 추천 API 를 붙였다(`movie_recommendations`,
-`POST`/`GET /movie-recommendations`, 규칙 기반 점수화, 후보 12개·최근 24시간 20회 상한).
-앱도 원격 카탈로그 캐시·내장 폴백, 로컬 매칭 위 서버 결과 병합, 사용자 변경 슬롯 보호까지
-연동했다. 현재 동작은 [모바일 기능 문서](../apps/mobile/docs/features/movie-templates.md),
+**2026-08-19 완료 (1·2·3단계)**: 서버 카탈로그·추천 API·앱 연동까지 전부 구현됐다.
+현행 요구는 [specs/template-and-recommendation.md](./specs/template-and-recommendation.md),
+앱 동작은 [모바일 기능 문서](../apps/mobile/docs/features/movie-templates.md),
 검증 내역은 [progress.md](./progress.md).
 
 **남은 것**
