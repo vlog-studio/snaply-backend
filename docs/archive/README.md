@@ -6,6 +6,7 @@
 | 문서 | 무엇이었나 | 현행 원천 |
 |---|---|---|
 | [snapvlog-backend-guide.md](./snapvlog-backend-guide.md) | Phase 1~9 착수 전 작성한 계획 가이드. Phase 전부 완료 | 스키마 `apps/api/prisma/schema.prisma` · API `/docs`(Swagger) + [api-spec.md](../api-spec.md) · 셋업 [ONBOARDING.md](../../ONBOARDING.md) · 규칙 [AGENTS.md](../../AGENTS.md) |
+| [progress-phase-1-9.md](./progress-phase-1-9.md) | Phase 1~9의 완료 기록. 2026-09-03에 [progress.md](../progress.md)에서 분리 — Stripe 구독·월 3편 제한 등 이후 뒤집힌 내용 포함 | 이후 진행은 [progress.md](../progress.md) · 현행 요구는 [specs/](../specs/README.md) |
 | [integrations-handover.md](./integrations-handover.md) | Dev B → Dev A 인수인계 4건. "Dev A 확인 결과"로 상호 확인 완료 | 미결 항목은 [backlog.md](../backlog.md) |
 | [integrations-backlog.md](./integrations-backlog.md) | 연동/수익화 트랙 미결 목록 | [backlog.md](../backlog.md) 로 통합됨 |
 | [video-analysis-implementation-plan.md](./video-analysis-implementation-plan.md) | 스냅 내용 분석 착수 전 구현 계획. 2026-08-19 구현 완료 | 정책 [decisions/snap-content-analysis.md](../decisions/snap-content-analysis.md) · 코드 `apps/ai-worker/src/pipeline/video_analysis/` · 계약 [api-spec.md](../api-spec.md) |

@@ -6,7 +6,7 @@
 
 상위 계획은 [trend-editing-pipeline.md](./trend-editing-pipeline.md), 미결 결정은
 [backlog.md](../backlog.md) A-7 에만 둔다. 현행 계약은 [api-spec.md](../api-spec.md),
-현행 파이프라인의 사실은 [progress.md](../progress.md) Phase 5 에 있다.
+현행 파이프라인의 사실은 [archive/progress-phase-1-9.md](../archive/progress-phase-1-9.md) Phase 5 에 있다.
 
 관련 결정: [storage-and-subscription-policy.md](../decisions/storage-and-subscription-policy.md) §3
 · [snap-content-analysis.md](../decisions/snap-content-analysis.md)

@@ -1,7 +1,7 @@
 # 트렌드 숏폼 편집 파이프라인 구현 계획 — 타임라인 스펙 v3
 
 작성일 2026-08-19 · 상태: **제안 (착수 전)** — 현행 사실이 아니다.
-현행 파이프라인의 사실은 [progress.md](../progress.md) Phase 5, 현행 계약은
+현행 파이프라인의 사실은 [archive/progress-phase-1-9.md](../archive/progress-phase-1-9.md) Phase 5, 현행 계약은
 [api-spec.md](../api-spec.md)에 있다. 미결 항목은 [backlog.md](../backlog.md) A-7 에만 둔다.
 
 관련: [decisions/storage-and-subscription-policy.md](../decisions/storage-and-subscription-policy.md) §3.2(레시피 재생성)
@@ -152,7 +152,7 @@ librosa(numpy/scipy/numba, 수백 MB)가 들어오지 않고, 워커 콜드스�
 지연이 감당되지 않는다.
 
 MediaPipe 도입 시 확인할 것: 워커 이미지는 이미 faster-whisper 로 무겁다(compose 검증에서
-빌드를 생략한 전례가 있다 — [progress.md](../progress.md) Phase 9). ARM 휠 가용성과 증가분을
+빌드를 생략한 전례가 있다 — [archive/progress-phase-1-9.md](../archive/progress-phase-1-9.md) Phase 9). ARM 휠 가용성과 증가분을
 측정한 뒤 넣는다.
 
 ---
