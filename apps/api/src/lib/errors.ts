@@ -5,7 +5,7 @@ export class AppError extends Error {
   /**
    * 에러 응답에 함께 실을 구조화된 부가 정보. 에러 핸들러가 `error` 객체에 병합하므로,
    * 실어 보내는 키는 해당 상태 코드의 응답 스키마에 선언돼 있어야 한다
-   * (선언 안 된 키는 직렬화에서 조용히 사라진다 — `schemas/responses.ts`).
+   * (선언 안 된 키는 직렬화에서 조용히 사라진다 — shared-types 의 `apiErrorWith` 로 선언한다).
    */
   readonly details?: Record<string, unknown>;
 

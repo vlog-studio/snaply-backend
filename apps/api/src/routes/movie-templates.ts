@@ -1,19 +1,18 @@
 import type { FastifyInstance } from 'fastify';
-import type { ApiSuccess, MovieTemplateCatalog } from '@vlog-studio/shared-types';
+import type { ZodTypeProvider } from 'fastify-type-provider-zod';
+import { getMovieTemplates, ok } from '@vlog-studio/shared-types';
 import { listMovieTemplates } from '../services/movie-template.service.js';
-import {
-  AUTHENTICATED_ERROR_RESPONSES,
-  MOVIE_TEMPLATE_CATALOG_SCHEMA,
-  successResponseSchema,
-} from '../schemas/responses.js';
 
 export async function movieTemplateRoutes(app: FastifyInstance): Promise<void> {
+  const routes = app.withTypeProvider<ZodTypeProvider>();
+
   // GET /movie-templates — 카탈로그 조회
-  app.get(
-    '/movie-templates',
+  routes.get(
+    getMovieTemplates.fastifyPath,
     {
       preHandler: app.authenticate,
       schema: {
+        ...getMovieTemplates.schema,
         tags: ['movie-templates'],
         summary: '무비 템플릿 카탈로그 조회',
         description: [
@@ -29,15 +28,11 @@ export async function movieTemplateRoutes(app: FastifyInstance): Promise<void> {
           '슬롯의 `label`·`hint` 는 **사람에게 보여주는 촬영 지시**이지, 그 자리에 들어간 스냅의',
           '내용에 대한 주장이 아니다. 점수화가 쓰는 매칭 힌트는 이 응답에 포함되지 않는다.',
         ].join('\n'),
-        response: {
-          200: successResponseSchema(MOVIE_TEMPLATE_CATALOG_SCHEMA),
-          ...AUTHENTICATED_ERROR_RESPONSES,
-        },
       },
     },
-    async (): Promise<ApiSuccess<MovieTemplateCatalog>> => {
+    async () => {
       const data = await listMovieTemplates();
-      return { success: true, data };
+      return ok(data);
     },
   );
 }

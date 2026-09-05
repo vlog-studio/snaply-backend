@@ -6,8 +6,10 @@
  * A-3 의 품질·단가 실측이 나오면 여기 숫자만 바꾼다.
  */
 
-/** 추천 1회가 분석할 수 있는 후보 수. 슬롯 최대 6개의 2배. */
-export const MAX_CANDIDATES = 12;
+import { MAX_RECOMMENDATION_CANDIDATES } from '@vlog-studio/shared-types';
+
+/** 추천 1회가 분석할 수 있는 후보 수. 앱이 읽는 계약 값이라 원천은 shared-types 다. */
+export const MAX_CANDIDATES = MAX_RECOMMENDATION_CANDIDATES;
 
 /**
  * 사용자 1명이 최근 24시간에 새로 만들 수 있는 추천 수.

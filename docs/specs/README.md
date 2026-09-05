@@ -11,7 +11,9 @@
   바꾸는 작업은 여기의 해당 spec 을 먼저 고친 뒤 구현한다.
 - spec 은 **무엇을·왜**만 담는다. 어떻게(설계·구현 계획)는 [docs/plans/](../plans/),
   결정의 배경·기각한 대안은 [docs/decisions/](../decisions/), API 의 정확한 형태는
-  Swagger 와 [api-spec.md](../api-spec.md)가 담는다.
+  [packages/shared-types/src/contract/](../../packages/shared-types/src/contract/)의 Zod 계약이
+  담고 Swagger·[apps/api/openapi.json](../../apps/api/openapi.json)은 거기서 생성된다.
+  FE 가 다뤄야 할 동작은 [api-spec.md](../api-spec.md).
 - 최초 작성(2026-09-02)은 **기존 구현과 확정된 결정에서 역으로 추출**했다. 이후부터는
   spec 이 앞서고 구현이 따라온다.
 

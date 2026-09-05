@@ -1,9 +1,6 @@
 import type { FastifyInstance } from 'fastify';
-import {
-  API_ERROR_SCHEMA,
-  COMMON_ERROR_RESPONSES,
-  WEBHOOK_RECEIVED_SCHEMA,
-} from '../schemas/responses.js';
+import type { ZodTypeProvider } from 'fastify-type-provider-zod';
+import { admobSsvCallback, revenuecatWebhook } from '@vlog-studio/shared-types';
 import {
   getAdMobConfig,
   handleWebhookEvent,
@@ -19,25 +16,17 @@ import { handleSsvCallback } from '../services/ad-reward.service.js';
  * 필요 없다. 전역 JSON 파서를 그대로 쓴다.
  */
 export async function billingWebhookRoutes(app: FastifyInstance): Promise<void> {
-  app.post(
-    '/billing/webhook/revenuecat',
-    {
-      schema: {
-        tags: ['system'],
-        summary: 'RevenueCat 웹훅',
-        response: {
-          200: WEBHOOK_RECEIVED_SCHEMA,
-          400: API_ERROR_SCHEMA,
-          ...COMMON_ERROR_RESPONSES,
-        },
-      },
-    },
+  const routes = app.withTypeProvider<ZodTypeProvider>();
+
+  routes.post(
+    revenuecatWebhook.fastifyPath,
+    { schema: { ...revenuecatWebhook.schema, tags: ['system'], summary: 'RevenueCat 웹훅' } },
     async (request, reply) => {
       // 인증 실패는 401 이며 본문을 아예 읽지 않는다.
       verifyWebhookAuth(request.headers.authorization);
       await handleWebhookEvent(parseWebhookEvent(request.body));
       reply.status(200);
-      return { received: true };
+      return { received: true as const };
     },
   );
 
@@ -51,19 +40,13 @@ export async function billingWebhookRoutes(app: FastifyInstance): Promise<void> 
    * 검증 실패를 200 으로 삼키지 않는다. 삼키면 위조 시도와 정상 미지급이 로그에서
    * 구분되지 않는다.
    */
-  app.get(
-    '/billing/webhook/admob',
+  routes.get(
+    admobSsvCallback.fastifyPath,
     {
       schema: {
+        ...admobSsvCallback.schema,
         tags: ['system'],
         summary: 'AdMob 보상형 광고 SSV 콜백',
-        // 파라미터는 AdMob 이 정하며 우리가 스키마로 강제하지 않는다. 여기서 걸러 봐야
-        // 서명 검증 전이라 의미가 없고, 스펙이 늘어나면 정상 콜백을 400 으로 떨어뜨린다.
-        response: {
-          200: WEBHOOK_RECEIVED_SCHEMA,
-          400: API_ERROR_SCHEMA,
-          ...COMMON_ERROR_RESPONSES,
-        },
       },
     },
     async (request, reply) => {
@@ -74,7 +57,7 @@ export async function billingWebhookRoutes(app: FastifyInstance): Promise<void> 
         rawQuery: queryStart < 0 ? '' : rawUrl.slice(queryStart + 1),
       });
       reply.status(200);
-      return { received: true };
+      return { received: true as const };
     },
   );
 }

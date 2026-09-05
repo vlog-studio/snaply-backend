@@ -1,49 +1,32 @@
 import type { FastifyInstance } from 'fastify';
-import type { ApiSuccess, CursorPaginated, Video, VideoKind } from '@vlog-studio/shared-types';
+import type { ZodTypeProvider } from 'fastify-type-provider-zod';
+import {
+  VIDEO_LIST_DEFAULT_LIMIT,
+  createVideo,
+  deleteVideo,
+  getUploadUrl,
+  getVideo,
+  listVideos,
+  ok,
+} from '@vlog-studio/shared-types';
 import {
   createUploadTarget,
   confirmUpload,
-  listVideos,
-  getVideo,
-  deleteVideo,
-  type UploadTarget,
+  listVideos as listVideosForUser,
+  getVideo as getVideoForUser,
+  deleteVideo as deleteVideoForUser,
 } from '../services/video.service.js';
-import {
-  API_ERROR_SCHEMA,
-  AUTHENTICATED_ERROR_RESPONSES,
-  DELETED_DATA_SCHEMA,
-  UPLOAD_TARGET_SCHEMA,
-  VIDEO_PAGE_SCHEMA,
-  VIDEO_SCHEMA,
-  successResponseSchema,
-} from '../schemas/responses.js';
-
-interface UploadUrlQuery {
-  filename: string;
-  contentType: string;
-}
-
-interface CreateVideoBody {
-  videoId: string;
-  durationSeconds?: number;
-}
-
-interface ListQuery {
-  kind?: VideoKind;
-  cursor?: string;
-  limit?: number;
-}
-
-const DEFAULT_LIMIT = 20;
-const MAX_LIMIT = 50;
 
 export async function videoRoutes(app: FastifyInstance): Promise<void> {
+  const routes = app.withTypeProvider<ZodTypeProvider>();
+
   // GET /videos/upload-url — presigned URL 발급 + pending 레코드 생성
-  app.get<{ Querystring: UploadUrlQuery }>(
-    '/videos/upload-url',
+  routes.get(
+    getUploadUrl.fastifyPath,
     {
       preHandler: app.authenticate,
       schema: {
+        ...getUploadUrl.schema,
         tags: ['videos'],
         summary: 'presigned 업로드 URL 발급',
         description: [
@@ -70,51 +53,25 @@ export async function videoRoutes(app: FastifyInstance): Promise<void> {
           '}}',
           '```',
         ].join('\n'),
-        querystring: {
-          type: 'object',
-          required: ['filename', 'contentType'],
-          properties: {
-            filename: {
-              type: 'string',
-              minLength: 1,
-              maxLength: 255,
-              description:
-                '원본 파일명. 확장자로 S3 키를 만드는 데만 쓰이고, 저장 이름은 `{videoId}.{ext}`로 대체된다.',
-              examples: ['clip1.mp4'],
-            },
-            contentType: {
-              type: 'string',
-              minLength: 1,
-              maxLength: 100,
-              description:
-                'MIME 타입. presigned 서명에 포함되므로 **실제 PUT의 `Content-Type` 헤더와 반드시 일치**해야 한다(다르면 S3가 403).',
-              examples: ['video/mp4'],
-            },
-          },
-        },
-        response: {
-          200: successResponseSchema(UPLOAD_TARGET_SCHEMA),
-          400: API_ERROR_SCHEMA,
-          ...AUTHENTICATED_ERROR_RESPONSES,
-        },
       },
     },
-    async (request): Promise<ApiSuccess<UploadTarget>> => {
+    async (request) => {
       const data = await createUploadTarget({
         userId: request.user.id,
         filename: request.query.filename,
         contentType: request.query.contentType,
       });
-      return { success: true, data };
+      return ok(data);
     },
   );
 
   // POST /videos — 업로드 완료 후 메타데이터 등록 (status → ready)
-  app.post<{ Body: CreateVideoBody }>(
-    '/videos',
+  routes.post(
+    createVideo.fastifyPath,
     {
       preHandler: app.authenticate,
       schema: {
+        ...createVideo.schema,
         tags: ['videos'],
         summary: '업로드 완료 등록 (status → ready)',
         description: [
@@ -136,51 +93,26 @@ export async function videoRoutes(app: FastifyInstance): Promise<void> {
           '}}',
           '```',
         ].join('\n'),
-        body: {
-          type: 'object',
-          additionalProperties: false,
-          required: ['videoId'],
-          properties: {
-            videoId: {
-              type: 'string',
-              format: 'uuid',
-              description: '`GET /videos/upload-url` 응답으로 받은 `videoId`. 본인 소유가 아니면 404.',
-            },
-            durationSeconds: {
-              type: 'integer',
-              minimum: 0,
-              maximum: 86400,
-              description:
-                '영상 길이(초). 선택값 — 클라이언트가 아는 값을 그대로 저장할 뿐 서버가 검증하지 않는다. 생략하면 `null`.',
-              examples: [12],
-            },
-          },
-        },
-        response: {
-          201: successResponseSchema(VIDEO_SCHEMA),
-          400: API_ERROR_SCHEMA,
-          404: API_ERROR_SCHEMA,
-          ...AUTHENTICATED_ERROR_RESPONSES,
-        },
       },
     },
-    async (request, reply): Promise<ApiSuccess<Video>> => {
+    async (request, reply) => {
       const data = await confirmUpload({
         userId: request.user.id,
         videoId: request.body.videoId,
         durationSeconds: request.body.durationSeconds,
       });
       reply.status(201);
-      return { success: true, data };
+      return ok(data);
     },
   );
 
   // GET /videos — 내 영상 목록 (커서 페이지네이션)
-  app.get<{ Querystring: ListQuery }>(
-    '/videos',
+  routes.get(
+    listVideos.fastifyPath,
     {
       preHandler: app.authenticate,
       schema: {
+        ...listVideos.schema,
         tags: ['videos'],
         summary: '내 영상 목록 (커서 페이지네이션)',
         description: [
@@ -192,53 +124,26 @@ export async function videoRoutes(app: FastifyInstance): Promise<void> {
           '{ "success": true, "data": { "items": [ /* Video[] */ ], "nextCursor": "uuid|null" } }',
           '```',
         ].join('\n'),
-        querystring: {
-          type: 'object',
-          properties: {
-            kind: {
-              type: 'string',
-              enum: ['source', 'result'],
-              description:
-                '영상 종류 필터. `source`=직접 업로드한 원본, `result`=편집 결과물. 생략하면 전체.',
-            },
-            cursor: {
-              type: 'string',
-              description:
-                '이전 응답의 `nextCursor`(마지막 항목 id). 첫 페이지는 생략. 해당 항목 **다음**부터 반환한다.',
-            },
-            limit: {
-              type: 'integer',
-              minimum: 1,
-              maximum: MAX_LIMIT,
-              description: `한 페이지 개수. 기본 ${DEFAULT_LIMIT}, 최대 ${MAX_LIMIT}.`,
-              examples: [DEFAULT_LIMIT],
-            },
-          },
-        },
-        response: {
-          200: successResponseSchema(VIDEO_PAGE_SCHEMA),
-          400: API_ERROR_SCHEMA,
-          ...AUTHENTICATED_ERROR_RESPONSES,
-        },
       },
     },
-    async (request): Promise<ApiSuccess<CursorPaginated<Video>>> => {
-      const data = await listVideos({
+    async (request) => {
+      const data = await listVideosForUser({
         userId: request.user.id,
         kind: request.query.kind,
         cursor: request.query.cursor,
-        limit: request.query.limit ?? DEFAULT_LIMIT,
+        limit: request.query.limit ?? VIDEO_LIST_DEFAULT_LIMIT,
       });
-      return { success: true, data };
+      return ok(data);
     },
   );
 
   // GET /videos/:id — 영상 상세
-  app.get<{ Params: { id: string } }>(
-    '/videos/:id',
+  routes.get(
+    getVideo.fastifyPath,
     {
       preHandler: app.authenticate,
       schema: {
+        ...getVideo.schema,
         tags: ['videos'],
         summary: '영상 상세',
         description: [
@@ -255,29 +160,21 @@ export async function videoRoutes(app: FastifyInstance): Promise<void> {
           '',
           '**남의 영상을 요청하면 403이 아니라 404**를 반환한다(리소스 존재 여부를 노출하지 않기 위함).',
         ].join('\n'),
-        params: {
-          type: 'object',
-          properties: { id: { type: 'string', description: '영상 id(uuid)' } },
-        },
-        response: {
-          200: successResponseSchema(VIDEO_SCHEMA),
-          404: API_ERROR_SCHEMA,
-          ...AUTHENTICATED_ERROR_RESPONSES,
-        },
       },
     },
-    async (request): Promise<ApiSuccess<Video>> => {
-      const data = await getVideo({ userId: request.user.id, videoId: request.params.id });
-      return { success: true, data };
+    async (request) => {
+      const data = await getVideoForUser({ userId: request.user.id, videoId: request.params.id });
+      return ok(data);
     },
   );
 
   // DELETE /videos/:id — S3 삭제 + 소프트 삭제
-  app.delete<{ Params: { id: string } }>(
-    '/videos/:id',
+  routes.delete(
+    deleteVideo.fastifyPath,
     {
       preHandler: app.authenticate,
       schema: {
+        ...deleteVideo.schema,
         tags: ['videos'],
         summary: '영상 삭제',
         description: [
@@ -285,20 +182,11 @@ export async function videoRoutes(app: FastifyInstance): Promise<void> {
           '',
           '삭제 후 목록·상세에서 사라지고, 남의 영상은 404. 응답: `{ "success": true, "data": { "deleted": true } }`',
         ].join('\n'),
-        params: {
-          type: 'object',
-          properties: { id: { type: 'string', description: '삭제할 영상 id(uuid)' } },
-        },
-        response: {
-          200: successResponseSchema(DELETED_DATA_SCHEMA),
-          404: API_ERROR_SCHEMA,
-          ...AUTHENTICATED_ERROR_RESPONSES,
-        },
       },
     },
-    async (request): Promise<ApiSuccess<{ deleted: true }>> => {
-      await deleteVideo({ userId: request.user.id, videoId: request.params.id });
-      return { success: true, data: { deleted: true } };
+    async (request) => {
+      await deleteVideoForUser({ userId: request.user.id, videoId: request.params.id });
+      return ok({ deleted: true });
     },
   );
 }

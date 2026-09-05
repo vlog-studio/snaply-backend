@@ -1,45 +1,27 @@
 import type { FastifyInstance } from 'fastify';
-import {
-  DEFAULT_FIT_MODE,
-  DEFAULT_OUTPUT_PROFILE,
-  type ApiSuccess,
-  type ClipSpec,
-  type EditJob,
-  type FitMode,
-  type OutputProfile,
-  type StylePreset,
-} from '@vlog-studio/shared-types';
-import { createRedisConnection, editProgressChannel } from '../lib/redis.js';
-import {
-  API_ERROR_SCHEMA,
-  AUTHENTICATED_ERROR_RESPONSES,
-  EDIT_JOB_SCHEMA,
-  JOB_CREATED_SCHEMA,
-  PAYMENT_REQUIRED_ERROR_SCHEMA,
-  successResponseSchema,
-} from '../schemas/responses.js';
+import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import {
   cancelEditJob,
   createEditJob,
   getEditJob,
+  ok,
+  type ClipSpec,
+} from '@vlog-studio/shared-types';
+import { createRedisConnection, editProgressChannel } from '../lib/redis.js';
+import {
+  cancelEditJob as cancelEditJobForOwner,
+  createEditJob as enqueueEditJob,
+  getEditJob as getEditJobForUser,
   getEditJobForOwner,
   getEditJobOutputUrl,
 } from '../services/edit-job.service.js';
 
-interface CreateEditJobBody {
-  clips?: Array<Omit<ClipSpec, 'startMs'> & { startMs?: number }>;
-  /** @deprecated clips를 사용하세요. */
-  videoIds?: string[];
-  stylePreset: StylePreset;
-  subtitles?: boolean;
-  outputProfile?: OutputProfile;
-  fitMode?: FitMode;
-}
-
 export async function editJobRoutes(app: FastifyInstance): Promise<void> {
+  const routes = app.withTypeProvider<ZodTypeProvider>();
+
   // POST /edit-jobs — 편집 요청 (BullMQ 큐 적재)
-  app.post<{ Body: CreateEditJobBody }>(
-    '/edit-jobs',
+  routes.post(
+    createEditJob.fastifyPath,
     {
       preHandler: app.authenticate,
       config: {
@@ -51,6 +33,7 @@ export async function editJobRoutes(app: FastifyInstance): Promise<void> {
         },
       },
       schema: {
+        ...createEditJob.schema,
         tags: ['edit-jobs'],
         summary: '편집 요청 (큐 적재)',
         description: [
@@ -78,97 +61,36 @@ export async function editJobRoutes(app: FastifyInstance): Promise<void> {
           '',
           '⚠️ **Rate limit: 토큰당 분당 5회.** 6번째 호출은 `429 RATE_LIMITED`.',
         ].join('\n'),
-        body: {
-          type: 'object',
-          additionalProperties: false,
-          required: ['stylePreset'],
-          oneOf: [{ required: ['clips'] }, { required: ['videoIds'] }],
-          properties: {
-            clips: {
-              type: 'array',
-              items: {
-                type: 'object',
-                additionalProperties: false,
-                required: ['videoId'],
-                properties: {
-                  videoId: { type: 'string', format: 'uuid' },
-                  startMs: { type: 'integer', minimum: 0, maximum: 86_400_000, default: 0 },
-                  endMs: { type: 'integer', minimum: 1, maximum: 86_400_000 },
-                },
-              },
-              minItems: 1,
-              maxItems: 10,
-            },
-            videoIds: {
-              type: 'array',
-              items: { type: 'string', format: 'uuid' },
-              minItems: 1,
-              maxItems: 10,
-              description:
-                '이어붙일 원본 클립 id 목록. **배열 순서대로** 연결된다. 1~10개. 모두 `status: "ready"`이고 내 소유여야 한다.',
-            },
-            stylePreset: {
-              type: 'string',
-              enum: ['감성', '여행', '일상'],
-              description:
-                '편집 스타일. 워커가 이 값으로 BGM 선곡·컷 호흡·색보정을 결정한다. 세 값 중 하나만 허용(다른 값은 400).',
-            },
-            subtitles: {
-              type: 'boolean',
-              default: false,
-              description:
-                '소프트 자막(mov_text 트랙) 생성 여부. 기본 false — 쇼츠용이라 자막이 필요 없고, 음성 인식(whisper)을 건너뛰어 편집이 더 빠르다. true면 한국어 음성을 인식해 별도 자막 트랙으로 삽입한다(영상에 굽지 않으므로 플레이어에서 자막을 켜야 보이고, SNS 업로드 시에는 유지되지 않음).',
-            },
-            outputProfile: {
-              type: 'string',
-              enum: ['short_vertical', 'youtube_landscape', 'instagram_portrait', 'square'],
-              default: DEFAULT_OUTPUT_PROFILE,
-              description: '출력 규격. 기본 short_vertical(1080x1920, 쇼츠용).',
-            },
-            fitMode: {
-              type: 'string',
-              enum: ['contain', 'cover', 'blur_background'],
-              default: DEFAULT_FIT_MODE,
-              description:
-                '원본 비율이 출력 규격과 다를 때 채우는 방식. 기본 blur_background(흐린 배경 위에 원본).',
-            },
-          },
-        },
-        response: {
-          202: successResponseSchema(JOB_CREATED_SCHEMA),
-          400: API_ERROR_SCHEMA,
-          402: PAYMENT_REQUIRED_ERROR_SCHEMA,
-          ...AUTHENTICATED_ERROR_RESPONSES,
-        },
       },
     },
-    async (request, reply): Promise<ApiSuccess<{ jobId: string }>> => {
+    async (request, reply) => {
       const clips: ClipSpec[] = request.body.clips
         ? request.body.clips.map((clip) => ({
             videoId: clip.videoId,
-            startMs: clip.startMs ?? 0,
+            startMs: clip.startMs,
             ...(clip.endMs !== undefined ? { endMs: clip.endMs } : {}),
           }))
         : (request.body.videoIds ?? []).map((videoId) => ({ videoId, startMs: 0 }));
-      const data = await createEditJob({
+      const data = await enqueueEditJob({
         userId: request.user.id,
         clips,
         stylePreset: request.body.stylePreset,
-        outputProfile: request.body.outputProfile ?? DEFAULT_OUTPUT_PROFILE,
-        fitMode: request.body.fitMode ?? DEFAULT_FIT_MODE,
-        subtitles: request.body.subtitles ?? false,
+        outputProfile: request.body.outputProfile,
+        fitMode: request.body.fitMode,
+        subtitles: request.body.subtitles,
       });
       reply.status(202);
-      return { success: true, data };
+      return ok(data);
     },
   );
 
   // GET /edit-jobs/:id — 편집 작업 상태 조회
-  app.get<{ Params: { id: string } }>(
-    '/edit-jobs/:id',
+  routes.get(
+    getEditJob.fastifyPath,
     {
       preHandler: app.authenticate,
       schema: {
+        ...getEditJob.schema,
         tags: ['edit-jobs'],
         summary: '편집 작업 상태 조회',
         description: [
@@ -183,31 +105,21 @@ export async function editJobRoutes(app: FastifyInstance): Promise<void> {
           '',
           '남의 작업은 404.',
         ].join('\n'),
-        params: {
-          type: 'object',
-          properties: {
-            id: { type: 'string', description: '`POST /edit-jobs`가 반환한 jobId(uuid)' },
-          },
-        },
-        response: {
-          200: successResponseSchema(EDIT_JOB_SCHEMA),
-          404: API_ERROR_SCHEMA,
-          ...AUTHENTICATED_ERROR_RESPONSES,
-        },
       },
     },
-    async (request): Promise<ApiSuccess<EditJob>> => {
-      const data = await getEditJob({ userId: request.user.id, jobId: request.params.id });
-      return { success: true, data };
+    async (request) => {
+      const data = await getEditJobForUser({ userId: request.user.id, jobId: request.params.id });
+      return ok(data);
     },
   );
 
   // DELETE /edit-jobs/:id — 진행 중 편집 작업 취소
-  app.delete<{ Params: { id: string } }>(
-    '/edit-jobs/:id',
+  routes.delete(
+    cancelEditJob.fastifyPath,
     {
       preHandler: app.authenticate,
       schema: {
+        ...cancelEditJob.schema,
         tags: ['edit-jobs'],
         summary: '편집 작업 취소',
         description: [
@@ -220,32 +132,16 @@ export async function editJobRoutes(app: FastifyInstance): Promise<void> {
           '- 이미 취소된 작업의 재취소는 200(멱등). `done`/`failed`로 끝난 작업은 409.',
           '- 예약된 크레딧은 전액 환급된다. 재취소해도 환급은 한 번만 기록된다.',
         ].join('\n'),
-        params: {
-          type: 'object',
-          properties: {
-            id: { type: 'string', description: '`POST /edit-jobs`가 반환한 jobId(uuid)' },
-          },
-        },
-        response: {
-          200: successResponseSchema({
-            type: 'object',
-            additionalProperties: false,
-            required: ['canceled'],
-            properties: { canceled: { type: 'boolean' } },
-          }),
-          404: API_ERROR_SCHEMA,
-          409: API_ERROR_SCHEMA,
-          ...AUTHENTICATED_ERROR_RESPONSES,
-        },
       },
     },
-    async (request): Promise<ApiSuccess<{ canceled: boolean }>> => {
-      await cancelEditJob({ userId: request.user.id, jobId: request.params.id });
-      return { success: true, data: { canceled: true } };
+    async (request) => {
+      await cancelEditJobForOwner({ userId: request.user.id, jobId: request.params.id });
+      return ok({ canceled: true });
     },
   );
 
   // WebSocket GET /edit-jobs/:id/progress — 실시간 진행률 스트리밍
+  // 메시지 계약은 shared-types 의 `editProgressEventSchema` 가 원천이다.
   app.get<{ Params: { id: string } }>(
     '/edit-jobs/:id/progress',
     // WebSocket은 OpenAPI로 표현되지 않으므로 문서에서 숨김 (api-spec.md 참고)

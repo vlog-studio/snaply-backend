@@ -43,7 +43,7 @@
 | 바꾼 것 | 같은 변경에서 갱신할 곳 |
 |---|---|
 | 사용자 가시 동작·정책 값 | [`docs/specs/`](docs/specs/README.md)의 해당 요구 — **구현보다 먼저** 고친다 |
-| 라우트·요청/응답 스키마 | 코드의 스키마 선언(Swagger의 원천) · [`docs/api-spec.md`](docs/api-spec.md)(FE 전달용 수동 문서) · 관련 테스트 |
+| 라우트·요청/응답 스키마 | [`packages/shared-types/src/contract/`](packages/shared-types/src/contract/)의 Zod 계약(백엔드 검증·직렬화·Swagger·앱 타입의 원천) · `npm run openapi:write -w apps/api`로 재생성한 [`apps/api/openapi.json`](apps/api/openapi.json) · [`docs/api-spec.md`](docs/api-spec.md)(FE 안내 + WebSocket) · 관련 테스트 |
 | 앱(모바일)의 사용자 가시 동작 | [`apps/mobile/docs/features/`](apps/mobile/docs/features/README.md)의 해당 기능 문서 |
 | 새 정책·설계 결정 | [`docs/decisions/`](docs/decisions/)에 배경·기각한 대안과 함께 |
 | DB 스키마 | 마이그레이션(같은 커밋) — pull 한 쪽은 `npm run db:generate` |

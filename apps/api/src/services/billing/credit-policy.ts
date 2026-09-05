@@ -58,21 +58,11 @@ export function signupBonusCredits(): number {
   return Number.isInteger(raw) && raw > 0 ? raw : 0;
 }
 
-/** 원장 `reason` 값. 스키마의 VARCHAR(30) 안에 들어가야 한다. */
-export const CREDIT_REASON = {
-  purchase: 'purchase',
-  signupBonus: 'signup_bonus',
-  exportReserve: 'export_reserve',
-  exportRefund: 'export_refund',
-  storeRefundRevoke: 'store_refund_revoke',
-  promo: 'promo',
-  adReward: 'ad_reward',
-} as const;
-
-export type CreditReason = (typeof CREDIT_REASON)[keyof typeof CREDIT_REASON];
-
-/** 앱이 내역 화면 문구를 안전하게 매핑할 수 있도록 OpenAPI 에 enum 으로 내리는 값. */
-export const CREDIT_REASONS: readonly CreditReason[] = Object.values(CREDIT_REASON);
+/**
+ * 원장 `reason` 값. 앱이 내역 문구를 매핑하는 와이어 계약이라 원천은 shared-types 의 계약이다
+ * (`creditReasonSchema`). 여기서는 서비스 코드의 편의를 위해 다시 내보낸다.
+ */
+export { CREDIT_REASON, CREDIT_REASONS, type CreditReason } from '@vlog-studio/shared-types';
 
 // ── 보상형 광고 ────────────────────────────────────────
 

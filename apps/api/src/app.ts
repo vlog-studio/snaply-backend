@@ -1,4 +1,5 @@
 import Fastify, { type FastifyError, type FastifyInstance } from 'fastify';
+import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod';
 import websocket from '@fastify/websocket';
 import type { AppConfig } from './config.js';
 import rateLimit from '@fastify/rate-limit';
@@ -45,6 +46,12 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
       ],
     },
   });
+
+  // 요청 검증과 응답 직렬화는 shared-types 의 Zod 계약으로 한다. 라우트 스키마는 전부 Zod 여야
+  // 하며(JSON Schema 혼용 불가), 응답이 계약과 어긋나면 500 FST_ERR_RESPONSE_SERIALIZATION 이다 —
+  // 선언되지 않은 필드가 조용히 사라지던 이전 동작과 달리 계약 위반이 겉으로 드러난다.
+  app.setValidatorCompiler(validatorCompiler);
+  app.setSerializerCompiler(serializerCompiler);
 
   // 에러/404 핸들러는 라우트 등록보다 먼저 설정해야 자식 컨텍스트가 상속받는다.
   app.setErrorHandler<FastifyError>((error, request, reply) => {

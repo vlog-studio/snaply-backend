@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
+import { jsonSchemaTransform, jsonSchemaTransformObject } from 'fastify-type-provider-zod';
 
 interface DocsConfig {
   supabaseUrl: string;
@@ -144,6 +145,10 @@ export async function registerDocs(app: FastifyInstance, config: DocsConfig): Pr
   const devLoginEnabled = config.allowDevLogin && Boolean(config.supabasePublishableKey);
 
   await app.register(swagger, {
+    // 라우트 스키마는 shared-types 의 Zod 계약이다. transform 이 라우트별 스키마를, transformObject 가
+    // `.meta({ id })` 로 이름 붙인 스키마를 components 로 옮긴다.
+    transform: jsonSchemaTransform,
+    transformObject: jsonSchemaTransformObject,
     openapi: {
       openapi: '3.0.3',
       info: {

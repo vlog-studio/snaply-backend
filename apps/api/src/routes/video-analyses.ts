@@ -1,36 +1,18 @@
 import type { FastifyInstance } from 'fastify';
-import type { ApiSuccess, VideoAnalysis } from '@vlog-studio/shared-types';
+import type { ZodTypeProvider } from 'fastify-type-provider-zod';
+import { getVideoAnalysis, requestVideoAnalysis, ok } from '@vlog-studio/shared-types';
 import { getLatestAnalysis, requestAnalysis } from '../services/video-analysis.service.js';
-import {
-  ANALYSIS_QUEUED_SCHEMA,
-  API_ERROR_SCHEMA,
-  AUTHENTICATED_ERROR_RESPONSES,
-  CONFLICT_ERROR_SCHEMA,
-  VIDEO_ANALYSIS_SCHEMA,
-  successResponseSchema,
-} from '../schemas/responses.js';
-
-interface AnalysisQueued {
-  analysisId: string;
-  version: number;
-  status: VideoAnalysis['status'];
-}
-
-const VIDEO_ID_PARAMS = {
-  type: 'object',
-  required: ['videoId'],
-  properties: {
-    videoId: { type: 'string', format: 'uuid', description: '분석할 source 영상 id' },
-  },
-} as const;
 
 export async function videoAnalysisRoutes(app: FastifyInstance): Promise<void> {
+  const routes = app.withTypeProvider<ZodTypeProvider>();
+
   // POST /videos/:videoId/analysis — 분석 요청 (멱등)
-  app.post<{ Params: { videoId: string } }>(
-    '/videos/:videoId/analysis',
+  routes.post(
+    requestVideoAnalysis.fastifyPath,
     {
       preHandler: app.authenticate,
       schema: {
+        ...requestVideoAnalysis.schema,
         tags: ['videos'],
         summary: '스냅 내용 분석 요청 (비동기)',
         description: [
@@ -55,40 +37,30 @@ export async function videoAnalysisRoutes(app: FastifyInstance): Promise<void> {
           '{ "success": true, "data": { "analysisId": "uuid", "version": 1, "status": "queued" } }',
           '```',
         ].join('\n'),
-        params: VIDEO_ID_PARAMS,
-        response: {
-          202: successResponseSchema(ANALYSIS_QUEUED_SCHEMA),
-          400: API_ERROR_SCHEMA,
-          404: API_ERROR_SCHEMA,
-          409: CONFLICT_ERROR_SCHEMA,
-          503: API_ERROR_SCHEMA,
-          ...AUTHENTICATED_ERROR_RESPONSES,
-        },
       },
     },
-    async (request, reply): Promise<ApiSuccess<AnalysisQueued>> => {
+    async (request, reply) => {
       const { analysis } = await requestAnalysis({
         userId: request.user.id,
         videoId: request.params.videoId,
       });
       reply.status(202);
-      return {
-        success: true,
-        data: {
-          analysisId: analysis.id,
-          version: analysis.version,
-          status: analysis.status,
-        },
-      };
+      return ok({
+        analysisId: analysis.id,
+        version: analysis.version,
+        // 요청 직후의 분석은 실패 상태일 수 없다 — 실패한 것은 이 호출이 재시도로 되살린다.
+        status: analysis.status === 'failed' ? 'queued' : analysis.status,
+      });
     },
   );
 
   // GET /videos/:videoId/analysis — 최신 버전 분석 조회
-  app.get<{ Params: { videoId: string } }>(
-    '/videos/:videoId/analysis',
+  routes.get(
+    getVideoAnalysis.fastifyPath,
     {
       preHandler: app.authenticate,
       schema: {
+        ...getVideoAnalysis.schema,
         tags: ['videos'],
         summary: '스냅 분석 상태·결과 조회',
         description: [
@@ -104,20 +76,14 @@ export async function videoAnalysisRoutes(app: FastifyInstance): Promise<void> {
           '**분석 실패는 원본 영상에 영향을 주지 않는다** — `Video.status` 는 `ready` 로 남는다.',
           '실패해도 이 조회 자체는 성공이므로 HTTP 200 이다. 모델의 원문 오류 메시지는 노출하지 않는다.',
         ].join('\n'),
-        params: VIDEO_ID_PARAMS,
-        response: {
-          200: successResponseSchema(VIDEO_ANALYSIS_SCHEMA),
-          404: API_ERROR_SCHEMA,
-          ...AUTHENTICATED_ERROR_RESPONSES,
-        },
       },
     },
-    async (request): Promise<ApiSuccess<VideoAnalysis>> => {
+    async (request) => {
       const data = await getLatestAnalysis({
         userId: request.user.id,
         videoId: request.params.videoId,
       });
-      return { success: true, data };
+      return ok(data);
     },
   );
 }

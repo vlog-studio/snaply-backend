@@ -1,44 +1,22 @@
 import type { FastifyInstance } from 'fastify';
-import type { ApiSuccess, MovieRecommendation } from '@vlog-studio/shared-types';
+import type { ZodTypeProvider } from 'fastify-type-provider-zod';
+import {
+  MAX_RECOMMENDATION_CANDIDATES,
+  getMovieRecommendation,
+  requestMovieRecommendation,
+  ok,
+} from '@vlog-studio/shared-types';
 import {
   getRecommendation,
   requestRecommendation,
 } from '../services/movie-recommendation.service.js';
-import { MAX_CANDIDATES } from '../services/recommendation/recommendation-policy.js';
-import {
-  API_ERROR_SCHEMA,
-  AUTHENTICATED_ERROR_RESPONSES,
-  CANDIDATE_LIMIT_ERROR_SCHEMA,
-  MOVIE_RECOMMENDATION_SCHEMA,
-  RECOMMENDATION_ACCEPTED_SCHEMA,
-  successResponseSchema,
-} from '../schemas/responses.js';
-
-interface RecommendationBody {
-  templateId: string;
-  candidates: string[];
-}
-
-const RECOMMENDATION_BODY_SCHEMA = {
-  type: 'object',
-  required: ['templateId', 'candidates'],
-  additionalProperties: false,
-  properties: {
-    templateId: { type: 'string', minLength: 1, description: 'GET /movie-templates 의 템플릿 id' },
-    // 개수 상한은 여기서 걸지 않는다. 스키마가 먼저 자르면 클라이언트는 몇 개까지 되는지
-    // 알 수 없는 일반 검증 오류를 받는다 — 서비스가 `TOO_MANY_CANDIDATES` + `max` 로 답한다.
-    candidates: {
-      type: 'array',
-      items: { type: 'string', format: 'uuid' },
-      description: `후보 스냅의 videoId, **촬영 시간 오름차순**. 이 순서가 점수화의 시간 사전값이다. 최대 ${MAX_CANDIDATES}개`,
-    },
-  },
-} as const;
 
 export async function movieRecommendationRoutes(app: FastifyInstance): Promise<void> {
+  const routes = app.withTypeProvider<ZodTypeProvider>();
+
   // POST /movie-recommendations — 추천 접수 (멱등)
-  app.post<{ Body: RecommendationBody }>(
-    '/movie-recommendations',
+  routes.post(
+    requestMovieRecommendation.fastifyPath,
     {
       preHandler: app.authenticate,
       config: {
@@ -50,6 +28,7 @@ export async function movieRecommendationRoutes(app: FastifyInstance): Promise<v
         },
       },
       schema: {
+        ...requestMovieRecommendation.schema,
         tags: ['movie-templates'],
         summary: '템플릿 슬롯에 넣을 스냅 추천 요청 (비동기)',
         description: [
@@ -69,35 +48,28 @@ export async function movieRecommendationRoutes(app: FastifyInstance): Promise<v
           '**크레딧을 차감하지 않는다.** 추천은 채택할지 버릴지 모르는 제안이고, 제안에 과금하면',
           '"만들기도 전에 돈부터 낸다"가 된다. 비용은 후보 수와 일일 횟수 상한으로 막는다.',
           '',
-          `후보는 한 번에 **${MAX_CANDIDATES}개**까지다. 초과분은 앱이 균등 샘플링해서 보낸다.`,
+          `후보는 한 번에 **${MAX_RECOMMENDATION_CANDIDATES}개**까지다. 초과분은 앱이 균등 샘플링해서 보낸다.`,
         ].join('\n'),
-        body: RECOMMENDATION_BODY_SCHEMA,
-        response: {
-          202: successResponseSchema(RECOMMENDATION_ACCEPTED_SCHEMA),
-          400: CANDIDATE_LIMIT_ERROR_SCHEMA,
-          404: API_ERROR_SCHEMA,
-          503: API_ERROR_SCHEMA,
-          ...AUTHENTICATED_ERROR_RESPONSES,
-        },
       },
     },
-    async (request, reply): Promise<ApiSuccess<{ id: string; status: string }>> => {
+    async (request, reply) => {
       const { recommendation } = await requestRecommendation({
         userId: request.user.id,
         templateId: request.body.templateId,
         candidateVideoIds: request.body.candidates,
       });
       reply.status(202);
-      return { success: true, data: { id: recommendation.id, status: recommendation.status } };
+      return ok({ id: recommendation.id, status: recommendation.status });
     },
   );
 
   // GET /movie-recommendations/:id — 상태·결과 조회
-  app.get<{ Params: { id: string } }>(
-    '/movie-recommendations/:id',
+  routes.get(
+    getMovieRecommendation.fastifyPath,
     {
       preHandler: app.authenticate,
       schema: {
+        ...getMovieRecommendation.schema,
         tags: ['movie-templates'],
         summary: '스냅 추천 상태·결과 조회',
         description: [
@@ -118,24 +90,14 @@ export async function movieRecommendationRoutes(app: FastifyInstance): Promise<v
           '`excluded[].reason`: `unusable`(편집에 쓸 수 없다고 분석이 판단) ·',
           '`analysis_failed`(분석 실패 또는 시한 초과) · `no_match`(슬롯보다 후보가 많아 자리 없음).',
         ].join('\n'),
-        params: {
-          type: 'object',
-          required: ['id'],
-          properties: { id: { type: 'string', format: 'uuid' } },
-        },
-        response: {
-          200: successResponseSchema(MOVIE_RECOMMENDATION_SCHEMA),
-          404: API_ERROR_SCHEMA,
-          ...AUTHENTICATED_ERROR_RESPONSES,
-        },
       },
     },
-    async (request): Promise<ApiSuccess<MovieRecommendation>> => {
+    async (request) => {
       const data = await getRecommendation({
         userId: request.user.id,
         recommendationId: request.params.id,
       });
-      return { success: true, data };
+      return ok(data);
     },
   );
 }

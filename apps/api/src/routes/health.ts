@@ -1,32 +1,15 @@
 import type { FastifyInstance } from 'fastify';
-import type { ApiSuccess } from '@vlog-studio/shared-types';
+import type { ZodTypeProvider } from 'fastify-type-provider-zod';
+import { getHealth, type HealthData, ok } from '@vlog-studio/shared-types';
 import { getPrisma } from '../db/client.js';
-import {
-  COMMON_ERROR_RESPONSES,
-  HEALTH_DATA_SCHEMA,
-  successResponseSchema,
-} from '../schemas/responses.js';
-
-interface HealthData {
-  status: 'ok';
-  uptimeSeconds: number;
-  db: 'connected' | 'not_configured' | 'error';
-}
 
 export async function healthRoutes(app: FastifyInstance): Promise<void> {
-  app.get(
-    '/health',
-    {
-      schema: {
-        tags: ['system'],
-        summary: '헬스체크',
-        response: {
-          200: successResponseSchema(HEALTH_DATA_SCHEMA),
-          ...COMMON_ERROR_RESPONSES,
-        },
-      },
-    },
-    async (): Promise<ApiSuccess<HealthData>> => {
+  const routes = app.withTypeProvider<ZodTypeProvider>();
+
+  routes.get(
+    getHealth.fastifyPath,
+    { schema: { ...getHealth.schema, tags: ['system'], summary: '헬스체크' } },
+    async () => {
       let db: HealthData['db'] = 'not_configured';
 
       if (process.env.DATABASE_URL) {
@@ -39,14 +22,11 @@ export async function healthRoutes(app: FastifyInstance): Promise<void> {
         }
       }
 
-      return {
-        success: true,
-        data: {
-          status: 'ok',
-          uptimeSeconds: Math.floor(process.uptime()),
-          db,
-        },
-      };
+      return ok<HealthData>({
+        status: 'ok',
+        uptimeSeconds: Math.floor(process.uptime()),
+        db,
+      });
     },
   );
 }

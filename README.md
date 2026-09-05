@@ -1,4 +1,4 @@
-# Snaply
+| API 계약 | [packages/shared-types/src/contract/](packages/shared-types/src/contract/) (Zod 스키마). Swagger `/docs`와 스냅샷 [apps/api/openapi.json](apps/api/openapi.json)은 여기서 생성 |# Snaply
 
 20~30대를 위한 숏폼 브이로그 AI 자동 편집 앱 — 모바일·API·AI worker 통합 모노레포.
 
@@ -13,7 +13,7 @@ apps/
   api/          # Fastify + TypeScript API 서버 (:3000)
   ai-worker/    # Python 워커 2개 — edit-jobs·video-analysis 큐 구독 (HTTP 포트 없음)
 packages/
-  shared-types/ # 앱·API가 공유하는 요청/응답 타입
+  shared-types/ # API 계약(Zod 스키마)과 앱·API·워커가 공유하는 타입·어휘
 ```
 
 인프라: 로컬 PostgreSQL(DB) · Supabase(Auth) · MinIO(S3 호환, :9100) · Redis(:6379).
@@ -28,7 +28,7 @@ packages/
 | 저장소 최상위 원칙 | [docs/constitution.md](docs/constitution.md) | 모든 spec·plan·구현·문서에 우선. 개정 절차 포함 |
 | 제품 요구사항 (무엇을·왜) | [docs/specs/](docs/specs/README.md) | 요구 ID + 구현 상태 라벨. 동작 계약 변경은 spec 갱신이 먼저 |
 | DB 스키마 | `apps/api/prisma/schema.prisma` | 마이그레이션 `prisma/migrations/`, RLS `prisma/rls-policies.sql` |
-| API 계약 | `/docs` (Swagger, 코드에서 생성) | [docs/api-spec.md](docs/api-spec.md)는 FE 전달용 요약 + WebSocket — **라우트를 바꾸면 같이 갱신** |
+| API 계약 | [packages/shared-types/src/contract/](packages/shared-types/src/contract/) (Zod 스키마). Swagger `/docs`와 스냅샷 [apps/api/openapi.json](apps/api/openapi.json)은 여기서 생성 | [docs/api-spec.md](docs/api-spec.md)는 FE 전달용 요약 + WebSocket — **라우트를 바꾸면 같이 갱신** |
 | 로컬 셋업·명령·트러블슈팅 | [ONBOARDING.md](ONBOARDING.md) | |
 | 서버 환경변수 — 변수 목록 | `apps/api/src/env-spec.ts` | `.env.example`은 이 목록의 복사용 표현. 어긋나면 테스트가 실패 |
 | 모바일 공개 환경변수 | `apps/mobile/.env.example` | `EXPO_PUBLIC_*`만 허용. 서버 시크릿 금지 |

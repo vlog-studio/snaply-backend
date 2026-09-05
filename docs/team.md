@@ -48,7 +48,7 @@
 | `apps/api/src/config.ts` | 각자 자기 섹션만 추가하고 초기화 순서를 바꾸지 않는다 |
 | `apps/api/src/app.ts` | 플러그인·라우트 등록만 추가한다. **에러/404 핸들러는 라우트 등록보다 앞**이라는 순서를 유지한다 |
 | `apps/api/prisma/schema.prisma` | 마이그레이션 규칙(§3)을 따른다 |
-| `packages/shared-types` | 타입은 append-only를 우선하고 API·워커 소비자를 같이 검증한다 |
+| `packages/shared-types` | API 계약(Zod 스키마·라우트 레지스트리)과 워커 어휘의 원천. 값은 append-only를 우선하고, 계약을 바꾸면 API 테스트·`openapi.json` 재생성·모바일 `verify`를 같이 돌린다 |
 
 ---
 

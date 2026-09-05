@@ -14,6 +14,7 @@
  * 동시 요청은 조회와 삽입 사이를 파고들기 때문에, 판정을 DB 제약에 맡긴다.
  */
 import { Prisma } from '@prisma/client';
+import type { CreditEntry, CreditReason } from '@vlog-studio/shared-types';
 import { getPrisma } from '../db/client.js';
 import { AppError } from '../lib/errors.js';
 import {
@@ -28,12 +29,8 @@ function isUniqueViolation(err: unknown): boolean {
   return err instanceof Prisma.PrismaClientKnownRequestError && err.code === UNIQUE_VIOLATION;
 }
 
-export interface CreditEntryDto {
-  id: string;
-  delta: number;
-  reason: string;
-  createdAt: string;
-}
+/** 앱에 내리는 내역 1건. 와이어 계약(`creditEntrySchema`)과 같은 형태다. */
+export type CreditEntryDto = CreditEntry;
 
 /** 현재 잔액. 원장 합계가 원천이다. */
 export async function getBalance(userId: string): Promise<number> {
@@ -54,7 +51,8 @@ export async function listEntries(userId: string, limit = 50): Promise<CreditEnt
   return rows.map((row) => ({
     id: row.id,
     delta: row.delta,
-    reason: row.reason,
+    // 원장의 reason 은 CREDIT_REASON 값으로만 쓰인다 — DB 컬럼은 문자열이라 계약 타입으로 좁힌다.
+    reason: row.reason as CreditReason,
     createdAt: row.createdAt.toISOString(),
   }));
 }

@@ -1,21 +1,14 @@
 import type { FastifyInstance } from 'fastify';
-import type { ApiSuccess } from '@vlog-studio/shared-types';
-import {
-  API_ERROR_SCHEMA,
-  AUTHENTICATED_ERROR_RESPONSES,
-  GEOFENCE_RESULT_SCHEMA,
-  successResponseSchema,
-} from '../schemas/responses.js';
-import { handleGeofenceEnter, type GeofenceResult } from '../services/location.service.js';
-
-interface GeofenceBody {
-  locationId: string;
-}
+import type { ZodTypeProvider } from 'fastify-type-provider-zod';
+import { reportGeofenceEnter, ok } from '@vlog-studio/shared-types';
+import { handleGeofenceEnter } from '../services/location.service.js';
 
 export async function notificationRoutes(app: FastifyInstance): Promise<void> {
+  const routes = app.withTypeProvider<ZodTypeProvider>();
+
   // POST /notifications/geofence-enter — Geofence 진입 → 조건 통과 시 FCM
-  app.post<{ Body: GeofenceBody }>(
-    '/notifications/geofence-enter',
+  routes.post(
+    reportGeofenceEnter.fastifyPath,
     {
       preHandler: app.authenticate,
       config: {
@@ -27,31 +20,18 @@ export async function notificationRoutes(app: FastifyInstance): Promise<void> {
         },
       },
       schema: {
+        ...reportGeofenceEnter.schema,
         tags: ['locations'],
         summary: 'Geofence 진입 → FCM',
-        body: {
-          type: 'object',
-          additionalProperties: false,
-          required: ['locationId'],
-          properties: {
-            locationId: { type: 'string', format: 'uuid' },
-          },
-        },
-        response: {
-          200: successResponseSchema(GEOFENCE_RESULT_SCHEMA),
-          400: API_ERROR_SCHEMA,
-          404: API_ERROR_SCHEMA,
-          ...AUTHENTICATED_ERROR_RESPONSES,
-        },
       },
     },
-    async (request): Promise<ApiSuccess<GeofenceResult>> => {
+    async (request) => {
       const data = await handleGeofenceEnter({
         userId: request.user.id,
         locationId: request.body.locationId,
         logger: request.log,
       });
-      return { success: true, data };
+      return ok(data);
     },
   );
 }
