@@ -20,7 +20,7 @@
 - **응답 형식(공통)**: 성공 `{ "success": true, "data": … }` / 실패 `{ "success": false, "error": { "code", "message", …부가 필드 } }`.
   부가 필드는 상태 코드별로 계약(`common.ts`의 `*ErrorSchema`)에 선언된 것만 온다 — 예: `403 ACCOUNT_PENDING_DELETION` 의 `purgeAfter`, `402 INSUFFICIENT_CREDITS` 의 `required`·`balance`.
 - **공통 에러 코드**: `UNAUTHORIZED`(401) · `FORBIDDEN`(403) · `ACCOUNT_PENDING_DELETION`(403, 삭제 대기 계정 — 복구는 `POST /auth/me/restore`) · `NOT_FOUND`(404) · `BAD_REQUEST`/`VALIDATION_ERROR`(400) · `RATE_LIMITED`(429) · `INTERNAL_SERVER_ERROR`(500).
-  타 유저의 리소스는 **403 이 아니라 404** 다(존재를 알리지 않는다).
+  타 유저의 리소스를 **조회·삭제**하면 403 이 아니라 **404** 다(존재를 알리지 않는다). 편집 요청처럼 남의 영상을 **입력으로 넘긴** 경우만 403 이다.
 - **Rate limit**: 기본 IP당 60req/분. `POST /edit-jobs` 유저당 5req/분, `POST /notifications/geofence-enter`·`POST /movie-recommendations` 유저당 10req/분. 초과 시 `429 RATE_LIMITED`. 도메인 한도(`429 RECOMMENDATION_LIMIT`)는 다른 코드다 — 잠시 후 재시도로 풀리지 않는다.
 - **알 수 없는 enum 값**: 서버가 값을 늘릴 수 있는 곳(편집 상태·에러 코드·템플릿 스타일 등)에서 앱은 모르는 값을 **버리지 말고 보수적으로 해석**한다(모르는 실패 코드는 `INTERNAL`처럼, 모르는 템플릿 스타일은 건너뛰기).
 
