@@ -9,7 +9,8 @@
 [backlog.md](../backlog.md) B-5가 관리한다.
 **관련 문서**: [constitution.md](../constitution.md) 제2조·제6조 ·
 [api-spec.md](../api-spec.md) · [team.md](../team.md) §2 ·
-[apps/mobile/docs/workflows/openapi-api-integration.md](../../apps/mobile/docs/workflows/openapi-api-integration.md)
+[apps/mobile/docs/workflows/api-contract-integration.md](../../apps/mobile/docs/workflows/api-contract-integration.md)
+(결정 시점의 이름은 `openapi-api-integration.md` 였고 4단계에서 교체됐다)
 
 ---
 
