@@ -13,7 +13,7 @@
 | 저장소 루트 | 진입점 4개(`README` · `ONBOARDING` · `AGENTS` · `CLAUDE`)만. **늘리지 않는다** | 상시 |
 | `docs/` 직하 | 계속 갱신되는 현행 문서 (계약·상태·규칙·절차). 최상위 원칙은 [`constitution.md`](constitution.md) | 상시 |
 | `docs/specs/` | 제품 요구사항(무엇을·왜) — 요구 ID + 구현 상태 라벨. 동작 계약을 바꾸는 작업은 해당 spec 갱신이 먼저다 | 상시 |
-| `docs/decisions/` | 한 시점에 내린 정책·설계 결정. 배경·기각한 대안 포함 | 결정 시점 고정 |
+| `docs/decisions/` | 한 시점에 내린 정책·설계 결정. 배경·기각한 대안 포함. 결정 전의 **결정 요청**(선택지·결과·권장)도 상태 `미결`로 여기에 두고, 결정되면 같은 파일을 갱신한다. 어느 문서가 미결인지는 [decisions/README.md](decisions/README.md) | 결정 시점 고정 |
 | `docs/plans/` | 착수 전 구현 계획. **제안이며 현행 사실이 아니다** | 구현 시작까지 |
 | `docs/meetings/` | 회의 안건과 결과 | 회의 단위 |
 | `docs/archive/` | 수명이 끝난 문서 | 보관 |

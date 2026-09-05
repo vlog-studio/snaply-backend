@@ -39,7 +39,7 @@ packages/
 | 다음에 결정·구현할 일 | [docs/backlog.md](docs/backlog.md) | 닫히지 않은 작업은 여기에만 둔다. `decisions/` 전체를 훑지 않는다 |
 | 완료된 구현·검증 내역 | [docs/progress.md](docs/progress.md) | 완료된 것만 |
 | 작업 분담·공유 파일 규칙 | [docs/team.md](docs/team.md) | |
-| 확정된 정책·설계 결정 | [docs/decisions/](docs/decisions/) | 배경·논점·기각한 대안 포함 |
+| 정책·설계 결정 — 확정과 결정 대기 | [docs/decisions/README.md](docs/decisions/README.md) | 인덱스가 **결정 완료 / 결정 대기 / 대체됨**을 구분한다. 배경·논점·기각한 대안 포함 |
 | 착수 전 구현 계획 | [docs/plans/](docs/plans/) | |
 | 외부 연동 셋업 절차 | [docs/sns-setup.md](docs/sns-setup.md) | 인스타·틱톡 앱 등록 |
 | 로컬 서버를 외부에 노출 | [docs/local-tunnel.md](docs/local-tunnel.md) | 웹훅·SSV 콜백·OAuth 테스트용 cloudflared 임시 주소 |
