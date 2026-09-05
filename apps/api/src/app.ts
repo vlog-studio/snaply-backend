@@ -1,4 +1,4 @@
-import Fastify, { type FastifyInstance } from 'fastify';
+import Fastify, { type FastifyError, type FastifyInstance } from 'fastify';
 import websocket from '@fastify/websocket';
 import type { AppConfig } from './config.js';
 import rateLimit from '@fastify/rate-limit';
@@ -47,7 +47,7 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   });
 
   // 에러/404 핸들러는 라우트 등록보다 먼저 설정해야 자식 컨텍스트가 상속받는다.
-  app.setErrorHandler((error, request, reply) => {
+  app.setErrorHandler<FastifyError>((error, request, reply) => {
     // 커스텀 도메인 에러. **rate limit 판정보다 앞이다** — 도메인에도 429 를 쓰는 한도가 있고
     // (예: 추천 일일 한도 RECOMMENDATION_LIMIT), 뒤에 두면 그 코드가 전부 RATE_LIMITED 로
     // 뭉개져 앱이 "잠시 후 다시"와 "오늘은 끝"을 구분할 수 없다.

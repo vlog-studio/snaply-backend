@@ -84,7 +84,8 @@ async function authPluginImpl(app: FastifyInstance, config: AppConfig): Promise<
     }
   };
 
-  app.decorateRequest('user', null);
+  // Fastify 5: 참조형 초기값은 금지되고 null 오버로드도 사라졌다. 값은 preHandler 가 채운다.
+  app.decorateRequest('user');
   app.decorate('authenticate', authenticate);
   app.decorate('authenticateAllowDeleted', authenticateAllowDeleted);
 }

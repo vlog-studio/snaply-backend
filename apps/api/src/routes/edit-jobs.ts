@@ -250,8 +250,7 @@ export async function editJobRoutes(app: FastifyInstance): Promise<void> {
     '/edit-jobs/:id/progress',
     // WebSocket은 OpenAPI로 표현되지 않으므로 문서에서 숨김 (api-spec.md 참고)
     { websocket: true, preHandler: app.authenticate, schema: { hide: true } },
-    async (connection, request) => {
-      const ws = connection.socket;
+    async (ws, request) => {
       const jobId = request.params.id;
 
       const job = await getEditJobForOwner({ userId: request.user.id, jobId });
