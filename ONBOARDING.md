@@ -322,6 +322,62 @@ curl -H "Authorization: Bearer <출력된 토큰>" http://localhost:3000/auth/me
 - **크리덴셜 파일**: Firebase 서비스 계정 JSON 같은 키 파일은 `.gitignore` 에 패턴으로 막혀 있지만
   (`*firebase-adminsdk*.json`, `*.pem` 등), 레포 안에 두지 말고 `.env` 에 base64 로 넣는 것을 권장한다.
 
+### 모노레포 통합(2026-08-31) 전후 주의사항
+
+앱 저장소는 `d13f921 chore: unify app and backend monorepos`에서 이 저장소로 합쳐졌다. 그 이전에
+만든 브랜치·로컬 환경·에이전트 세션은 아래 차이를 한꺼번에 만난다. 내 브랜치가 통합 전 분기인지는
+다음으로 확인한다(종료 코드 0이면 통합 후 분기).
+
+```bash
+git merge-base --is-ancestor d13f921 <branch>
+```
+
+**환경 — 통합 후 툴체인이 바뀌었다**
+
+| 항목 | 통합 전 | 통합 후 |
+|---|---|---|
+| Node | `>=20` | `>=22.13` (`.nvmrc`는 26) |
+| npm | 10.8.2 | 11.19.1 |
+| 루트 `npm test` | API만 | turbo가 모바일 jest까지 실행 |
+| CI | API 잡만 | 모든 PR에서 `verify:mobile`도 실행(경로 필터 없음) |
+
+- 루트에서 `nvm use && npm ci`를 다시 한다. 구 Node/npm으로 `npm install`하면 lockfile이 흔들린다.
+  pull 뒤 `npm run db:generate`도 잊지 않는다.
+- 백엔드만 고친 PR도 모바일 verify가 깨지면 CI가 실패한다. 로컬 확인은 §3-9의 범위 좁힌 명령을 쓴다.
+- 환경변수 파일이 `apps/api/.env` 하나에서 `apps/mobile/.env`(`EXPO_PUBLIC_*`)까지 둘이 됐다.
+  서버 시크릿을 모바일 `.env`에 복사하면 앱 번들에 노출되므로 금지. `APP_DEEPLINK_SCHEME` 기본값은
+  `snaplyapp://`로 바뀌었다.
+
+**API 계약 — 통합 후 Zod 계약이 스키마의 원천이다** (`855cf05`, [결정 문서](./docs/decisions/api-contract-schema-first.md))
+
+- `apps/api/src/schemas/responses.ts`, `packages/shared-types/src/api.ts`, `domain.ts`는 **삭제**됐다.
+  통합 전 브랜치가 이 파일들을 고쳤다면 rebase 시 삭제 충돌이 난다. 내용은
+  `packages/shared-types/src/contract/*.ts`로 옮긴다.
+- 라우트를 추가·수정하면 계약 파일 수정 → `npm run openapi:write -w apps/api` → `apps/api/openapi.json`
+  커밋 순서가 필수다. 스냅샷 테스트가 있어 빠뜨리면 테스트가 실패한다.
+- 응답 직렬화가 strict다. 계약에 없는 필드를 내려보내면 조용히 빠지지 않고 **500**이 난다.
+- 같은 날 Fastify 5로 올라갔다. WebSocket 핸들러는 소켓을 직접 받고, `setErrorHandler`의 에러 타입은
+  `FastifyError`로 고정하며, `decorateRequest`는 `null` 초기값을 받지 않는다.
+
+**이력 — 모바일 쪽 git 이력은 squash됐다**
+
+- `apps/mobile` 아래 파일은 `git log`·`git blame`이 통합 커밋(08-31) 이전으로 내려가지 않는다.
+  그 이전 맥락은 옛 앱 저장소에서 찾는다.
+- 통합 전에 분기한 원격 브랜치는 커밋이 다른 해시로 main에 들어가 있을 수 있다. 그대로 rebase하면
+  같은 내용끼리 충돌하니 `git cherry -v main <branch>`로 미병합 커밋(`+`)만 골라 cherry-pick한다.
+
+**에이전트(Claude Code) 세션**
+
+- [`AGENTS.md`](./AGENTS.md)가 통합 후 크게 바뀌었다. 문서 갱신 의무가 표로 재편됐고,
+  [`docs/constitution.md`](./docs/constitution.md)와 [`docs/specs/`](./docs/specs/README.md)가 새로 생겨
+  사용자 가시 동작은 **스펙을 구현보다 먼저** 고친다. 통합 전 컨텍스트를 이어가던 세션은 새로 열어
+  지침을 다시 읽힌다.
+- [`apps/mobile/AGENTS.md`](./apps/mobile/AGENTS.md)는 영어로 쓰인 별도 지침이며 루트 헌법·스펙이 그 위에
+  있다. 모바일 전용 스킬(`apps/mobile:hygiene-sweep`)과 `apps/mobile/.claude/settings.json`의 플러그인은
+  `apps/mobile`에서 세션을 열어야 온전히 적용된다.
+- `packages/shared-types`는 이제 API 계약까지 담는다. 계약을 바꾸면 API 테스트·`openapi.json` 재생성·
+  모바일 verify를 함께 돌린다([docs/team.md](./docs/team.md) §2).
+
 ---
 
 ## 6. 다음 단계
