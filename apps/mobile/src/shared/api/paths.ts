@@ -1,7 +1,14 @@
-import type { paths } from './schema';
+import type { ApiContract } from '@vlog-studio/shared-types';
 
-/** An endpoint path literally present in the generated OpenAPI schema. */
-export type ApiPath = keyof paths & string;
+/** One endpoint of the backend contract (`apiContract` in `@vlog-studio/shared-types`). */
+export type ApiRoute = ApiContract[keyof ApiContract];
+
+/**
+ * An endpoint path literally present in the contract, in its OpenAPI spelling
+ * (`/videos/{id}`). The registry is imported as a type only, so the contract
+ * package is not part of the app bundle.
+ */
+export type ApiPath = ApiRoute['path'];
 
 declare const resolvedApiPath: unique symbol;
 

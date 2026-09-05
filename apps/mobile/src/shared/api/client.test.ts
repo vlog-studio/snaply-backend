@@ -16,14 +16,15 @@ jest.mock('./auth-header', () => ({
 }));
 
 /**
- * Compile-time contract of `apiRequest`'s spec-derived typing. None of these
- * thunks is ever called — `npm run typecheck` is the real assertion, including
- * that every `@ts-expect-error` line genuinely fails to compile (tsc reports an
- * unused suppression otherwise).
+ * Compile-time contract of `apiRequest`'s typing, derived from the shared Zod
+ * contract (`@vlog-studio/shared-types`). None of these thunks is ever called —
+ * `npm run typecheck` is the real assertion, including that every
+ * `@ts-expect-error` line genuinely fails to compile (tsc reports an unused
+ * suppression otherwise).
  */
 describe('apiRequest type contract', () => {
   const accepted: (() => unknown)[] = [
-    // A schema may narrow the spec's data to the fields the app consumes.
+    // A schema may narrow the contract's data to the fields the app consumes.
     () =>
       apiRequest('/videos/upload-url', {
         query: { filename: 'a.mp4', contentType: 'video/mp4' },
@@ -54,7 +55,7 @@ describe('apiRequest type contract', () => {
     () =>
       apiRequest('/videos', {
         method: 'POST',
-        // @ts-expect-error — the spec types durationSeconds as a number
+        // @ts-expect-error — the contract types durationSeconds as a number
         body: { videoId: 'video-1', durationSeconds: '3' },
         schema: z.unknown(),
       }),
@@ -67,14 +68,14 @@ describe('apiRequest type contract', () => {
       }),
     () =>
       apiRequest('/locations', {
-        // @ts-expect-error — the spec defines no POST /locations
+        // @ts-expect-error — the contract defines no POST /locations
         method: 'POST',
         schema: z.unknown(),
       }),
     () =>
       apiRequest('/videos/upload-url', {
         query: { filename: 'a.mp4', contentType: 'video/mp4' },
-        // @ts-expect-error — the spec's data carries no `downloadUrl` field
+        // @ts-expect-error — the contract's data carries no `downloadUrl` field
         schema: z.object({ downloadUrl: z.string() }),
       }),
     // @ts-expect-error — POST-only endpoint: omitting `method` would GET it

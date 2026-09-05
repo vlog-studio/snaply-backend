@@ -1,6 +1,0 @@
-# Generated verbatim by `npm run api:gen`, and guarded by `npm run api:check`
-# rather than by reading it. Its diff is thousands of lines that restate the
-# spec's diff, so suppress it: `-diff` keeps `git diff` from printing the file
-# (`git diff --text` still shows it), and `linguist-generated` collapses it in
-# GitHub reviews.
-src/shared/api/schema.d.ts linguist-generated=true -diff

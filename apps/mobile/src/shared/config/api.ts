@@ -3,8 +3,8 @@
  *
  * Mock mode is on whenever no base URL is configured, or when explicitly
  * forced with `EXPO_PUBLIC_USE_MOCK_API=true`; with `EXPO_PUBLIC_API_BASE_URL`
- * set, every `api/` segment calls the real backend (the contract is the
- * committed spec — see docs/workflows/openapi-api-integration.md).
+ * set, every `api/` segment calls the real backend (the contract is the shared
+ * Zod package — see docs/workflows/api-contract-integration.md).
  */
 export const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? '';
 

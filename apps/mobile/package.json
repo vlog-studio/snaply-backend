@@ -9,6 +9,7 @@
     "@react-native-firebase/messaging": "^25.1.0",
     "@supabase/supabase-js": "^2.110.7",
     "@tanstack/react-query": "^5.101.2",
+    "@vlog-studio/shared-types": "*",
     "expo": "~57.0.7",
     "expo-auth-session": "~57.0.4",
     "expo-blur": "~57.0.2",
@@ -60,7 +61,6 @@
     "eslint-config-prettier": "10.1.8",
     "jest": "~29.7.0",
     "jest-expo": "~57.0.2",
-    "openapi-typescript": "^7.13.0",
     "prettier": "3.9.5",
     "typescript": "~6.0.3"
   },
@@ -75,12 +75,11 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
-    "api:gen": "openapi-typescript ../api/openapi.json -o src/shared/api/schema.d.ts",
-    "api:check": "bash scripts/check-api-types.sh",
     "test": "jest --ci --runInBand --no-watchman",
     "test:watch": "jest --watch",
     "test:ci": "jest --ci --runInBand --no-watchman",
-    "verify": "npm run format:check && npm run lint && npm run typecheck && npm run api:check && npm run test:ci"
+    "verify": "npm run contract:build && npm run format:check && npm run lint && npm run typecheck && npm run test:ci",
+    "contract:build": "npm run build --prefix ../../packages/shared-types"
   },
   "private": true
 }

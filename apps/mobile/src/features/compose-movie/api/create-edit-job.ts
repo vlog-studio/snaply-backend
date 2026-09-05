@@ -10,7 +10,7 @@ import { USE_MOCK_API } from '@/shared/config/api';
  * This table is the whole reason `MovieStyle` may stay English (see its own
  * doc comment): the correspondence is one-to-one, and it lives at the API
  * boundary so a preset renamed on the server moves one line. The literals are
- * checked against the generated spec at the `apiRequest` call below — a value
+ * checked against the shared contract at the `apiRequest` call below — a value
  * the enum does not have is a compile error here, not a 400 at runtime.
  */
 const StylePresets: Record<MovieStyle, '감성' | '여행' | '일상'> = {

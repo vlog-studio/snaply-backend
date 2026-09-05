@@ -5,73 +5,81 @@ import { API_BASE_URL } from '@/shared/config/api';
 import { ApiError } from './api-error';
 import { authHeader } from './auth-header';
 import { notifyApiError } from './error-listeners';
-import type { ApiPath, ResolvedApiPath } from './paths';
-import type { paths } from './schema';
+import type { ApiPath, ApiRoute, ResolvedApiPath } from './paths';
 
 type QueryValue = string | number | boolean | undefined | null;
-type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'DELETE';
-
-/** How `apiRequest`'s uppercase methods index the generated (lowercase) spec. */
-type MethodKeyMap = { GET: 'get'; POST: 'post'; PATCH: 'patch'; DELETE: 'delete' };
 
 /**
- * The methods the spec actually defines for a path. An absent method is
- * generated as `get?: never`, so it reads back as `undefined` here.
+ * The methods the contract defines for a path. Derived from the route registry
+ * in `@vlog-studio/shared-types` — the same Zod schemas the backend validates
+ * and serializes with, so a mismatch here is a mismatch with the server.
  */
-export type ApiMethod<P extends ApiPath> = {
-  [M in HttpMethod]: paths[P][MethodKeyMap[M]] extends undefined ? never : M;
-}[HttpMethod];
+export type ApiMethod<P extends ApiPath> = Extract<ApiRoute, { path: P }>['method'];
 
-type OperationOf<P extends ApiPath, M extends ApiMethod<P>> = NonNullable<
-  paths[P][MethodKeyMap[M]]
->;
+type HttpMethod = ApiRoute['method'];
 
-/** The operation's query parameters; `never` when it takes none. */
-type QueryOf<Op> = Op extends { parameters: { query?: infer Q } } ? NonNullable<Q> : never;
-
-/** The operation's JSON request body; `never` when it takes none. */
-// The bodyless case needs its own branch: an absent body is generated as
-// `requestBody?: never`, and `never extends { content: … }` is trivially true,
-// which would leave `B` unconstrained instead of forbidding the body.
-type BodyOf<Op> = Op extends { requestBody?: infer RB }
-  ? [NonNullable<RB>] extends [never]
-    ? never
-    : NonNullable<RB> extends { content: { 'application/json': infer B } }
-      ? B
-      : never
-  : never;
+// `M extends HttpMethod` rather than `ApiMethod<P>`: TypeScript cannot relate a
+// type parameter to that deferred indexed type, so the "method exists for this
+// path" rule is enforced by `MethodRule` below instead of by the constraint.
+type RouteSchemaOf<P extends ApiPath, M extends HttpMethod> = Extract<
+  ApiRoute,
+  { path: P; method: M }
+>['schema'];
 
 /**
- * The `data` carried by the operation's success envelope (2xx JSON response).
- * `unknown` — imposing no constraint — when the spec declares none.
+ * `method` may be omitted only where the runtime default (GET) is a route the
+ * contract defines — otherwise omitting it would silently GET a POST-only
+ * endpoint. A method the contract does not define for the path intersects to
+ * `never`, so the error lands on the `method` line and nowhere else.
  */
-type ApiSuccessData<Op> = Op extends { responses: infer Rs }
+type MethodRule<P extends ApiPath, M extends HttpMethod> =
+  'GET' extends ApiMethod<P> ? { method?: M & ApiMethod<P> } : { method: M & ApiMethod<P> };
+
+/** The route's query parameters as the caller supplies them; `never` when it takes none. */
+type QueryOf<S> = S extends { querystring: infer Q extends z.ZodType } ? z.input<Q> : never;
+
+/** The route's JSON request body as the caller supplies it; `never` when it takes none. */
+type BodyOf<S> = S extends { body: infer B extends z.ZodType } ? z.input<B> : never;
+
+type SuccessStatus = 200 | 201 | 202;
+
+/**
+ * The `data` carried by the route's success envelope (2xx response).
+ * `unknown` — imposing no constraint — when the contract declares none.
+ */
+type ApiSuccessData<S> = S extends { response: infer R }
   ? {
-      [C in Extract<keyof Rs, 200 | 201 | 202>]: Rs[C] extends {
-        content: { 'application/json': { success: true; data: infer D } };
-      }
-        ? D
+      [C in Extract<keyof R, SuccessStatus>]: R[C] extends z.ZodType
+        ? z.output<R[C]> extends { success: true; data: infer D }
+          ? D
+          : unknown
         : unknown;
-    }[Extract<keyof Rs, 200 | 201 | 202>]
+    }[Extract<keyof R, SuccessStatus>]
   : unknown;
 
 /**
- * The response contract: a Zod schema whose output the spec's `data` must be
+ * The response contract: a Zod schema whose output the contract's `data` must be
  * assignable to. Assignable-to rather than equal on purpose — the project
- * validates only the fields the app consumes, so a schema may narrow the spec
- * (omit fields, widen an enum to `string`) but may not invent a field or
- * disagree on a type. On mismatch, the marker property below surfaces in the
- * compile error and names the spec type the schema must accept.
+ * validates only the fields the app consumes, so a schema may narrow the
+ * contract (omit fields, widen an enum to `string`) but may not invent a field
+ * or disagree on a type. On mismatch, the marker property below surfaces in the
+ * compile error and names the contract type the schema must accept.
  */
-type ResponseSchema<Op, T> = z.ZodType<T> &
-  ([ApiSuccessData<Op>] extends [T] ? unknown : { __schemaMustAcceptApiData: ApiSuccessData<Op> });
+// `[S] extends [never]` first: with an unknown path/method pairing there is no
+// route to check against, and that mistake is already reported on `method`.
+type ResponseSchema<S, T> = [S] extends [never]
+  ? z.ZodType<T>
+  : z.ZodType<T> &
+      ([ApiSuccessData<S>] extends [T]
+        ? unknown
+        : { __schemaMustAcceptApiData: ApiSuccessData<S> });
 
-export type ApiRequestOptions<P extends ApiPath, M extends ApiMethod<P>, T> = {
-  query?: QueryOf<OperationOf<P, M>>;
+export type ApiRequestOptions<P extends ApiPath, M extends HttpMethod, T> = {
+  query?: QueryOf<RouteSchemaOf<P, M>>;
   /** Serialized as JSON; omit for bodyless requests. */
-  body?: BodyOf<OperationOf<P, M>>;
+  body?: BodyOf<RouteSchemaOf<P, M>>;
   /** Validates and types the envelope's `data` field. */
-  schema: ResponseSchema<OperationOf<P, M>, T>;
+  schema: ResponseSchema<RouteSchemaOf<P, M>, T>;
   signal?: AbortSignal;
   /**
    * Give up after this many milliseconds and fail as a `network_error`.
@@ -83,10 +91,7 @@ export type ApiRequestOptions<P extends ApiPath, M extends ApiMethod<P>, T> = {
    * than a failure with a retry.
    */
   timeoutMs?: number;
-  // `method` may be omitted only where the runtime default (GET) is an
-  // operation the spec defines — otherwise omitting it would silently GET a
-  // POST-only endpoint.
-} & ('GET' extends ApiMethod<P> ? { method?: M } : { method: M });
+} & MethodRule<P, M>;
 
 /** The common success/failure envelope every endpoint returns. */
 type ApiEnvelope =
@@ -119,17 +124,17 @@ function buildUrl(path: string, query?: Record<string, QueryValue>): string {
  * normalization into `ApiError`. It never knows about domain models — callers in
  * an entity/page `api` segment map the validated `data` to their domain type.
  *
- * Fully typed against the generated spec: the path (or the template a
- * `ResolvedApiPath` was built from) and the method select the operation, and
- * from it come the allowed `query` keys, the `body` shape, and the response
- * `data` the Zod schema must be compatible with — a typo'd request field or a
- * schema that contradicts the spec is a compile error, at the call site.
+ * Fully typed against the backend contract: the path (or the template a
+ * `ResolvedApiPath` was built from) and the method select the route, and from
+ * its Zod schemas come the allowed `query` keys, the `body` shape, and the
+ * response `data` the call's schema must be compatible with — a typo'd request
+ * field or a schema that contradicts the contract is a compile error, at the
+ * call site.
  */
-export async function apiRequest<
-  P extends ApiPath,
-  T,
-  M extends ApiMethod<P> = Extract<'GET', ApiMethod<P>>,
->(path: P | ResolvedApiPath<P>, options: ApiRequestOptions<P, M, T>): Promise<T> {
+export async function apiRequest<P extends ApiPath, T, M extends HttpMethod = 'GET'>(
+  path: P | ResolvedApiPath<P>,
+  options: ApiRequestOptions<P, M, T>,
+): Promise<T> {
   try {
     return await performRequest(path, options);
   } catch (error) {
@@ -140,11 +145,10 @@ export async function apiRequest<
   }
 }
 
-async function performRequest<
-  P extends ApiPath,
-  T,
-  M extends ApiMethod<P> = Extract<'GET', ApiMethod<P>>,
->(path: P | ResolvedApiPath<P>, options: ApiRequestOptions<P, M, T>): Promise<T> {
+async function performRequest<P extends ApiPath, T, M extends HttpMethod = 'GET'>(
+  path: P | ResolvedApiPath<P>,
+  options: ApiRequestOptions<P, M, T>,
+): Promise<T> {
   const { method = 'GET', query, body, schema, signal, timeoutMs } = options;
 
   // The caller's own signal still cancels; the deadline only adds a second way

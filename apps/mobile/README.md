@@ -56,7 +56,6 @@ src/
 | [`docs/frameworks/`](docs/frameworks) | Expo Router와 상태·데이터 처리 규칙 |
 | [`docs/workflows/`](docs/workflows) | 기능 개발, 검증, 브랜딩 변경 절차 |
 | [`docs/features/`](docs/features) | 현재 사용자 기능, 구현 상태, 소유 계층 기록 |
-| [`docs/api/`](docs/api) | 백엔드 OpenAPI 스펙 사본(`openapi.json`) — `npm run api:pull`로 갱신, `npm run api:gen`으로 타입 생성 |
 
 ### 개발자 가이드
 
@@ -76,14 +75,12 @@ src/
 | `npm run android` / `npm run android:device` | Android 개발 빌드를 에뮬레이터/실기기에 빌드·실행 |
 | `npm run android:device:release` | 릴리스 APK를 빌드해 실기기에 설치 |
 | `npm run web` | 웹 환경 실행(기준 개발 환경 아님) |
-| `npm run api:pull` | 백엔드에서 OpenAPI 스펙(`docs/api/openapi.json`) 갱신 |
-| `npm run api:gen` | 스펙에서 API 타입(`src/shared/api/schema.d.ts`) 생성 |
+| `npm run contract:build` | 공유 계약 패키지(`packages/shared-types`) 빌드 — `verify`가 먼저 실행하며, 계약 변경을 pull한 뒤 `typecheck`만 돌릴 때 한 번 필요 |
 | `npm run verify` | **자동 검증 게이트.** 검증 목록은 `package.json`의 `verify` 스크립트가 유일한 기준이며, CI도 같은 명령을 실행합니다 |
 | `npm run lint` | ESLint 검사 실행 |
 | `npm run format` | Prettier로 전체 코드 자동 포맷 |
 | `npm run format:check` | 포맷 위반 여부만 검사 |
 | `npm run typecheck` | TypeScript 타입 검사 실행 |
-| `npm run api:check` | 스펙과 생성된 API 타입의 동기화 검사 |
 | `npm test` | Jest 단일 실행 테스트(`--runInBand`) |
 | `npm run test:watch` | Jest 워치 모드 |
 | `npm run test:ci` | 단일 실행 테스트(`--runInBand`) |
@@ -232,8 +229,8 @@ src/
 | `typescript` | 타입 검사기. `strict` 모드로 컴파일 없이 타입만 검사(`tsc --noEmit`)합니다. |
 | `@types/react` | React 19의 타입 정의. JSX와 훅의 타입 지원을 제공합니다. |
 
-### API 코드 생성
+### API 계약
 
 | 패키지 | 사용 이유 |
 | --- | --- |
-| `openapi-typescript` | 커밋된 OpenAPI 스펙(`docs/api/openapi.json`)에서 API 타입(`src/shared/api/schema.d.ts`)을 생성합니다(`npm run api:gen`). 절차는 [`docs/workflows/openapi-api-integration.md`](docs/workflows/openapi-api-integration.md)를 따릅니다. |
+| `@vlog-studio/shared-types` | 백엔드와 공유하는 API 계약(Zod 스키마·라우트 레지스트리). `apiRequest`가 이 패키지의 타입에서 경로·메서드별 query·body·응답 타입을 유도하며, 타입 전용 import라 앱 번들에는 포함되지 않습니다. 절차는 [`docs/workflows/api-contract-integration.md`](docs/workflows/api-contract-integration.md)를 따릅니다. |
