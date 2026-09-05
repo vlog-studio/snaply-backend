@@ -270,6 +270,24 @@ geofence 쿨다운 판정용 이력이 무한히 쌓인다. 쿨다운은 30분 �
 
 **결정할 것**: 보관 기간(감사 목적이 있는지), 정리 방식(주기적 삭제 / 파티셔닝).
 
+### B-5. API 계약을 스키마 우선으로 — Zod 계약 패키지 ★
+
+**결정됨** (2026-09-05): 계약의 원천을 `packages/shared-types`의 Zod 스키마 하나로 통일하고
+백엔드 검증·직렬화·OpenAPI와 모바일 타입·런타임 검증을 그 스키마에서 유도한다. 배경(여섯 겹
+사본)과 기각한 대안은 [decisions/api-contract-schema-first.md](./decisions/api-contract-schema-first.md).
+
+**왜 열려 있는지**: 단계가 다섯이고 각 단계가 독립 머지되어야 한다. 모바일 `shared/api`와
+`packages/shared-types`는 [team.md](./team.md) §2의 공유 surface라 4단계는 양 트랙 합의가 필요하다.
+
+- [ ] 1. Fastify 5 + 플러그인 메이저 업 (`@fastify/rate-limit`·`swagger`·`swagger-ui`·`websocket`·`fastify-plugin`)
+- [ ] 2. `schemas/responses.ts`·라우트 요청 인터페이스 → `packages/shared-types` Zod 스키마 (컴파일러가 Zod 전용이라 한 변경에서 전부)
+- [ ] 3. OpenAPI 스냅샷 테스트 — 생성 스펙과 커밋된 `apps/api/openapi.json` 일치 검사
+- [ ] 4. 모바일: 계약 패키지 import, `apiRequest`를 라우트 맵 기반으로 교체, `openapi-typescript`·`api:pull`/`gen`/`check` 제거
+- [ ] 5. `api-spec.md`를 WebSocket 계약 + FE 안내로 축소
+
+**완료 조건**: 엔드포인트 계약을 손으로 적는 곳이 `packages/shared-types` 하나이고, 모바일
+`verify`와 백엔드 테스트가 서버 실행 없이 그 계약과의 일치를 검사한다.
+
 ---
 
 ## C. 외부 크리덴셜/승인 대기
