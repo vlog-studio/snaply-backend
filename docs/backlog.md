@@ -24,13 +24,17 @@
 
 **남은 판단**: ① 내보내기 시 클립 순서 기본값 ② 재내보내기 정책(누적 vs 교체)
 ③ Movie 삭제 시 참조 영상 처리 ④ 날짜 기반 자동 그룹핑의 도입 범위
-⑤ 기존 `POST /edit-jobs` 직접 편집 API의 공존·폐기 시점
+⑤ 기존 `POST /edit-jobs` 직접 편집 API의 공존·폐기 시점 — ①~⑤의 선택지·결과는
+[decisions/movie-export-policy.md](./decisions/movie-export-policy.md)(미결)
 ⑥ **영상·프로젝트·결과물 생애주기 재정의**(2026-08-31 개발자 회의 제안 —
 [meetings/2026-08-31-dev-sync.md](./meetings/2026-08-31-dev-sync.md) §4): 영상 15일 지속 ·
 서버 업로드 성공 시 로컬 삭제 · 내보내기 완료 시 프로젝트 삭제 · 결과물은 다운로드/SNS 연동 진행 후 삭제.
 현행 MOV-14(구성 영구 보관)·MOV-16(결과물 30일 보관 + 무료 재생성)·SNAP-9(2GB 한도)와 충돌하므로,
 채택하면 spec 을 먼저 고치고 [decisions/storage-and-subscription-policy.md](./decisions/storage-and-subscription-policy.md)
 §3 의 기각 근거를 결정 문서에 남긴다. 결과물을 삭제하면 A-7 의 에셋 영구 라이선스 조항 논의도 함께 닫힌다.
+세 축의 결정 요청 문서(미결): [snap-retention-period.md](./decisions/snap-retention-period.md) ·
+[local-copy-after-upload.md](./decisions/local-copy-after-upload.md) ·
+[movie-cleanup-after-export.md](./decisions/movie-cleanup-after-export.md).
 `capturedAt` 수집은 결정 완료이며 스냅 서버 원천화 1단계에서 구현한다. 위치 정보 저장
 여부는 이 항목과 분리해 A-4에서만 관리한다.
 
@@ -205,10 +209,12 @@ S3 삭제 실패분은 E-3의 정리 배치 경로를 쓴다.
 
 **결정할 것**
 
-- [ ] 번인 자막 전환 여부 (소프트 자막 폐기 = 사용자에게 보이는 변경, 재인코딩 1회 증가)
+- [ ] 번인 자막 전환 여부 (소프트 자막 폐기 = 사용자에게 보이는 변경, 재인코딩 1회 증가) —
+      선택지·결과는 [decisions/subtitle-rendering.md](./decisions/subtitle-rendering.md)(미결)
 - [ ] BGM 조달 경로와 예산 — Uppbeat / Epidemic Sound / Artlist 등, 위 라이선스 조항 확인 포함.
       **AI 생성 음원**도 후보다(2026-08-31 개발자 회의 제안). 생성 음원의 상업 이용·소셜 업로드 허용·
-      저작권 귀속 등 **법적 정책을 먼저 확인한 뒤 결정**한다 — 위 라이선스 조건은 AI 음원에도 그대로 적용된다
+      저작권 귀속 등 **법적 정책을 먼저 확인한 뒤 결정**한다 — 위 라이선스 조건은 AI 음원에도 그대로 적용된다.
+      경로별 선택지·검토 항목 6개는 [decisions/bgm-sourcing.md](./decisions/bgm-sourcing.md)(미결)
 - [ ] `bgm_tracks` 스키마 신설 — `schema.prisma` 는 공유 파일이라 [team.md](./team.md) §2·§3 적용
 - [ ] 골든 프레임·ffprobe 계약 테스트를 위한 **CI 의 ffmpeg 설치** — 현행 파이썬 테스트는
       "ffmpeg 없이 돈다"가 설계 원칙이라 CI 구조가 바뀐다
@@ -220,7 +226,9 @@ S3 삭제 실패분은 E-3의 정리 배치 경로를 쓴다.
       플랫폼 기본 스티커와 구분되지 않아 제품의 이유가 사라진다
 - [ ] **관리자 페이지(에셋 관리) 도입 여부** — 2026-08-31 개발자 회의에서 스티커·에셋 확보의 전제로
       제기됐다([meetings/2026-08-31-dev-sync.md](./meetings/2026-08-31-dev-sync.md) §3). 관리자 인증·권한
-      모델이 아직 없으므로 착수 전에 결정 문서(범위 · 인증 방식 · 팩 매니페스트 등록 UI 인지 파일 업로드만인지)가 선행이다
+      모델이 아직 없으므로 착수 전에 결정 문서(범위 · 인증 방식 · 팩 매니페스트 등록 UI 인지 파일 업로드만인지)가 선행이다.
+      조달 경로와 등록 경로(시드 스크립트 → 관리자 페이지)의 선택지는
+      [decisions/sticker-asset-sourcing.md](./decisions/sticker-asset-sourcing.md)(미결)
 - [ ] **세이프 에어리어 실측값** — 상단 약 10%·하단 약 20%·우측 버튼 레일은 추정치다.
       실기기 캡처가 필요하다. 값은 스펙에 굽지 않고 **버전드 팩**으로 둔다(kickoff §1.1 B-3) —
       스펙에 값으로 넣으면 플랫폼 UI 가 바뀌어도 이미 저장된 스펙을 못 고친다
@@ -446,7 +454,8 @@ cloudflared tunnel login                        # 브라우저 인증, 1회
 **2026-08-31 개발자 회의**: SNS 웹훅 연동에 HTTPS 도메인이 필요해 **사내 AWS 등록 현황을 파악한 뒤
 도메인을 추가**하기로 했다([meetings/2026-08-31-dev-sync.md](./meetings/2026-08-31-dev-sync.md) §1).
 사내 AWS 도메인으로 가면 위 cloudflared named tunnel 경로는 쓰지 않고 운영 배포(B-1) 경로에서
-해결된다 — 그 경우 개발 검증은 임시 터널을 계속 쓴다.
+해결된다 — 그 경우 개발 검증은 임시 터널을 계속 쓴다. "웹훅 연동"이 어느 웹훅을 뜻하는지는
+[decisions/sns-webhook-scope.md](./decisions/sns-webhook-scope.md)(미결)에서 정한다 — 도메인 작업은 그 답과 무관하게 진행한다.
 
 **완료 조건**: Cloudflare 에 등록된 보유 도메인 확보, 또는 사내 AWS 도메인을 운영 도메인으로 확정.
 운영 도메인이 정해지면 그것이 `CLOUDFRONT_DOMAIN` / `S3_PUBLIC_ENDPOINT` 의 실제 값이 되므로

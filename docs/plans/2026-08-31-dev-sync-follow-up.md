@@ -151,8 +151,21 @@ T6 에셋 조달 ──▶ 매니페스트 시드 ──▶ (필요 시) 관리�
 T5 자막 · T7 위치 · T9 확인 : 독립
 ```
 
-**결정 회의 1회로 묶을 것**(구현보다 먼저, 같은 자리에서): T2 세 축 · A-1 ①~⑤ · T5 자막 ·
-T1 "어떤 웹훅인가" · T6 커미션 여부. 이 다섯이 정해지지 않으면 T3·T4·T6 구현은 시작할 수 없다.
+**결정 회의 1회로 묶을 것**(구현보다 먼저, 같은 자리에서). 항목마다 배경·영향 범위·선택지·결과를
+정리한 결정 요청 문서가 `docs/decisions/`에 미결 상태로 있다:
+
+| 결정 | 문서 | 트랙 |
+|---|---|---|
+| 영상 보관 기간(15일 만료 vs 2GB 한도) | [snap-retention-period.md](../decisions/snap-retention-period.md) | T2 |
+| 업로드 후 로컬 삭제 시점 | [local-copy-after-upload.md](../decisions/local-copy-after-upload.md) | T2 |
+| 내보내기 후 프로젝트·결과물 삭제 | [movie-cleanup-after-export.md](../decisions/movie-cleanup-after-export.md) | T2 |
+| 무비 내보내기 세부 규칙 ①~⑤ | [movie-export-policy.md](../decisions/movie-export-policy.md) | T3 |
+| 자막 소프트 vs 번인 | [subtitle-rendering.md](../decisions/subtitle-rendering.md) | T5 |
+| "웹훅 연동"의 범위 | [sns-webhook-scope.md](../decisions/sns-webhook-scope.md) | T1 |
+| 스티커 조달 경로·등록 경로(관리자 페이지 시점) | [sticker-asset-sourcing.md](../decisions/sticker-asset-sourcing.md) | T6 |
+| BGM 조달(AI 생성 포함) | [bgm-sourcing.md](../decisions/bgm-sourcing.md) | T4 |
+
+이것들이 정해지지 않으면 T3·T4·T6 구현은 시작할 수 없다.
 
 **결정과 무관하게 지금 시작할 수 있는 것**: T1 1~3(도메인·인증서·배포 타깃) · T4 약관 비교표 ·
 T6 1(에셋 라이선스 조사) · T9.
