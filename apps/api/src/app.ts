@@ -31,7 +31,18 @@ import { snsWebhookRoutes } from './routes/sns-webhook.js';
 import { billingRoutes } from './routes/billing.js';
 import { billingWebhookRoutes } from './routes/billing-webhook.js';
 
-export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
+export interface BuildAppOptions {
+  /**
+   * OpenAPI 문서 노출을 환경 판정 대신 강제한다. 스펙 스냅샷을 만들거나 검사할 때 쓴다 —
+   * 개발 로그인 스킴은 환경마다 달라 스냅샷에 넣지 않는다.
+   */
+  docs?: { enabled: boolean; allowDevLogin: boolean };
+}
+
+export async function buildApp(
+  config: AppConfig,
+  options: BuildAppOptions = {},
+): Promise<FastifyInstance> {
   const app = Fastify({
     logger: {
       level: process.env.LOG_LEVEL ?? 'info',
@@ -133,12 +144,15 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   // 주입으로 값을 받는데, NODE_ENV 주입을 빠뜨리거나 오타를 내도 배포는 성공한다.
   // `!==` 로 두면 그 경우 문서와 개발 로그인이 열린 채로 뜬다 — 닫히는 쪽으로 떨어뜨린다.
   const isDevelopment = process.env.NODE_ENV === 'development';
-  const docsEnabled = isDevelopment || process.env.ENABLE_DOCS === 'true';
-  if (docsEnabled) {
+  const docs = options.docs ?? {
+    enabled: isDevelopment || process.env.ENABLE_DOCS === 'true',
+    allowDevLogin: isDevelopment,
+  };
+  if (docs.enabled) {
     await registerDocs(app, {
       supabaseUrl: config.supabaseUrl,
       supabasePublishableKey: config.supabasePublishableKey,
-      allowDevLogin: isDevelopment,
+      allowDevLogin: docs.allowDevLogin,
     });
   }
 

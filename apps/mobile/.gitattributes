@@ -4,8 +4,3 @@
 # (`git diff --text` still shows it), and `linguist-generated` collapses it in
 # GitHub reviews.
 src/shared/api/schema.d.ts linguist-generated=true -diff
-
-# Fetched verbatim by `npm run api:pull`. Collapsed in GitHub reviews because it
-# is machine-produced, but its diff stays readable — this file *is* the backend
-# contract, so a spec change is the thing worth reviewing.
-docs/api/openapi.json linguist-generated=true

@@ -21,7 +21,9 @@
     "seed:locations": "node --env-file=.env prisma/seeds/seed-locations.mjs",
     "ig:probe": "node --env-file=.env --import tsx scripts/ig-token-probe.ts",
     "ig:publish-probe": "node --env-file=.env --import tsx scripts/ig-publish-probe.ts",
-    "ig:container-probe": "node --env-file=.env --import tsx scripts/ig-container-probe.ts"
+    "ig:container-probe": "node --env-file=.env --import tsx scripts/ig-container-probe.ts",
+    "openapi:write": "node --env-file=.env --import tsx scripts/openapi.ts",
+    "openapi:check": "node --env-file=.env --import tsx scripts/openapi.ts --check"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1092.0",

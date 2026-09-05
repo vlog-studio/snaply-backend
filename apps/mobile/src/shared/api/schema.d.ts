@@ -46,14 +46,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -62,14 +55,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
             };
@@ -282,16 +268,7 @@ export interface paths {
                         "application/json": {
                             /** @enum {boolean} */
                             success: true;
-                            data: {
-                                /** Format: uuid */
-                                id: string;
-                                nickname: string | null;
-                                avatarUrl: string | null;
-                                interests: string[];
-                                notificationEnabled: boolean;
-                                quietStart: number;
-                                quietEnd: number;
-                            };
+                            data: components["schemas"]["UserProfile"];
                         };
                     };
                 };
@@ -301,14 +278,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -323,7 +293,10 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
-                                /** Format: date-time */
+                                /**
+                                 * Format: date-time
+                                 * @description ACCOUNT_PENDING_DELETION — 이 시각 이전에는 POST /auth/me/restore 로 복구 가능
+                                 */
                                 purgeAfter?: string;
                             };
                         };
@@ -335,14 +308,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -351,14 +317,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -367,14 +326,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
             };
@@ -406,7 +358,10 @@ export interface paths {
                             data: {
                                 /** @enum {boolean} */
                                 deleted: true;
-                                /** Format: date-time */
+                                /**
+                                 * Format: date-time
+                                 * @description 이 시각 이후 배치가 실삭제한다 — 그 전에는 복구 가능
+                                 */
                                 purgeAfter: string;
                             };
                         };
@@ -418,14 +373,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -440,7 +388,10 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
-                                /** Format: date-time */
+                                /**
+                                 * Format: date-time
+                                 * @description ACCOUNT_PENDING_DELETION — 이 시각 이전에는 POST /auth/me/restore 로 복구 가능
+                                 */
                                 purgeAfter?: string;
                             };
                         };
@@ -452,14 +403,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -468,14 +412,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
             };
@@ -490,7 +427,7 @@ export interface paths {
                 path?: never;
                 cookie?: never;
             };
-            requestBody?: {
+            requestBody: {
                 content: {
                     "application/json": {
                         nickname?: string;
@@ -509,16 +446,7 @@ export interface paths {
                         "application/json": {
                             /** @enum {boolean} */
                             success: true;
-                            data: {
-                                /** Format: uuid */
-                                id: string;
-                                nickname: string | null;
-                                avatarUrl: string | null;
-                                interests: string[];
-                                notificationEnabled: boolean;
-                                quietStart: number;
-                                quietEnd: number;
-                            };
+                            data: components["schemas"]["UserProfile"];
                         };
                     };
                 };
@@ -528,14 +456,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -544,14 +465,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -566,7 +480,10 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
-                                /** Format: date-time */
+                                /**
+                                 * Format: date-time
+                                 * @description ACCOUNT_PENDING_DELETION — 이 시각 이전에는 POST /auth/me/restore 로 복구 가능
+                                 */
                                 purgeAfter?: string;
                             };
                         };
@@ -578,14 +495,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -594,14 +504,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
             };
@@ -649,14 +552,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -665,14 +561,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -687,7 +576,10 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
-                                /** Format: date-time */
+                                /**
+                                 * Format: date-time
+                                 * @description ACCOUNT_PENDING_DELETION — 이 시각 이전에는 POST /auth/me/restore 로 복구 가능
+                                 */
                                 purgeAfter?: string;
                             };
                         };
@@ -699,14 +591,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -715,14 +600,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
             };
@@ -780,14 +658,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -796,14 +667,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -818,7 +682,10 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
-                                /** Format: date-time */
+                                /**
+                                 * Format: date-time
+                                 * @description ACCOUNT_PENDING_DELETION — 이 시각 이전에는 POST /auth/me/restore 로 복구 가능
+                                 */
                                 purgeAfter?: string;
                             };
                         };
@@ -830,14 +697,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -846,14 +706,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
             };
@@ -940,14 +793,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -956,14 +802,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -978,7 +817,10 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
-                                /** Format: date-time */
+                                /**
+                                 * Format: date-time
+                                 * @description ACCOUNT_PENDING_DELETION — 이 시각 이전에는 POST /auth/me/restore 로 복구 가능
+                                 */
                                 purgeAfter?: string;
                             };
                         };
@@ -990,14 +832,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -1006,14 +841,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
             };
@@ -1072,22 +900,7 @@ export interface paths {
                             /** @enum {boolean} */
                             success: true;
                             data: {
-                                items: {
-                                    /** Format: uuid */
-                                    id: string;
-                                    /** @enum {string} */
-                                    kind: "source" | "result";
-                                    originalUrls: string[];
-                                    editedUrl: string | null;
-                                    thumbnailUrl: string | null;
-                                    durationSeconds: number | null;
-                                    /** @enum {string|null} */
-                                    stylePreset: "감성" | "여행" | "일상" | null;
-                                    /** @enum {string} */
-                                    status: "pending" | "ready" | "processing" | "done" | "failed";
-                                    /** Format: date-time */
-                                    createdAt: string;
-                                }[];
+                                items: components["schemas"]["Video"][];
                                 nextCursor: string | null;
                             };
                         };
@@ -1099,14 +912,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -1115,14 +921,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -1137,7 +936,10 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
-                                /** Format: date-time */
+                                /**
+                                 * Format: date-time
+                                 * @description ACCOUNT_PENDING_DELETION — 이 시각 이전에는 POST /auth/me/restore 로 복구 가능
+                                 */
                                 purgeAfter?: string;
                             };
                         };
@@ -1149,14 +951,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -1165,14 +960,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
             };
@@ -1231,22 +1019,7 @@ export interface paths {
                         "application/json": {
                             /** @enum {boolean} */
                             success: true;
-                            data: {
-                                /** Format: uuid */
-                                id: string;
-                                /** @enum {string} */
-                                kind: "source" | "result";
-                                originalUrls: string[];
-                                editedUrl: string | null;
-                                thumbnailUrl: string | null;
-                                durationSeconds: number | null;
-                                /** @enum {string|null} */
-                                stylePreset: "감성" | "여행" | "일상" | null;
-                                /** @enum {string} */
-                                status: "pending" | "ready" | "processing" | "done" | "failed";
-                                /** Format: date-time */
-                                createdAt: string;
-                            };
+                            data: components["schemas"]["Video"];
                         };
                     };
                 };
@@ -1256,14 +1029,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -1272,14 +1038,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -1294,7 +1053,10 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
-                                /** Format: date-time */
+                                /**
+                                 * Format: date-time
+                                 * @description ACCOUNT_PENDING_DELETION — 이 시각 이전에는 POST /auth/me/restore 로 복구 가능
+                                 */
                                 purgeAfter?: string;
                             };
                         };
@@ -1306,14 +1068,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -1322,14 +1077,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -1338,14 +1086,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
             };
@@ -1399,22 +1140,7 @@ export interface paths {
                         "application/json": {
                             /** @enum {boolean} */
                             success: true;
-                            data: {
-                                /** Format: uuid */
-                                id: string;
-                                /** @enum {string} */
-                                kind: "source" | "result";
-                                originalUrls: string[];
-                                editedUrl: string | null;
-                                thumbnailUrl: string | null;
-                                durationSeconds: number | null;
-                                /** @enum {string|null} */
-                                stylePreset: "감성" | "여행" | "일상" | null;
-                                /** @enum {string} */
-                                status: "pending" | "ready" | "processing" | "done" | "failed";
-                                /** Format: date-time */
-                                createdAt: string;
-                            };
+                            data: components["schemas"]["Video"];
                         };
                     };
                 };
@@ -1424,14 +1150,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -1446,7 +1165,10 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
-                                /** Format: date-time */
+                                /**
+                                 * Format: date-time
+                                 * @description ACCOUNT_PENDING_DELETION — 이 시각 이전에는 POST /auth/me/restore 로 복구 가능
+                                 */
                                 purgeAfter?: string;
                             };
                         };
@@ -1458,14 +1180,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -1474,14 +1189,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -1490,14 +1198,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
             };
@@ -1515,7 +1216,7 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    /** @description 삭제할 영상 id(uuid) */
+                    /** @description 영상 id(uuid) */
                     id: string;
                 };
                 cookie?: never;
@@ -1544,14 +1245,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -1566,7 +1260,10 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
-                                /** Format: date-time */
+                                /**
+                                 * Format: date-time
+                                 * @description ACCOUNT_PENDING_DELETION — 이 시각 이전에는 POST /auth/me/restore 로 복구 가능
+                                 */
                                 purgeAfter?: string;
                             };
                         };
@@ -1578,14 +1275,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -1594,14 +1284,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -1610,14 +1293,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
             };
@@ -1669,45 +1345,7 @@ export interface paths {
                         "application/json": {
                             /** @enum {boolean} */
                             success: true;
-                            data: {
-                                /** Format: uuid */
-                                id: string;
-                                /** Format: uuid */
-                                videoId: string;
-                                version: number;
-                                /** @enum {string} */
-                                status: "queued" | "processing" | "done" | "failed";
-                                result: {
-                                    /** @description 워커가 FFprobe 로 실측한 길이. 클라이언트가 보고한 값이 아니다. */
-                                    durationMs: number | null;
-                                    frameTimestampsMs: number[];
-                                    summary: string;
-                                    topics: string[];
-                                    places: string[];
-                                    objects: string[];
-                                    actions: string[];
-                                    moods: string[];
-                                    visualQuality: {
-                                        score: number;
-                                        issues: string[];
-                                        /** @description 자동 편집 후보로 쓸 수 있는지. 추천이 1차로 보는 값이다. */
-                                        usableForEdit: boolean;
-                                    };
-                                    confidence: number | null;
-                                } | null;
-                                error: {
-                                    code: string;
-                                    /** @description false 면 다시 요청해도 같은 결과다(손상된 영상·정책 거절 등). */
-                                    retryable: boolean;
-                                } | null;
-                                modelVersion: string | null;
-                                promptVersion: string | null;
-                                attempts: number;
-                                /** Format: date-time */
-                                createdAt: string;
-                                /** Format: date-time */
-                                completedAt: string | null;
-                            };
+                            data: components["schemas"]["VideoAnalysis"];
                         };
                     };
                 };
@@ -1717,14 +1355,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -1739,7 +1370,10 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
-                                /** Format: date-time */
+                                /**
+                                 * Format: date-time
+                                 * @description ACCOUNT_PENDING_DELETION — 이 시각 이전에는 POST /auth/me/restore 로 복구 가능
+                                 */
                                 purgeAfter?: string;
                             };
                         };
@@ -1751,14 +1385,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -1767,14 +1394,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -1783,14 +1403,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
             };
@@ -1856,14 +1469,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -1872,14 +1478,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -1894,7 +1493,10 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
-                                /** Format: date-time */
+                                /**
+                                 * Format: date-time
+                                 * @description ACCOUNT_PENDING_DELETION — 이 시각 이전에는 POST /auth/me/restore 로 복구 가능
+                                 */
                                 purgeAfter?: string;
                             };
                         };
@@ -1906,14 +1508,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -1944,14 +1539,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -1960,14 +1548,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -1976,14 +1557,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
             };
@@ -2039,6 +1613,7 @@ export interface paths {
             requestBody: {
                 content: {
                     "application/json": {
+                        /** @description 이어붙일 클립 구간(권장). **배열 순서대로** 연결되며 같은 영상을 다른 구간으로 반복 사용할 수 있다. 1~10개. */
                         clips?: {
                             /** Format: uuid */
                             videoId: string;
@@ -2046,7 +1621,7 @@ export interface paths {
                             startMs?: number;
                             endMs?: number;
                         }[];
-                        /** @description 이어붙일 원본 클립 id 목록. **배열 순서대로** 연결된다. 1~10개. 모두 `status: "ready"`이고 내 소유여야 한다. */
+                        /** @description 이어붙일 원본 클립 id 목록(구버전 호환 — `clips` 를 사용하세요). **배열 순서대로** 연결된다. 1~10개. 모두 `status: "ready"`이고 내 소유여야 한다. */
                         videoIds?: string[];
                         /**
                          * @description 편집 스타일. 워커가 이 값으로 BGM 선곡·컷 호흡·색보정을 결정한다. 세 값 중 하나만 허용(다른 값은 400).
@@ -2070,7 +1645,7 @@ export interface paths {
                          * @enum {string}
                          */
                         fitMode?: "contain" | "cover" | "blur_background";
-                    } & (unknown | unknown);
+                    };
                 };
             };
             responses: {
@@ -2096,14 +1671,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -2112,14 +1680,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -2152,7 +1713,10 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
-                                /** Format: date-time */
+                                /**
+                                 * Format: date-time
+                                 * @description ACCOUNT_PENDING_DELETION — 이 시각 이전에는 POST /auth/me/restore 로 복구 가능
+                                 */
                                 purgeAfter?: string;
                             };
                         };
@@ -2164,14 +1728,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -2180,14 +1737,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
             };
@@ -2239,56 +1789,7 @@ export interface paths {
                         "application/json": {
                             /** @enum {boolean} */
                             success: true;
-                            data: {
-                                /** Format: uuid */
-                                id: string;
-                                /** Format: uuid */
-                                videoId: string;
-                                pipelineVersion: string;
-                                editSpec: {
-                                    /** @enum {integer} */
-                                    version: 1;
-                                    /** @enum {string} */
-                                    stylePreset: "감성" | "여행" | "일상";
-                                } | {
-                                    /** @enum {integer} */
-                                    version: 2;
-                                    /** @enum {string} */
-                                    stylePreset: "감성" | "여행" | "일상";
-                                    clips: {
-                                        /** Format: uuid */
-                                        videoId: string;
-                                        startMs: number;
-                                        endMs?: number;
-                                    }[];
-                                };
-                                renderSpec: {
-                                    /** @enum {integer} */
-                                    profileVersion: 1;
-                                    /** @enum {string} */
-                                    outputProfile: "short_vertical" | "youtube_landscape" | "instagram_portrait" | "square";
-                                    width: number;
-                                    height: number;
-                                    fps: number;
-                                    /** @enum {string} */
-                                    fitMode: "contain" | "cover" | "blur_background";
-                                };
-                                /** @enum {string} */
-                                status: "queued" | "processing" | "done" | "failed" | "canceled";
-                                progress: number;
-                                errorMessage: string | null;
-                                /**
-                                 * @description 실패 분류 코드. status가 failed일 때만 채워진다.
-                                 * @enum {string|null}
-                                 */
-                                errorCode: "TIMEOUT" | "SOURCE_UNAVAILABLE" | "QUEUE_FAILED" | "INTERNAL" | null;
-                                /** Format: date-time */
-                                startedAt: string | null;
-                                /** Format: date-time */
-                                completedAt: string | null;
-                                /** Format: date-time */
-                                createdAt: string;
-                            };
+                            data: components["schemas"]["EditJob"];
                         };
                     };
                 };
@@ -2298,14 +1799,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -2320,7 +1814,10 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
-                                /** Format: date-time */
+                                /**
+                                 * Format: date-time
+                                 * @description ACCOUNT_PENDING_DELETION — 이 시각 이전에는 POST /auth/me/restore 로 복구 가능
+                                 */
                                 purgeAfter?: string;
                             };
                         };
@@ -2332,14 +1829,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -2348,14 +1838,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -2364,14 +1847,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
             };
@@ -2422,14 +1898,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -2444,7 +1913,10 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
-                                /** Format: date-time */
+                                /**
+                                 * Format: date-time
+                                 * @description ACCOUNT_PENDING_DELETION — 이 시각 이전에는 POST /auth/me/restore 로 복구 가능
+                                 */
                                 purgeAfter?: string;
                             };
                         };
@@ -2456,14 +1928,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -2472,14 +1937,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -2488,14 +1946,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -2504,14 +1955,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
             };
@@ -2566,25 +2010,7 @@ export interface paths {
                                  * @description 목록에서 가장 최근에 바뀐 템플릿의 시각. 앱의 캐시 갱신 판단 근거
                                  */
                                 updatedAt: string;
-                                templates: {
-                                    /** @description 'walk' 처럼 고정된 사람이 읽는 id */
-                                    id: string;
-                                    name: string;
-                                    description: string;
-                                    /** @description POST /edit-jobs 가 받는 프리셋 이름 그대로. 앱이 모르는 프리셋이 오면 그 템플릿을 건너뛴다 */
-                                    style: string;
-                                    /** @description 앱에서만 쓰는 트랙 키. 편집 파이프라인은 받지 않는다 */
-                                    bgm: string;
-                                    /** @description 촬영 순서 */
-                                    slots: {
-                                        /** @description 템플릿 안에서만 유일한 슬롯 id */
-                                        id: string;
-                                        /** @description 장면 이름 (예: 골목) */
-                                        label: string;
-                                        /** @description 무엇을 찍을지에 대한 지시 (예: 좁은 길, 걷는 발) */
-                                        hint: string;
-                                    }[];
-                                }[];
+                                templates: components["schemas"]["MovieTemplate"][];
                             };
                         };
                     };
@@ -2595,14 +2021,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -2617,7 +2036,10 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
-                                /** Format: date-time */
+                                /**
+                                 * Format: date-time
+                                 * @description ACCOUNT_PENDING_DELETION — 이 시각 이전에는 POST /auth/me/restore 로 복구 가능
+                                 */
                                 purgeAfter?: string;
                             };
                         };
@@ -2629,14 +2051,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -2645,14 +2060,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
             };
@@ -2754,14 +2162,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -2776,7 +2177,10 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
-                                /** Format: date-time */
+                                /**
+                                 * Format: date-time
+                                 * @description ACCOUNT_PENDING_DELETION — 이 시각 이전에는 POST /auth/me/restore 로 복구 가능
+                                 */
                                 purgeAfter?: string;
                             };
                         };
@@ -2788,14 +2192,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -2804,14 +2201,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -2820,14 +2210,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -2836,14 +2219,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
             };
@@ -2900,34 +2276,7 @@ export interface paths {
                         "application/json": {
                             /** @enum {boolean} */
                             success: true;
-                            data: {
-                                /** Format: uuid */
-                                id: string;
-                                templateId: string;
-                                /** @enum {string} */
-                                status: "processing" | "done" | "failed";
-                                /** @description 템플릿의 슬롯 순서 그대로. done 이 되기 전에는 비어 있다 */
-                                slots: {
-                                    slotId: string;
-                                    /**
-                                     * Format: uuid
-                                     * @description null 이면 채울 후보가 없었다는 뜻
-                                     */
-                                    videoId: null | string;
-                                    /** @description 0~1 슬롯 적합도. 스냅 내용에 대한 주장이 아니다 */
-                                    score: null | number;
-                                }[];
-                                excluded: {
-                                    /** Format: uuid */
-                                    videoId: string;
-                                    /** @enum {string} */
-                                    reason: "unusable" | "analysis_failed" | "no_match";
-                                }[];
-                                /** Format: date-time */
-                                createdAt: string;
-                                /** Format: date-time */
-                                completedAt: null | string;
-                            };
+                            data: components["schemas"]["MovieRecommendation"];
                         };
                     };
                 };
@@ -2937,14 +2286,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -2959,7 +2301,10 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
-                                /** Format: date-time */
+                                /**
+                                 * Format: date-time
+                                 * @description ACCOUNT_PENDING_DELETION — 이 시각 이전에는 POST /auth/me/restore 로 복구 가능
+                                 */
                                 purgeAfter?: string;
                             };
                         };
@@ -2971,14 +2316,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -2987,14 +2325,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -3003,14 +2334,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
             };
@@ -3053,17 +2377,7 @@ export interface paths {
                         "application/json": {
                             /** @enum {boolean} */
                             success: true;
-                            data: {
-                                /** Format: uuid */
-                                id: string;
-                                name: string;
-                                lat: number;
-                                lng: number;
-                                radiusMeters: number;
-                                /** @enum {string} */
-                                category: "관광지" | "카페" | "여행지";
-                                distanceMeters: number;
-                            }[];
+                            data: components["schemas"]["NearbyLocation"][];
                         };
                     };
                 };
@@ -3073,14 +2387,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -3089,14 +2396,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -3111,7 +2411,10 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
-                                /** Format: date-time */
+                                /**
+                                 * Format: date-time
+                                 * @description ACCOUNT_PENDING_DELETION — 이 시각 이전에는 POST /auth/me/restore 로 복구 가능
+                                 */
                                 purgeAfter?: string;
                             };
                         };
@@ -3123,14 +2426,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -3139,14 +2435,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
             };
@@ -3212,14 +2501,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -3228,14 +2510,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -3250,7 +2525,10 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
-                                /** Format: date-time */
+                                /**
+                                 * Format: date-time
+                                 * @description ACCOUNT_PENDING_DELETION — 이 시각 이전에는 POST /auth/me/restore 로 복구 가능
+                                 */
                                 purgeAfter?: string;
                             };
                         };
@@ -3262,14 +2540,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -3278,14 +2549,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -3294,14 +2558,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
             };
@@ -3338,13 +2595,7 @@ export interface paths {
                         "application/json": {
                             /** @enum {boolean} */
                             success: true;
-                            data: {
-                                /** @enum {string} */
-                                platform: "instagram" | "tiktok";
-                                platformUsername: string | null;
-                                /** Format: date-time */
-                                connectedAt: string;
-                            }[];
+                            data: components["schemas"]["SnsConnection"][];
                         };
                     };
                 };
@@ -3354,14 +2605,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -3376,7 +2620,10 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
-                                /** Format: date-time */
+                                /**
+                                 * Format: date-time
+                                 * @description ACCOUNT_PENDING_DELETION — 이 시각 이전에는 POST /auth/me/restore 로 복구 가능
+                                 */
                                 purgeAfter?: string;
                             };
                         };
@@ -3388,14 +2635,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -3404,14 +2644,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
             };
@@ -3424,19 +2657,21 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/sns/instagram/connect": {
+    "/sns/{platform}/connect": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** instagram OAuth URL */
+        /** SNS OAuth URL */
         get: {
             parameters: {
                 query?: never;
                 header?: never;
-                path?: never;
+                path: {
+                    platform: "instagram" | "tiktok";
+                };
                 cookie?: never;
             };
             requestBody?: never;
@@ -3462,14 +2697,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -3484,7 +2712,10 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
-                                /** Format: date-time */
+                                /**
+                                 * Format: date-time
+                                 * @description ACCOUNT_PENDING_DELETION — 이 시각 이전에는 POST /auth/me/restore 로 복구 가능
+                                 */
                                 purgeAfter?: string;
                             };
                         };
@@ -3496,14 +2727,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -3512,14 +2736,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
             };
@@ -3532,19 +2749,25 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/sns/instagram/callback": {
+    "/sns/{platform}/callback": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** instagram OAuth 콜백 */
+        /** SNS OAuth 콜백 */
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    code?: string;
+                    state?: string;
+                    error?: string;
+                };
                 header?: never;
-                path?: never;
+                path: {
+                    platform: "instagram" | "tiktok";
+                };
                 cookie?: never;
             };
             requestBody?: never;
@@ -3566,7 +2789,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/sns/instagram/disconnect": {
+    "/sns/{platform}/disconnect": {
         parameters: {
             query?: never;
             header?: never;
@@ -3576,12 +2799,14 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** instagram 연동 해제 */
+        /** SNS 연동 해제 */
         delete: {
             parameters: {
                 query?: never;
                 header?: never;
-                path?: never;
+                path: {
+                    platform: "instagram" | "tiktok";
+                };
                 cookie?: never;
             };
             requestBody?: never;
@@ -3608,14 +2833,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -3630,7 +2848,10 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
-                                /** Format: date-time */
+                                /**
+                                 * Format: date-time
+                                 * @description ACCOUNT_PENDING_DELETION — 이 시각 이전에는 POST /auth/me/restore 로 복구 가능
+                                 */
                                 purgeAfter?: string;
                             };
                         };
@@ -3642,14 +2863,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -3658,14 +2872,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -3674,14 +2881,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
             };
@@ -3691,7 +2891,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/sns/instagram/upload": {
+    "/sns/{platform}/upload": {
         parameters: {
             query?: never;
             header?: never;
@@ -3705,7 +2905,9 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: never;
-                path?: never;
+                path: {
+                    platform: "instagram" | "tiktok";
+                };
                 cookie?: never;
             };
             requestBody: {
@@ -3732,9 +2934,14 @@ export interface paths {
                                 uploadId: string;
                                 /** @enum {string} */
                                 platform: "instagram" | "tiktok";
-                                /** @enum {string} */
-                                status: "success";
+                                /**
+                                 * @description `success` 는 게시 완료. `pending` 은 플랫폼이 아직 처리 중(실패가 아님 — 앱은 "업로드 중" 으로 표시).
+                                 * @enum {string}
+                                 */
+                                status: "pending" | "success" | "failed";
                                 platformPostId: string | null;
+                                /** @description true 면 업로드는 끝났지만 **사용자가 플랫폼 앱에서 마무리해야** 게시된다(틱톡 받은함 모드). 앱은 "틱톡 앱에서 마무리하세요" 를 안내한다. */
+                                requiresUserAction?: boolean;
                             };
                         };
                     };
@@ -3745,14 +2952,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -3761,14 +2961,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -3783,7 +2976,10 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
-                                /** Format: date-time */
+                                /**
+                                 * Format: date-time
+                                 * @description ACCOUNT_PENDING_DELETION — 이 시각 이전에는 POST /auth/me/restore 로 복구 가능
+                                 */
                                 purgeAfter?: string;
                             };
                         };
@@ -3795,14 +2991,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -3811,14 +3000,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -3827,435 +3009,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/sns/tiktok/connect": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** tiktok OAuth URL */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Default Response */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: true;
-                            data: {
-                                authorizeUrl: string;
-                            };
-                        };
-                    };
-                };
-                /** @description Default Response */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
-                    };
-                };
-                /** @description Default Response */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                                /** Format: date-time */
-                                purgeAfter?: string;
-                            };
-                        };
-                    };
-                };
-                /** @description Default Response */
-                429: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
-                    };
-                };
-                /** @description Default Response */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/sns/tiktok/callback": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** tiktok OAuth 콜백 */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Default Response */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/sns/tiktok/disconnect": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** tiktok 연동 해제 */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Default Response */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: true;
-                            data: {
-                                /** @enum {boolean} */
-                                disconnected: true;
-                            };
-                        };
-                    };
-                };
-                /** @description Default Response */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
-                    };
-                };
-                /** @description Default Response */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                                /** Format: date-time */
-                                purgeAfter?: string;
-                            };
-                        };
-                    };
-                };
-                /** @description Default Response */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
-                    };
-                };
-                /** @description Default Response */
-                429: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
-                    };
-                };
-                /** @description Default Response */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
-                    };
-                };
-            };
-        };
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/sns/tiktok/upload": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** SNS 업로드 */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": {
-                        /** Format: uuid */
-                        videoId: string;
-                        caption?: string;
-                    };
-                };
-            };
-            responses: {
-                /** @description Default Response */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: true;
-                            data: {
-                                /** Format: uuid */
-                                uploadId: string;
-                                /** @enum {string} */
-                                platform: "instagram" | "tiktok";
-                                /** @enum {string} */
-                                status: "success";
-                                platformPostId: string | null;
-                            };
-                        };
-                    };
-                };
-                /** @description Default Response */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
-                    };
-                };
-                /** @description Default Response */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
-                    };
-                };
-                /** @description Default Response */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                                /** Format: date-time */
-                                purgeAfter?: string;
-                            };
-                        };
-                    };
-                };
-                /** @description Default Response */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
-                    };
-                };
-                /** @description Default Response */
-                429: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
-                    };
-                };
-                /** @description Default Response */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
             };
@@ -4348,8 +3102,11 @@ export interface paths {
                             /** @enum {boolean} */
                             success: true;
                             data: {
+                                /** @description 스토어 상품 ID. 양 스토어에 같은 ID로 등록한다. */
                                 productId: string;
+                                /** @description 지급할 크레딧 수. 웹훅이 지급량을 정하는 유일한 근거다. */
                                 credits: number;
+                                /** @description 앱의 표시 순서 */
                                 displayOrder: number;
                             }[];
                         };
@@ -4361,14 +3118,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -4377,14 +3127,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
             };
@@ -4431,15 +3174,7 @@ export interface paths {
                             data: {
                                 balance: number;
                                 /** @description 최신순 **최대 50건**. 전체 내역이 아니다 — 페이지네이션은 없다. */
-                                entries: {
-                                    /** Format: uuid */
-                                    id: string;
-                                    delta: number;
-                                    /** @enum {string} */
-                                    reason: "purchase" | "signup_bonus" | "export_reserve" | "export_refund" | "store_refund_revoke" | "promo" | "ad_reward";
-                                    /** Format: date-time */
-                                    createdAt: string;
-                                }[];
+                                entries: components["schemas"]["CreditEntry"][];
                             };
                         };
                     };
@@ -4450,14 +3185,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -4472,7 +3200,10 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
-                                /** Format: date-time */
+                                /**
+                                 * Format: date-time
+                                 * @description ACCOUNT_PENDING_DELETION — 이 시각 이전에는 POST /auth/me/restore 로 복구 가능
+                                 */
                                 purgeAfter?: string;
                             };
                         };
@@ -4484,14 +3215,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -4500,14 +3224,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
             };
@@ -4552,6 +3269,7 @@ export interface paths {
                             /** @enum {boolean} */
                             success: true;
                             data: {
+                                /** @description 이번 호출로 새로 지급된 거래 수. 0 이면 이미 모두 반영돼 있었다는 뜻이다. */
                                 granted: number;
                                 balance: number;
                             };
@@ -4564,14 +3282,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -4586,7 +3297,10 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
-                                /** Format: date-time */
+                                /**
+                                 * Format: date-time
+                                 * @description ACCOUNT_PENDING_DELETION — 이 시각 이전에는 POST /auth/me/restore 로 복구 가능
+                                 */
                                 purgeAfter?: string;
                             };
                         };
@@ -4598,14 +3312,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -4614,14 +3321,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
             };
@@ -4664,13 +3364,20 @@ export interface paths {
                             /** @enum {boolean} */
                             success: true;
                             data: {
+                                /** @description false 면 앱은 진입점 자체를 숨긴다 (킬 스위치). */
                                 enabled: boolean;
                                 rewardCredits: number;
                                 dailyLimit: number;
                                 remainingToday: number;
-                                /** Format: date-time */
+                                /**
+                                 * Format: date-time
+                                 * @description 쿨다운 중일 때만 채운다. null 이면 지금 가능.
+                                 */
                                 nextAvailableAt: string | null;
-                                /** Format: date-time */
+                                /**
+                                 * Format: date-time
+                                 * @description 일일 한도 초기화 시각(KST 자정).
+                                 */
                                 resetsAt: string;
                             };
                         };
@@ -4682,14 +3389,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -4704,7 +3404,10 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
-                                /** Format: date-time */
+                                /**
+                                 * Format: date-time
+                                 * @description ACCOUNT_PENDING_DELETION — 이 시각 이전에는 POST /auth/me/restore 로 복구 가능
+                                 */
                                 purgeAfter?: string;
                             };
                         };
@@ -4716,14 +3419,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -4732,14 +3428,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
             };
@@ -4770,9 +3459,14 @@ export interface paths {
                             /** @enum {boolean} */
                             success: true;
                             data: {
-                                /** Format: uuid */
+                                /**
+                                 * Format: uuid
+                                 * @description 상태 폴링용 식별자. SSV 비밀(`nonce`)과 분리돼 있다.
+                                 */
                                 rewardId: string;
+                                /** @description AdMob SDK 의 `customData` 로 그대로 전달한다. */
                                 nonce: string;
+                                /** @description AdMob SDK 의 `userId` 로 그대로 전달한다. */
                                 ssvUserId: string;
                                 rewardCredits: number;
                                 /** Format: date-time */
@@ -4787,14 +3481,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -4809,7 +3496,10 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
-                                /** Format: date-time */
+                                /**
+                                 * Format: date-time
+                                 * @description ACCOUNT_PENDING_DELETION — 이 시각 이전에는 POST /auth/me/restore 로 복구 가능
+                                 */
                                 purgeAfter?: string;
                             };
                         };
@@ -4843,14 +3533,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -4859,14 +3542,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -4875,14 +3551,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
             };
@@ -4929,7 +3598,9 @@ export interface paths {
                                  * @enum {string}
                                  */
                                 status: "pending" | "abandoned" | "granted" | "expired" | "rejected";
+                                /** @description granted 일 때만 채워진다. */
                                 credits: number | null;
+                                /** @description 항상 현재 잔액 — 앱이 별도 호출을 하지 않아도 되게. */
                                 balance: number;
                             };
                         };
@@ -4941,14 +3612,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -4963,7 +3627,10 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
-                                /** Format: date-time */
+                                /**
+                                 * Format: date-time
+                                 * @description ACCOUNT_PENDING_DELETION — 이 시각 이전에는 POST /auth/me/restore 로 복구 가능
+                                 */
                                 purgeAfter?: string;
                             };
                         };
@@ -4975,14 +3642,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -4991,14 +3651,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -5007,14 +3660,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
             };
@@ -5055,7 +3701,9 @@ export interface paths {
                                  * @enum {string}
                                  */
                                 status: "pending" | "abandoned" | "granted" | "expired" | "rejected";
+                                /** @description granted 일 때만 채워진다. */
                                 credits: number | null;
+                                /** @description 항상 현재 잔액 — 앱이 별도 호출을 하지 않아도 되게. */
                                 balance: number;
                             };
                         };
@@ -5067,14 +3715,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -5089,7 +3730,10 @@ export interface paths {
                             error: {
                                 code: string;
                                 message: string;
-                                /** Format: date-time */
+                                /**
+                                 * Format: date-time
+                                 * @description ACCOUNT_PENDING_DELETION — 이 시각 이전에는 POST /auth/me/restore 로 복구 가능
+                                 */
                                 purgeAfter?: string;
                             };
                         };
@@ -5101,14 +3745,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -5117,14 +3754,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -5133,14 +3763,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
             };
@@ -5187,14 +3810,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -5203,14 +3819,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -5219,14 +3828,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
             };
@@ -5272,14 +3874,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -5288,14 +3883,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
                 /** @description Default Response */
@@ -5304,14 +3892,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: false;
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                        };
+                        "application/json": components["schemas"]["ApiError"];
                     };
                 };
             };
@@ -5327,7 +3908,418 @@ export interface paths {
 }
 export type webhooks = Record<string, never>;
 export interface components {
-    schemas: never;
+    schemas: {
+        ApiErrorInput: {
+            /** @enum {boolean} */
+            success: false;
+            error: {
+                code: string;
+                message: string;
+            };
+        };
+        UserProfileInput: {
+            /** Format: uuid */
+            id: string;
+            nickname: string | null;
+            avatarUrl: string | null;
+            interests: string[];
+            notificationEnabled: boolean;
+            quietStart: number;
+            quietEnd: number;
+        };
+        VideoInput: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            kind: "source" | "result";
+            originalUrls: string[];
+            editedUrl: string | null;
+            thumbnailUrl: string | null;
+            durationSeconds: number | null;
+            /** @enum {string|null} */
+            stylePreset: "감성" | "여행" | "일상" | null;
+            /** @enum {string} */
+            status: "pending" | "ready" | "processing" | "done" | "failed";
+            /** Format: date-time */
+            createdAt: string;
+        };
+        VideoAnalysisInput: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            videoId: string;
+            version: number;
+            /** @enum {string} */
+            status: "queued" | "processing" | "done" | "failed";
+            result: {
+                /** @description 워커가 FFprobe 로 실측한 길이. 클라이언트가 보고한 값이 아니다. */
+                durationMs: number | null;
+                frameTimestampsMs: number[];
+                summary: string;
+                topics: string[];
+                places: string[];
+                objects: string[];
+                actions: string[];
+                moods: string[];
+                visualQuality: {
+                    score: number;
+                    issues: string[];
+                    /** @description 자동 편집 후보로 쓸 수 있는지. 추천이 1차로 보는 값이다. */
+                    usableForEdit: boolean;
+                };
+                confidence: number | null;
+            } | null;
+            error: {
+                /** @description 분류 코드. 알려진 값: TIMEOUT | RATE_LIMITED | UPSTREAM_ERROR | NETWORK | SCHEMA_INVALID | AUTH_FAILED | BAD_REQUEST | MODEL_NOT_FOUND | SAFETY_REFUSED | EMPTY_OUTPUT | SOURCE_UNAVAILABLE | FRAME_EXTRACTION_FAILED | INTERNAL */
+                code: string;
+                /** @description false 면 다시 요청해도 같은 결과다(손상된 영상·정책 거절 등). */
+                retryable: boolean;
+            } | null;
+            modelVersion: string | null;
+            promptVersion: string | null;
+            attempts: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            completedAt: string | null;
+        };
+        EditJobInput: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            videoId: string;
+            pipelineVersion: string;
+            editSpec: {
+                /** @enum {number} */
+                version: 1;
+                /** @enum {string} */
+                stylePreset: "감성" | "여행" | "일상";
+            } | {
+                /** @enum {number} */
+                version: 2;
+                /** @enum {string} */
+                stylePreset: "감성" | "여행" | "일상";
+                clips: {
+                    /** Format: uuid */
+                    videoId: string;
+                    startMs: number;
+                    endMs?: number;
+                }[];
+            };
+            renderSpec: {
+                /** @enum {number} */
+                profileVersion: 1;
+                /** @enum {string} */
+                outputProfile: "short_vertical" | "youtube_landscape" | "instagram_portrait" | "square";
+                width: number;
+                height: number;
+                fps: number;
+                /** @enum {string} */
+                fitMode: "contain" | "cover" | "blur_background";
+            };
+            /** @enum {string} */
+            status: "queued" | "processing" | "done" | "failed" | "canceled";
+            progress: number;
+            errorMessage: string | null;
+            /**
+             * @description 실패 분류 코드. status가 failed일 때만 채워진다.
+             * @enum {string|null}
+             */
+            errorCode: "TIMEOUT" | "SOURCE_UNAVAILABLE" | "QUEUE_FAILED" | "INTERNAL" | null;
+            /** Format: date-time */
+            startedAt: string | null;
+            /** Format: date-time */
+            completedAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        NearbyLocationInput: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            lat: number;
+            lng: number;
+            radiusMeters: number;
+            /** @enum {string} */
+            category: "관광지" | "카페" | "여행지";
+            distanceMeters: number;
+        };
+        SnsConnectionInput: {
+            /** @enum {string} */
+            platform: "instagram" | "tiktok";
+            platformUsername: string | null;
+            /** Format: date-time */
+            connectedAt: string;
+        };
+        CreditEntryInput: {
+            /** Format: uuid */
+            id: string;
+            /** @description +지급 / -차감 */
+            delta: number;
+            /**
+             * @description 앱이 내역 화면 문구를 매핑하는 값. 닫힌 집합이다.
+             * @enum {string}
+             */
+            reason: "purchase" | "signup_bonus" | "export_reserve" | "export_refund" | "store_refund_revoke" | "promo" | "ad_reward";
+            /** Format: date-time */
+            createdAt: string;
+        };
+        MovieTemplateInput: {
+            /** @description 'walk' 처럼 고정된 사람이 읽는 id. 앱의 내장 폴백 카탈로그와 같은 값이다. */
+            id: string;
+            name: string;
+            description: string;
+            /**
+             * @description POST /edit-jobs 가 받는 프리셋 이름 그대로. 앱이 모르는 프리셋이 오면 그 템플릿을 건너뛴다
+             * @enum {string}
+             */
+            style: "감성" | "여행" | "일상";
+            /** @description 앱에서만 쓰는 트랙 키. 편집 파이프라인은 받지 않는다 */
+            bgm: string;
+            /** @description 촬영 순서 (`position` 오름차순) */
+            slots: {
+                /** @description 템플릿 안에서만 유일한 슬롯 id. 추천 응답이 슬롯을 가리키는 키다. */
+                id: string;
+                /** @description 장면 이름 (예: 골목) */
+                label: string;
+                /** @description 무엇을 찍을지에 대한 지시 (예: 좁은 길, 걷는 발) */
+                hint: string;
+            }[];
+        };
+        MovieRecommendationInput: {
+            /** Format: uuid */
+            id: string;
+            templateId: string;
+            /** @enum {string} */
+            status: "processing" | "done" | "failed";
+            /** @description 템플릿의 슬롯 순서 그대로. done 이 되기 전에는 비어 있다 */
+            slots: {
+                slotId: string;
+                /**
+                 * Format: uuid
+                 * @description null 이면 채울 후보가 없었다는 뜻
+                 */
+                videoId: string | null;
+                /** @description 0~1 슬롯 적합도. 스냅 내용에 대한 주장이 아니다 */
+                score: number | null;
+            }[];
+            excluded: {
+                /** Format: uuid */
+                videoId: string;
+                /** @enum {string} */
+                reason: "unusable" | "analysis_failed" | "no_match";
+            }[];
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            completedAt: string | null;
+        };
+        ApiError: {
+            /** @enum {boolean} */
+            success: false;
+            error: {
+                code: string;
+                message: string;
+            };
+        };
+        UserProfile: {
+            /** Format: uuid */
+            id: string;
+            nickname: string | null;
+            avatarUrl: string | null;
+            interests: string[];
+            notificationEnabled: boolean;
+            quietStart: number;
+            quietEnd: number;
+        };
+        Video: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            kind: "source" | "result";
+            originalUrls: string[];
+            editedUrl: string | null;
+            thumbnailUrl: string | null;
+            durationSeconds: number | null;
+            /** @enum {string|null} */
+            stylePreset: "감성" | "여행" | "일상" | null;
+            /** @enum {string} */
+            status: "pending" | "ready" | "processing" | "done" | "failed";
+            /** Format: date-time */
+            createdAt: string;
+        };
+        VideoAnalysis: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            videoId: string;
+            version: number;
+            /** @enum {string} */
+            status: "queued" | "processing" | "done" | "failed";
+            result: {
+                /** @description 워커가 FFprobe 로 실측한 길이. 클라이언트가 보고한 값이 아니다. */
+                durationMs: number | null;
+                frameTimestampsMs: number[];
+                summary: string;
+                topics: string[];
+                places: string[];
+                objects: string[];
+                actions: string[];
+                moods: string[];
+                visualQuality: {
+                    score: number;
+                    issues: string[];
+                    /** @description 자동 편집 후보로 쓸 수 있는지. 추천이 1차로 보는 값이다. */
+                    usableForEdit: boolean;
+                };
+                confidence: number | null;
+            } | null;
+            error: {
+                /** @description 분류 코드. 알려진 값: TIMEOUT | RATE_LIMITED | UPSTREAM_ERROR | NETWORK | SCHEMA_INVALID | AUTH_FAILED | BAD_REQUEST | MODEL_NOT_FOUND | SAFETY_REFUSED | EMPTY_OUTPUT | SOURCE_UNAVAILABLE | FRAME_EXTRACTION_FAILED | INTERNAL */
+                code: string;
+                /** @description false 면 다시 요청해도 같은 결과다(손상된 영상·정책 거절 등). */
+                retryable: boolean;
+            } | null;
+            modelVersion: string | null;
+            promptVersion: string | null;
+            attempts: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            completedAt: string | null;
+        };
+        EditJob: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            videoId: string;
+            pipelineVersion: string;
+            editSpec: {
+                /** @enum {number} */
+                version: 1;
+                /** @enum {string} */
+                stylePreset: "감성" | "여행" | "일상";
+            } | {
+                /** @enum {number} */
+                version: 2;
+                /** @enum {string} */
+                stylePreset: "감성" | "여행" | "일상";
+                clips: {
+                    /** Format: uuid */
+                    videoId: string;
+                    startMs: number;
+                    endMs?: number;
+                }[];
+            };
+            renderSpec: {
+                /** @enum {number} */
+                profileVersion: 1;
+                /** @enum {string} */
+                outputProfile: "short_vertical" | "youtube_landscape" | "instagram_portrait" | "square";
+                width: number;
+                height: number;
+                fps: number;
+                /** @enum {string} */
+                fitMode: "contain" | "cover" | "blur_background";
+            };
+            /** @enum {string} */
+            status: "queued" | "processing" | "done" | "failed" | "canceled";
+            progress: number;
+            errorMessage: string | null;
+            /**
+             * @description 실패 분류 코드. status가 failed일 때만 채워진다.
+             * @enum {string|null}
+             */
+            errorCode: "TIMEOUT" | "SOURCE_UNAVAILABLE" | "QUEUE_FAILED" | "INTERNAL" | null;
+            /** Format: date-time */
+            startedAt: string | null;
+            /** Format: date-time */
+            completedAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        NearbyLocation: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            lat: number;
+            lng: number;
+            radiusMeters: number;
+            /** @enum {string} */
+            category: "관광지" | "카페" | "여행지";
+            distanceMeters: number;
+        };
+        SnsConnection: {
+            /** @enum {string} */
+            platform: "instagram" | "tiktok";
+            platformUsername: string | null;
+            /** Format: date-time */
+            connectedAt: string;
+        };
+        CreditEntry: {
+            /** Format: uuid */
+            id: string;
+            /** @description +지급 / -차감 */
+            delta: number;
+            /**
+             * @description 앱이 내역 화면 문구를 매핑하는 값. 닫힌 집합이다.
+             * @enum {string}
+             */
+            reason: "purchase" | "signup_bonus" | "export_reserve" | "export_refund" | "store_refund_revoke" | "promo" | "ad_reward";
+            /** Format: date-time */
+            createdAt: string;
+        };
+        MovieTemplate: {
+            /** @description 'walk' 처럼 고정된 사람이 읽는 id. 앱의 내장 폴백 카탈로그와 같은 값이다. */
+            id: string;
+            name: string;
+            description: string;
+            /**
+             * @description POST /edit-jobs 가 받는 프리셋 이름 그대로. 앱이 모르는 프리셋이 오면 그 템플릿을 건너뛴다
+             * @enum {string}
+             */
+            style: "감성" | "여행" | "일상";
+            /** @description 앱에서만 쓰는 트랙 키. 편집 파이프라인은 받지 않는다 */
+            bgm: string;
+            /** @description 촬영 순서 (`position` 오름차순) */
+            slots: {
+                /** @description 템플릿 안에서만 유일한 슬롯 id. 추천 응답이 슬롯을 가리키는 키다. */
+                id: string;
+                /** @description 장면 이름 (예: 골목) */
+                label: string;
+                /** @description 무엇을 찍을지에 대한 지시 (예: 좁은 길, 걷는 발) */
+                hint: string;
+            }[];
+        };
+        MovieRecommendation: {
+            /** Format: uuid */
+            id: string;
+            templateId: string;
+            /** @enum {string} */
+            status: "processing" | "done" | "failed";
+            /** @description 템플릿의 슬롯 순서 그대로. done 이 되기 전에는 비어 있다 */
+            slots: {
+                slotId: string;
+                /**
+                 * Format: uuid
+                 * @description null 이면 채울 후보가 없었다는 뜻
+                 */
+                videoId: string | null;
+                /** @description 0~1 슬롯 적합도. 스냅 내용에 대한 주장이 아니다 */
+                score: number | null;
+            }[];
+            excluded: {
+                /** Format: uuid */
+                videoId: string;
+                /** @enum {string} */
+                reason: "unusable" | "analysis_failed" | "no_match";
+            }[];
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            completedAt: string | null;
+        };
+    };
     responses: never;
     parameters: never;
     requestBodies: never;

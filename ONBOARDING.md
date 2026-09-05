@@ -170,6 +170,10 @@ curl http://localhost:3000/health
 - Swagger: `http://localhost:3000/docs`
 - OpenAPI JSON: `http://localhost:3000/docs/json`
 
+계약(`packages/shared-types/src/contract/`)을 바꿨으면 `npm run openapi:write -w apps/api`로
+스냅샷 `apps/api/openapi.json`을 다시 생성해 같은 커밋에 넣는다. 서버가 떠 있을 필요는 없고,
+빠뜨리면 `test/openapi-snapshot.test.ts`가 실패한다.
+
 `SUPABASE_PUBLISHABLE_KEY`가 있으면 Swagger `Authorize`의 `devLogin`에 개발 계정 이메일과
 비밀번호를 넣어 Bearer token을 받을 수 있다. 키가 없으면 `bearerAuth`에 JWT를 직접 넣는다.
 
