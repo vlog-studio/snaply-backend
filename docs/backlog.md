@@ -279,14 +279,22 @@ geofence 쿨다운 판정용 이력이 무한히 쌓인다. 쿨다운은 30분 �
 **왜 열려 있는지**: 단계가 다섯이고 각 단계가 독립 머지되어야 한다. 모바일 `shared/api`와
 `packages/shared-types`는 [team.md](./team.md) §2의 공유 surface라 4단계는 양 트랙 합의가 필요하다.
 
-- [ ] 1. Fastify 5 + 플러그인 메이저 업 (`@fastify/rate-limit`·`swagger`·`swagger-ui`·`websocket`·`fastify-plugin`)
-- [ ] 2. `schemas/responses.ts`·라우트 요청 인터페이스 → `packages/shared-types` Zod 스키마 (컴파일러가 Zod 전용이라 한 변경에서 전부)
-- [ ] 3. OpenAPI 스냅샷 테스트 — 생성 스펙과 커밋된 `apps/api/openapi.json` 일치 검사
-- [ ] 4. 모바일: 계약 패키지 import, `apiRequest`를 라우트 맵 기반으로 교체, `openapi-typescript`·`api:pull`/`gen`/`check` 제거
-- [ ] 5. `api-spec.md`를 WebSocket 계약 + FE 안내로 축소
+- [x] 1. Fastify 5 + 플러그인 메이저 업 (`@fastify/rate-limit`·`swagger`·`swagger-ui`·`websocket`·`fastify-plugin`) — 2026-09-05
+- [x] 2. `schemas/responses.ts`·라우트 요청 인터페이스 → `packages/shared-types` Zod 스키마 (컴파일러가 Zod 전용이라 한 변경에서 전부) — 2026-09-05
+- [x] 3. OpenAPI 스냅샷 테스트 — `test/openapi-snapshot.test.ts`가 생성 스펙과 커밋된 `apps/api/openapi.json` 일치를 검사. 모바일 `api:pull` 제거, `api:gen`은 이 파일을 읽는다 — 2026-09-05
+- [x] 4. 모바일: `apiRequest`·`apiPath`가 `apiContract` 타입(타입 전용 import)에서 경로·메서드·query·body·응답 타입을 유도. `openapi-typescript`·`schema.d.ts`·`api:gen`/`api:check` 제거, `verify`가 `contract:build`를 먼저 실행 — 2026-09-05
+- [x] 5. `api-spec.md`를 "FE 가 다뤄야 할 동작 + WebSocket" 으로 축소, 필드 형태는 계약 파일·Swagger 로 위임 — 2026-09-05
 
-**완료 조건**: 엔드포인트 계약을 손으로 적는 곳이 `packages/shared-types` 하나이고, 모바일
-`verify`와 백엔드 테스트가 서버 실행 없이 그 계약과의 일치를 검사한다.
+**완료 조건(충족)**: 엔드포인트 계약을 손으로 적는 곳이 `packages/shared-types` 하나이고, 모바일
+`verify`(typecheck)와 백엔드 테스트(`openapi-snapshot`)가 서버 실행 없이 그 계약과의 일치를 검사한다.
+
+**남은 후속** (계약 원천 통일 뒤의 다듬기):
+- [ ] 엔티티 경계의 Zod 를 계약 스키마의 **파생**(`videoSchema.pick(...)` 등)으로 바꾸기. 계약 패키지가
+  앱 **런타임** 번들에 들어가므로 Metro 가 `dist`(또는 `react-native` export 조건으로 `src`)를 해석하는지,
+  Jest 가 워크스페이스 심링크 밖 ESM 을 변환하는지 한 엔티티로 먼저 확인한다. 지금은 타입만 쓰고
+  경계 스키마는 `apiRequest`의 할당 가능성 규칙으로 계약과 대조한다
+- [ ] `openapi.json`의 `*Input` 사본 스키마 — type provider 가 입력/출력 레지스트리를 둘 다 내는 동작.
+  무해하지만 Swagger 가독성을 위해 upstream 옵션이 생기면 끈다
 
 ---
 

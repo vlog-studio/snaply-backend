@@ -3,6 +3,8 @@
 **작성일**: 2026-09-05
 **상태**: 결정 — API 계약의 원천을 `packages/shared-types`의 Zod 스키마 하나로 통일하고,
 백엔드 검증·직렬화·OpenAPI와 모바일 타입·런타임 검증을 모두 그 스키마에서 유도한다.
+§4의 5단계는 2026-09-05에 구현됐다(검증 내역은 [progress.md](../progress.md)). 모바일의 런타임
+검증을 계약 스키마의 파생으로 바꾸는 일은 [backlog.md](../backlog.md) B-5 후속으로 남았다.
 **범위**: 결정과 근거, 기각한 대안, 이행 단계의 형태를 기록한다. 단계별 진행 상태는
 [backlog.md](../backlog.md) B-5가 관리한다.
 **관련 문서**: [constitution.md](../constitution.md) 제2조·제6조 ·
@@ -70,7 +72,22 @@
    라우트 맵으로 교체하고 `openapi-typescript`와 pull·gen·check 스크립트 제거
 5. `api-spec.md` 축소
 
-## 5. 결정 시점에 확인해야 할 것
+## 5. 이전 중 드러난 불일치 (2단계, 2026-09-05)
+
+수기 JSON 스키마가 `additionalProperties: false`로 조용히 지우던 것들이 Zod 직렬화에서는
+계약 위반으로 드러난다. 2단계에서 계약을 **실제 의도**에 맞춰 고친 것:
+
+- `POST /sns/{platform}/upload` — `status`가 `success`만 허용돼 있었으나 서비스는 `pending`도
+  낸다(틱톡 폴링 시한 초과). `requiresUserAction`은 `api-spec.md`가 안내하는 필드인데 스키마에
+  없어 **앱에 도달한 적이 없었다.** 둘 다 계약에 넣었다
+- `GET /billing/credits` — `entries[].reason`이 서비스 DTO에서 `string`이었다. 계약의 닫힌
+  집합(`creditReasonSchema`)으로 좁혔다
+- SNS 라우트는 플랫폼별 리터럴 경로 8개에서 `{platform}` 경로 파라미터 4개로 합쳤다.
+  알 수 없는 플랫폼은 404가 아니라 400이다
+- OpenAPI에 `components.schemas`가 생겼다(`.meta({ id })`). 같은 이름의 `*Input` 사본이
+  함께 나오는 것은 type provider의 동작이며 소비자에게 무해하다
+
+## 6. 결정 시점에 확인해야 할 것
 
 - Metro가 shared-types의 `.js` 확장자 specifier를 해석하는지. 안 되면 `react-native` export
   조건으로 `src`를 가리키거나 빌드 산출물을 쓴다. 모바일 `verify`가 turbo를 우회하므로

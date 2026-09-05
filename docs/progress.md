@@ -10,7 +10,7 @@
 > 착수 전 계획서는 [archive/snapvlog-backend-guide.md](./archive/snapvlog-backend-guide.md),
 > Dev B → Dev A 인수인계 기록은 [archive/integrations-handover.md](./archive/integrations-handover.md)(확인 완료).
 > 아래 기록도 각 완료 시점 기준이다. **현재 구조·명령은 README와 ONBOARDING,
-> 현재 스키마·계약은 Prisma와 Swagger를 우선한다.**
+> 현재 스키마·계약은 Prisma와 `packages/shared-types/src/contract/`(Zod 계약, Swagger 의 원천)를 우선한다.**
 
 ---
 
@@ -1287,3 +1287,50 @@ progress.md 에 주의를 적는 것으로는 세 번째를 못 막는다. E-6(�
 - `npm test -w apps/api`: Vitest **23 files, 319 tests 통과**, 스토리지 Node 테스트 1건 통과
 - `npm run typecheck -w apps/api`, `npm run lint -w apps/api`, `git diff --check` 통과
 - 루트·`docs/`·모바일 문서 **77개**의 로컬 Markdown 링크 검사 통과
+
+---
+
+## API 계약을 스키마 우선으로 — Zod 계약 패키지 (2026-09-05)
+
+**배경**: 한 엔드포인트의 계약이 여섯 곳(shared-types 타입, 수기 JSON 스키마, 라우트 요청 인터페이스,
+모바일의 OpenAPI 스냅샷·생성 타입, 모바일 Zod, `api-spec.md`)에 손으로 적혀 있었고 어느 둘의 일치도
+검사되지 않았다. 모바일 스냅샷은 실행 중인 서버를 curl 해 갱신했다. 결정과 기각한 대안은
+[decisions/api-contract-schema-first.md](./decisions/api-contract-schema-first.md).
+
+**구현** (5단계, 각각 독립 검증):
+
+1. **Fastify 5** — `fastify@5.12`, `@fastify/rate-limit@11`, `@fastify/swagger@9`, `@fastify/swagger-ui@6`,
+   `@fastify/websocket@11`, `fastify-plugin@5`. 코드 변경은 WebSocket 핸들러 시그니처(`(socket, req)`),
+   `setErrorHandler<FastifyError>`, `decorateRequest('user')` 세 곳. swagger 9 는 body 있는 라우트의
+   `requestBody.required: true` 를 내기 시작했다(정확해진 것).
+2. **계약 패키지** — `packages/shared-types/src/contract/` 에 Zod 스키마·`defineRoute`·레지스트리
+   `apiContract`(35 라우트). `apps/api/src/schemas/responses.ts`(770줄)와 라우트의 요청 인터페이스 12개,
+   `domain.ts`·`api.ts` 의 수기 타입을 삭제하고 `z.infer` 로 대체. 백엔드는 `fastify-type-provider-zod@7`로
+   검증·직렬화·OpenAPI 변환. `CREDIT_REASON`·`MAX_CANDIDATES` 같은 계약 상수는 패키지로 옮기고
+   서비스는 다시 내보낸다.
+   - 드러난 불일치(계약을 실제 의도에 맞춤): `POST /sns/{platform}/upload` 의 `status` 가 `success` 만
+     허용돼 있었고 `api-spec.md` 가 안내하는 `requiresUserAction` 은 스키마에 없어 **앱에 도달한 적이
+     없었다**. `GET /billing/credits` 의 `entries[].reason` 이 DTO 에서 `string` 이었다. SNS 라우트는
+     플랫폼별 리터럴 8개에서 `{platform}` 파라미터 4개로.
+   - Zod 직렬화는 `additionalProperties: false` 처럼 미선언 필드를 지우되, 계약과 어긋난 응답은
+     `500 FST_ERR_RESPONSE_SERIALIZATION` 으로 드러낸다.
+3. **OpenAPI 스냅샷** — `buildApp(config, { docs })` 오버라이드로 서버·DB 없이 문서를 만드는
+   `src/openapi.ts`, `npm run openapi:write|check -w apps/api`, `test/openapi-snapshot.test.ts`.
+   스펙 파일은 `apps/api/openapi.json` 하나(2칸 들여쓰기)로 옮겼다.
+4. **모바일** — `apiRequest`·`apiPath` 가 `apiContract` **타입 전용 import** 에서 경로·메서드·query·body·
+   응답 `data` 타입을 유도. `openapi-typescript`, `schema.d.ts`(5,300줄), `api:pull`/`api:gen`/`api:check`,
+   `.gitattributes` 제거. `verify` 는 `contract:build` 를 먼저 실행하고 루트 `dev:mobile` 도 빌드 후 Metro.
+   기존 `@ts-expect-error` 계약 테스트 7건은 그대로 통과. `docs/workflows/openapi-api-integration.md` →
+   `api-contract-integration.md`.
+5. **`api-spec.md`** — 599줄에서 필드 형태 서술을 걷어내고 "FE 가 다뤄야 할 동작 + WebSocket" 만 남겼다.
+   WebSocket 메시지 계약은 `editProgressEventSchema` 가 원천.
+
+**검증**
+- `npm test -- --filter=@vlog-studio/api` — 24 파일 321 테스트 통과(스냅샷 테스트 2건 신규), API typecheck·lint 통과
+- `npm run openapi:check -w apps/api` — 최신
+- `npm run verify:mobile` — contract:build → format → lint(기존 경고 1) → typecheck → jest 통과
+- 1단계 직후 Fastify 5 에서 생성한 스펙과 기존 스냅샷을 대조해 `PATCH /auth/me` 의 `requestBody.required` 외
+  차이가 없음을 확인했다
+
+**남은 것**: [backlog.md](./backlog.md) B-5 후속 — 엔티티 경계 Zod 를 계약 스키마의 파생으로(런타임 import 의
+Metro/Jest 해석 확인 필요), `openapi.json` 의 `*Input` 사본 스키마.
