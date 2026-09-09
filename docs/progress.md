@@ -1436,3 +1436,29 @@ Metro/Jest 해석 확인 필요), `openapi.json` 의 `*Input` 사본 스키마.
 
 **FE 에 열린 것**: 3단계(reconcile)의 선행 조건이 풀렸다 —
 [mobile-handover-lifecycle.md](./mobile-handover-lifecycle.md).
+
+---
+
+## 2026-09-09 (이어서) — SNS 게시 자동 끝내기 · 만료 예고 알림 (Dev A)
+
+**SNS 게시가 성공하면 그 결과물을 쓰던 무비를 자동으로 끝낸다.** 다운로드 경로는 시스템 공유
+시트가 저장 여부를 알려주지 않아 사용자의 명시적 행동을 받아야 하지만, 게시는 **서버가
+플랫폼의 성공 응답을 직접 봤으므로** 추측이 아니다. `finishMovie` 의 본체를 `applyFinish` 로
+뽑아 두 진입점이 나눠 쓴다. 틱톡의 `pending`(PULL_FROM_URL)은 제외한다 — 플랫폼이 나중에
+영상을 가져가므로 지금 지우면 가져갈 대상이 사라진다. 자동 끝내기가 실패해도 게시는 성공으로
+보고한다(이미 성공했고 `sns_uploads` 에 남았다).
+
+**만료 예고 알림**(SNAP-13)이 서버에서 나간다: 삭제 **D-3 · D-1** 두 번, **KST 오전 10시**에
+도는 별도 배치 `npm run media:notify-expiring -w apps/api` (dry-run 기본, `--yes` 발송).
+값과 근거는 [decisions/expiry-notice-schedule.md](decisions/expiry-notice-schedule.md).
+
+정리 배치와 **일부러 분리했다.** 조용한 시간대 기본값이 22–08시라 새벽에 함께 보내면 알림이
+발송되지 않고 버려지고, 사용자는 예고 없이 파일을 잃는다. 유예를 두지 않기로 한 결정
+(`EXPIRY_TO_PURGE_DAYS = 0`)의 근거가 이 예고이므로, 예고가 사라지면 삭제 정책의 근거가 사라진다.
+
+`notification_logs` 가 geofence 전용을 벗어났다(`NotificationKind` + nullable `location_id`).
+발송보다 **먼저 행을 선점**하고 실패하면 되돌리며, `@@unique([userId, videoId, noticeDaysBefore])`
+가 중복을 DB 에서 막는다. **dry-run 은 발송으로 치지 않는다** — 그러지 않으면 운영에 서비스
+계정이 빠져도 배치가 "전원 발송 완료" 라고 말하면서 파일을 지운다.
+
+검증: `npm test -w apps/api` 374건 통과(만료 예고 13건 신규 · SNS 자동 끝내기 3건 신규).

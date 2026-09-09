@@ -15,6 +15,7 @@
     "accounts:purge": "node --env-file=.env --import tsx scripts/purge-deleted-accounts.ts",
     "videos:purge-pending": "node --env-file=.env --import tsx scripts/purge-stale-pending-videos.ts",
     "media:purge-expired": "node --env-file=.env --import tsx scripts/purge-expired-media.ts",
+    "media:notify-expiring": "node --env-file=.env --import tsx scripts/notify-expiring-media.ts",
     "dev:public-bucket": "node --env-file=.env --import tsx scripts/dev-public-bucket.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy",

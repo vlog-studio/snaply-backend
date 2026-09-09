@@ -60,16 +60,38 @@ model Location {
   @@map("locations")
 }
 
-// 알림 쿨다운 관리 (30분 중복 방지)
+/// 알림의 종류. 중복을 막는 방식이 종류마다 다르므로 한 표에 섞기 전에 구분한다.
+enum NotificationKind {
+  /// 근처 장소 추천. 30분 쿨다운으로 중복을 막는다.
+  geofence
+  /// 스냅 만료 예고. 같은 영상·같은 예고일에 한 번만 — `@@unique` 가 막는다.
+  snap_expiry
+}
+
+/// 보낸 알림의 기록. **중복 발송을 막는 것이 주 용도**라 발송 전에 먼저 선점하고,
+/// 발송이 실패하면 지운다(그래야 다음 실행에서 다시 시도된다).
+///
+/// 종류마다 중복 판정 기준이 다르다 — geofence 는 "최근 30분" 이라는 시간 창이고,
+/// 만료 예고는 "이 영상의 D-3 을 보냈는가" 라는 한 번뿐인 사건이다. 후자는
+/// `@@unique([userId, videoId, noticeDaysBefore])` 로 DB 가 막는다. Postgres 는 NULL 을
+/// 서로 다른 값으로 보므로 `videoId` 가 없는 geofence 행끼리는 충돌하지 않는다.
 model NotificationLog {
-  id         String   @id @default(uuid()) @db.Uuid
-  userId     String   @map("user_id") @db.Uuid
-  locationId String   @map("location_id") @db.Uuid
-  sentAt     DateTime @default(now()) @map("sent_at") @db.Timestamptz(6)
+  id         String           @id @default(uuid()) @db.Uuid
+  userId     String           @map("user_id") @db.Uuid
+  kind       NotificationKind @default(geofence)
+  /// geofence 전용. 만료 예고에는 없다.
+  locationId String?          @map("location_id") @db.Uuid
+  /// 만료 예고 전용 — 어느 스냅의 예고였는지.
+  videoId    String?          @map("video_id") @db.Uuid
+  /// 만료 예고 전용 — 삭제 며칠 전 알림인지(3, 1). 같은 영상에 여러 번 보내되 각 1회다.
+  noticeDaysBefore Int?       @map("notice_days_before")
+  sentAt     DateTime         @default(now()) @map("sent_at") @db.Timestamptz(6)
 
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  location Location? @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  video    Video?    @relation(fields: [videoId], references: [id], onDelete: Cascade)
 
+  @@unique([userId, videoId, noticeDaysBefore])
   @@index([userId, locationId, sentAt])
   @@map("notification_logs")
 }
@@ -128,6 +150,7 @@ model Video {
   analyses   VideoAnalysis[]
   recommendationItems MovieRecommendationItem[]
   movieClips MovieClip[]
+  notificationLogs NotificationLog[]
   resultOf   Movie[]         @relation("MovieResult")
 
   @@index([userId, createdAt])
