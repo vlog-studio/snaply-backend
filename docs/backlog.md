@@ -30,12 +30,18 @@
 ⑥ **영상·프로젝트·결과물 생애주기 재정의**(2026-08-31 개발자 회의 제안 —
 [meetings/2026-08-31-dev-sync.md](./meetings/2026-08-31-dev-sync.md) §4): 영상 15일 지속 ·
 서버 업로드 성공 시 로컬 삭제 · 내보내기 완료 시 프로젝트 삭제 · 결과물은 다운로드/SNS 연동 진행 후 삭제.
-현행 MOV-14(구성 영구 보관)·MOV-16(결과물 30일 보관 + 무료 재생성)·SNAP-9(2GB 한도)와 충돌하므로,
+현행 MOV-14(구성 영구 보관)·MOV-16(결과물 30일 보관 + 무료 재생성)와 충돌하므로,
 채택하면 spec 을 먼저 고치고 [decisions/storage-and-subscription-policy.md](./decisions/storage-and-subscription-policy.md)
 §3 의 기각 근거를 결정 문서에 남긴다. 결과물을 삭제하면 A-7 의 에셋 영구 라이선스 조항 논의도 함께 닫힌다.
-세 축의 결정 요청 문서(미결): [snap-retention-period.md](./decisions/snap-retention-period.md) ·
-[local-copy-after-upload.md](./decisions/local-copy-after-upload.md) ·
+세 축 중 **보관 기간은 2026-09-09 결정됐다** — 서버 원본은 업로드 후 **15일**에 만료된다
+([snap-retention-period.md](./decisions/snap-retention-period.md), SNAP-9·SNAP-12·SNAP-13).
+구독자에게 더 긴 기간을 줄지는 **아직 미확정**이므로 구현은 전원 15일을 가정한다(A-2).
+남은 두 축은 미결이다: [local-copy-after-upload.md](./decisions/local-copy-after-upload.md) ·
 [movie-cleanup-after-export.md](./decisions/movie-cleanup-after-export.md).
+⚠️ 로컬 삭제(A)를 택하면 15일 만료와 겹쳐 **사용자 영상이 폰에서도 서버에서도 사라진다** —
+두 결정을 반드시 같은 자리에서 본다.
+만료의 동작 구조(2단계 삭제 · 만료 스냅 식별 · 사전 알림)는
+[plans/lifecycle-alignment.md](./plans/lifecycle-alignment.md) §6 에서 설계를 마쳤다.
 `capturedAt` 수집은 결정 완료이며 스냅 서버 원천화 1단계에서 구현한다. 위치 정보 저장
 여부는 이 항목과 분리해 A-4에서만 관리한다.
 
@@ -54,7 +60,8 @@ S3 삭제 실패분은 E-3의 정리 배치 경로를 쓴다.
 ### A-2. 크레딧 결제 세부 정책 확정
 
 **결정·구현 완료분**: 과금 모델(구독 제거, export 1회 = 100크레딧 불변, 생성/보관 2축 분리),
-결제 채널(IAP + RevenueCat), 스토리지 정책(Free 2GB·무비 30일 보관·무료 재생성)은 확정됐다.
+결제 채널(IAP + RevenueCat), 스토리지 정책(무비 30일 보관·무료 재생성, 스냅은 2026-09-09부터
+기간 기준 — 무료 15일)은 확정됐다.
 현행 요구는 [specs/credits-and-payment.md](./specs/credits-and-payment.md)·
 [specs/snap-library.md](./specs/snap-library.md)·[specs/movie.md](./specs/movie.md)가,
 배경은 [decisions/](./decisions/)의 결제·스토리지 결정 3편이 담는다. 크레딧 원장·웹훅
@@ -78,6 +85,16 @@ S3 삭제 실패분은 E-3의 정리 배치 경로를 쓴다.
 
 **결정할 것 — 구독(보관 축)**: 용량 티어와 가격 · 연 구독 여부 · 구독 혜택에 워터마크
 제거·고해상도 export를 포함할지 · 무비 만료 알림 발송 시점.
+
+2026-09-09 에 스냅 보관이 **기간 기준(업로드 후 15일)** 으로 바뀌면서
+([snap-retention-period.md](./decisions/snap-retention-period.md)) 이 축에 세 가지가 더해졌다:
+- **구독으로 보관 기간을 팔 것인가** ⚠️ **예정일 뿐 미확정이다.** 판다면 연장(며칠/몇 달)인지
+  무제한인지, 티어별로 다른지를 정해야 하고 구독 상품의 축이 "용량"에서 "기간"으로 옮겨간다.
+  **정해지기 전까지 스냅 만료 구현은 전원 15일을 가정한다**
+- **용량 한도(2GB)를 존치할지** — 기간 만료가 누적을 대신 막아 평균 사용자는 닿지 않는다.
+  권장은 폐기하고 남용 방지 상한만 별도로 두는 것(결정 문서 §후속 판단). SNAP-9 가 미결로 표시 중
+- **만료 예고의 최소 리드타임** — 첫 알림부터 실제 삭제까지. 유예 기간 대신 이 값이 그 역할을 한다
+  (SNAP-13). 사용자 구독 만료의 경우와 우리가 정책을 바꾸는 경우를 각각 정한다
 경계 규칙상 **구독에 크레딧을 얹는 안은 검토 대상이 아니다**
 ([decisions/storage-and-subscription-policy.md](./decisions/storage-and-subscription-policy.md) §4.3).
 

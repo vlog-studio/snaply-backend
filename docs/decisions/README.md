@@ -14,7 +14,6 @@
 
 | 문서 | 무엇을 정하나 | 백로그 | 출처 |
 |---|---|---|---|
-| [snap-retention-period.md](snap-retention-period.md) | 영상(스냅) 서버 보관: 15일 만료 vs 2GB 용량 한도 vs 병행 | A-1 ⑥ | 2026-08-31 회의 |
 | [local-copy-after-upload.md](local-copy-after-upload.md) | 업로드 성공 시 로컬 파일 삭제를 언제 켤지 | A-1 ⑥ · A-4 | 2026-08-31 회의 |
 | [movie-cleanup-after-export.md](movie-cleanup-after-export.md) | 내보내기 후 프로젝트·결과물 삭제 vs 30일 보관 + 무료 재생성 | A-1 ⑥ | 2026-08-31 회의 |
 | [movie-export-policy.md](movie-export-policy.md) | 무비 내보내기 세부 규칙 5개(순서 기본값 · 재내보내기 · 삭제 시 스냅 · 자동 그룹핑 · 기존 API 폐기) | A-1 ①~⑤ | backlog A-1 |
@@ -23,7 +22,7 @@
 | [sticker-asset-sourcing.md](sticker-asset-sourcing.md) | 스티커 조달 경로 · 등록 경로(관리자 페이지 시점) | A-7 | 2026-08-31 회의 |
 | [bgm-sourcing.md](bgm-sourcing.md) | BGM 조달(AI 생성 · 라이선스 구독 · 커미션) — 법적 검토 6항목 선행 | A-7 · E-5 | 2026-08-31 회의 |
 
-여덟 건의 선후관계와 착수 순서는 [plans/2026-08-31-dev-sync-follow-up.md](../plans/2026-08-31-dev-sync-follow-up.md) §2.
+남은 일곱 건의 선후관계와 착수 순서는 [plans/2026-08-31-dev-sync-follow-up.md](../plans/2026-08-31-dev-sync-follow-up.md) §2.
 
 ## 결정 완료 — 현행 정책의 근거
 
@@ -33,7 +32,8 @@
 | [snap-content-analysis.md](snap-content-analysis.md) | 스냅 내용 분석(vision) 도입 | 완료, 생산 활성화 대기(A-3) |
 | [template-snap-recommendation.md](template-snap-recommendation.md) | 템플릿 기반 스냅 자동 추천 | 완료, 생산 활성화 대기(A-6) |
 | [ad-reward-credits.md](ad-reward-credits.md) | 보상형 광고 크레딧 지급 규칙 | 완료, 기본 꺼짐(C-6) |
-| [storage-and-subscription-policy.md](storage-and-subscription-policy.md) | Free 2GB · 무비 30일 보관 + 무료 재생성 · 크레딧/구독 2축 | 정책 확정, 한도 집행·만료 미구현(A-1·A-2) |
+| [snap-retention-period.md](snap-retention-period.md) | 스냅 서버 보관은 기간 기준 — 업로드 후 15일 만료 (구독 혜택으로 연장할지는 미확정, A-2) | 결정만, 미구현(A-1) |
+| [storage-and-subscription-policy.md](storage-and-subscription-policy.md) | 무비 30일 보관 + 무료 재생성 · 크레딧/구독 2축 (**Free 2GB 한도 행은 snap-retention-period 가 대체**) | 정책 확정, 만료 미구현(A-1·A-2) |
 | [payment-channel-iap.md](payment-channel-iap.md) | 결제 채널 IAP + RevenueCat, Stripe 제거 | 완료, 스토어 등록 대기(C-1) |
 | [credit-payment-model.md](credit-payment-model.md) | 구독 제거, 무비 생성 = 크레딧 100 | 완료 |
 | [snap-source-of-truth.md](snap-source-of-truth.md) | 스냅 원천을 서버로 전환(1~4단계) | 결정만, 미착수(A-4) |
