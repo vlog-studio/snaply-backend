@@ -156,6 +156,41 @@ function clipCreateData(clips: ClipInput[]) {
   }));
 }
 
+/**
+ * `generating` 인 무비의 상태를 편집 작업의 결과로 따라잡는다.
+ *
+ * 워커는 무비를 모른다 — `edit_jobs` 와 결과물 `videos` 만 갱신한다. 그래서 무비 상태를
+ * 워커가 옮겨줄 수 없고, 읽는 시점에 작업을 보고 맞춘다. 이 보정이 없으면 무비가 영원히
+ * `generating` 에 갇혀 수정도 끝내기도 409 가 된다.
+ *
+ * 값이 실제로 바뀔 때만 UPDATE 한다 — `updatedAt` 은 스튜디오 보드의 정렬 기준이라
+ * 조회할 때마다 건드리면 목록 순서가 흔들린다.
+ */
+async function reconcileStatus(row: MovieRow): Promise<MovieRow> {
+  if (row.status !== 'generating' || !row.resultVideoId) {
+    return row;
+  }
+  const job = await getPrisma().editJob.findFirst({
+    where: { videoId: row.resultVideoId },
+    orderBy: { createdAt: 'desc' },
+    select: { status: true },
+  });
+  const next =
+    job?.status === 'done'
+      ? 'ready'
+      : job?.status === 'failed' || job?.status === 'canceled'
+        ? 'failed'
+        : null;
+  if (next === null) {
+    return row;
+  }
+  await getPrisma().movie.update({
+    where: { id: row.id },
+    data: { status: next, updatedAt: row.updatedAt },
+  });
+  return { ...row, status: next };
+}
+
 async function findOwned(userId: string, movieId: string): Promise<MovieRow> {
   const row = await getPrisma().movie.findFirst({
     where: { id: movieId, userId, deletedAt: null },
@@ -164,7 +199,7 @@ async function findOwned(userId: string, movieId: string): Promise<MovieRow> {
   if (!row) {
     throw AppError.notFound('무비를 찾을 수 없습니다.');
   }
-  return row as MovieRow;
+  return await reconcileStatus(row as MovieRow);
 }
 
 export async function createMovie(params: {
@@ -213,8 +248,9 @@ export async function listMovies(params: {
 
   const hasMore = rows.length > params.limit;
   const items = hasMore ? rows.slice(0, params.limit) : rows;
+  const reconciled = await Promise.all(items.map((row) => reconcileStatus(row as MovieRow)));
   return {
-    items: items.map((row) => toDto(row as MovieRow)),
+    items: reconciled.map(toDto),
     nextCursor: hasMore ? (items[items.length - 1]?.id ?? null) : null,
   };
 }

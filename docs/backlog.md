@@ -53,8 +53,15 @@
 `capturedAt` 수집은 결정 완료이며 스냅 서버 원천화 1단계에서 구현한다. 위치 정보 저장
 여부는 이 항목과 분리해 A-4에서만 관리한다.
 
-**완료 조건**: ~~남은 세부 정책 확정~~(완료) → `Movie` 스키마 PR → CRUD → export → e2e 실검증.
+**완료 조건**: ~~남은 세부 정책 확정~~ → ~~`Movie` 스키마~~ → ~~CRUD → export~~ (2026-09-09 완료,
+[progress.md](./progress.md)) → **앱 전환** → e2e 실검증.
 착수 계획과 순서는 [plans/lifecycle-alignment.md](./plans/lifecycle-alignment.md) §5-A.
+
+- [ ] **앱 전환** — `entities/movie` 의 zustand persist 를 서버 쿼리/뮤테이션으로 바꾼다.
+      기존 로컬 무비는 이관하지 않는다(개발 단계). 이것이 끝나야 "기기를 바꾸면 무비가 사라진다"가 닫힌다
+- [ ] **끝내기 호출 붙이기** — 공유 시트는 저장 여부를 알려주지 않으므로(MOV-18) 앱이
+      사용자의 명시적 행동을 받아 `POST /movies/{id}/finish` 를 부른다. SNS 게시 경로는 서버가 판정
+- [ ] **e2e 실검증** — `media:e2e` 를 무비 경로로 갱신
 
 - [ ] **`POST /edit-jobs` 폐기** — 결정 ⑤ 는 "한 버전 공존 후 폐기"다. 앱이 Movie export 로
       옮긴 릴리스의 **다음 릴리스**에서 제거한다. 시점을 항목으로 남기지 않으면 영구 공존이

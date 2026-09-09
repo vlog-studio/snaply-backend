@@ -285,6 +285,69 @@ describe('POST /movies/:id/export', () => {
   });
 });
 
+describe('생성이 끝난 뒤의 무비 상태', () => {
+  /**
+   * 워커는 무비를 모른다 — 편집 작업과 결과물 영상만 갱신한다. 그래서 무비 상태는 읽는
+   * 시점에 작업을 보고 따라잡는다. 이 보정이 없으면 무비가 `generating` 에 갇혀 수정도
+   * 끝내기도 영원히 409 가 된다.
+   */
+  async function movieWithJob(user: TestUser, jobStatus: string): Promise<string> {
+    const snapId = await createSnap(user);
+    const movieId = (await createMovie(user, { clips: [{ videoId: snapId }] })).json().data.id;
+    const result = await h.prisma.video.create({
+      data: { userId: user.id, kind: 'result', status: 'processing' },
+    });
+    await h.prisma.editJob.create({
+      data: { videoId: result.id, userId: user.id, status: jobStatus },
+    });
+    await h.prisma.movie.update({
+      where: { id: movieId },
+      data: { status: 'generating', resultVideoId: result.id },
+    });
+    return movieId;
+  }
+
+  it('작업이 끝나면 ready 가 된다', async () => {
+    const user = await h.createUser();
+    const movieId = await movieWithJob(user, 'done');
+
+    expect((await getMovie(user, movieId)).json().data.status).toBe('ready');
+  });
+
+  it('작업이 실패하면 failed 가 되고 다시 편집할 수 있다', async () => {
+    const user = await h.createUser();
+    const movieId = await movieWithJob(user, 'failed');
+
+    expect((await getMovie(user, movieId)).json().data.status).toBe('failed');
+    const edit = await h.app.inject({
+      method: 'PATCH',
+      url: `/movies/${movieId}`,
+      headers: user.auth,
+      payload: { title: '다시 해보기' },
+    });
+    expect(edit.statusCode).toBe(200);
+  });
+
+  it('작업이 진행 중이면 generating 그대로다', async () => {
+    const user = await h.createUser();
+    const movieId = await movieWithJob(user, 'processing');
+
+    expect((await getMovie(user, movieId)).json().data.status).toBe('generating');
+  });
+
+  it('상태 보정이 목록 순서를 흔들지 않는다 (updatedAt 을 건드리지 않는다)', async () => {
+    const user = await h.createUser();
+    const older = await movieWithJob(user, 'done');
+    const newer = (await createMovie(user, { title: '나중에 만든 것' })).json().data.id;
+
+    const res = await h.app.inject({ method: 'GET', url: '/movies', headers: user.auth });
+
+    const items = res.json().data.items;
+    expect(items[0].id).toBe(newer);
+    expect(items.find((movie: { id: string }) => movie.id === older).status).toBe('ready');
+  });
+});
+
 describe('POST /movies/:id/finish', () => {
   it('결과물만 지우고 무비는 남긴다 — 끝낸 뒤에도 편집할 수 있다', async () => {
     const user = await h.createUser();
