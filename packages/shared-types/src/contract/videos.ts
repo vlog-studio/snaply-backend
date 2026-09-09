@@ -17,6 +17,12 @@ export const videoSchema = z
     durationSeconds: z.int().nullable(),
     stylePreset: stylePresetSchema.nullable(),
     status: videoStatusSchema,
+    capturedAt: z.iso
+      .datetime()
+      .nullable()
+      .describe(
+        '촬영 시각. 클라이언트가 보고한 값이며, 전달되지 않은(또는 전달 이전에 업로드된) 영상은 `null`이다. 시간 기준 정렬·묶음의 원천이고, 없으면 `createdAt`으로 대신한다.',
+      ),
     createdAt: z.iso.datetime(),
   })
   .meta({ id: 'Video' });
@@ -63,6 +69,13 @@ export const createVideoBodySchema = z.object({
       '영상 길이(초). 선택값 — 클라이언트가 아는 값을 그대로 저장할 뿐 서버가 검증하지 않는다. 생략하면 `null`.',
     )
     .meta({ examples: [12] }),
+  capturedAt: z.iso
+    .datetime()
+    .optional()
+    .describe(
+      '촬영 시각(ISO 8601). 선택값이지만 **가능하면 항상 보낸다** — 서버가 소급해 알아낼 방법이 없어, 빠뜨린 영상은 영구히 `null`로 남고 시간 기준 정렬·묶음에서 `createdAt`(업로드 시각)으로 대신하게 된다.',
+    )
+    .meta({ examples: ['2026-09-09T04:15:30.000Z'] }),
 });
 export type CreateVideoBody = z.infer<typeof createVideoBodySchema>;
 

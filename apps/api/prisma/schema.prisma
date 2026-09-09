@@ -93,6 +93,8 @@ model Video {
   stylePreset     String?   @map("style_preset") @db.VarChar(20)
   status          String    @default("pending") @db.VarChar(20)
   s3Key           String?   @map("s3_key")
+  /// 클라이언트가 보고한 촬영 시각. 서버가 소급할 수 없어, 전달 이전에 올라온 행은 null 로 남는다.
+  capturedAt      DateTime? @map("captured_at") @db.Timestamptz(6)
   createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(6)
 

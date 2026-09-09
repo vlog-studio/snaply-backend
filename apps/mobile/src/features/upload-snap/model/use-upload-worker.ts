@@ -151,7 +151,7 @@ export function useUploadWorker(): void {
         if (cancelled || isSnapGone(snap.id)) return;
         await putRecordingFile(target.uploadUrl, snap.uri, contentType);
         if (cancelled || isSnapGone(snap.id)) return;
-        await registerVideo(target.videoId, toDurationSeconds(snap.durationSec));
+        await registerVideo(target.videoId, toDurationSeconds(snap.durationSec), snap.capturedAt);
         if (isSnapGone(snap.id)) {
           // Registered ready, then deleted mid-transfer: the remote copy is an
           // orphan now, owed the same delete as any other removed snap.

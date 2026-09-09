@@ -31,6 +31,7 @@ interface VideoRow {
   durationSeconds: number | null;
   stylePreset: string | null;
   status: string;
+  capturedAt: Date | null;
   createdAt: Date;
 }
 
@@ -56,6 +57,7 @@ async function toDto(row: VideoRow): Promise<Video> {
     durationSeconds: row.durationSeconds,
     stylePreset: row.stylePreset as StylePreset | null,
     status: row.status as VideoStatus,
+    capturedAt: row.capturedAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
   };
 }
@@ -73,6 +75,7 @@ const SELECT = {
   durationSeconds: true,
   stylePreset: true,
   status: true,
+  capturedAt: true,
   createdAt: true,
 } as const;
 
@@ -115,6 +118,8 @@ export async function confirmUpload(params: {
   userId: string;
   videoId: string;
   durationSeconds?: number;
+  /** 클라이언트가 보고한 촬영 시각(ISO). 생략하면 저장하지 않는다 — 서버가 소급할 수 없다. */
+  capturedAt?: string;
 }): Promise<Video> {
   const prisma = getPrisma();
   const video = await prisma.video.findFirst({
@@ -142,6 +147,7 @@ export async function confirmUpload(params: {
       originalUrls: [publicUrl(video.s3Key)],
       originalS3Keys: [video.s3Key],
       ...(params.durationSeconds !== undefined ? { durationSeconds: params.durationSeconds } : {}),
+      ...(params.capturedAt !== undefined ? { capturedAt: new Date(params.capturedAt) } : {}),
     },
     select: SELECT,
   });

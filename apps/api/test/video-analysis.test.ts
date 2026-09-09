@@ -334,6 +334,7 @@ describe('분석과 영상 생명주기', () => {
     });
     expect(res.statusCode).toBe(200);
     expect(Object.keys(res.json().data).sort()).toEqual([
+      'capturedAt',
       'createdAt',
       'durationSeconds',
       'editedUrl',

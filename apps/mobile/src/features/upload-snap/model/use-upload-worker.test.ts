@@ -141,7 +141,9 @@ describe('useUploadWorker', () => {
       'video/mp4',
     );
     // The measured 3.4s is rounded to the spec's integer seconds.
-    expect(mockRegisterVideo).toHaveBeenCalledWith('video-1', 3);
+    // The capture time travels with the registration: the server cannot recover
+    // it afterwards, so a snap registered without it keeps `null` forever.
+    expect(mockRegisterVideo).toHaveBeenCalledWith('video-1', 3, 1_753_200_000_000);
   });
 
   it('uploads the oldest snap first', async () => {
