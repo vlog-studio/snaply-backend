@@ -293,3 +293,86 @@ describe('POST /sns/:platform/upload', () => {
     expect(after.tokenExpiresAt?.getTime()).toBeGreaterThan(Date.now() + 60_000);
   });
 });
+
+/**
+ * 게시가 확정되면 그 결과물을 쓰던 무비가 자동으로 끝난다(backlog A-1).
+ *
+ * 다운로드 경로와 달리 여기서는 **서버가 플랫폼의 성공 응답을 직접 봤다** — 시스템 공유
+ * 시트처럼 "열어줬을 뿐"이 아니다. 그래서 앱의 확인 없이 끝내도 된다.
+ *
+ * `pending`(틱톡 PULL_FROM_URL) 을 제외한다는 나머지 절반은 여기서 검증하지 못한다 —
+ * mock 클라이언트는 언제나 즉시 성공을 돌려주므로 그 분기를 태울 수 없다.
+ * 실키 검증(`sns-realkey.test.ts`)이 열릴 때 함께 확인한다.
+ */
+describe('SNS 게시 성공 시 무비 자동 끝내기', () => {
+  it('게시가 성공하면 그 결과물을 쓰던 무비가 끝난다 — 파일은 지워지고 무비는 남는다', async () => {
+    const user = await h.createUser();
+    await connect(user, 'instagram');
+    const video = await createEditedVideo(user.id);
+    const movie = await h.prisma.movie.create({
+      data: { userId: user.id, title: '오늘의 브이로그', status: 'ready', resultVideoId: video.id },
+      select: { id: true },
+    });
+
+    const res = await h.app.inject({
+      method: 'POST',
+      url: '/sns/instagram/upload',
+      headers: user.auth,
+      payload: { videoId: video.id },
+    });
+    expect(res.statusCode).toBe(200);
+
+    const after = await h.prisma.movie.findUniqueOrThrow({ where: { id: movie.id } });
+    expect(after.finishedAt).not.toBeNull();
+    expect(after.resultVideoId).toBeNull();
+    // 무비 자체는 남는다 — 레시피가 남아 고쳐서 다시 만들 수 있다(새 생성이라 유료).
+    expect(after.deletedAt).toBeNull();
+    expect(after.status).toBe('draft');
+
+    const result = await h.prisma.video.findUniqueOrThrow({ where: { id: video.id } });
+    expect(result.deletedAt).not.toBeNull();
+    expect(result.removalReason).toBe('user');
+    expect(result.editedUrl).toBeNull();
+  });
+
+  it('무비 없이 만든 결과물을 게시해도 업로드는 성공한다 — 자동 끝내기는 조용히 넘어간다', async () => {
+    const user = await h.createUser();
+    await connect(user, 'instagram');
+    const video = await createEditedVideo(user.id);
+
+    const res = await h.app.inject({
+      method: 'POST',
+      url: '/sns/instagram/upload',
+      headers: user.auth,
+      payload: { videoId: video.id },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().data.status).toBe('success');
+    // 결과물은 그대로다 — 지울 근거(끝난 무비)가 없다.
+    const result = await h.prisma.video.findUniqueOrThrow({ where: { id: video.id } });
+    expect(result.deletedAt).toBeNull();
+  });
+
+  it('남의 무비는 건드리지 않는다 — 결과물 id 가 같아도 소유자가 다르면 무시한다', async () => {
+    const owner = await h.createUser();
+    const other = await h.createUser();
+    await connect(owner, 'instagram');
+    const video = await createEditedVideo(owner.id);
+    const foreign = await h.prisma.movie.create({
+      data: { userId: other.id, title: '남의 무비', status: 'ready', resultVideoId: video.id },
+      select: { id: true },
+    });
+
+    await h.app.inject({
+      method: 'POST',
+      url: '/sns/instagram/upload',
+      headers: owner.auth,
+      payload: { videoId: video.id },
+    });
+
+    const after = await h.prisma.movie.findUniqueOrThrow({ where: { id: foreign.id } });
+    expect(after.finishedAt).toBeNull();
+    expect(after.resultVideoId).toBe(video.id);
+  });
+});

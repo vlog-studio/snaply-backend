@@ -3,6 +3,7 @@ import type { SnsConfig, SnsProviderConfig } from '../config.js';
 import { getPrisma } from '../db/client.js';
 import { AppError } from '../lib/errors.js';
 import { encrypt, decrypt, encodeState, decodeState } from '../lib/crypto.js';
+import { finishMovieForResult } from './movie.service.js';
 import { createDownloadUrl } from './storage.service.js';
 import * as instagram from './sns/instagram.client.js';
 import * as tiktok from './sns/tiktok.client.js';
@@ -314,6 +315,19 @@ export async function upload(params: {
       },
       select: { id: true, platformPostId: true },
     });
+    // 게시가 확정됐으면 그 결과물을 쓰던 무비를 끝낸다.
+    //
+    // 끝내기는 사용자가 결과물을 가져갔음을 확정하는 동작이고(specs/movie.md MOV-17),
+    // **이 경로는 추측이 아니다** — 서버가 플랫폼의 성공 응답을 직접 봤다. 다운로드 경로가
+    // 앱의 명시적 행동을 요구하는 이유(공유 시트는 저장 여부를 알려주지 않는다, MOV-18)가
+    // 여기에는 해당하지 않는다.
+    //
+    // `pending` 은 제외한다 — 틱톡 PULL_FROM_URL 은 플랫폼이 **나중에** 영상을 가져가므로,
+    // 지금 파일을 지우면 가져갈 대상이 사라진다.
+    if (status === 'success') {
+      await finishMovieForResult({ userId: params.userId, resultVideoId: video.id });
+    }
+
     return {
       uploadId: record.id,
       platform: params.platform,

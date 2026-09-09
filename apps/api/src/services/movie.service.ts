@@ -11,6 +11,7 @@ import {
 } from '@vlog-studio/shared-types';
 import { getPrisma } from '../db/client.js';
 import { AppError } from '../lib/errors.js';
+import { captureException } from '../lib/sentry.js';
 import { createEditJob } from './edit-job.service.js';
 import { deleteObject } from './storage.service.js';
 
@@ -367,19 +368,22 @@ export async function exportMovie(params: {
  * 알려주지 않으므로, 이 호출은 사용자의 명시적 행동이거나 서버가 성공을 확인한 SNS 게시여야 한다.
  * 프로젝트(무비)는 남으므로 끝낸 뒤에도 고쳐서 다시 만들 수 있다 — 그것은 새 생성이다(MOV-19).
  */
-export async function finishMovie(params: {
+/**
+ * 끝내기의 실제 동작 — 결과물 파일을 지우고 무비를 초안으로 되돌린다.
+ *
+ * 두 진입점이 이것을 나눠 쓴다: 사용자의 명시적 행동(`POST /movies/{id}/finish`)과
+ * SNS 게시 성공(서버가 플랫폼 응답을 직접 본 경우). 어느 쪽이든 **무비는 남는다** —
+ * 사라지는 것은 파일이고, 레시피가 남아 고쳐서 다시 만들 수 있다(새 생성이라 유료, MOV-19).
+ */
+async function applyFinish(params: {
   userId: string;
   movieId: string;
+  resultVideoId: string | null;
 }): Promise<{ finishedAt: string; resultDeleted: boolean }> {
-  const movie = await findOwned(params.userId, params.movieId);
-  if (movie.status === 'generating') {
-    throw AppError.conflict('생성 중인 무비는 끝낼 수 없습니다.');
-  }
-
   const prisma = getPrisma();
-  const result = movie.resultVideoId
+  const result = params.resultVideoId
     ? await prisma.video.findFirst({
-        where: { id: movie.resultVideoId, userId: params.userId },
+        where: { id: params.resultVideoId, userId: params.userId },
         select: { id: true, editedS3Key: true, thumbnailS3Key: true },
       })
     : null;
@@ -413,9 +417,62 @@ export async function finishMovie(params: {
 
   const finishedAt = new Date();
   await prisma.movie.update({
-    where: { id: movie.id },
+    where: { id: params.movieId },
     // 결과물 포인터를 비운다 — 파일이 사라졌으므로 무비는 다시 초안이다.
     data: { finishedAt, resultVideoId: null, status: 'draft' },
   });
   return { finishedAt: finishedAt.toISOString(), resultDeleted };
+}
+
+export async function finishMovie(params: {
+  userId: string;
+  movieId: string;
+}): Promise<{ finishedAt: string; resultDeleted: boolean }> {
+  const movie = await findOwned(params.userId, params.movieId);
+  if (movie.status === 'generating') {
+    throw AppError.conflict('생성 중인 무비는 끝낼 수 없습니다.');
+  }
+  return await applyFinish({
+    userId: params.userId,
+    movieId: movie.id,
+    resultVideoId: movie.resultVideoId,
+  });
+}
+
+/**
+ * 결과물 영상을 단서로 그 무비를 끝낸다 — **SNS 게시 성공 경로 전용**이다.
+ *
+ * 다운로드 경로가 사용자의 명시적 행동을 요구하는 이유(시스템 공유 시트는 저장 여부를
+ * 알려주지 않는다, MOV-18)가 여기에는 해당하지 않는다. 서버가 플랫폼의 성공 응답을 직접
+ * 봤으므로 추측이 아니다.
+ *
+ * **호출자의 동작을 막지 않는다.** 게시는 이미 성공했고 그 사실은 `sns_uploads` 에 남았다 —
+ * 여기서 예외를 던지면 성공한 게시가 실패로 보고된다. 무비가 없거나(직접 편집 API 로 만든
+ * 결과물) 이미 끝난 경우도 조용히 넘어간다.
+ */
+export async function finishMovieForResult(params: {
+  userId: string;
+  resultVideoId: string;
+}): Promise<void> {
+  try {
+    const movie = await getPrisma().movie.findFirst({
+      where: {
+        userId: params.userId,
+        resultVideoId: params.resultVideoId,
+        deletedAt: null,
+        finishedAt: null,
+      },
+      select: { id: true, resultVideoId: true },
+    });
+    if (!movie) {
+      return;
+    }
+    await applyFinish({
+      userId: params.userId,
+      movieId: movie.id,
+      resultVideoId: movie.resultVideoId,
+    });
+  } catch (err) {
+    captureException(err, { resultVideoId: params.resultVideoId, phase: 'sns-auto-finish' });
+  }
 }
