@@ -106,6 +106,14 @@ model Video {
   s3Key           String?   @map("s3_key")
   /// 클라이언트가 보고한 촬영 시각. 서버가 소급할 수 없어, 전달 이전에 올라온 행은 null 로 남는다.
   capturedAt      DateTime? @map("captured_at") @db.Timestamptz(6)
+  /// 어디서나 재생되는 배포본(H.264/SDR)의 S3 키. 원본은 아이폰 HEVC/HDR 그대로라
+  /// 다른 플랫폼에서 재생되지 않을 수 있어, ingest 워커가 따로 만든다.
+  /// 원본은 지우지 않는다 — 편집은 계속 원본을 쓴다.
+  renditionS3Key  String?   @map("rendition_s3_key")
+  /// 렌디션 생성 상태: pending | processing | ready | failed. 실패해도 스냅 자체는 쓸 수 있다.
+  renditionStatus String    @default("pending") @map("rendition_status") @db.VarChar(20)
+  /// FFprobe 로 실측한 길이. 클라이언트가 보고한 durationSeconds 보다 정확하다.
+  durationMs      Int?      @map("duration_ms")
   /// 왜 사라졌는가. 행은 툼스톤으로 남으므로(SNAP-12) 사용자는 무엇을 잃었는지 알 수 있다.
   removalReason   VideoRemovalReason? @map("removal_reason")
   /// 파일을 실제로 지운 시각. 만료 "예정"이 아니라 일어난 사실이다 — 만료 판정 자체는
@@ -124,6 +132,8 @@ model Video {
 
   @@index([userId, createdAt])
   @@index([userId, kind, createdAt])
+  /// ingest 워커가 밀린 것을 찾을 때 쓴다.
+  @@index([renditionStatus])
   @@map("videos")
 }
 
