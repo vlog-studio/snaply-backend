@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { PrismaClient } from '@prisma/client';
+import { assertPrismaClientFresh } from './assert-prisma-client-fresh.js';
 import { ADMIN_DATABASE_URL, TEST_DATABASE_URL, TEST_DB_NAME } from './constants.js';
 
 const apiDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -11,6 +12,9 @@ const apiDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..
  * 테스트가 개발 데이터를 건드리지 않도록 하기 위함.
  */
 export default async function globalSetup(): Promise<void> {
+  // DB 를 건드리기 전에 확인한다 — 낡은 클라이언트는 여기서 멈추는 편이 진단이 빠르다.
+  assertPrismaClientFresh();
+
   const admin = new PrismaClient({ datasourceUrl: ADMIN_DATABASE_URL });
   try {
     await admin.$executeRawUnsafe(`CREATE DATABASE "${TEST_DB_NAME}"`);
