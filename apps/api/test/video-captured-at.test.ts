@@ -21,6 +21,8 @@ const validVideo = {
   durationSeconds: 3,
   stylePreset: null,
   status: 'ready',
+  playbackUrl: null,
+  durationMs: 3237,
   capturedAt: '2026-09-09T04:15:30.000Z',
   createdAt: '2026-09-09T04:20:00.000Z',
 };

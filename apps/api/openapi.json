@@ -144,6 +144,18 @@
               "failed"
             ]
           },
+          "playbackUrl": {
+            "nullable": true,
+            "description": "어디서나 재생되는 배포본(H.264/SDR)의 시한부 URL. 원본은 아이폰 HEVC/HDR 그대로라 플랫폼에 따라 재생되지 않을 수 있으므로 **재생에는 이 값을 우선 쓴다.** 아직 만들어지지 않았거나 변환에 실패하면 `null` 이고, 그때는 `originalUrls` 로 돌아간다.",
+            "type": "string"
+          },
+          "durationMs": {
+            "nullable": true,
+            "description": "서버가 실측한 길이(밀리초). 클라이언트가 보고한 `durationSeconds` 보다 정확하다.",
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
           "capturedAt": {
             "nullable": true,
             "description": "촬영 시각. 클라이언트가 보고한 값이며, 전달되지 않은(또는 전달 이전에 업로드된) 영상은 `null`이다. 시간 기준 정렬·묶음의 원천이고, 없으면 `createdAt`으로 대신한다.",
@@ -166,6 +178,8 @@
           "durationSeconds",
           "stylePreset",
           "status",
+          "playbackUrl",
+          "durationMs",
           "capturedAt",
           "createdAt"
         ]
@@ -1117,6 +1131,18 @@
               "failed"
             ]
           },
+          "playbackUrl": {
+            "nullable": true,
+            "description": "어디서나 재생되는 배포본(H.264/SDR)의 시한부 URL. 원본은 아이폰 HEVC/HDR 그대로라 플랫폼에 따라 재생되지 않을 수 있으므로 **재생에는 이 값을 우선 쓴다.** 아직 만들어지지 않았거나 변환에 실패하면 `null` 이고, 그때는 `originalUrls` 로 돌아간다.",
+            "type": "string"
+          },
+          "durationMs": {
+            "nullable": true,
+            "description": "서버가 실측한 길이(밀리초). 클라이언트가 보고한 `durationSeconds` 보다 정확하다.",
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
           "capturedAt": {
             "nullable": true,
             "description": "촬영 시각. 클라이언트가 보고한 값이며, 전달되지 않은(또는 전달 이전에 업로드된) 영상은 `null`이다. 시간 기준 정렬·묶음의 원천이고, 없으면 `createdAt`으로 대신한다.",
@@ -1139,6 +1165,8 @@
           "durationSeconds",
           "stylePreset",
           "status",
+          "playbackUrl",
+          "durationMs",
           "capturedAt",
           "createdAt"
         ],

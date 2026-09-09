@@ -183,6 +183,25 @@ export const ENV_VARS = [
     origin: 'shared',
     description: '스냅 분석 큐 이름. 기본 video-analysis. API 와 분석 워커가 일치해야 한다',
   },
+  {
+    key: 'RENDITION_QUEUE_NAME',
+    required: false,
+    origin: 'shared',
+    description: '배포 렌디션 큐 이름. 기본 renditions. API 와 ingest 워커가 일치해야 한다',
+  },
+  // 아래 둘은 ingest 워커(apps/ai-worker/src/rendition_worker.py)만 읽는다.
+  {
+    key: 'RENDITION_TIMEOUT_SECONDS',
+    required: false,
+    origin: 'shared',
+    description: '렌디션 변환 1건의 타임아웃(초). 기본 300 — 짧은 변환이라 편집보다 짧다',
+  },
+  {
+    key: 'RENDITION_CONCURRENCY',
+    required: false,
+    origin: 'shared',
+    description: 'ingest 워커 동시 처리 수. 기본 2',
+  },
 
   // ── 스냅 내용 분석 (분석 워커 전용) ──────────────────
   // API 서버는 큐 이름만 읽는다. 아래 값들은 apps/ai-worker 의 analysis_worker.py 가 소비한다.

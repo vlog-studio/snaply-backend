@@ -10,6 +10,7 @@ import { authPlugin } from './plugins/auth.js';
 import { initStorage } from './services/storage.service.js';
 import { initRedis } from './lib/redis.js';
 import { initEditQueue } from './queue/edit-queue.js';
+import { initRenditionQueue } from './queue/rendition-queue.js';
 import { initVideoAnalysisQueue } from './queue/video-analysis-queue.js';
 import { initFcm } from './services/fcm.service.js';
 import { initCrypto } from './lib/crypto.js';
@@ -122,6 +123,7 @@ export async function buildApp(
   initRedis(config.redis);
   initEditQueue(config.redis.editQueueName);
   initVideoAnalysisQueue(config.redis.analysisQueueName);
+  initRenditionQueue(config.redis.renditionQueueName);
   initFcm(config.firebase);
   initCrypto(config.sns.tokenEncryptionKey);
   initSns(config.sns);

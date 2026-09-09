@@ -336,11 +336,13 @@ describe('분석과 영상 생명주기', () => {
     expect(Object.keys(res.json().data).sort()).toEqual([
       'capturedAt',
       'createdAt',
+      'durationMs',
       'durationSeconds',
       'editedUrl',
       'id',
       'kind',
       'originalUrls',
+      'playbackUrl',
       'status',
       'stylePreset',
       'thumbnailUrl',

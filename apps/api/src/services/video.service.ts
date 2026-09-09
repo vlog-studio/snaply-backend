@@ -9,6 +9,7 @@ import type {
 import { getPrisma } from '../db/client.js';
 import { AppError } from '../lib/errors.js';
 import { captureException } from '../lib/sentry.js';
+import { enqueueRendition } from '../queue/rendition-queue.js';
 import {
   createDownloadUrl,
   createUploadUrl,
@@ -32,6 +33,9 @@ interface VideoRow {
   stylePreset: string | null;
   status: string;
   capturedAt: Date | null;
+  renditionS3Key: string | null;
+  renditionStatus: string;
+  durationMs: number | null;
   createdAt: Date;
 }
 
@@ -58,6 +62,9 @@ async function toDto(row: VideoRow): Promise<Video> {
     stylePreset: row.stylePreset as StylePreset | null,
     status: row.status as VideoStatus,
     capturedAt: row.capturedAt?.toISOString() ?? null,
+    // 어디서나 재생되는 배포본. 아직 없으면(생성 전·실패) null 이고, 그때 앱은 원본으로 돌아간다.
+    playbackUrl: row.renditionS3Key ? await createDownloadUrl(row.renditionS3Key) : null,
+    durationMs: row.durationMs,
     createdAt: row.createdAt.toISOString(),
   };
 }
@@ -76,6 +83,9 @@ const SELECT = {
   stylePreset: true,
   status: true,
   capturedAt: true,
+  renditionS3Key: true,
+  renditionStatus: true,
+  durationMs: true,
   createdAt: true,
 } as const;
 
@@ -151,6 +161,16 @@ export async function confirmUpload(params: {
     },
     select: SELECT,
   });
+
+  // 배포 렌디션 생성을 요청한다. **실패해도 업로드는 성공이다** — 렌디션이 없으면 다른
+  // 플랫폼에서 재생이 안 될 뿐 스냅은 쓸 수 있고 편집은 원본으로 돈다. 여기서 예외를 던지면
+  // 이미 올라간 파일을 두고 사용자에게 실패를 보이게 된다.
+  try {
+    await enqueueRendition({ videoId: video.id, userId: params.userId, s3Key: video.s3Key });
+  } catch (err) {
+    captureException(err, { videoId: video.id, phase: 'rendition-enqueue' });
+  }
+
   return await toDto(updated);
 }
 

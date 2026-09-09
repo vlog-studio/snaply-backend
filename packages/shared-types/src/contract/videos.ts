@@ -17,6 +17,16 @@ export const videoSchema = z
     durationSeconds: z.int().nullable(),
     stylePreset: stylePresetSchema.nullable(),
     status: videoStatusSchema,
+    playbackUrl: z
+      .string()
+      .nullable()
+      .describe(
+        '어디서나 재생되는 배포본(H.264/SDR)의 시한부 URL. 원본은 아이폰 HEVC/HDR 그대로라 플랫폼에 따라 재생되지 않을 수 있으므로 **재생에는 이 값을 우선 쓴다.** 아직 만들어지지 않았거나 변환에 실패하면 `null` 이고, 그때는 `originalUrls` 로 돌아간다.',
+      ),
+    durationMs: z
+      .int()
+      .nullable()
+      .describe('서버가 실측한 길이(밀리초). 클라이언트가 보고한 `durationSeconds` 보다 정확하다.'),
     capturedAt: z.iso
       .datetime()
       .nullable()
