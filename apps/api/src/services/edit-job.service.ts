@@ -177,7 +177,7 @@ export async function createEditJob(params: {
   fitMode: FitMode;
   /** 소프트 자막 생성 여부 (기본 false — 쇼츠용) */
   subtitles: boolean;
-}): Promise<{ jobId: string }> {
+}): Promise<{ jobId: string; videoId: string }> {
   const prisma = getPrisma();
   validateClips(params.clips);
   const clips = params.clips.map((clip) => ({
@@ -291,7 +291,8 @@ export async function createEditJob(params: {
     throw err;
   }
 
-  return { jobId: job.id };
+  // 결과물 영상 id 도 함께 돌려준다 — 무비 내보내기가 이 id 를 무비에 걸어 둔다.
+  return { jobId: job.id, videoId: outputVideo.id };
 }
 
 export async function getEditJob(params: { userId: string; jobId: string }): Promise<EditJob> {

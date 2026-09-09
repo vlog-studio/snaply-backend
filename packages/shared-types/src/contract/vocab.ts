@@ -33,6 +33,23 @@ export const STYLE_PRESETS = ['감성', '여행', '일상'] as const;
 export const stylePresetSchema = z.enum(STYLE_PRESETS);
 export type StylePreset = z.infer<typeof stylePresetSchema>;
 
+/** 무비의 생애. `generating` 은 진행 중인 편집 작업이 있는 상태다. */
+export const MOVIE_STATUSES = ['draft', 'generating', 'ready', 'failed'] as const;
+export const movieStatusSchema = z.enum(MOVIE_STATUSES);
+export type MovieStatus = z.infer<typeof movieStatusSchema>;
+
+/**
+ * 컷 순서를 누가 정했는가. `user` 면 서버가 다시 정렬하지 않는다 —
+ * 촬영 시각 정렬은 `ai` 일 때만 적용된다(decisions/movie-export-policy.md ①).
+ */
+export const MOVIE_ARRANGERS = ['user', 'ai'] as const;
+export const movieArrangerSchema = z.enum(MOVIE_ARRANGERS);
+export type MovieArranger = z.infer<typeof movieArrangerSchema>;
+
+/** 무비 하나가 담을 수 있는 컷 수 (specs/movie.md MOV-5). */
+export const MOVIE_CLIP_MIN = 1;
+export const MOVIE_CLIP_MAX = 10;
+
 export const OUTPUT_PROFILES = [
   'short_vertical',
   'youtube_landscape',

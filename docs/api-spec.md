@@ -102,6 +102,46 @@
 
 ---
 
+## 무비 (`contract/movies.ts`)
+
+무비는 **스냅을 참조하는 편집 레시피**다. 스냅을 소유하지 않으므로 한 스냅을 여러 무비가 서로
+다른 구간으로 쓸 수 있고, 무비를 지워도 스냅은 남는다. 요구:
+[specs/movie.md](./specs/movie.md) · 배경: [decisions/movie-model.md](./decisions/movie-model.md) ·
+[movie-export-policy.md](./decisions/movie-export-policy.md) ·
+[movie-cleanup-after-export.md](./decisions/movie-cleanup-after-export.md)
+
+- `POST /movies` 🔒 — 생성. 컷 없이 만들면 빈 초안이다.
+- `GET /movies` 🔒 — **최근 편집순**(스튜디오 보드의 순서). 커서 페이지네이션.
+- `GET /movies/{id}` 🔒 · `PATCH /movies/{id}` 🔒 · `DELETE /movies/{id}` 🔒
+- `POST /movies/{id}/export` 🔒 → **202** `{ jobId }` — 생성 시작.
+- `POST /movies/{id}/finish` 🔒 — 끝내기(아래).
+
+FE 가 알아야 할 동작:
+
+- **컷 순서는 배열 순서다.** `order` 필드는 없다 — 두 표현이 어긋나지 않게 하기 위해서다.
+- **`arranger` 가 순서의 주인이다.** `user`(기본)면 보낸 순서를 서버가 절대 다시 정렬하지 않고,
+  `ai` 면 촬영 시각 순으로 정렬한다. 사용자가 순서를 손대면 `user` 로 바꿔 보내야 그 뒤로 고정된다.
+- **`PATCH` 의 `clips` 는 통째로 교체**다. 부분 수정이 아니다.
+- **컷의 `unavailable: true`** 는 참조하던 스냅이 만료·삭제됐다는 뜻이다. 그런 컷이 있어도
+  무비는 열리고 목록에서 사라지지 않는다 — 사용자가 무엇을 잃었는지 알아야 하기 때문이다.
+  다만 그 상태로 `export` 하면 400 이다(빼고 다시 시도).
+- **생성 중(`generating`)에는 수정·재생성·끝내기가 모두 409**다.
+- `export` 는 크레딧 **100** 을 예약한다(잔액 부족 시 402). 진행률은 `GET /edit-jobs/{id}` 와
+  WebSocket 으로 본다 — 무비 API 는 진행률을 주지 않는다.
+- **다시 만들면 이전 결과물을 대신한다**(누적하지 않는다).
+
+### 끝내기 (`POST /movies/{id}/finish`)
+
+사용자가 결과물을 **다운로드했거나 SNS 에 게시했을 때** 호출한다. 서버의 결과물 파일을 지우고
+`resultVideoId` 를 비우지만 **무비는 남는다** — 끝낸 뒤에도 고쳐서 다시 만들 수 있고, 그것은
+새 생성이라 크레딧 100 을 다시 낸다. **다시 보기는 제공하지 않는다.**
+
+⚠️ **이 호출을 추측으로 하면 안 된다.** 시스템 공유 시트는 사용자가 실제로 저장했는지 알려주지
+않는다(시트를 닫기만 해도 성공과 구분되지 않는다). 다운로드 경로에서는 **사용자의 명시적 행동**을
+받아 호출하고, SNS 게시는 서버가 성공을 알고 있으므로 그쪽에서 판정한다. 되돌릴 수 없다.
+
+---
+
 ## 무비 템플릿 (`contract/movie-templates.ts`)
 
 사용자가 "템플릿으로 시작"할 때 고르는 무비의 **형태**다. 슬롯의 `label`·`hint` 는 사람에게
