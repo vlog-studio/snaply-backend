@@ -37,6 +37,7 @@ model User {
   creditEntries    CreditLedger[]
   adRewards        AdReward[]
   recommendations  MovieRecommendation[]
+  movies           Movie[]
 
   @@index([deletedAt])
   @@map("users")
@@ -103,6 +104,8 @@ model Video {
   snsUploads SnsUpload[]
   analyses   VideoAnalysis[]
   recommendationItems MovieRecommendationItem[]
+  movieClips MovieClip[]
+  resultOf   Movie[]         @relation("MovieResult")
 
   @@index([userId, createdAt])
   @@index([userId, kind, createdAt])
@@ -409,4 +412,78 @@ model CreditLedger {
   @@unique([adRewardId, reason])
   @@index([userId, createdAt])
   @@map("credit_ledger")
+}
+
+/// 무비의 생애. 앱의 `MovieStatus` 와 같은 값이며, `generating` 은 진행 중인 EditJob 이 있는 상태다.
+enum MovieStatus {
+  draft
+  generating
+  ready
+  failed
+}
+
+/// 컷 순서를 누가 정했는가. `user` 면 서버가 다시 정렬하지 않는다.
+/// 촬영 시각 정렬(movie-export-policy ①)은 `ai` 일 때만 적용된다.
+enum MovieArranger {
+  user
+  ai
+}
+
+/// 무비(회의 용어의 "프로젝트") — 스냅을 참조하는 편집 레시피.
+///
+/// 스냅(`Video`)을 소유하지 않고 참조만 하므로 한 스냅을 여러 무비가 다르게 쓸 수 있다
+/// (decisions/movie-model.md). 결과물 파일은 사용자가 "끝내면" 사라지지만 이 레시피는 남아
+/// 다시 편집·생성할 수 있다(decisions/movie-cleanup-after-export.md).
+model Movie {
+  id          String        @id @default(uuid()) @db.Uuid
+  userId      String        @map("user_id") @db.Uuid
+  title       String        @db.VarChar(100)
+  status      MovieStatus   @default(draft)
+  stylePreset String        @default("일상") @map("style_preset") @db.VarChar(20)
+  /// 소프트 자막 생성 여부. 기본 꺼짐(쇼츠용).
+  captions    Boolean       @default(false)
+  /// 현재는 9:16 뿐이지만, 다른 비율이 생겨도 기존 무비가 자기 비율을 지키도록 저장한다.
+  ratio       String        @default("9:16") @db.VarChar(10)
+  arranger    MovieArranger @default(user)
+
+  /// 살아 있는 결과물 하나(movie-export-policy ②: 누적이 아니라 교체).
+  /// 끝내기(MOV-17)나 30일 상한(MOV-16)으로 파일이 사라지면 NULL 로 돌아간다.
+  resultVideoId String? @map("result_video_id") @db.Uuid
+  /// 사용자가 다운로드·게시로 "끝낸" 시각. 결과물 파일 삭제의 근거이며,
+  /// 이 값이 있어도 무비 자체는 계속 편집할 수 있다(MOV-4).
+  finishedAt    DateTime? @map("finished_at") @db.Timestamptz(6)
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resultVideo Video?      @relation("MovieResult", fields: [resultVideoId], references: [id], onDelete: SetNull)
+  clips       MovieClip[]
+
+  /// 스튜디오 보드가 최근 수정순으로 읽는다.
+  @@index([userId, updatedAt])
+  @@map("movies")
+}
+
+/// 무비 안의 컷 하나 — 어떤 스냅을, 어느 구간으로, 몇 번째에 쓰는지.
+///
+/// 스냅을 지워도(또는 15일 만료로 사라져도) 이 행은 남는다: 참조 대상인 `Video` 가 툼스톤으로
+/// 남기 때문이며(SNAP-12), 그래서 컷 하나가 만료돼도 무비는 열린다.
+model MovieClip {
+  id      String @id @default(uuid()) @db.Uuid
+  movieId String @map("movie_id") @db.Uuid
+  videoId String @map("video_id") @db.Uuid
+  /// 0부터의 표시 순서. 같은 무비 안에서 유일하다.
+  order   Int
+  /// 트림 구간(밀리초). 없으면 스냅 전체를 쓴다.
+  startMs Int? @map("start_ms")
+  endMs   Int? @map("end_ms")
+
+  movie Movie @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@unique([movieId, order])
+  @@index([videoId])
+  @@map("movie_clips")
 }

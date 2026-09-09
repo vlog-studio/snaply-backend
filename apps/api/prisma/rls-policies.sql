@@ -133,3 +133,48 @@ create policy "ad_rewards_select_own" on public.ad_rewards
 -- 클라이언트에 직접 select 를 열면 점수화 내부값이 그대로 나간다.
 alter table public.movie_templates enable row level security;
 alter table public.movie_template_slots enable row level security;
+
+-- ── movies · movie_clips ───────────────────────────────
+-- 무비는 유저 데이터다. 본인 것만 읽고 쓴다.
+alter table public.movies enable row level security;
+
+create policy "movies_select_own" on public.movies
+  for select using (user_id = public.current_app_user_id());
+create policy "movies_insert_own" on public.movies
+  for insert with check (user_id = public.current_app_user_id());
+create policy "movies_update_own" on public.movies
+  for update using (user_id = public.current_app_user_id());
+create policy "movies_delete_own" on public.movies
+  for delete using (user_id = public.current_app_user_id());
+
+-- 컷에는 소유자 컬럼이 없다. 소속 무비를 거쳐 판정한다 — 무비가 본인 것이면 그 컷도 본인 것이다.
+alter table public.movie_clips enable row level security;
+
+create policy "movie_clips_select_own" on public.movie_clips
+  for select using (
+    exists (
+      select 1 from public.movies m
+      where m.id = movie_id and m.user_id = public.current_app_user_id()
+    )
+  );
+create policy "movie_clips_insert_own" on public.movie_clips
+  for insert with check (
+    exists (
+      select 1 from public.movies m
+      where m.id = movie_id and m.user_id = public.current_app_user_id()
+    )
+  );
+create policy "movie_clips_update_own" on public.movie_clips
+  for update using (
+    exists (
+      select 1 from public.movies m
+      where m.id = movie_id and m.user_id = public.current_app_user_id()
+    )
+  );
+create policy "movie_clips_delete_own" on public.movie_clips
+  for delete using (
+    exists (
+      select 1 from public.movies m
+      where m.id = movie_id and m.user_id = public.current_app_user_id()
+    )
+  );
