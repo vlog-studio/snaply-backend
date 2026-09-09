@@ -267,6 +267,7 @@ export async function deleteVideo(params: { userId: string; videoId: string }): 
 
   await prisma.video.update({
     where: { id: video.id },
-    data: { deletedAt: new Date(), status: 'deleted' },
+    // 사유를 남긴다 — 사용자가 지운 것과 기간 만료로 사라진 것은 보여줄 문구가 다르다(SNAP-12).
+    data: { deletedAt: new Date(), status: 'deleted', removalReason: 'user' },
   });
 }

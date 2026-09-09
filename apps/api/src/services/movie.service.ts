@@ -398,7 +398,15 @@ export async function finishMovie(params: {
     }
     await prisma.video.update({
       where: { id: result.id },
-      data: { deletedAt: new Date(), editedUrl: null, thumbnailUrl: null },
+      // 사용자가 가져가서 지운 것이므로 사유는 `user` 다. `purgedAt` 이 있으면 남은 객체
+      // 정리 배치가 다시 훑지 않는다.
+      data: {
+        deletedAt: new Date(),
+        removalReason: 'user',
+        purgedAt: new Date(),
+        editedUrl: null,
+        thumbnailUrl: null,
+      },
     });
     resultDeleted = true;
   }
