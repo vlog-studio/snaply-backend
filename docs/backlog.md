@@ -23,10 +23,12 @@
 **결정됨**: 영상은 평면으로 보관하고, 편집할 클립을 참조하는 엔티티는 **`Movie`** 로 둔다.
 3안 비교와 채택 근거는 [decisions/movie-model.md](./decisions/movie-model.md).
 
-**남은 판단**: ① 내보내기 시 클립 순서 기본값 ② 재내보내기 정책(누적 vs 교체)
-③ Movie 삭제 시 참조 영상 처리 ④ 날짜 기반 자동 그룹핑의 도입 범위
-⑤ 기존 `POST /edit-jobs` 직접 편집 API의 공존·폐기 시점 — ①~⑤의 선택지·결과는
-[decisions/movie-export-policy.md](./decisions/movie-export-policy.md)(미결)
+**①~⑤ 세부 규칙은 2026-09-09 결정 완료** —
+[decisions/movie-export-policy.md](./decisions/movie-export-policy.md):
+① 순서는 **촬영 시각 순이 기본, 사용자가 옮기면 고정**(`arranger`) ② 재내보내기는 **교체**
+(무비당 살아 있는 결과물 1개) ③ 무비를 지워도 **스냅은 남는다** ④ 자동 그룹핑은 **앱 표시만**
+(서버 제안은 A-6 후속) ⑤ `POST /edit-jobs` 는 **한 버전 공존 후 폐기**.
+
 ⑥ **영상·프로젝트·결과물 생애주기 재정의**(2026-08-31 개발자 회의 제안 —
 [meetings/2026-08-31-dev-sync.md](./meetings/2026-08-31-dev-sync.md) §4) — **2026-09-09 세 축 모두 결정 완료.**
 
@@ -51,7 +53,12 @@
 `capturedAt` 수집은 결정 완료이며 스냅 서버 원천화 1단계에서 구현한다. 위치 정보 저장
 여부는 이 항목과 분리해 A-4에서만 관리한다.
 
-**완료 조건**: 남은 세부 정책 확정 → `Movie` 스키마 PR → CRUD → export → e2e 실검증.
+**완료 조건**: ~~남은 세부 정책 확정~~(완료) → `Movie` 스키마 PR → CRUD → export → e2e 실검증.
+착수 계획과 순서는 [plans/lifecycle-alignment.md](./plans/lifecycle-alignment.md) §5-A.
+
+- [ ] **`POST /edit-jobs` 폐기** — 결정 ⑤ 는 "한 버전 공존 후 폐기"다. 앱이 Movie export 로
+      옮긴 릴리스의 **다음 릴리스**에서 제거한다. 시점을 항목으로 남기지 않으면 영구 공존이
+      되어 editSpec v3 를 두 곳에 붙이게 된다(A-7 부착 지점)
 
 무비 결과물의 정리도 이 항목에서 함께 구현한다: **끝내기 시 삭제**(MOV-17)와, 끝내지 않은
 결과물의 **30일 상한**(MOV-16). 프로젝트 자동 삭제는 **기능만 만들고 기본 꺼짐**으로 둔다.

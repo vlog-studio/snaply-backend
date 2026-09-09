@@ -14,13 +14,12 @@
 
 | 문서 | 무엇을 정하나 | 백로그 | 출처 |
 |---|---|---|---|
-| [movie-export-policy.md](movie-export-policy.md) | 무비 내보내기 세부 규칙 5개(순서 기본값 · 재내보내기 · 삭제 시 스냅 · 자동 그룹핑 · 기존 API 폐기) | A-1 ①~⑤ | backlog A-1 |
 | [subtitle-rendering.md](subtitle-rendering.md) | 자막: 소프트 유지 vs 번인 전환 | A-7 | 2026-08-31 회의 |
 | [sns-webhook-scope.md](sns-webhook-scope.md) | "웹훅 연동"이 어느 웹훅을 뜻하는지 | D-1 | 2026-08-31 회의 |
 | [sticker-asset-sourcing.md](sticker-asset-sourcing.md) | 스티커 조달 경로 · 등록 경로(관리자 페이지 시점) | A-7 | 2026-08-31 회의 |
 | [bgm-sourcing.md](bgm-sourcing.md) | BGM 조달(AI 생성 · 라이선스 구독 · 커미션) — 법적 검토 6항목 선행 | A-7 · E-5 | 2026-08-31 회의 |
 
-남은 다섯 건의 선후관계와 착수 순서는 [plans/2026-08-31-dev-sync-follow-up.md](../plans/2026-08-31-dev-sync-follow-up.md) §2.
+남은 네 건의 선후관계와 착수 순서는 [plans/2026-08-31-dev-sync-follow-up.md](../plans/2026-08-31-dev-sync-follow-up.md) §2.
 
 ## 결정 완료 — 현행 정책의 근거
 
@@ -33,11 +32,12 @@
 | [snap-retention-period.md](snap-retention-period.md) | 스냅 서버 보관은 기간 기준 — 업로드 후 15일 만료 (구독 혜택으로 연장할지는 미확정, A-2) | 결정만, 미구현(A-1) |
 | [local-copy-after-upload.md](local-copy-after-upload.md) | 로컬은 최종적으로 캐시. 삭제를 켜는 것은 렌디션·동기화 검증 후로 연기 | 결정만, 조건 미충족(A-4) |
 | [movie-cleanup-after-export.md](movie-cleanup-after-export.md) | 끝내면 결과물 파일만 삭제, 프로젝트는 보존. 다시 만들기는 유료 | 결정만, 미구현(A-1) |
+| [movie-export-policy.md](movie-export-policy.md) | 무비 세부 규칙 5개 — 촬영순 기본·결과물 교체·스냅 보존·앱 그룹핑·edit-jobs 한 버전 후 폐기 | 결정만, 미구현(A-1) |
 | [storage-and-subscription-policy.md](storage-and-subscription-policy.md) | 크레딧/구독 2축 (**Free 2GB 한도는 snap-retention-period 가, 무비 무료 재생성은 movie-cleanup-after-export 가 대체**) | 정책 확정, 만료 미구현(A-1·A-2) |
 | [payment-channel-iap.md](payment-channel-iap.md) | 결제 채널 IAP + RevenueCat, Stripe 제거 | 완료, 스토어 등록 대기(C-1) |
 | [credit-payment-model.md](credit-payment-model.md) | 구독 제거, 무비 생성 = 크레딧 100 | 완료 |
 | [snap-source-of-truth.md](snap-source-of-truth.md) | 스냅 원천을 서버로 전환(1~4단계) | 결정만, 미착수(A-4) |
-| [movie-model.md](movie-model.md) | 영상 묶음은 평면 `Video`를 참조하는 `Movie` 엔티티 | 결정만, 세부 규칙은 위 movie-export-policy |
+| [movie-model.md](movie-model.md) | 영상 묶음은 평면 `Video`를 참조하는 `Movie` 엔티티 | 결정만, 미구현(A-1). 세부 규칙은 movie-export-policy |
 | [env-management.md](env-management.md) | 로컬은 `apps/api/.env`, 운영은 플랫폼 시크릿 주입 | 완료 |
 
 ## 과거 결정 — 일부 또는 전부 대체됨
