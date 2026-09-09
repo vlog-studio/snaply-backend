@@ -28,20 +28,24 @@
 ⑤ 기존 `POST /edit-jobs` 직접 편집 API의 공존·폐기 시점 — ①~⑤의 선택지·결과는
 [decisions/movie-export-policy.md](./decisions/movie-export-policy.md)(미결)
 ⑥ **영상·프로젝트·결과물 생애주기 재정의**(2026-08-31 개발자 회의 제안 —
-[meetings/2026-08-31-dev-sync.md](./meetings/2026-08-31-dev-sync.md) §4): 영상 15일 지속 ·
-서버 업로드 성공 시 로컬 삭제 · 내보내기 완료 시 프로젝트 삭제 · 결과물은 다운로드/SNS 연동 진행 후 삭제.
-현행 MOV-14(구성 영구 보관)·MOV-16(결과물 30일 보관 + 무료 재생성)와 충돌하므로,
-채택하면 spec 을 먼저 고치고 [decisions/storage-and-subscription-policy.md](./decisions/storage-and-subscription-policy.md)
-§3 의 기각 근거를 결정 문서에 남긴다. 결과물을 삭제하면 A-7 의 에셋 영구 라이선스 조항 논의도 함께 닫힌다.
-세 축 중 **보관 기간은 2026-09-09 결정됐다** — 서버 원본은 업로드 후 **15일**에 만료된다
-([snap-retention-period.md](./decisions/snap-retention-period.md), SNAP-9·SNAP-12·SNAP-13).
-구독자에게 더 긴 기간을 줄지는 **아직 미확정**이므로 구현은 전원 15일을 가정한다(A-2).
-**로컬 삭제도 2026-09-09 결정됐다** — 로컬은 최종적으로 캐시가 되지만 삭제를 켜는 것은
-렌디션·동기화 검증 뒤로 연기하고, 그때까지 기기 파일이 원천이다
-([local-copy-after-upload.md](./decisions/local-copy-after-upload.md), SNAP-14).
-15일 만료와 겹쳐 영상이 완전히 사라지는 조합은 이 결정으로 지금은 생기지 않는다 —
-**다만 전환을 켜는 시점에 다시 열린다.**
-남은 한 축은 미결이다: [movie-cleanup-after-export.md](./decisions/movie-cleanup-after-export.md).
+[meetings/2026-08-31-dev-sync.md](./meetings/2026-08-31-dev-sync.md) §4) — **2026-09-09 세 축 모두 결정 완료.**
+
+| 축 | 결정 | 요구 |
+|---|---|---|
+| 스냅 보관 | 서버 원본은 업로드 후 **15일** 만료. 구독 연장은 미확정이라 구현은 전원 15일 가정(A-2) | SNAP-9·12·13 |
+| 로컬 파일 | 최종적으로 캐시가 되지만 **삭제를 켜는 것은 렌디션·동기화 검증 뒤로 연기**. 그때까지 기기 파일이 원천 | SNAP-14 |
+| 내보내기 후 | **끝내면 결과물 파일만 삭제, 프로젝트는 보존.** 다시 보기 없음, 다시 만들기는 유료(크레딧 100) | MOV-16~19 |
+
+근거: [snap-retention-period.md](./decisions/snap-retention-period.md) ·
+[local-copy-after-upload.md](./decisions/local-copy-after-upload.md) ·
+[movie-cleanup-after-export.md](./decisions/movie-cleanup-after-export.md).
+
+⚠️ **구현 시 주의 둘**
+- 로컬 삭제 전환을 켜는 시점에 **15일 만료와 겹쳐 영상이 완전히 사라지는 조합**이 다시 열린다.
+  지금은 기기 파일이 남아 그 조합이 생기지 않는다.
+- 시스템 공유 시트는 저장 여부를 알려주지 않으므로 **다운로드 경로의 "끝내기"는 사용자의 명시적
+  행동이어야 한다**(MOV-18). 시트를 연 것만으로 지우면 취소한 사용자의 파일이 사라진다.
+
 만료의 동작 구조(2단계 삭제 · 만료 스냅 식별 · 사전 알림)는
 [plans/lifecycle-alignment.md](./plans/lifecycle-alignment.md) §6 에서 설계를 마쳤다.
 `capturedAt` 수집은 결정 완료이며 스냅 서버 원천화 1단계에서 구현한다. 위치 정보 저장
@@ -49,11 +53,11 @@
 
 **완료 조건**: 남은 세부 정책 확정 → `Movie` 스키마 PR → CRUD → export → e2e 실검증.
 
-무비 파일의 **30일 보관 후 만료**와 만료분의 **크레딧 없는 무료 재생성**은 이 항목에서
-함께 구현한다 —
-[decisions/storage-and-subscription-policy.md](./decisions/storage-and-subscription-policy.md) §3.
-재생성의 원천은 이미 영구 저장되는 `EditJob.editSpec`/`renderSpec`이라 추가 스키마가 필요 없다.
-S3 삭제 실패분은 E-3의 정리 배치 경로를 쓴다.
+무비 결과물의 정리도 이 항목에서 함께 구현한다: **끝내기 시 삭제**(MOV-17)와, 끝내지 않은
+결과물의 **30일 상한**(MOV-16). 프로젝트 자동 삭제는 **기능만 만들고 기본 꺼짐**으로 둔다.
+다시 만들기는 유료(MOV-19)라 무료 재생성 경로는 만들지 않는다 —
+[decisions/storage-and-subscription-policy.md](./decisions/storage-and-subscription-policy.md) §3 의
+무료 재생성은 대체됐다. S3 삭제 실패분은 E-3의 정리 배치 경로를 쓴다.
 
 같은 결정 §3.5의 "생성 완료 FCM 알림에 보관 기간 명시"에는 선행 조건이 있다 —
 **현재 무비 생성 완료 알림은 앱의 로컬 알림이고, 서버 FCM 파이프라인은 geofence 전용이다.**
@@ -267,9 +271,11 @@ S3 삭제 실패분은 E-3의 정리 배치 경로를 쓴다.
       실기기 캡처가 필요하다. 값은 스펙에 굽지 않고 **버전드 팩**으로 둔다(kickoff §1.1 B-3) —
       스펙에 값으로 넣으면 플랫폼 UI 가 바뀌어도 이미 저장된 스펙을 못 고친다
 - [ ] **에셋 라이선스에 영구(perpetual) 조항을 필수로 걸 것인가** ⚠️ 2026-08-20 신규.
-      [storage-and-subscription-policy.md](./decisions/storage-and-subscription-policy.md) §3 이
-      만료된 무비의 **크레딧 없는 무료 재생성**을 약속했는데, 라이선스가 만료돼 에셋 서빙을
-      멈추면 그 약속이 깨진다. 구독형 BGM 라이선스(Epidemic·Uppbeat 등)는 대개 "구독 기간 중
+      **2026-09-09 재판정 — 여전히 열려 있다.** 근거가 "무료 재생성 약속"에서
+      "**다시 만들기가 계속 가능하다**"로 바뀌었을 뿐이다
+      ([movie-cleanup-after-export.md](./decisions/movie-cleanup-after-export.md): 프로젝트는
+      보존되고 유료로 다시 생성한다). 라이선스가 만료돼 에셋 서빙을 멈추면 사용자는 예전
+      프로젝트를 **돈을 내고도** 다시 만들 수 없게 된다. 구독형 BGM 라이선스(Epidemic·Uppbeat 등)는 대개 "구독 기간 중
       제작한 콘텐츠는 이후에도 사용 가능" 구조지만, **만료 후 재렌더가 "기존 콘텐츠 사용"인지
       "신규 제작"인지**가 계약서마다 다를 수 있다. 법률 판단이 필요하고 스키마로는 풀리지 않는다.
       조달 단계에서 **"신규 배포 중단 / 기존 저작물 유지" 분리 조항**을 협상 항목으로 올린다.
@@ -602,9 +608,14 @@ api 만 스모크하고 워커는 빌드 성공까지만 볼지 판단이 필요
 ([`apps/ai-worker/src/pipeline/music.py`](../apps/ai-worker/src/pipeline/music.py))
 **같은 레시피로 재생성해도 BGM 이 달라진다.** 사용자는 "복원"을 눌렀는데 다른 영상을 받는다.
 
-지금 당장 사용자에게 보이지는 않는다 — 무비 재생성 경로가 아직 구현되지 않았기 때문이다(A-1).
-**A-1 착수 시점에 같이 닫아야 하는 잠복 결함**이며, A-7 의 비트 싱크가 들어오면 컷 지점까지
-달라져 피해가 커진다.
+**2026-09-09 재판정 — 급박함은 줄었지만 사라지지는 않았다.** 무료 재생성(위 §3.2)이
+폐기되면서([movie-cleanup-after-export.md](./decisions/movie-cleanup-after-export.md))
+"복원을 눌렀는데 다른 영상" 이라는 시나리오는 없어졌다. 다시 만들기는 이제 **사용자가 편집한 뒤
+크레딧을 내고 하는 새 생성**이라, 결과가 달라지는 것이 배신은 아니다.
+
+그러나 결함 자체는 남는다: **같은 구성으로 다시 만들었는데 BGM 이 바뀌면** 사용자는 자기가
+바꾸지 않은 것이 바뀐 이유를 알 수 없다. MOV-14(같은 구성 → 같은 결과)도 여전히 그렇게 요구한다.
+A-7 의 비트 싱크가 들어오면 컷 지점까지 달라져 피해가 커진다.
 
 **완료 조건**: 선택된 트랙 ID·난수 시드를 `editSpec` 에 핀으로 남기고, 재생성이 같은 산출물을
 내는 것을 테스트로 고정한다. 트랙 ID 를 가지려면 `bgm_tracks` 가 필요하므로 A-7 과 함께 간다.
