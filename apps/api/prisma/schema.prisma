@@ -80,6 +80,16 @@ enum VideoKind {
   result
 }
 
+/// 영상이 사라진 이유. 사용자에게 보일 문구와 안내 톤이 다르므로 구분해 저장한다
+/// (docs/specs/snap-library.md SNAP-12). `deleted_at` 이 있는데 이 값이 없는 행은
+/// 이 컬럼이 생기기 전에 지워진 것이며 `user` 로 읽는다.
+enum VideoRemovalReason {
+  /// 사용자가 직접 지웠다.
+  user
+  /// 보관 기간이 지나 우리 정책으로 사라졌다.
+  expired
+}
+
 model Video {
   id              String    @id @default(uuid()) @db.Uuid
   userId          String    @map("user_id") @db.Uuid
@@ -96,6 +106,11 @@ model Video {
   s3Key           String?   @map("s3_key")
   /// 클라이언트가 보고한 촬영 시각. 서버가 소급할 수 없어, 전달 이전에 올라온 행은 null 로 남는다.
   capturedAt      DateTime? @map("captured_at") @db.Timestamptz(6)
+  /// 왜 사라졌는가. 행은 툼스톤으로 남으므로(SNAP-12) 사용자는 무엇을 잃었는지 알 수 있다.
+  removalReason   VideoRemovalReason? @map("removal_reason")
+  /// 파일을 실제로 지운 시각. 만료 "예정"이 아니라 일어난 사실이다 — 만료 판정 자체는
+  /// 저장하지 않고 업로드 시각 + 정책 값으로 유도한다(services/retention-policy.ts).
+  purgedAt        DateTime? @map("purged_at") @db.Timestamptz(6)
   createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(6)
 
