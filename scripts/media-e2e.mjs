@@ -156,6 +156,25 @@ function probeDuration(path) {
   }
 }
 
+/**
+ * 촬영 시각. 앱은 스냅의 실제 촬영 시각을 보내지만 여기서는 파일에서 얻는다 —
+ * ffprobe 의 creation_time 이 있으면 그 값, 없으면 파일 mtime.
+ */
+function probeCapturedAt(path) {
+  try {
+    const out = execFileSync(
+      'ffprobe',
+      ['-v', 'error', '-show_entries', 'format_tags=creation_time', '-of', 'csv=p=0', path],
+      { encoding: 'utf8' },
+    ).trim();
+    const parsed = Date.parse(out);
+    if (Number.isFinite(parsed)) return new Date(parsed).toISOString();
+  } catch {
+    /* ffprobe 가 없거나 태그가 없으면 아래로 */
+  }
+  return statSync(path).mtime.toISOString();
+}
+
 /** 1클립: presigned 발급 → S3 PUT → 등록. videoId 반환. */
 async function uploadClip(api, path) {
   const filename = basename(path);
@@ -185,11 +204,16 @@ async function uploadClip(api, path) {
   dim(`S3 PUT ${put.status}`);
 
   const durationSeconds = probeDuration(path);
+  const capturedAt = probeCapturedAt(path);
   const video = await api('POST', '/videos', {
     videoId: target.videoId,
     ...(durationSeconds !== undefined ? { durationSeconds } : {}),
+    capturedAt,
   });
-  ok(`등록 완료 status=${video.status} duration=${video.durationSeconds ?? '-'}s`);
+  ok(
+    `등록 완료 status=${video.status} duration=${video.durationSeconds ?? '-'}s ` +
+      `capturedAt=${video.capturedAt ?? '(없음)'}`,
+  );
   return video.id;
 }
 
