@@ -1410,3 +1410,29 @@ Metro/Jest 해석 확인 필요), `openapi.json` 의 `*Input` 사본 스키마.
 
 **앱에 넘긴 것**: [mobile-handover-lifecycle.md](./mobile-handover-lifecycle.md) —
 무비 서버 전환·만료 표시·끝내기 버튼과 그 계약. 백로그 항목에 `앱`/`서버` 라벨을 달았다.
+
+---
+
+## 2026-09-09 (이어서) — 배포 렌디션 워커 (Dev A)
+
+서버 원천 전환 2단계([decisions/snap-source-of-truth.md](./decisions/snap-source-of-truth.md) §5).
+아이폰 원본은 HEVC·종종 HDR 이라 다른 플랫폼에서 재생되지 않을 수 있어, 업로드가 확정되면
+**H.264/SDR 사본**을 만든다. 원본은 지우지 않는다 — 편집은 계속 원본을 쓴다.
+
+- **세 번째 워커 프로세스**(`npm run worker:rendition`, compose `rendition-worker`). 편집·분석
+  워커와 같은 이미지에 커맨드만 다르다. 적재는 `POST /videos` 가 한다
+- **계약**: `Video.playbackUrl`(시한부 URL, 없으면 `originalUrls` 폴백) · `durationMs`(FFprobe 실측)
+- **실패는 치명적이지 않다** — 렌디션이 없으면 일부 플랫폼에서 재생이 안 될 뿐이라 `videos.status`
+  를 건드리지 않고, 큐 적재 실패도 삼킨다(파일은 이미 올라갔고 스냅은 쓸 수 있다). 변환 자체가
+  안 되는 파일은 재시도하지 않는다 — 다음에도 같은 결과다
+- **HDR 은 `zscale` 톤매핑 대신 `format=yuv420p` 강제 변환**으로 떨어뜨린다. zscale 이 없는
+  ffmpeg 빌드가 흔해서다. HDR 원본이 다소 어두워질 수 있지만 재생되지 않는 것보다 낫다 —
+  정밀 톤매핑은 A-7 렌더 파이프라인의 몫
+- 기존 스냅은 마이그레이션에서 `skipped` 로 표시했다. 소급 변환하지 않으며, `pending` 으로
+  두면 있지도 않은 밀린 작업처럼 보인다
+
+**검증**: 합성 HEVC(1080×1920) 업로드 → 큐 → 변환 → `playbackUrl` 발급까지 로컬 MinIO 로 확인.
+결과물은 h264 High/yuv420p 이고 `moov` 가 `mdat` 앞에 있다(faststart). API 358 테스트 통과.
+
+**FE 에 열린 것**: 3단계(reconcile)의 선행 조건이 풀렸다 —
+[mobile-handover-lifecycle.md](./mobile-handover-lifecycle.md).
