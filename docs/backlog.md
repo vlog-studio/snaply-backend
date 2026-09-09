@@ -36,10 +36,12 @@
 세 축 중 **보관 기간은 2026-09-09 결정됐다** — 서버 원본은 업로드 후 **15일**에 만료된다
 ([snap-retention-period.md](./decisions/snap-retention-period.md), SNAP-9·SNAP-12·SNAP-13).
 구독자에게 더 긴 기간을 줄지는 **아직 미확정**이므로 구현은 전원 15일을 가정한다(A-2).
-남은 두 축은 미결이다: [local-copy-after-upload.md](./decisions/local-copy-after-upload.md) ·
-[movie-cleanup-after-export.md](./decisions/movie-cleanup-after-export.md).
-⚠️ 로컬 삭제(A)를 택하면 15일 만료와 겹쳐 **사용자 영상이 폰에서도 서버에서도 사라진다** —
-두 결정을 반드시 같은 자리에서 본다.
+**로컬 삭제도 2026-09-09 결정됐다** — 로컬은 최종적으로 캐시가 되지만 삭제를 켜는 것은
+렌디션·동기화 검증 뒤로 연기하고, 그때까지 기기 파일이 원천이다
+([local-copy-after-upload.md](./decisions/local-copy-after-upload.md), SNAP-14).
+15일 만료와 겹쳐 영상이 완전히 사라지는 조합은 이 결정으로 지금은 생기지 않는다 —
+**다만 전환을 켜는 시점에 다시 열린다.**
+남은 한 축은 미결이다: [movie-cleanup-after-export.md](./decisions/movie-cleanup-after-export.md).
 만료의 동작 구조(2단계 삭제 · 만료 스냅 식별 · 사전 알림)는
 [plans/lifecycle-alignment.md](./plans/lifecycle-alignment.md) §6 에서 설계를 마쳤다.
 `capturedAt` 수집은 결정 완료이며 스냅 서버 원천화 1단계에서 구현한다. 위치 정보 저장
@@ -172,6 +174,19 @@ S3 삭제 실패분은 E-3의 정리 배치 경로를 쓴다.
       ([decisions/account-deletion.md](./decisions/account-deletion.md))
 - [ ] egress 비용 실측 후 렌디션 기본 다운로드 정책 재평가
 - [ ] 앱 선행 과제: 촬영 스냅 해상도 하드코딩(1080×1920) 해소 — 틀린 값이 서버 원천이 되면 백필 불가
+
+**2026-09-09**: 로컬 파일을 언제 지울지는 결정됐다 — 최종 목표는 "로컬은 캐시"이되 **켜는 것은
+아래 두 단계가 실기기에서 검증된 뒤**로 연기한다(SNAP-14,
+[local-copy-after-upload.md](./decisions/local-copy-after-upload.md)). 그때까지 기기 파일이 원천이다.
+전환의 선행 작업이자 이 항목의 실질적 남은 일:
+
+- [ ] **2단계 — ingest 렌디션**: confirm 후 워커가 H.264/SDR 배포본 + 썸네일 생성, `Video`에
+      렌디션 키 컬럼 추가. **크로스 플랫폼 재생의 전제**라 3단계보다 먼저다
+      ([snap-source-of-truth.md](./decisions/snap-source-of-truth.md) §5)
+- [ ] **3단계 — 앱 reconcile**: 서버 목록 대조·파일 온디맨드 다운로드, 삭제 유예·전파 규칙.
+      이것이 없으면 재설치 시 서버에 있어도 앱이 모른다
+- [ ] **전환을 켤 때 함께 볼 것**: 로컬이 캐시가 되는 순간 서버 만료(SNAP-9, 15일)가 곧 영상의
+      소멸이 된다. 보관 기간·구독 연장과 **같은 자리에서** 판단한다
 
 ### A-6. 템플릿 기반 스냅 자동 추천 — 앱·백엔드 완료, 생산 활성화 대기
 

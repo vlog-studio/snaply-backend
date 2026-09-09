@@ -102,6 +102,8 @@ Thumbnails are derived cover art, held by no model. Extraction and caching live 
 
 Every snap is uploaded to the backend automatically, so that by the time movie generation moves server-side (`POST /edit-jobs` takes `videoIds`), the material is already there and the user never waits on a bulk upload at the moment they ask for a movie.
 
+**The local file stays the source of truth.** A finished upload does not delete it. Making the device copy a cache is the agreed destination, but switching it on waits until the backend serves a playable rendition and the app reconciles against the server list — without those, deleting locally would leave a snap unplayable on other platforms and unrecoverable after a reinstall ([SNAP-14](../../../../docs/specs/snap-library.md), [decision](../../../../docs/decisions/local-copy-after-upload.md)).
+
 | Capability | Status | Notes |
 | --- | --- | --- |
 | Upload worker | `Functional` | `features/upload-snap`, mounted app-wide as `SnapUploadGate` in `_app/providers` — an upload continues wherever the user navigates, like movie generation. Runs only while authenticated (the endpoints tie videos to the caller) and after both snap stores hydrate. Strictly serial: one transfer at a time, oldest capture first. Routes to in-code mocks under `USE_MOCK_API`, like every other API caller. |
