@@ -52,6 +52,10 @@ _load_dotenv()
 REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379")
 DATABASE_URL = os.environ.get("DATABASE_URL", "")
 EDIT_QUEUE_NAME = os.environ.get("EDIT_QUEUE_NAME", "edit-jobs")
+RENDITION_QUEUE_NAME = os.environ.get("RENDITION_QUEUE_NAME", "renditions")
+# 배포 렌디션은 짧은 변환이라 편집보다 짧게 잡는다.
+RENDITION_TIMEOUT_SECONDS = int(os.environ.get("RENDITION_TIMEOUT_SECONDS", "300"))
+RENDITION_CONCURRENCY = int(os.environ.get("RENDITION_CONCURRENCY", "2"))
 
 # S3 / MinIO
 S3_ENDPOINT = os.environ.get("S3_ENDPOINT") or None

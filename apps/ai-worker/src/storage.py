@@ -71,3 +71,13 @@ def edited_key(user_id: str, job_id: str) -> str:
 
 def thumbnail_key(user_id: str, job_id: str) -> str:
     return f"uploads/{user_id}/thumbnails/{job_id}.jpg"
+
+
+def rendition_key(user_id: str, video_id: str) -> str:
+    """배포본(H.264/SDR). 원본과 다른 prefix 라 정리 배치가 둘을 구분해 다룰 수 있다."""
+    return f"uploads/{user_id}/renditions/{video_id}.mp4"
+
+
+def snap_thumbnail_key(user_id: str, video_id: str) -> str:
+    """스냅 표지. 편집 결과물의 thumbnails/ 와 같은 규칙을 쓰되 키는 video_id 로 잡는다."""
+    return f"uploads/{user_id}/thumbnails/{video_id}.jpg"

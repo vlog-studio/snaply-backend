@@ -92,6 +92,7 @@ npm run dev:mobile              # Android dev client용 Metro
 RLS 정책은 최초 1회 `apps/api/prisma/rls-policies.sql`을 Supabase SQL Editor에서 실행한다.
 AI 편집 워커는 `npm run worker:install` 후 `npm run worker`.
 스냅 분석 워커는 같은 venv 에서 `npm run worker:analysis` — `OPENAI_API_KEY` 가 없으면 기동 단계에서 종료된다.
+배포 렌디션 워커는 `npm run worker:rendition` — 업로드된 스냅의 H.264/SDR 사본을 만든다(없으면 다른 플랫폼에서 재생이 안 될 수 있다).
 
 ## 스크립트 (루트)
 
@@ -103,7 +104,7 @@ AI 편집 워커는 `npm run worker:install` 후 `npm run worker`.
 | `npm run dev:api` | API 서버(watch) |
 | `npm run dev:mobile` | Android dev client용 Expo Metro |
 | `npm run verify:mobile` | 모바일 포맷·린트·타입·API 타입·Jest 검증 |
-| `npm run worker` / `worker:analysis` / `worker:install` | AI 편집 워커 / 스냅 분석 워커 / venv 설치 |
+| `npm run worker` / `worker:analysis` / `worker:rendition` / `worker:install` | AI 편집 워커 / 스냅 분석 워커 / 배포 렌디션 워커 / venv 설치 |
 | `npm run analysis:run` | 분석 워커 단발 실행(디버그) |
 | `npm run build` / `typecheck` / `lint` | 전체 빌드·검사 |
 | `npm run db:generate` / `db:migrate` / `db:seed` / `db:studio` | Prisma |
