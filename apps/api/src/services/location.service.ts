@@ -2,6 +2,7 @@ import type { LocationCategory, NearbyLocation } from '@vlog-studio/shared-types
 import { getPrisma } from '../db/client.js';
 import { AppError } from '../lib/errors.js';
 import { sendToUser, type PushMessage } from './fcm.service.js';
+import { isQuietNow } from '../lib/quiet-hours.js';
 
 const COOLDOWN_MINUTES = 30;
 const EARTH_RADIUS_M = 6_371_000;
@@ -38,19 +39,6 @@ export async function listNearby(params: {
     }))
     .filter((loc) => loc.distanceMeters <= params.radius)
     .sort((a, b) => a.distanceMeters - b.distanceMeters);
-}
-
-/** KST(UTC+9) 기준 현재 시각이 quiet_hours 구간인지 판정 (자정 넘김 지원). */
-function isQuietNow(quietStart: number, quietEnd: number, now: Date): boolean {
-  const kstHour = (now.getUTCHours() + 9) % 24;
-  if (quietStart === quietEnd) {
-    return false;
-  }
-  if (quietStart < quietEnd) {
-    return kstHour >= quietStart && kstHour < quietEnd;
-  }
-  // 예: 22시~8시 (자정 넘김)
-  return kstHour >= quietStart || kstHour < quietEnd;
 }
 
 export type GeofenceResult =
