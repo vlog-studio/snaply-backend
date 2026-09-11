@@ -44,6 +44,11 @@ type Harness = Awaited<ReturnType<typeof createHarness>>;
 let h: Harness;
 const logger = { info: vi.fn(), warn: vi.fn() };
 
+/** n 번째 발송의 알림 문구. 호출이 없으면 빈 문자열이라 단언이 그대로 실패한다. */
+function sentBody(index: number): string {
+  return send.mock.calls[index]?.[0]?.notification?.body ?? '';
+}
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 const now = new Date('2026-09-09T01:00:00.000Z');
 
@@ -91,7 +96,7 @@ describe('예고 대상 고르기', () => {
     expect(outcome.notified).toBe(1);
     expect(outcome.videos).toBe(1);
     expect(send).toHaveBeenCalledTimes(1);
-    expect(send.mock.calls[0][0].notification.body).toContain('3일 후');
+    expect(sentBody(0)).toContain('3일 후');
   });
 
   it('아직 D-3 이 안 된 스냅은 대상이 아니다', async () => {
@@ -156,7 +161,7 @@ describe('중복 발송 방지', () => {
     const second = await sendExpiryNotices({ logger, now: later, apply: true });
 
     expect(second.notified).toBe(1);
-    expect(send.mock.calls[1][0].notification.body).toContain('내일');
+    expect(sentBody(1)).toContain('내일');
     const logs = await h.prisma.notificationLog.findMany({ where: { videoId: snap.id } });
     expect(logs.map((l) => l.noticeDaysBefore).sort()).toEqual([1, 3]);
   });
@@ -172,7 +177,7 @@ describe('중복 발송 방지', () => {
     expect(send).toHaveBeenCalledTimes(1);
     expect(outcome.notified).toBe(1);
     expect(outcome.videos).toBe(5);
-    expect(send.mock.calls[0][0].notification.body).toContain('5개');
+    expect(sentBody(0)).toContain('5개');
   });
 });
 
