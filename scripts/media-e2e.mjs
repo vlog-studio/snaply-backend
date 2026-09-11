@@ -5,7 +5,11 @@
  * 클립 파일 경로만 주면 아래를 한 번에 수행한다:
  *   1. Supabase 로그인 → JWT 발급
  *   2. 클립별: GET /videos/upload-url → S3 직접 PUT → POST /videos (status: ready)
- *   3. POST /edit-jobs → GET /edit-jobs/:id 폴링 → 결과물 editedUrl 출력
+ *   3. POST /movies (컷 목록) → POST /movies/:id/export → GET /edit-jobs/:id 폴링
+ *   4. GET /movies/:id 로 결과물을 찾아 editedUrl 출력
+ *
+ * 앱이 쓰는 경로와 같다. 옛 `POST /edit-jobs` 직접 호출은 한 릴리스 더 살아 있지만
+ * (docs/backlog.md A-1), 검증은 앱이 실제로 가는 길을 따라가야 의미가 있다.
  *
  * 사용법:
  *   node scripts/media-e2e.mjs clip1.mov clip2.mp4
@@ -277,12 +281,16 @@ if (opts.uploadOnly) {
   process.exit(0);
 }
 
-step(`3. 편집 요청 (style=${opts.style}, subtitles=${opts.subtitles ?? false})`);
-const { jobId } = await api('POST', '/edit-jobs', {
-  videoIds,
+step(`3. 무비 만들기 (style=${opts.style}, captions=${opts.subtitles ?? false})`);
+const movie = await api('POST', '/movies', {
+  title: `e2e ${new Date().toISOString().slice(0, 16)}`,
+  clips: videoIds.map((videoId) => ({ videoId })),
   stylePreset: opts.style,
-  ...(opts.subtitles ? { subtitles: true } : {}),
+  ...(opts.subtitles ? { captions: true } : {}),
 });
+ok(`movieId=${movie.id} status=${movie.status} clips=${movie.clips.length}`);
+
+const { jobId } = await api('POST', `/movies/${movie.id}/export`, undefined);
 ok(`jobId=${jobId}`);
 dim(`실시간 진행률: npx wscat -c "ws://localhost:${env.API_PORT}/edit-jobs/${jobId}/progress?token=<jwt>"`);
 
@@ -293,7 +301,12 @@ if (job.status === 'failed') {
 }
 
 step('5. 결과물');
-const output = await api('GET', `/videos/${job.videoId}`);
+// 무비를 다시 읽어 결과물을 찾는다 — 서버가 생성 완료를 무비에 반영했는지까지 함께 본다.
+const finished = await api('GET', `/movies/${movie.id}`);
+if (finished.status !== 'ready' || !finished.resultVideoId) {
+  fail('무비가 완성 상태가 아니다', `status=${finished.status} resultVideoId=${finished.resultVideoId}`);
+}
+const output = await api('GET', `/videos/${finished.resultVideoId}`);
 ok(`status=${output.status}`);
 console.log(`
   editedUrl:    ${output.editedUrl}
@@ -302,5 +315,8 @@ console.log(`
 
   검증:
     curl -s -o ./test/edited.mp4 "${output.editedUrl}"
-    ffprobe -hide_banner ./test/edited.mp4    # 1080p h264 + aac + mov_text 자막 트랙 확인
+    ffprobe -hide_banner ./test/edited.mp4    # 1080x1920 h264 + aac (자막은 --subtitles 일 때만)
+
+  끝내기까지 확인하려면 (결과물 파일이 지워진다, 되돌릴 수 없다):
+    curl -sX POST "${baseUrl}/movies/${movie.id}/finish" -H "Authorization: Bearer <jwt>"
 `);
