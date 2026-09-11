@@ -1462,3 +1462,27 @@ Metro/Jest 해석 확인 필요), `openapi.json` 의 `*Input` 사본 스키마.
 계정이 빠져도 배치가 "전원 발송 완료" 라고 말하면서 파일을 지운다.
 
 검증: `npm test -w apps/api` 374건 통과(만료 예고 13건 신규 · SNS 자동 끝내기 3건 신규).
+
+---
+
+## 2026-09-11 — 이미지 스모크 검사 · e2e 무비 경로 전환 (Dev A)
+
+**빌드한 이미지가 실제로 뜨는지 CI 가 확인한다**(backlog E-4 닫힘). `deploy.yml` 이
+**빌드 → 스모크 → 푸시** 순서가 됐고, 검사한 그 이미지에 태그만 붙여 올린다 — 다시 빌드하면
+검사 대상과 배포 대상이 갈라진다. 전에는 Dockerfile 이 깨져도 CI 가 초록이었고 실행되지 않는
+이미지가 `:latest` 로 올라갔다(실제로 두 번: BGM 자산 누락, `BGM_DIR` 경로 어긋남).
+
+검사는 [`scripts/smoke-images.sh`](../scripts/smoke-images.sh) 하나이고 로컬에서도 같은 명령으로
+돈다(`npm run smoke:images`). API 는 compose 로 실제 기동해 `/health` 가 `db=connected` 를
+돌려주는지 본다 — `status:ok` 만 보면 마이그레이션이 실패해도 통과한다. 워커는 이미지가 커서
+기동 대신 정적 검사(BGM 자산·ffmpeg/ffprobe·워커 3종 임포트)를 하는데, **경로를 스크립트에
+다시 적지 않고 `config.BGM_DIR` 에서 읽는다** — 다시 적으면 config 와 어긋나도 통과하고,
+과거 결함이 정확히 그렇게 숨었다.
+
+검증: 로컬에서 두 이미지를 빌드해 스모크 통과(`db=connected` 확인). `BGM_DIR` 을 일부러
+어긋나게 준 실행이 exit 1 로 떨어지는 것까지 확인했다 — 통과만 하는 검사가 아니다.
+
+**`media:e2e` 가 앱과 같은 길을 간다**: `POST /movies` → `POST /movies/{id}/export` → 편집 작업
+폴링 → 무비에서 결과물 찾기. 옛 `POST /edit-jobs` 직접 호출은 한 릴리스 더 살아 있지만
+(backlog A-1), 검증이 앱이 가지 않는 길을 확인하면 의미가 없다. 무비 상태가 `ready` 로
+반영됐는지까지 함께 본다.
