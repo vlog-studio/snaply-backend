@@ -14,7 +14,7 @@ import { initRenditionQueue } from './queue/rendition-queue.js';
 import { initVideoAnalysisQueue } from './queue/video-analysis-queue.js';
 import { initFcm } from './services/fcm.service.js';
 import { initCrypto } from './lib/crypto.js';
-import { initSns } from './services/sns.service.js';
+import { initSns, snsUploadReadiness } from './services/sns.service.js';
 import { initBilling } from './services/billing.service.js';
 import { initSupabaseAdmin } from './services/supabase-admin.service.js';
 import { healthRoutes } from './routes/health.js';
@@ -127,6 +127,12 @@ export async function buildApp(
   initFcm(config.firebase);
   initCrypto(config.sns.tokenEncryptionKey);
   initSns(config.sns);
+  // SNS 는 우리가 준 URL 을 플랫폼이 직접 내려받는다. 도달할 수 없는 주소면 업로드를
+  // 시도해야 비로소 400 이 나므로, 기동 시점에 한 줄 남겨 원인 추적을 앞당긴다(backlog E-2).
+  const snsBlocker = snsUploadReadiness(config.storage.publicBaseUrl);
+  if (snsBlocker) {
+    app.log.warn({ publicBaseUrl: config.storage.publicBaseUrl }, `SNS 실업로드 불가 — ${snsBlocker}`);
+  }
   initBilling(config.billing);
   initSupabaseAdmin({ url: config.supabaseUrl, serviceRoleKey: config.supabaseServiceRoleKey });
 

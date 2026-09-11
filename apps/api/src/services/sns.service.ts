@@ -199,6 +199,38 @@ function isUnreachableHost(hostname: string): boolean {
 }
 
 /**
+ * 기동 시점에 SNS 실업로드가 가능한 설정인지 본다. 불가능하면 그 이유를, 가능하면 null.
+ *
+ * 업로드를 시도해야 비로소 400 이 나오는 문제 때문에 있다 — 실패 시점이 한참 뒤라
+ * "SNS 가 안 된다" 는 신고를 받고 나서야 설정을 들여다보게 된다. 기동 로그에 한 줄 있으면
+ * 원인까지 한 번에 간다.
+ *
+ * **미설정만 보지 않는다.** `S3_PUBLIC_ENDPOINT=http://localhost:9200` 처럼 값이 있어도
+ * 플랫폼이 도달하지 못하는 주소면 결과는 같으므로, 업로드 때와 같은 기준으로 판정한다.
+ */
+export function snsUploadReadiness(publicBaseUrl: string): string | null {
+  const platforms: SnsPlatform[] = ['instagram', 'tiktok'];
+  if (platforms.every((p) => providerConfig(p).mock)) {
+    return null; // 전부 mock 이면 실업로드 자체를 하지 않는다
+  }
+  let url: URL;
+  try {
+    url = new URL(publicBaseUrl);
+  } catch {
+    return `미디어 공개 URL(${publicBaseUrl || '미설정'})이 URL 형식이 아니다`;
+  }
+  if (isUnreachableHost(url.hostname)) {
+    return `미디어 공개 URL 이 외부에서 도달할 수 없는 주소(${url.hostname})다`
+      + ' — S3_PUBLIC_ENDPOINT 또는 CLOUDFRONT_DOMAIN 을 공개 주소로 설정할 것';
+  }
+  if (url.protocol !== 'https:') {
+    return `미디어 공개 URL 이 https 가 아니다(${url.protocol.replace(':', '')})`
+      + ' — 인스타·틱톡은 https 로만 내려받는다';
+  }
+  return null;
+}
+
+/**
  * 인스타/틱톡은 우리가 준 URL을 자기네 서버가 직접 내려받는다(PULL 방식).
  * 로컬 MinIO 주소 같은 걸 넘기면 플랫폼 쪽에서 알 수 없는 에러로 실패하므로 먼저 걸러낸다.
  */

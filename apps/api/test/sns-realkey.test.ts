@@ -10,6 +10,7 @@ import { createHarness, type Harness } from './helpers/harness.js';
 import { encrypt } from '../src/lib/crypto.js';
 import * as instagram from '../src/services/sns/instagram.client.js';
 import * as tiktok from '../src/services/sns/tiktok.client.js';
+import { snsUploadReadiness } from '../src/services/sns.service.js';
 import type { SnsProviderConfig } from '../src/config.js';
 
 let h: Harness;
@@ -874,5 +875,36 @@ describe('토큰 만료 처리', () => {
     expect(after.accessToken).not.toBe(conn.accessToken);
     const daysLeft = (after.tokenExpiresAt!.getTime() - Date.now()) / 86_400_000;
     expect(daysLeft).toBeGreaterThan(59);
+  });
+});
+
+/**
+ * 기동 시점 준비 상태 점검 (backlog E-2).
+ *
+ * 실키 모드에서만 의미가 있다 — mock 은 우리가 준 URL 을 실제로 내려받지 않으므로 도달
+ * 가능성이 상관없다. 업로드 때 쓰는 것과 **같은 기준**으로 판정해야 기동 로그가 거짓말을
+ * 하지 않으므로, 미설정뿐 아니라 "값은 있지만 도달 불가" 도 걸러야 한다.
+ */
+describe('snsUploadReadiness (실키 모드)', () => {
+  it('공개 https 주소면 경고하지 않는다', () => {
+    expect(snsUploadReadiness('https://cdn.snaply.test/snaply')).toBeNull();
+  });
+
+  it('localhost 는 값이 있어도 경고한다 — 플랫폼이 우리 머신에 닿을 수 없다', () => {
+    const warning = snsUploadReadiness('http://localhost:9100/snaply');
+    expect(warning).toContain('localhost');
+    expect(warning).toContain('S3_PUBLIC_ENDPOINT');
+  });
+
+  it('사설 IP 도 경고한다', () => {
+    expect(snsUploadReadiness('http://192.168.0.10:9000/snaply')).toContain('192.168.0.10');
+  });
+
+  it('공개 주소여도 http 면 경고한다 — 인스타·틱톡은 https 로만 내려받는다', () => {
+    expect(snsUploadReadiness('http://cdn.snaply.test/snaply')).toContain('https');
+  });
+
+  it('URL 형식이 아니면 경고한다', () => {
+    expect(snsUploadReadiness('')).toContain('미설정');
   });
 });

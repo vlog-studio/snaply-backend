@@ -376,3 +376,17 @@ describe('SNS 게시 성공 시 무비 자동 끝내기', () => {
     expect(after.resultVideoId).toBe(video.id);
   });
 });
+
+/**
+ * 기동 시점 준비 상태 점검 (backlog E-2).
+ *
+ * SNS 업로드는 **플랫폼이 우리 URL 을 직접 내려받는다.** 도달할 수 없는 주소면 업로드를
+ * 시도해야 비로소 400 이 나므로, 실패 시점이 설정 시점에서 한참 떨어진다. 기동 로그 한 줄이
+ * 그 거리를 좁힌다.
+ */
+describe('snsUploadReadiness', () => {
+  it('전부 mock 이면 경고하지 않는다 — 실업로드를 하지 않는다', async () => {
+    const { snsUploadReadiness } = await import('../src/services/sns.service.js');
+    expect(snsUploadReadiness('http://localhost:9100/snaply')).toBeNull();
+  });
+});
