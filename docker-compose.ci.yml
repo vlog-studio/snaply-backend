@@ -1,0 +1,26 @@
+# 스모크 검사용 오버레이 — 이미 빌드해 둔 이미지를 그대로 띄운다.
+#
+# compose 는 `image:` 가 가리키는 이미지가 로컬에 있으면 `build:` 를 건너뛴다. 그래서 이
+# 파일은 "다시 빌드하지 말고 **방금 검사하려는 그 이미지**를 써라" 는 뜻이다 — 검사한 것과
+# 배포하는 것이 다른 이미지면 검사의 의미가 없다.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d
+#
+# 호스트 포트는 `API_HOST_PORT` 로 옮겨 잡는다(3000 은 러너에서도 로컬에서도 점유될 수 있다) —
+# scripts/smoke-images.sh 가 값을 넣는다.
+
+services:
+  migrate:
+    image: ${API_IMAGE:-snaply-api:ci}
+
+  api:
+    image: ${API_IMAGE:-snaply-api:ci}
+
+  ai-worker:
+    image: ${WORKER_IMAGE:-snaply-ai-worker:ci}
+
+  analysis-worker:
+    image: ${WORKER_IMAGE:-snaply-ai-worker:ci}
+
+  rendition-worker:
+    image: ${WORKER_IMAGE:-snaply-ai-worker:ci}
