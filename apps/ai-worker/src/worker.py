@@ -17,6 +17,7 @@ from loguru import logger
 
 import config
 import db
+import notify
 import storage
 from pipeline import anchor, editor, invalidation, music, seed, subtitle, vocabulary
 from pipeline.edit_spec import parse_job_clips
@@ -145,6 +146,8 @@ async def _run_pipeline(job_id: str, data: dict, work_dir: str) -> None:
         raise JobCanceled(job_id)
     output_url = storage.download_url(edited_key)
     await _publish(job_id, {"progress": 100, "step": "완료", "outputUrl": output_url})
+    # 앱이 꺼져 있어도 알 수 있게 푸시를 요청한다. WS 는 화면이 열려 있을 때만 닿는다.
+    await notify.movie_ready(user_id, output_video_id)
     logger.info("편집 완료 job_id={} url={}", job_id, edited_url)
 
 
@@ -233,6 +236,7 @@ async def main() -> None:
     await worker.close()
     if _publisher is not None:
         await _publisher.aclose()
+    await notify.close()
     await db.close_pool()
 
 

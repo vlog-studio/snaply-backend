@@ -77,6 +77,7 @@ export interface RedisConfig {
   /** 스냅 분석 큐. 분석 워커와 같은 값이어야 작업이 전달된다. */
   analysisQueueName: string;
   renditionQueueName: string;
+  notificationQueueName: string;
 }
 
 export interface StorageConfig {
@@ -163,6 +164,7 @@ export function loadConfig(): AppConfig {
       editQueueName: process.env.EDIT_QUEUE_NAME ?? 'edit-jobs',
       analysisQueueName: process.env.VIDEO_ANALYSIS_QUEUE_NAME ?? 'video-analysis',
       renditionQueueName: process.env.RENDITION_QUEUE_NAME ?? 'renditions',
+      notificationQueueName: process.env.NOTIFICATION_QUEUE_NAME ?? 'notifications',
     },
     firebase: {
       projectId: process.env.FIREBASE_PROJECT_ID,

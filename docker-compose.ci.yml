@@ -16,6 +16,9 @@ services:
   api:
     image: ${API_IMAGE:-snaply-api:ci}
 
+  notification-worker:
+    image: ${API_IMAGE:-snaply-api:ci}
+
   ai-worker:
     image: ${WORKER_IMAGE:-snaply-ai-worker:ci}
 

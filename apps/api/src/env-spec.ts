@@ -189,6 +189,13 @@ export const ENV_VARS = [
     origin: 'shared',
     description: '배포 렌디션 큐 이름. 기본 renditions. API 와 ingest 워커가 일치해야 한다',
   },
+  {
+    key: 'NOTIFICATION_QUEUE_NAME',
+    required: false,
+    origin: 'shared',
+    description:
+      '알림 요청 큐 이름. 기본 notifications. 편집 워커가 넣고 알림 워커가 꺼낸다 — 양쪽이 일치해야 한다',
+  },
   // 아래 둘은 ingest 워커(apps/ai-worker/src/rendition_worker.py)만 읽는다.
   {
     key: 'RENDITION_TIMEOUT_SECONDS',

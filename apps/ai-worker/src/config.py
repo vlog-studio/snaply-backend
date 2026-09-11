@@ -53,6 +53,8 @@ REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379")
 DATABASE_URL = os.environ.get("DATABASE_URL", "")
 EDIT_QUEUE_NAME = os.environ.get("EDIT_QUEUE_NAME", "edit-jobs")
 RENDITION_QUEUE_NAME = os.environ.get("RENDITION_QUEUE_NAME", "renditions")
+#: 알림 요청 큐. 워커가 넣고 Node 쪽 알림 워커가 꺼내 발송한다(notify.py 참고).
+NOTIFICATION_QUEUE_NAME = os.environ.get("NOTIFICATION_QUEUE_NAME", "notifications")
 # 배포 렌디션은 짧은 변환이라 편집보다 짧게 잡는다.
 RENDITION_TIMEOUT_SECONDS = int(os.environ.get("RENDITION_TIMEOUT_SECONDS", "300"))
 RENDITION_CONCURRENCY = int(os.environ.get("RENDITION_CONCURRENCY", "2"))
