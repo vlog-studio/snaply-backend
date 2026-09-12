@@ -121,4 +121,4 @@ Run the canonical automated gate and confirm it passes:
 npm run verify
 ```
 
-Its check list is defined once, in `package.json`. While iterating, `npm test` runs the suite in watch mode and `npm run test:ci` runs it once without the other gates. A new user-visible behavior is not complete until it is covered by a test at the appropriate level and the affected document under `docs/features` is updated in the same change (see [`feature-development.md`](feature-development.md)).
+Its check list is defined once, in `package.json`. While iterating, `npm test` (an alias of `npm run test:ci` — both run `jest --ci --runInBand --no-watchman`) runs the suite once without the other gates; for a single file, pass its path (`npm test -- src/shared/lib/datetime/datetime.test.ts`). There is no watch-mode script; run `npx jest --watch` directly if you want one. A new user-visible behavior is not complete until it is covered by a test at the appropriate level and the affected document under `docs/features` is updated in the same change (see [`feature-development.md`](feature-development.md)).
