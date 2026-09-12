@@ -6,6 +6,7 @@ import type { PropsWithChildren } from 'react';
 import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { MovieSyncGate } from '@/features/compose-movie';
 import { DeletedLibraryPurgeGate } from '@/features/delete-account';
 import { SnapUploadGate } from '@/features/upload-snap';
 import { Colors, useResolvedColorScheme } from '@/shared/ui/theme';
@@ -70,6 +71,11 @@ export function AppProviders({ children }: PropsWithChildren) {
             to keep going after the user leaves the screen, and to be picked back
             up on the next app start if they left before it finished. */}
         <MovieGenerationBridge />
+        {/* Movies live on the server (2026-09-12); this carries edits made
+            anywhere in the app up to it and reads the account's movies back —
+            on sign-in, and on every return to the foreground. After the scope
+            gate, since it reads the store the gate binds. */}
+        <MovieSyncGate />
         {/* Snaps captured before their length and size were measured claim the
             capture option they were shot with and an upright 1080×1920 frame;
             this reads the real numbers back from the files, once, in the

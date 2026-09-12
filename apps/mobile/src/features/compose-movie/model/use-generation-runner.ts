@@ -5,8 +5,8 @@ import {
   cutsDurationSec,
   useAdvanceMovieJob,
   useCancelMovieJob,
+  useCompleteMovieJob,
   useFailMovieJob,
-  useFinishMovieJob,
   useMovies,
   useSetRenderThumbnail,
   type Movie,
@@ -39,7 +39,11 @@ const LostMaterialError = '이 무비가 쓰던 스냅 원본이 모두 지워�
 const UnknownJobError = '이 무비의 편집 작업을 서버에서 찾을 수 없어요. 다시 만들어주세요.';
 
 export type GenerationRunnerOptions = {
-  /** Whether a job ending should raise a notification. Off unless asked for. */
+  /**
+   * Whether a job **failing** should raise a notification. Off unless asked for.
+   * A job completing is announced by the server's own push (`movie_ready`,
+   * 2026-09-11), never from here — the two would ring twice.
+   */
   announce?: boolean;
 };
 
@@ -77,7 +81,7 @@ export function useGenerationRunner({ announce = false }: GenerationRunnerOption
   const snapIndex = useSnapIndex();
   const snapsHydrated = useSnapsHydrated();
   const advanceMovieJob = useAdvanceMovieJob();
-  const finishMovieJob = useFinishMovieJob();
+  const completeMovieJob = useCompleteMovieJob();
   const failMovieJob = useFailMovieJob();
   const cancelMovieJob = useCancelMovieJob();
   const setRenderThumbnail = useSetRenderThumbnail();
@@ -128,10 +132,13 @@ export function useGenerationRunner({ announce = false }: GenerationRunnerOption
         (snapId) => latest.current.snapIndex.get(snapId)?.durationSec,
       );
 
+    // The server sends no push for a failure, so the device says so itself —
+    // but only for a run it started: an adopted job's ending is old news about
+    // a run this device never watched.
     const fail = (movie: Movie, error: string, detail?: string) => {
       settled.add(movie.id);
       failMovieJob(movie.id, error, detail);
-      if (latest.current.announce) announceJobEnd('failed', movie, error);
+      if (latest.current.announce && !movie.job?.adopted) announceJobEnd(movie, error);
     };
 
     // A canceled run is not a failure: the movie goes back to being the draft
@@ -149,7 +156,7 @@ export function useGenerationRunner({ announce = false }: GenerationRunnerOption
     ) => {
       settled.add(movie.id);
       const renderedAt = Date.now();
-      finishMovieJob(movie.id, {
+      completeMovieJob(movie.id, {
         // The id is the durable handle — the URL the lookup got is time-limited
         // (a signed link to a private bucket), so watch mode re-asks by id and
         // this uri is only its fallback. Stored even when the lookup failed:
@@ -159,10 +166,9 @@ export function useGenerationRunner({ announce = false }: GenerationRunnerOption
         renderedAt,
         durationSec,
       });
-      // Announced from here rather than from a store subscription because this is
-      // the moment the job ended, and the user is expected to be elsewhere by
-      // now — that is the whole reason to tell them.
-      if (latest.current.announce) announceJobEnd('ready', movie);
+      // Not announced from here: the server pushes `movie_ready` for a finished
+      // run (quiet hours respected), and a second notice from the device would
+      // ring twice for one movie.
       // The cover follows the result rather than gating it: the movie is already
       // `ready`, and a download nobody is waiting for cannot hold a finished
       // movie in `generating`. A cover that never arrives leaves the movie
@@ -320,7 +326,7 @@ export function useGenerationRunner({ announce = false }: GenerationRunnerOption
     runningKey,
     snapsHydrated,
     advanceMovieJob,
-    finishMovieJob,
+    completeMovieJob,
     failMovieJob,
     cancelMovieJob,
     setRenderThumbnail,

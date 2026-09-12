@@ -1,17 +1,25 @@
 export {
   applyMovieScope,
+  applyRemoteMovies,
   getMovieById,
+  getMovieOutbox,
+  markMovieDeleteSent,
+  markMovieGone,
+  markMovieSent,
   purgeMovieScope,
   useAdvanceMovieJob,
   useBeginMovieJob,
   useCancelMovieJob,
+  useCompleteMovieJob,
   useCreateMovie,
   useDeleteMovie,
   useFailMovieJob,
-  useFinishMovieJob,
+  useFinishMovie,
   useMovieById,
+  useMovieOutbox,
   useMovies,
   useMoviesHydrated,
+  useMoviesSynced,
   useRemoveSnapsEverywhere,
   useRenameMovie,
   useSetMovieArranger,
@@ -21,6 +29,17 @@ export {
   type CreateMovieInput,
   type MovieStylePatch,
 } from './model/movie-store';
+export {
+  createRemoteMovie,
+  deleteRemoteMovie,
+  exportRemoteMovie,
+  finishRemoteMovie,
+  updateRemoteMovie,
+  type MovieFinished,
+} from './api/write-movie';
+export { getMovies } from './api/get-movies';
+export { toMovieBody, type SnapIdResolver, type VideoIdResolver } from './api/movie.dto';
+export type { PendingWrite } from './lib/movie-sync';
 export { isAiArranged, sameArrangement } from './lib/movie-arrangement';
 export { isEditedSinceRender, sameCuts } from './lib/movie-render';
 export { MovieSnapLimit } from './model/movie';
@@ -45,3 +64,4 @@ export type {
   MovieStyle,
   SnapRef,
 } from './model/movie';
+export type { RemoteMovie } from './model/remote-movie';

@@ -10,3 +10,4 @@ export {
 export type { CreditShortfall } from './lib/read-credit-shortfall';
 export { useRenderSource, type RenderSource } from './model/use-render-source';
 export { MovieGenerationGate, type MovieGenerationGateProps } from './ui/movie-generation-gate';
+export { MovieSyncGate } from './ui/movie-sync-gate';

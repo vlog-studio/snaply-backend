@@ -54,11 +54,30 @@ export type MovieArranger = 'user' | 'ai';
  * A movie's reference to a snap. The snap original is immutable; per-movie edit
  * information (position in the cut list, optional trim) lives here so the same
  * snap can be cut differently into two movies.
+ *
+ * `snapId` is the snap's id in this device's library. The server knows the snap
+ * by the `videoId` its upload earned, so a movie read back from the server names
+ * its cuts that way and the app translates through the upload state. A cut
+ * whose server video no local snap answers to — a movie made on another device,
+ * or a library not yet reconciled after a reinstall — keeps the server id as its
+ * `snapId`, where it matches nothing and draws as a cut with no original.
  */
 export type SnapRef = {
   snapId: string;
   order: number;
   trim?: { startSec: number; endSec: number };
+  /**
+   * The snap's id on the server, when known: written when the movie is synced
+   * or read back. Absent on a cut whose snap has not been uploaded yet.
+   */
+  videoId?: string;
+  /**
+   * The server says this cut's snap is gone from the server — expired past its
+   * retention (SNAP-9) or deleted there. The local original may well still be
+   * on this device and play, but a run cannot be made from it (`export` is
+   * refused), so the cut has to say so and offer removal.
+   */
+  unavailable?: boolean;
 };
 
 /**
@@ -74,7 +93,7 @@ export type SnapRef = {
  * Optional because renders stored before the field existed have none.
  *
  * `snapRefs` is the cut list the render was made from, frozen by
- * `finishMovieJob` as the job ends. The composition the user edits and the
+ * `completeMovieJob` as the job ends. The composition the user edits and the
  * result a run produced are different objects, and the movie's live `snapRefs`
  * keeps moving after a run — without this snapshot the render could not say
  * what it was made of, an edited `ready` movie could not be told apart from an
@@ -154,6 +173,14 @@ export type MovieJob = {
   step?: string;
   /** Epoch milliseconds the job was queued. */
   startedAt: number;
+  /**
+   * A job this device did not start — learned from the server's `jobId` on a
+   * movie that was generating (or had finished, unwitnessed) when the movies
+   * were read back. The runner follows it exactly like its own, but does not
+   * announce how it ends: the news is about a run this device never watched,
+   * and the server's own push already carried it.
+   */
+  adopted?: boolean;
 };
 
 /**
@@ -194,6 +221,20 @@ export type Movie = {
   /** Present only while a job is in flight; cleared when it finishes. */
   job?: MovieJob;
   render?: MovieRender;
+  /**
+   * Epoch milliseconds the user "finished" the movie — took the result by
+   * downloading or posting it and confirmed so (MOV-17). The server deleted the
+   * result file at that moment, which is why a finished movie has no `render`:
+   * the composition stays and can be made again, as a new run. Absent until then.
+   */
+  finishedAt?: number;
+  /**
+   * The run whose outcome this device last applied to the movie — completed,
+   * failed, or canceled. Bookkeeping for the read-back merge: the server may
+   * still describe that run when the movies are next read, and a run already
+   * settled here must not be adopted and followed a second time.
+   */
+  settledJobId?: string;
   /** Why the last generation failed, for the recovery UI. */
   error?: string;
   /**

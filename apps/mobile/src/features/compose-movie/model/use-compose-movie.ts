@@ -2,9 +2,11 @@ import { useCallback } from 'react';
 
 import {
   MovieSnapLimit,
+  exportRemoteMovie,
   getMovieById,
   isAiArranged,
   sameArrangement,
+  toMovieBody,
   useBeginMovieJob,
   useCancelMovieJob,
   useCreateMovie,
@@ -16,12 +18,13 @@ import {
   type MovieStylePatch,
   type SnapRef,
 } from '@/entities/movie';
-import { getSnapSyncEntries, useSnapIndex } from '@/entities/snap';
+import { useSnapIndex } from '@/entities/snap';
 import { ApiError } from '@/shared/api';
 
 import { cancelEditJob } from '../api/cancel-edit-job';
-import { createEditJob, type EditJobClip } from '../api/create-edit-job';
 import { readCreditShortfall, type CreditShortfall } from '../lib/read-credit-shortfall';
+
+import { sendMovie, snapResolvers } from './movie-outbox';
 
 /**
  * Why a cut edit was refused, or `undefined` when it landed.
@@ -46,13 +49,14 @@ export type CutsOutcome = {
  * again, so this is the only state that refuses outright.
  * `empty` — there is nothing to generate from.
  * `uploading` — some cuts have not reached the backend yet. The run is made from
- * the *server's* copies of the snaps, and `POST /edit-jobs` refuses a batch whole
- * when one of them is missing, so this is checked here rather than discovered as
- * a `403` after the user has pressed the button.
- * `rejected` — the backend refused the run: not the caller's video, a video that
- * is not ready, or one that is itself a generated result. It carries the server's
- * own message, because a `403` does not say which of those it was — and the set
- * can grow, which is the other reason nothing here rewords it.
+ * the *server's* copies of the snaps, and the movie cannot even be sent to the
+ * server until every cut can be named there, so this is checked here rather
+ * than discovered as a refusal after the user has pressed the button.
+ * `rejected` — the backend refused the run and said why: a cut whose snap has
+ * expired or been deleted on the server (`unavailable`, a 400), or a video that
+ * is not the caller's or not ready (a 403). It carries the server's own message,
+ * because one status does not say which of those it was — and the set can grow,
+ * which is the other reason nothing here rewords it.
  * `no-credit` — the backend refused to reserve the run's 100 credits
  * (`402 INSUFFICIENT_CREDITS`). Its own refusal rather than a `rejected`,
  * because it is the one the screen can do something about: say the numbers and
@@ -151,32 +155,6 @@ function arrangeByCaptureTime(
 
   const unchanged = arranged.every((ref, index) => ref.snapId === stored[index].snapId);
   return unchanged ? undefined : arranged;
-}
-
-/**
- * The run's cuts — each one's id on the server and the window of it to use, in
- * cut order — or `undefined` when one of them has not got there yet.
- *
- * The id mapping lives on `entities/snap`'s sync store, which is where the upload
- * worker writes the id each snap earned. Read at call time rather than
- * subscribed to: this answers "can this run start *now*", and a stale answer
- * would either refuse a movie that just finished uploading or send an id that
- * does not exist yet. The trim comes from the cut itself, so what the user
- * shortened on the timeline is what the server renders.
- *
- * All-or-nothing on purpose. `POST /edit-jobs` refuses the whole batch when one
- * source is missing, and half a movie is not a movie the user asked for.
- */
-function remoteClips(snapRefs: readonly SnapRef[]): EditJobClip[] | undefined {
-  const entries = getSnapSyncEntries();
-  const ordered = [...snapRefs].sort((left, right) => left.order - right.order);
-  const clips: EditJobClip[] = [];
-  for (const ref of ordered) {
-    const entry = entries[ref.snapId];
-    if (entry?.status !== 'uploaded') return undefined;
-    clips.push({ videoId: entry.videoId, ...(ref.trim ? { trim: ref.trim } : null) });
-  }
-  return clips;
 }
 
 /**
@@ -332,16 +310,20 @@ export function useComposeMovie() {
    * after a failure, or a regeneration of a movie the user has already watched
    * and changed. `MovieGenerationGate` follows it to a render from there.
    *
-   * The run is queued on the backend first and the movie enters `generating` only
-   * once there is a `jobId` to follow (2026-08-07): the socket and the status
-   * endpoint are both addressed by that id, so a movie that went `generating`
-   * before the request landed would be a job nothing could report on — and a
-   * refusal would have to be undone rather than simply reported.
+   * The run is made from the movie **as the server holds it** (2026-09-12,
+   * `POST /movies/{id}/export`), so whatever the outbox still owes for this
+   * movie is sent first — the user pressed the button on the cut list they see,
+   * and that list must be what the server renders. The movie enters
+   * `generating` only once there is a `jobId` to follow (2026-08-07): the socket
+   * and the status endpoint are both addressed by that id, so a movie that went
+   * `generating` before the request landed would be a job nothing could report
+   * on — and a refusal would have to be undone rather than simply reported.
    *
    * A movie with nothing to generate is refused rather than started: a job over
    * an empty cut list can only produce an empty movie, and the screen would have
    * no way to explain the result. So is a movie whose cuts are still uploading —
-   * the run is made from the server's copies.
+   * the run is made from the server's copies, and the movie cannot be sent
+   * until every cut can be named there.
    */
   const startGeneration = useCallback(
     async (movieId: string): Promise<GenerationOutcome> => {
@@ -353,34 +335,44 @@ export function useComposeMovie() {
       // A movie the AI still arranges gets arranged before it runs, so what the
       // user sees afterwards is what was made. A movie the user arranged is left
       // exactly as they left it — that is the whole promise of the lock. Done
-      // before the ids are collected, because the arrangement *is* the order the
-      // request carries.
-      let snapRefs = movie.snapRefs;
+      // before the movie is sent, because the arrangement *is* the order the
+      // server is given. (The server sorts an `ai` movie by capture time itself
+      // too; doing it here as well is what makes the screen show it first.)
       if (isAiArranged(movie)) {
-        const arranged = arrangeByCaptureTime(snapRefs, snapIndex);
-        if (arranged) {
-          updateMovieCuts(movieId, arranged);
-          snapRefs = arranged;
-        }
+        const arranged = arrangeByCaptureTime(movie.snapRefs, snapIndex);
+        if (arranged) updateMovieCuts(movieId, arranged);
       }
 
-      const clips = remoteClips(snapRefs);
-      if (!clips) return { started: false, refused: 'uploading' };
+      const current = getMovieById(movieId) ?? movie;
+      if (!toMovieBody(current, snapResolvers().videoIdOf)) {
+        return { started: false, refused: 'uploading' };
+      }
+
+      // Whatever the server has not heard about this movie goes first: a run
+      // over the server's stale copy would render a cut list the user is not
+      // looking at.
+      const sent = await sendMovie(movieId);
+      if (sent === 'waiting') return { started: false, refused: 'uploading' };
+      if (sent === 'busy' || sent === 'gone') return { started: false, refused: 'frozen' };
+      if (sent === 'failed') return { started: false, refused: 'unreachable' };
 
       let jobId: string;
       try {
-        jobId = await createEditJob({ clips, style: movie.style });
+        jobId = await exportRemoteMovie(movieId);
       } catch (error) {
         // A refusal the backend can explain is reported in its own words; a
         // transport failure is not the user's to interpret.
-        if (error instanceof ApiError && error.status === 403) {
+        if (error instanceof ApiError && (error.status === 400 || error.status === 403)) {
           return { started: false, refused: 'rejected', message: error.message };
         }
         if (error instanceof ApiError && error.status === 402) {
           return { started: false, refused: 'no-credit', shortfall: readCreditShortfall(error) };
         }
+        if (error instanceof ApiError && error.status === 409) {
+          return { started: false, refused: 'frozen' };
+        }
         // The status and code are logged, not just the message: everything that
-        // is not a 403 or 402 lands in one refusal the user is told is a
+        // is not one of the above lands in one refusal the user is told is a
         // connection problem, and a 401, a 429 (the endpoint allows five runs a
         // minute), and a genuinely unreachable server are indistinguishable on
         // screen.

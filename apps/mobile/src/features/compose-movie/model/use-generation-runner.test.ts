@@ -27,7 +27,7 @@ const mockSockets = new Map<string, EditProgressHandlers>();
 jest.mock('@/entities/movie', () => ({
   useMovies: () => mockMovies(),
   useAdvanceMovieJob: () => mockAdvance,
-  useFinishMovieJob: () => mockFinish,
+  useCompleteMovieJob: () => mockFinish,
   useFailMovieJob: () => mockFail,
   useCancelMovieJob: () => mockCancel,
   useSetRenderThumbnail: () => mockSetThumbnail,
@@ -388,7 +388,8 @@ describe('useGenerationRunner', () => {
     expect(mockAnnounce).not.toHaveBeenCalled();
   });
 
-  it('announces a job that finished while the user was elsewhere', async () => {
+  // The server pushes `movie_ready` itself; a local notice on top rang twice.
+  it('leaves a completion to the server’s push, even with the notification on', async () => {
     mockMovies.mockReturnValue([generatingMovie()]);
     mockGetEditJob.mockResolvedValue({ status: 'done', progress: 100, videoId: 'result-1' });
 
@@ -396,10 +397,11 @@ describe('useGenerationRunner', () => {
       await renderHook(() => useGenerationRunner({ announce: true }));
     });
 
-    expect(mockAnnounce).toHaveBeenCalledWith('ready', expect.objectContaining({ id: 'm1' }));
+    expect(mockFinish).toHaveBeenCalled();
+    expect(mockAnnounce).not.toHaveBeenCalled();
   });
 
-  it('announces a failure too, so a broken job is not silent', async () => {
+  it('announces a failure, which the server sends nothing for', async () => {
     mockSnapIndex.mockReturnValue(new Map());
     mockMovies.mockReturnValue([generatingMovie()]);
 
@@ -408,10 +410,25 @@ describe('useGenerationRunner', () => {
     });
 
     expect(mockAnnounce).toHaveBeenCalledWith(
-      'failed',
       expect.objectContaining({ id: 'm1' }),
       expect.any(String),
     );
+  });
+
+  // A job learned from the server on a read-back ended long before this device
+  // looked; telling the user now would be news about a run they never watched.
+  it('does not announce the failure of a job it only adopted', async () => {
+    mockSnapIndex.mockReturnValue(new Map());
+    mockMovies.mockReturnValue([
+      generatingMovie({ job: { id: 'job-1', progress: 0, startedAt, adopted: true } }),
+    ]);
+
+    await act(async () => {
+      await renderHook(() => useGenerationRunner({ announce: true }));
+    });
+
+    expect(mockFail).toHaveBeenCalled();
+    expect(mockAnnounce).not.toHaveBeenCalled();
   });
 
   it('closes its sockets and stops writing once it is unmounted', async () => {

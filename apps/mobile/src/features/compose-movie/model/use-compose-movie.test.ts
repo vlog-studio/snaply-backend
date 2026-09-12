@@ -13,20 +13,24 @@ const mockSetMovieArranger = jest.fn();
 const mockGetMovieById = jest.fn<Movie | undefined, [string]>();
 const mockSnapIndex = jest.fn<[string, { capturedAt: number }][], []>();
 const mockSyncEntries = jest.fn<Record<string, { status: string; videoId?: string }>, []>();
-const mockCreateEditJob = jest.fn();
+const mockExportMovie = jest.fn();
+const mockSendMovie = jest.fn();
 const mockCancelEditJob = jest.fn();
 const mockCancelMovieJob = jest.fn();
 
 // Mock each dependency at its slice Public API so the test stays at the seam.
 jest.mock('@/entities/movie', () => {
-  // The arrangement predicates are the entity's own and tested there; this suite
-  // is about which of them the rules apply and what they then write.
+  // The arrangement predicates and the wire mapping are the entity's own and
+  // tested there; this suite is about which rules apply and what they then write.
   const arrangement = jest.requireActual('@/entities/movie/lib/movie-arrangement');
+  const dto = jest.requireActual('@/entities/movie/api/movie.dto');
   return {
     MovieSnapLimit: 10,
     getMovieById: (id: string) => mockGetMovieById(id),
     isAiArranged: arrangement.isAiArranged,
     sameArrangement: arrangement.sameArrangement,
+    toMovieBody: dto.toMovieBody,
+    exportRemoteMovie: (...args: unknown[]) => mockExportMovie(...args),
     useCreateMovie: () => mockCreateMovie,
     useUpdateMovieCuts: () => mockUpdateMovieCuts,
     useUpdateMovieStyle: () => mockUpdateMovieStyle,
@@ -42,8 +46,18 @@ jest.mock('@/entities/snap', () => ({
 jest.mock('@/shared/lib/supabase', () => ({
   supabase: { auth: { getSession: jest.fn() } },
 }));
-jest.mock('../api/create-edit-job', () => ({
-  createEditJob: (...args: unknown[]) => mockCreateEditJob(...args),
+jest.mock('./movie-outbox', () => ({
+  sendMovie: (...args: unknown[]) => mockSendMovie(...args),
+  snapResolvers: () => {
+    const entries = mockSyncEntries();
+    return {
+      videoIdOf: (snapId: string) => {
+        const entry = entries[snapId];
+        return entry?.status === 'uploaded' ? entry.videoId : undefined;
+      },
+      snapIdOf: () => undefined,
+    };
+  },
 }));
 jest.mock('../api/cancel-edit-job', () => ({
   cancelEditJob: (...args: unknown[]) => mockCancelEditJob(...args),
@@ -80,7 +94,8 @@ beforeEach(() => {
     s1: { status: 'uploaded', videoId: 'v1' },
     s2: { status: 'uploaded', videoId: 'v2' },
   });
-  mockCreateEditJob.mockResolvedValue('job-1');
+  mockSendMovie.mockResolvedValue('sent');
+  mockExportMovie.mockResolvedValue('job-1');
 });
 
 describe('startMovieFromSnaps', () => {
@@ -539,54 +554,51 @@ describe('startGeneration', () => {
     expect(outcome).toEqual({ started: false, refused: 'frozen' });
   });
 
-  it('sends the cuts in cut order, which is the only channel the order has', async () => {
-    mockGetMovieById.mockReturnValue(
-      makeMovie({
-        arranger: 'user',
-        snapRefs: [
-          { snapId: 's2', order: 0 },
-          { snapId: 's1', order: 1 },
-        ],
-      }),
-    );
+  // The run is made from the movie as the server holds it, so what the outbox
+  // still owes for this movie goes first — the user pressed the button on the
+  // cut list they see.
+  it('sends the movie to the server before asking for the run', async () => {
+    const order: string[] = [];
+    mockSendMovie.mockImplementation(async () => {
+      order.push('send');
+      return 'sent';
+    });
+    mockExportMovie.mockImplementation(async () => {
+      order.push('export');
+      return 'job-1';
+    });
     const { result } = await renderHook(() => useComposeMovie());
 
     await act(async () => {
       await result.current.startGeneration('m1');
     });
 
-    expect(mockCreateEditJob).toHaveBeenCalledWith({
-      clips: [{ videoId: 'v2' }, { videoId: 'v1' }],
-      style: 'daily',
-    });
+    expect(order).toEqual(['send', 'export']);
+    expect(mockExportMovie).toHaveBeenCalledWith('m1');
   });
 
-  // What the user shortened on the timeline is what the run renders — the trim
-  // travels with the cut it belongs to, not as a separate list to line up.
-  it('sends each cut’s trim window with it', async () => {
-    mockGetMovieById.mockReturnValue(
-      makeMovie({
-        arranger: 'user',
-        snapRefs: [
-          { snapId: 's1', order: 0, trim: { startSec: 0.5, endSec: 2 } },
-          { snapId: 's2', order: 1 },
-        ],
-      }),
-    );
+  it.each([
+    ['still waiting on an upload', 'waiting', 'uploading'],
+    ['refused while a run owns it', 'busy', 'frozen'],
+    ['gone from the server', 'gone', 'frozen'],
+    ['unsendable', 'failed', 'unreachable'],
+  ] as const)('does not start a run when the movie is %s', async (_label, sent, refused) => {
+    mockSendMovie.mockResolvedValue(sent);
     const { result } = await renderHook(() => useComposeMovie());
 
+    let outcome;
     await act(async () => {
-      await result.current.startGeneration('m1');
+      outcome = await result.current.startGeneration('m1');
     });
 
-    expect(mockCreateEditJob).toHaveBeenCalledWith({
-      clips: [{ videoId: 'v1', trim: { startSec: 0.5, endSec: 2 } }, { videoId: 'v2' }],
-      style: 'daily',
-    });
+    expect(outcome).toEqual({ started: false, refused });
+    expect(mockExportMovie).not.toHaveBeenCalled();
+    expect(mockBeginMovieJob).not.toHaveBeenCalled();
   });
 
-  // The run is made from the server's copies, and `POST /edit-jobs` refuses the
-  // whole batch when one is missing — so this is answered before the request.
+  // The run is made from the server's copies, and the movie cannot even be
+  // sent until every cut can be named there — so this is answered before
+  // anything is sent.
   it.each([
     ['still uploading', { status: 'uploading' }],
     ['a failed upload', { status: 'failed', attempts: 1 }],
@@ -604,20 +616,36 @@ describe('startGeneration', () => {
     });
 
     expect(outcome).toEqual({ started: false, refused: 'uploading' });
-    expect(mockCreateEditJob).not.toHaveBeenCalled();
+    expect(mockSendMovie).not.toHaveBeenCalled();
+    expect(mockExportMovie).not.toHaveBeenCalled();
     expect(mockBeginMovieJob).not.toHaveBeenCalled();
   });
 
-  // Every cause of a 403 shares one code and only the message says which one it
-  // was — so it is carried through rather than reworded. The fixture is the
-  // server's own ownership/state sentence.
-  it('reports the backend’s own words when it refuses the run', async () => {
-    const reason =
-      '\uD3B8\uC9D1\uD560 \uC218 \uC5C6\uB294 \uC601\uC0C1\uC774 \uD3EC\uD568\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4.';
-    // 편집할 수 없는 영상이 포함되어 있습니다.
-    mockCreateEditJob.mockRejectedValue(
-      new ApiError('generation_rejected', reason, { status: 403 }),
-    );
+  // One status does not say which cause it was — an expired cut (400), a video
+  // that is not the caller's (403) — and only the message does, so it is
+  // carried through rather than reworded. The fixture is the server's own
+  // sentence for an expired cut.
+  it.each([400, 403])(
+    'reports the backend’s own words when it refuses the run with %i',
+    async (status) => {
+      const reason =
+        '\uC0AC\uC6A9\uD560 \uC218 \uC5C6\uB294 \uCEF7\uC774 \uC788\uC2B5\uB2C8\uB2E4.';
+      // 사용할 수 없는 컷이 있습니다.
+      mockExportMovie.mockRejectedValue(new ApiError('generation_rejected', reason, { status }));
+      const { result } = await renderHook(() => useComposeMovie());
+
+      let outcome;
+      await act(async () => {
+        outcome = await result.current.startGeneration('m1');
+      });
+
+      expect(outcome).toEqual({ started: false, refused: 'rejected', message: reason });
+      expect(mockBeginMovieJob).not.toHaveBeenCalled();
+    },
+  );
+
+  it('reports a run the server says is already going as frozen', async () => {
+    mockExportMovie.mockRejectedValue(new ApiError('CONFLICT', 'busy', { status: 409 }));
     const { result } = await renderHook(() => useComposeMovie());
 
     let outcome;
@@ -625,13 +653,13 @@ describe('startGeneration', () => {
       outcome = await result.current.startGeneration('m1');
     });
 
-    expect(outcome).toEqual({ started: false, refused: 'rejected', message: reason });
+    expect(outcome).toEqual({ started: false, refused: 'frozen' });
     expect(mockBeginMovieJob).not.toHaveBeenCalled();
   });
 
   it('leaves the movie untouched when the request itself fails', async () => {
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
-    mockCreateEditJob.mockRejectedValue(new ApiError('network_error', 'network'));
+    mockExportMovie.mockRejectedValue(new ApiError('network_error', 'network'));
     const { result } = await renderHook(() => useComposeMovie());
 
     let outcome;
