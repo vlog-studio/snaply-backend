@@ -54,6 +54,13 @@ export const movieSchema = z
      * 사라지면 `null` 로 돌아간다 — 그때도 무비 자체는 남아 다시 만들 수 있다.
      */
     resultVideoId: z.uuid().nullable().describe('완성된 결과물 영상 id. 없으면 `null`.'),
+    /**
+     * 결과물을 만든(만들고 있는) 편집 작업. 무비 API 는 진행률·실패 사유를 직접 주지 않으므로
+     * 앱은 이 id 로 `GET /edit-jobs/{id}` · WebSocket 을 연다. 앱이 `export` 응답의 `jobId` 를
+     * 재시작으로 잃어도 여기서 다시 찾는다 — 없으면 무비가 `generating` 에 갇힌 채 진행률을
+     * 볼 길이 없다. `resultVideoId` 와 함께 비워진다.
+     */
+    jobId: z.uuid().nullable().describe('결과물을 만든(만들고 있는) 편집 작업 id. 진행률·취소·실패 사유는 편집 작업 API 로 본다. 없으면 `null`.'),
     finishedAt: z.iso
       .datetime()
       .nullable()
@@ -82,7 +89,20 @@ const clipsInputSchema = z
     `컷 목록. **배열 순서가 곧 재생 순서**다. ${MOVIE_CLIP_MIN}~${MOVIE_CLIP_MAX}개이며, 같은 스냅을 다른 구간으로 여러 번 쓸 수 있다.`,
   );
 
+/**
+ * 앱이 오프라인에서 먼저 만든 초안의 id 를 그대로 서버 id 로 쓴다.
+ *
+ * 무비는 기기에서 즉시 만들어지고(촬영 직후 담기) 스냅 업로드가 끝난 뒤에 서버로 올라오므로,
+ * 서버가 id 를 새로 매기면 앱이 이미 화면·알림·경로에 쓰고 있는 id 가 바뀐다. 같은 id 로
+ * 다시 보내면(네트워크 실패 뒤 재시도) 새로 만들지 않고 있는 것을 돌려준다 — 멱등이다.
+ */
 export const createMovieBodySchema = z.object({
+  id: z
+    .uuid()
+    .optional()
+    .describe(
+      '앱이 정한 무비 id(uuid). 생략하면 서버가 정한다. 내 무비에 같은 id 가 이미 있으면 새로 만들지 않고 그것을 돌려준다(멱등). 다른 사용자의 id 와 겹치면 409.',
+    ),
   title: z.string().min(1).max(100).optional().describe('무비 이름. 생략하면 서버가 정한다.'),
   clips: clipsInputSchema.optional().describe('처음부터 컷을 담아 만들 때. 생략하면 빈 초안이 된다.'),
   stylePreset: stylePresetSchema.optional().describe('편집 스타일. 생략하면 `일상`.'),
@@ -98,7 +118,13 @@ export type CreateMovieBody = z.infer<typeof createMovieBodySchema>;
 export const updateMovieBodySchema = z
   .object({
     title: z.string().min(1).max(100).optional(),
-    clips: clipsInputSchema.optional().describe('보내면 컷 목록을 통째로 교체한다(부분 수정이 아니다).'),
+    clips: z
+      .array(clipInputSchema)
+      .max(MOVIE_CLIP_MAX)
+      .optional()
+      .describe(
+        '보내면 컷 목록을 통째로 교체한다(부분 수정이 아니다). 빈 배열이면 컷 없는 초안으로 돌아간다 — 마지막 스냅을 지운 무비도 남아야 하기 때문이다. 컷이 없으면 생성(export)은 400.',
+      ),
     stylePreset: stylePresetSchema.optional(),
     captions: z.boolean().optional(),
     arranger: movieArrangerSchema.optional(),
@@ -143,6 +169,7 @@ export const createMovie = defineRoute({
     response: {
       201: apiSuccess(movieSchema),
       400: apiErrorSchema,
+      409: apiErrorSchema,
       ...AUTHENTICATED_ERROR_RESPONSES,
     },
   },

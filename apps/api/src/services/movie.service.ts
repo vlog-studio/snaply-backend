@@ -51,6 +51,14 @@ interface MovieRow {
   clips: ClipRow[];
 }
 
+/** 결과물 영상에 걸린 가장 최근 편집 작업. 무비 상태 보정과 응답의 `jobId` 가 함께 쓴다. */
+interface LatestJob {
+  id: string;
+  status: string;
+}
+
+type MovieRowWithJob = MovieRow & { job: LatestJob | null };
+
 const SELECT = {
   id: true,
   title: true,
@@ -75,7 +83,7 @@ const SELECT = {
   },
 } as const;
 
-function toDto(row: MovieRow): Movie {
+function toDto(row: MovieRowWithJob): Movie {
   return {
     id: row.id,
     title: row.title,
@@ -91,6 +99,7 @@ function toDto(row: MovieRow): Movie {
       unavailable: clip.video.deletedAt !== null || clip.video.status !== 'ready',
     })),
     resultVideoId: row.resultVideoId,
+    jobId: row.job?.id ?? null,
     finishedAt: row.finishedAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
@@ -109,11 +118,17 @@ async function resolveClips(params: {
   userId: string;
   clips: ClipInput[];
   arranger: MovieArranger;
+  /** 수정은 컷을 모두 빼는 것도 허용한다 — 마지막 스냅을 지운 무비도 초안으로 남아야 한다. */
+  allowEmpty?: boolean;
 }): Promise<ClipInput[]> {
-  if (params.clips.length < MOVIE_CLIP_MIN || params.clips.length > MOVIE_CLIP_MAX) {
+  const min = params.allowEmpty ? 0 : MOVIE_CLIP_MIN;
+  if (params.clips.length < min || params.clips.length > MOVIE_CLIP_MAX) {
     throw AppError.badRequest(
       `컷은 ${MOVIE_CLIP_MIN}개 이상 ${MOVIE_CLIP_MAX}개 이하로 담아야 합니다.`,
     );
+  }
+  if (params.clips.length === 0) {
+    return [];
   }
   for (const clip of params.clips) {
     if (clip.endMs !== undefined && clip.startMs !== undefined && clip.endMs <= clip.startMs) {
@@ -158,30 +173,63 @@ function clipCreateData(clips: ClipInput[]) {
 }
 
 /**
+ * 결과물 영상마다 가장 최근 편집 작업을 한 번의 조회로 붙인다.
+ *
+ * 목록은 무비 수만큼 작업을 따로 묻지 않는다 — 결과물 id 를 모아 한 번에 읽고, 영상별로
+ * 가장 최근 것만 남긴다(다시 만들기는 결과물을 교체하므로 보통 하나지만, 같은 결과물에 작업이
+ * 둘 이상 걸린 경우에도 최신이 이긴다).
+ */
+async function attachLatestJobs(rows: MovieRow[]): Promise<MovieRowWithJob[]> {
+  const videoIds = [
+    ...new Set(rows.map((row) => row.resultVideoId).filter((id): id is string => id !== null)),
+  ];
+  const jobs =
+    videoIds.length === 0
+      ? []
+      : await getPrisma().editJob.findMany({
+          where: { videoId: { in: videoIds } },
+          orderBy: { createdAt: 'desc' },
+          select: { id: true, videoId: true, status: true },
+        });
+  const latestByVideo = new Map<string, LatestJob>();
+  for (const job of jobs) {
+    if (!latestByVideo.has(job.videoId)) {
+      latestByVideo.set(job.videoId, { id: job.id, status: job.status });
+    }
+  }
+  return rows.map((row) => ({
+    ...row,
+    job: row.resultVideoId ? (latestByVideo.get(row.resultVideoId) ?? null) : null,
+  }));
+}
+
+/**
  * `generating` 인 무비의 상태를 편집 작업의 결과로 따라잡는다.
  *
  * 워커는 무비를 모른다 — `edit_jobs` 와 결과물 `videos` 만 갱신한다. 그래서 무비 상태를
  * 워커가 옮겨줄 수 없고, 읽는 시점에 작업을 보고 맞춘다. 이 보정이 없으면 무비가 영원히
  * `generating` 에 갇혀 수정도 끝내기도 409 가 된다.
  *
+ * 취소는 실패가 아니다(specs/movie.md MOV-11) — 사용자가 멈춘 작업은 무비를 **초안**으로
+ * 되돌리고, 취소 시 지워진 결과물의 포인터도 함께 비운다. 앱도 취소를 초안으로 다루므로
+ * 서버가 `failed` 라 하면 두 쪽이 서로 고치려 든다.
+ *
  * 값이 실제로 바뀔 때만 UPDATE 한다 — `updatedAt` 은 스튜디오 보드의 정렬 기준이라
  * 조회할 때마다 건드리면 목록 순서가 흔들린다.
  */
-async function reconcileStatus(row: MovieRow): Promise<MovieRow> {
-  if (row.status !== 'generating' || !row.resultVideoId) {
+async function reconcileStatus(row: MovieRowWithJob): Promise<MovieRowWithJob> {
+  if (row.status !== 'generating' || !row.job) {
     return row;
   }
-  const job = await getPrisma().editJob.findFirst({
-    where: { videoId: row.resultVideoId },
-    orderBy: { createdAt: 'desc' },
-    select: { status: true },
-  });
+  if (row.job.status === 'canceled') {
+    await getPrisma().movie.update({
+      where: { id: row.id },
+      data: { status: 'draft', resultVideoId: null, updatedAt: row.updatedAt },
+    });
+    return { ...row, status: 'draft', resultVideoId: null, job: null };
+  }
   const next =
-    job?.status === 'done'
-      ? 'ready'
-      : job?.status === 'failed' || job?.status === 'canceled'
-        ? 'failed'
-        : null;
+    row.job.status === 'done' ? 'ready' : row.job.status === 'failed' ? 'failed' : null;
   if (next === null) {
     return row;
   }
@@ -192,7 +240,13 @@ async function reconcileStatus(row: MovieRow): Promise<MovieRow> {
   return { ...row, status: next };
 }
 
-async function findOwned(userId: string, movieId: string): Promise<MovieRow> {
+/** 응답으로 나가기 전에 거치는 두 단계 — 작업을 붙이고, 그 작업으로 상태를 맞춘다. */
+async function settle(rows: MovieRow[]): Promise<MovieRowWithJob[]> {
+  const withJobs = await attachLatestJobs(rows);
+  return await Promise.all(withJobs.map(reconcileStatus));
+}
+
+async function findOwned(userId: string, movieId: string): Promise<MovieRowWithJob> {
   const row = await getPrisma().movie.findFirst({
     where: { id: movieId, userId, deletedAt: null },
     select: SELECT,
@@ -200,22 +254,50 @@ async function findOwned(userId: string, movieId: string): Promise<MovieRow> {
   if (!row) {
     throw AppError.notFound('무비를 찾을 수 없습니다.');
   }
-  return await reconcileStatus(row as MovieRow);
+  const [settled] = await settle([row as MovieRow]);
+  return settled!;
 }
 
+/**
+ * 무비를 만든다. 앱이 `id` 를 정해 보내면 그 id 로 만든다 — 앱은 오프라인에서 초안을 먼저
+ * 만들고 스냅 업로드가 끝난 뒤 올리므로, 서버가 id 를 새로 매기면 앱이 이미 쓰는 id 가 바뀐다.
+ *
+ * **같은 id 로 다시 오면 멱등이다**: 내 무비에 이미 있으면 새로 만들지 않고 그것을 돌려준다
+ * (네트워크 실패 뒤 재시도가 두 번째 무비를 만들면 안 된다). 다른 사용자의 무비 id 와 겹치면
+ * 409 — 존재 여부를 굳이 숨기지 않는 이유는, uuid 충돌은 사고가 아니라 조작이기 때문이다.
+ */
 export async function createMovie(params: {
   userId: string;
+  id?: string;
   title?: string;
   clips?: ClipInput[];
   stylePreset?: StylePreset;
   captions?: boolean;
   arranger?: MovieArranger;
 }): Promise<Movie> {
+  if (params.id) {
+    const existing = await getPrisma().movie.findUnique({
+      where: { id: params.id },
+      select: { userId: true, deletedAt: true },
+    });
+    if (existing && existing.userId !== params.userId) {
+      throw AppError.conflict('이미 쓰이고 있는 무비 id 입니다.');
+    }
+    if (existing && existing.deletedAt === null) {
+      return await getMovie({ userId: params.userId, movieId: params.id });
+    }
+    if (existing) {
+      // 지운 무비의 id 로 다시 만들려는 재시도 — 지운 것은 지운 것이다.
+      throw AppError.conflict('삭제된 무비의 id 입니다.');
+    }
+  }
+
   const arranger = params.arranger ?? 'user';
   const clips = params.clips ? await resolveClips({ ...params, clips: params.clips, arranger }) : [];
 
   const created = await getPrisma().movie.create({
     data: {
+      ...(params.id ? { id: params.id } : {}),
       userId: params.userId,
       title: params.title ?? DEFAULT_TITLE,
       stylePreset: params.stylePreset ?? DEFAULT_STYLE,
@@ -225,7 +307,8 @@ export async function createMovie(params: {
     },
     select: SELECT,
   });
-  return toDto(created as MovieRow);
+  // 새 무비에는 결과물이 없으니 작업도 없다 — 조회 없이 비운다.
+  return toDto({ ...(created as MovieRow), job: null });
 }
 
 export async function listMovies(params: {
@@ -249,9 +332,9 @@ export async function listMovies(params: {
 
   const hasMore = rows.length > params.limit;
   const items = hasMore ? rows.slice(0, params.limit) : rows;
-  const reconciled = await Promise.all(items.map((row) => reconcileStatus(row as MovieRow)));
+  const settled = await settle(items as MovieRow[]);
   return {
-    items: reconciled.map(toDto),
+    items: settled.map(toDto),
     nextCursor: hasMore ? (items[items.length - 1]?.id ?? null) : null,
   };
 }
@@ -280,7 +363,12 @@ export async function updateMovie(params: {
   const clips =
     params.clips === undefined
       ? undefined
-      : await resolveClips({ userId: params.userId, clips: params.clips, arranger });
+      : await resolveClips({
+          userId: params.userId,
+          clips: params.clips,
+          arranger,
+          allowEmpty: true,
+        });
 
   const updated = await getPrisma().movie.update({
     where: { id: current.id },
@@ -296,7 +384,8 @@ export async function updateMovie(params: {
     },
     select: SELECT,
   });
-  return toDto(updated as MovieRow);
+  // 수정은 결과물을 건드리지 않으므로 방금 읽은 작업이 그대로 유효하다.
+  return toDto({ ...(updated as MovieRow), job: current.job });
 }
 
 /**

@@ -62,6 +62,7 @@ describe('POST /movies', () => {
     expect(movie.status).toBe('draft');
     expect(movie.clips).toEqual([]);
     expect(movie.resultVideoId).toBeNull();
+    expect(movie.jobId).toBeNull();
     expect(movie.finishedAt).toBeNull();
     // 쇼츠가 기본이라 자막은 꺼진 채로 시작한다.
     expect(movie.captions).toBe(false);
@@ -133,6 +134,46 @@ describe('POST /movies', () => {
     });
 
     expect(res.statusCode).toBe(400);
+  });
+});
+
+describe('POST /movies — 앱이 정한 id', () => {
+  /**
+   * 앱은 오프라인에서 초안을 먼저 만들고 업로드가 끝난 뒤 올린다. 서버가 id 를 새로 매기면
+   * 앱이 이미 화면·알림·경로에 쓰는 id 가 바뀌므로, 앱의 id 를 그대로 받는다.
+   */
+  it('보낸 id 로 만든다', async () => {
+    const user = await h.createUser();
+    const id = crypto.randomUUID();
+
+    const res = await createMovie(user, { id, title: '기기에서 먼저 만든 것' });
+
+    expect(res.statusCode).toBe(201);
+    expect(res.json().data.id).toBe(id);
+  });
+
+  it('같은 id 로 다시 보내면 새로 만들지 않고 있는 것을 돌려준다 (재시도 멱등)', async () => {
+    const user = await h.createUser();
+    const id = crypto.randomUUID();
+    await createMovie(user, { id, title: '처음' });
+
+    const again = await createMovie(user, { id, title: '재시도' });
+
+    expect(again.statusCode).toBe(201);
+    expect(again.json().data.title).toBe('처음');
+    const list = await h.app.inject({ method: 'GET', url: '/movies', headers: user.auth });
+    expect(list.json().data.items).toHaveLength(1);
+  });
+
+  it('다른 사용자의 무비 id 와 겹치면 409 다', async () => {
+    const owner = await h.createUser();
+    const other = await h.createUser();
+    const id = crypto.randomUUID();
+    await createMovie(owner, { id });
+
+    const res = await createMovie(other, { id });
+
+    expect(res.statusCode).toBe(409);
   });
 });
 
@@ -220,6 +261,26 @@ describe('PATCH /movies/:id', () => {
   });
 });
 
+describe('PATCH /movies/:id — 컷을 모두 빼기', () => {
+  /** 마지막 스냅을 지운 무비도 초안으로 남아야 한다 — 무비 삭제는 사용자의 별도 행동이다. */
+  it('빈 clips 로 컷 없는 초안이 된다', async () => {
+    const user = await h.createUser();
+    const snapId = await createSnap(user);
+    const movieId = (await createMovie(user, { clips: [{ videoId: snapId }] })).json().data.id;
+
+    const res = await h.app.inject({
+      method: 'PATCH',
+      url: `/movies/${movieId}`,
+      headers: user.auth,
+      payload: { clips: [] },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().data.clips).toEqual([]);
+    expect(res.json().data.status).toBe('draft');
+  });
+});
+
 describe('DELETE /movies/:id', () => {
   it('무비를 지워도 스냅은 남는다', async () => {
     const user = await h.createUser();
@@ -291,32 +352,62 @@ describe('생성이 끝난 뒤의 무비 상태', () => {
    * 시점에 작업을 보고 따라잡는다. 이 보정이 없으면 무비가 `generating` 에 갇혀 수정도
    * 끝내기도 영원히 409 가 된다.
    */
-  async function movieWithJob(user: TestUser, jobStatus: string): Promise<string> {
+  async function movieWithJob(
+    user: TestUser,
+    jobStatus: string,
+  ): Promise<{ movieId: string; jobId: string }> {
     const snapId = await createSnap(user);
     const movieId = (await createMovie(user, { clips: [{ videoId: snapId }] })).json().data.id;
     const result = await h.prisma.video.create({
       data: { userId: user.id, kind: 'result', status: 'processing' },
     });
-    await h.prisma.editJob.create({
+    const job = await h.prisma.editJob.create({
       data: { videoId: result.id, userId: user.id, status: jobStatus },
     });
     await h.prisma.movie.update({
       where: { id: movieId },
       data: { status: 'generating', resultVideoId: result.id },
     });
-    return movieId;
+    return { movieId, jobId: job.id };
   }
+
+  /**
+   * 앱은 `export` 응답의 `jobId` 로 진행률 소켓을 열지만, 재시작으로 그 값을 잃을 수 있다.
+   * 무비가 자기 작업을 말해 주지 않으면 `generating` 에 갇힌 무비의 진행률·취소에 닿을 길이 없다.
+   */
+  it('무비가 자기 편집 작업의 id 를 말해 준다', async () => {
+    const user = await h.createUser();
+    const { movieId, jobId } = await movieWithJob(user, 'processing');
+
+    expect((await getMovie(user, movieId)).json().data.jobId).toBe(jobId);
+  });
+
+  it('같은 결과물에 작업이 둘이면 최신 것을 말한다', async () => {
+    const user = await h.createUser();
+    const { movieId } = await movieWithJob(user, 'failed');
+    const resultVideoId = (await getMovie(user, movieId)).json().data.resultVideoId;
+    const retry = await h.prisma.editJob.create({
+      data: {
+        videoId: resultVideoId,
+        userId: user.id,
+        status: 'processing',
+        createdAt: new Date(Date.now() + 1_000),
+      },
+    });
+
+    expect((await getMovie(user, movieId)).json().data.jobId).toBe(retry.id);
+  });
 
   it('작업이 끝나면 ready 가 된다', async () => {
     const user = await h.createUser();
-    const movieId = await movieWithJob(user, 'done');
+    const { movieId } = await movieWithJob(user, 'done');
 
     expect((await getMovie(user, movieId)).json().data.status).toBe('ready');
   });
 
   it('작업이 실패하면 failed 가 되고 다시 편집할 수 있다', async () => {
     const user = await h.createUser();
-    const movieId = await movieWithJob(user, 'failed');
+    const { movieId } = await movieWithJob(user, 'failed');
 
     expect((await getMovie(user, movieId)).json().data.status).toBe('failed');
     const edit = await h.app.inject({
@@ -328,16 +419,27 @@ describe('생성이 끝난 뒤의 무비 상태', () => {
     expect(edit.statusCode).toBe(200);
   });
 
+  /** 취소는 실패가 아니다(MOV-11) — 앱과 같은 읽기여야 두 쪽이 서로 고치려 들지 않는다. */
+  it('작업이 취소되면 초안으로 돌아가고 결과물 포인터가 비워진다', async () => {
+    const user = await h.createUser();
+    const { movieId } = await movieWithJob(user, 'canceled');
+
+    const movie = (await getMovie(user, movieId)).json().data;
+    expect(movie.status).toBe('draft');
+    expect(movie.resultVideoId).toBeNull();
+    expect(movie.jobId).toBeNull();
+  });
+
   it('작업이 진행 중이면 generating 그대로다', async () => {
     const user = await h.createUser();
-    const movieId = await movieWithJob(user, 'processing');
+    const { movieId } = await movieWithJob(user, 'processing');
 
     expect((await getMovie(user, movieId)).json().data.status).toBe('generating');
   });
 
   it('상태 보정이 목록 순서를 흔들지 않는다 (updatedAt 을 건드리지 않는다)', async () => {
     const user = await h.createUser();
-    const older = await movieWithJob(user, 'done');
+    const { movieId: older } = await movieWithJob(user, 'done');
     const newer = (await createMovie(user, { title: '나중에 만든 것' })).json().data.id;
 
     const res = await h.app.inject({ method: 'GET', url: '/movies', headers: user.auth });
@@ -377,6 +479,7 @@ describe('POST /movies/:id/finish', () => {
     expect(after.json().data.finishedAt).not.toBeNull();
     // 결과물은 사라졌지만 컷 구성은 그대로 남아 다시 만들 수 있다.
     expect(after.json().data.resultVideoId).toBeNull();
+    expect(after.json().data.jobId).toBeNull();
     expect(after.json().data.clips).toHaveLength(1);
 
     // 끝낸 뒤에도 수정이 된다 — 사라지는 것은 파일이지 무비가 아니다.
