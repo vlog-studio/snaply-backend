@@ -1,8 +1,8 @@
 # Android device verification (wireless adb)
 
-The physical Android device connected over wireless adb is the **default verification surface for this project**. Use it instead of the Android emulator or the web build unless the owner explicitly asks for another target.
+A physical Android device connected over wireless adb is an **optional verification surface**: the default path is the iOS Simulator and Android emulator ([`local-development-and-testing.md`](local-development-and-testing.md#verification-surfaces-read-first)), and device-only behavior (camera capture, real permission prompts, haptics, push delivery) is normally checked by the owner from a manual-check list you write. Use this document when the owner has a device attached and asks you to drive it, or when a manual check needs to be reproduced with exact commands.
 
-This document is the agent's toolkit: what can actually be observed and driven on that device, with the exact commands. The policy that mandates it — ask before assuming the device is attached, never background Metro — lives in [`local-development-and-testing.md`](local-development-and-testing.md#agent-verification-policy-read-first) and still applies here.
+This document is the agent's toolkit: what can actually be observed and driven on that device, with the exact commands. Confirm the device is attached before assuming it (`adb devices`), and never free port 8081 without asking — the Metro rules in `local-development-and-testing.md` apply here too.
 
 Every command below was executed successfully against the owner's device (`SM-S908N`, Android 16) on 2026-07-27 with the app running as a debug dev build and owner-run Metro on port 8081.
 

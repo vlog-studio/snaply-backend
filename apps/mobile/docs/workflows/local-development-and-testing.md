@@ -1,18 +1,16 @@
 # Local development and testing
 
-## Agent verification policy (read first)
+## Verification surfaces (read first)
 
-These rules were set by the project owner (2026-07-23) and override the procedures further down:
+A change is verified on three surfaces, each answering a different question:
 
-1. **Do not verify on the web build or on the Android emulator.** Web (`expo start --web`) is not the reference runtime, and the emulator proved too limited for real verification (no real camera pipeline, Expo Go boot failure — see below). On-device verification happens on the owner's **physical Android device connected over wireless adb**.
-2. **Ask the owner to connect the wireless device before testing.** The device is not always attached. When a change needs on-device verification, explicitly request the connection ("무선 디버깅 기기 연결해 주세요") and wait; confirm with `adb devices` (the device appears as `adb-…-_adb-tls-connect._tcp`). Target it explicitly with `-s <serial>` (or `ANDROID_SERIAL`) — never assume it is the only device.
-3. **Never start the Metro server in the background.** A backgrounded Metro dies with its parent shell/timeout and silently takes down whatever device session the owner had open, and `expo run:android` piggybacks on an existing port-8081 server, chaining its lifetime to that hidden process. Ask the owner to run `npx expo start --dev-client` in their own terminal (or confirm the one they already run), and never kill port 8081 without asking.
+1. **Automated checks** (`npm run verify`, [below](#automated-checks)) — JavaScript logic and rendered interaction contracts. Always run first.
+2. **iOS Simulator and Android emulator** — the agent's on-device verification path: screens render, navigation and interaction flows work, the app talks to the backend. Boot them, drive them, and capture screenshots yourself using the procedures below (Expo Go on the iOS Simulator, a dev build on the Android emulator — Expo Go no longer boots this app on Android, see [Expo Go limitations](#expo-go-limitations)). The web build (`expo start --web`) is not a reference runtime; do not use it as evidence.
+3. **Physical device, by the owner** — behavior a simulator cannot reproduce faithfully: real camera capture and the recording pipeline, the OS permission prompts as shipped, haptics, push-notification delivery, media-library writes, and network behavior from the device's own connection. When a change touches any of these, do not claim it verified. List the exact steps and expected results as a **separate manual-check section in your report** so the owner can run them on a real device, and say what you did verify on the simulator/emulator. If the owner has a device attached and asks you to drive it, [`android-device-verification.md`](android-device-verification.md) is the toolkit — confirm it with `adb devices` and target it with `-s <serial>` (or `ANDROID_SERIAL`); never assume it is the only device.
 
-For **what to actually do once the device is connected** — screenshots, UI hierarchy dumps, input injection, reading the app's persisted stores, logs, and permission state — see [`android-device-verification.md`](android-device-verification.md). That document is the agent's verification toolkit; this one covers the machine constraints and the simulator/emulator procedures.
+The owner has no iOS device (as of 2026-07-27), so iOS hardware checks are not available; state explicitly when a change was not verified on iOS hardware.
 
-The iOS counterpart does not exist yet: the owner has no iOS device as of 2026-07-27, so iOS verification uses the simulator procedures below.
-
-The sections below describe the machine constraints and the simulator/emulator commands. Treat the emulator/Expo Go procedures as background reference for the human developer, not as the agent's verification path.
+**Metro belongs to whoever started it.** `expo run:android` and the dev client attach to any server already on port 8081, so a Metro process that dies quietly (a backgrounded process tied to a shell or a timeout) takes the device session with it. Reuse a Metro the owner already runs when one is up (`curl -s http://localhost:8081/status`); when you start one yourself, run it as a persistent process that outlives the shell that launched it, and never free port 8081 without asking.
 
 You can run **one iOS simulator and one Android emulator side by side** against a single Metro server.
 
@@ -45,9 +43,9 @@ The command examples below were validated with this legacy-machine profile. Adju
 - Android: Android SDK at `~/Library/Android/sdk`, Android Studio, JDK 17, system image `system-images;android-35;default;x86_64`, and the AVD **`Pixel_API_35`**.
 - Expo CLI 57.x.
 
-## Expo Go on the simulators — human-developer reference
+## Expo Go on the simulators
 
-**This is not the agent's verification path** (see the policy at the top), and it is not a working Android path either: Expo Go no longer boots this app on Android ([below](#expo-go-limitations)). What remains usable here is the iOS simulator. The Android emulator commands are kept only because the two platforms share one Metro server.
+Expo Go is the iOS Simulator path (and the only iOS path on a legacy machine, [above](#environment-and-legacy-macos-limitation)). It is not a working Android path: Expo Go no longer boots this app on Android ([below](#expo-go-limitations)), so the Android emulator runs a dev build (`npm run android`) instead. The Android emulator commands below are kept because the two platforms share one Metro server.
 
 One Metro server serves both platforms. Boot the two devices, start Metro once, then open the app on each.
 
@@ -123,7 +121,7 @@ Verify each interaction with `xcrun simctl io "iPhone 16" screenshot <path>`. To
 
 ### Expo Go limitations
 
-**Expo Go no longer boots this app on Android** (verified 2026-07-23 on the Pixel_API_35 emulator): the app imports `expo-notifications` at startup (`_app/providers` push-token registrar → `shared/lib/notifications/local.ts`), and on Android Expo Go that import throws a fatal `Uncaught Error: expo-notifications: Android Push notifications … removed from Expo Go with the release of SDK 53` before anything renders. Android verification therefore requires a dev build (`npm run android:device`; `npm run android` for an emulator) on the owner's wireless device (see the agent verification policy at the top). iOS Expo Go is unaffected.
+**Expo Go no longer boots this app on Android** (verified 2026-07-23 on the Pixel_API_35 emulator): the app imports `expo-notifications` at startup (`_app/providers` push-token registrar → `shared/lib/notifications/local.ts`), and on Android Expo Go that import throws a fatal `Uncaught Error: expo-notifications: Android Push notifications … removed from Expo Go with the release of SDK 53` before anything renders. Android verification therefore requires a dev build: `npm run android` for the emulator, `npm run android:device` for a connected physical device. iOS Expo Go is unaffected.
 
 Only native modules bundled in Expo Go work, and `expo-dev-client` configuration is ignored. Custom native behavior (e.g. `expo-camera` config-plugin options, `expo-glass-effect`) may differ from a real build or be unavailable. When a feature depends on such modules, verify it with EAS Build instead.
 
@@ -144,4 +142,4 @@ When Expo Go is insufficient, build a simulator/emulator dev client in the cloud
 ## Notes
 
 - `ios/` and `android/` are git-ignored (managed workflow). A `prebuild` may generate `ios/`; do not commit it.
-- To stop: Android — `adb -s emulator-5554 emu kill`; iOS — `xcrun simctl shutdown "iPhone 16"`. **Metro is the owner's process, not the agent's**: never free port 8081 without asking (policy 3 above), because the server on it is usually the one the owner started for their own device session.
+- To stop: Android — `adb -s emulator-5554 emu kill`; iOS — `xcrun simctl shutdown "iPhone 16"`. Never free port 8081 without asking (see [Verification surfaces](#verification-surfaces-read-first)): the Metro on it may be the one the owner started for their own device session.
