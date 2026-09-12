@@ -100,7 +100,7 @@ Thumbnails are derived cover art, held by no model. Extraction and caching live 
 
 ## Backend upload sync
 
-Every snap is uploaded to the backend automatically, so that by the time movie generation moves server-side (`POST /edit-jobs` takes `videoIds`), the material is already there and the user never waits on a bulk upload at the moment they ask for a movie.
+Every snap is uploaded to the backend automatically, so that the material is already there when a movie is sent to the server and run there (`POST /movies` names its cuts by `videoId`; `POST /movies/{id}/export` renders the server's copies) and the user never waits on a bulk upload at the moment they ask for a movie. The upload finishing is also what lets a movie holding that snap be sent at all — the movie sync (`features/compose-movie`'s `MovieSyncGate`) drains its outbox on every sync-entry change for exactly that reason ([The movie screen](movie.md#movies-live-on-the-server)).
 
 **The local file stays the source of truth.** A finished upload does not delete it. Making the device copy a cache is the agreed destination, but switching it on waits until the backend serves a playable rendition and the app reconciles against the server list — without those, deleting locally would leave a snap unplayable on other platforms and unrecoverable after a reinstall ([SNAP-14](../../../../docs/specs/snap-library.md), [decision](../../../../docs/decisions/local-copy-after-upload.md)).
 
