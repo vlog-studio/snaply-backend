@@ -6,9 +6,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { isAiArranged, movieStyleLabel, useDeleteMovie } from '@/entities/movie';
 import { useComposeMovie, useRenderSource } from '@/features/compose-movie';
+import { FinishMovieConfirm } from '@/features/finish-movie';
 import { RenameMovieSheet } from '@/features/rename-movie';
 import { useShareMovie } from '@/features/share-movie';
 import { BackBar } from '@/shared/ui/back-bar';
+import { BottomSheet } from '@/shared/ui/bottom-sheet';
 import { MaxContentWidth, Radius, Spacing, useTheme } from '@/shared/ui/theme';
 import { ThemedText } from '@/shared/ui/themed-text';
 
@@ -96,6 +98,9 @@ export function MoviePage({ movieId }: MoviePageProps) {
   const [editing, setEditing] = useState(false);
   // The back-out question for a finished movie's studio (`EditExitSheet`).
   const [exitAsking, setExitAsking] = useState(false);
+  // 끝내기 asked from the watch stage's own prompt (the ⋯ sheet hosts its own
+  // copy of the step, so the two Modals are never up together).
+  const [finishAsking, setFinishAsking] = useState(false);
   // The refusal already in the user's words: one of them (`rejected`) is worded
   // by the backend, so the message is resolved where the outcome arrives rather
   // than by the footer that draws it.
@@ -255,6 +260,7 @@ export function MoviePage({ movieId }: MoviePageProps) {
           sharing={sharing}
           editedSinceRender={editedSinceRender}
           onReviewEdits={openStudio}
+          onFinish={() => setFinishAsking(true)}
         />
       ) : (
         <>
@@ -497,6 +503,22 @@ export function MoviePage({ movieId }: MoviePageProps) {
         }}
         onClose={() => setExitAsking(false)}
       />
+
+      {/* Finishing returns the movie to a draft, so this sheet's host — watch
+          mode — is gone the moment it succeeds; closing it first keeps the
+          Modal from outliving the face that opened it. */}
+      <BottomSheet
+        accessibilityLabel="무비 끝내기 확인"
+        visible={finishAsking}
+        onClose={() => setFinishAsking(false)}
+      >
+        <FinishMovieConfirm
+          movieId={movie.id}
+          title={movie.title}
+          onCancel={() => setFinishAsking(false)}
+          onFinished={() => setFinishAsking(false)}
+        />
+      </BottomSheet>
 
       <StylePickerSheet
         visible={styleOpen}

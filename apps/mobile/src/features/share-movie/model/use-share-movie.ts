@@ -55,6 +55,14 @@ export type MovieSharing = {
    * Cleared when a new attempt starts.
    */
   failed: boolean;
+  /**
+   * True once the share sheet has been opened on **this render** during this
+   * visit. Not whether anything was saved — the sheet never says (a share is
+   * "offered", never "confirmed") — only that the user has had the chance,
+   * which is what makes it the moment to offer 끝내기 (MOV-17) without ever
+   * calling it for them. Forgotten when the render changes.
+   */
+  offered: boolean;
   /** Opens the system share sheet on the rendered movie. */
   share: () => void;
 };
@@ -83,21 +91,26 @@ export function useShareMovie(movie: Movie | undefined, source: ShareSource): Mo
   const uri = source.uri;
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
+  // The render the sheet was last opened on, so the flag dies with the render.
+  const [offeredFor, setOfferedFor] = useState<string>();
+  const renderKey = movie?.render ? `${movie.id}-${movie.render.renderedAt}` : undefined;
 
   const share = () => {
     if (!uri || !movie?.render || busy) return;
     const render = movie.render;
+    const key = `${movie.id}-${render.renderedAt}`;
     setBusy(true);
     setFailed(false);
     void (async () => {
       try {
         if (!(await canShareFiles())) return;
-        const localUri = await downloadRenderFile(uri, `${movie.id}-${render.renderedAt}`);
+        const localUri = await downloadRenderFile(uri, key);
         await shareFile(localUri, {
           mimeType: 'video/mp4',
           uti: 'public.movie',
           dialogTitle: movie.title,
         });
+        setOfferedFor(key);
       } catch (error) {
         setFailed(true);
         if (__DEV__) console.warn('[movie] share failed:', String(error));
@@ -113,5 +126,11 @@ export function useShareMovie(movie: Movie | undefined, source: ShareSource): Mo
       ? 'unresolved'
       : 'no-render';
 
-  return { blocked, busy, failed, share };
+  return {
+    blocked,
+    busy,
+    failed,
+    offered: renderKey !== undefined && offeredFor === renderKey,
+    share,
+  };
 }

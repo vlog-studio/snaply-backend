@@ -33,6 +33,8 @@ export type MovieWatchProps = {
   editedSinceRender: boolean;
   /** Opens the studio on the edited composition. */
   onReviewEdits: () => void;
+  /** Opens the 끝내기 confirm (MOV-17); never finishes by itself. */
+  onFinish: () => void;
 };
 
 /**
@@ -75,6 +77,7 @@ export function MovieWatch({
   sharing,
   editedSinceRender,
   onReviewEdits,
+  onFinish,
 }: MovieWatchProps) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
@@ -186,6 +189,27 @@ export function MovieWatch({
           <ThemedText type="note" themeColor="textSecondary" style={styles.centerText}>
             완성 파일을 내려받지 못했어요. 연결을 확인하고 다시 시도해주세요.
           </ThemedText>
+        ) : sharing.offered ? (
+          // The share sheet has been up, which is the one moment 끝내기 is
+          // worth offering — and offering is all this does. The sheet never
+          // says whether the file was saved (MOV-18), so nothing here decides
+          // for the user; the confirm asks them.
+          <View style={[styles.notice, { borderColor: theme.border }]}>
+            <ThemedText type="small" themeColor="textSecondary">
+              파일을 저장했다면 끝내기로 서버의 완성 파일을 정리할 수 있어요.
+            </ThemedText>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="무비 끝내기"
+              onPress={onFinish}
+              hitSlop={Spacing.two}
+              style={({ pressed }) => [styles.review, { opacity: pressed ? 0.7 : 1 }]}
+            >
+              <ThemedText selectable={false} type="smallBold" themeColor="primary">
+                끝내기
+              </ThemedText>
+            </Pressable>
+          </View>
         ) : null}
       </View>
     </View>

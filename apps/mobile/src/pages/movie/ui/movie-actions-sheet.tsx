@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import type { Movie } from '@/entities/movie';
+import { FinishMovieConfirm } from '@/features/finish-movie';
 import { RenameMovieForm } from '@/features/rename-movie';
 import { ShareBlockMessages, type ShareBlock } from '@/features/share-movie';
 import { formatSeconds } from '@/shared/lib/datetime';
@@ -26,6 +27,9 @@ export type MovieActionsSheetProps = {
   onConfirmDelete: () => void;
   onClose: () => void;
 };
+
+/** The ⋯ sheet's own steps; each is a face of the one Modal. */
+type Step = 'menu' | 'delete' | 'rename' | 'finish';
 
 /**
  * Everything watch mode can do to the movie besides watching it, behind the
@@ -55,7 +59,7 @@ export function MovieActionsSheet({
   onClose,
 }: MovieActionsSheetProps) {
   const theme = useTheme();
-  const [step, setStep] = useState<'menu' | 'delete' | 'rename'>('menu');
+  const [step, setStep] = useState<Step>('menu');
   const confirmingDelete = step === 'delete';
 
   const close = () => {
@@ -72,10 +76,26 @@ export function MovieActionsSheet({
       visible={visible}
       onClose={close}
       accessibilityLabel={
-        confirmingDelete ? '무비 삭제 확인' : step === 'rename' ? '무비 이름 바꾸기' : '무비 더보기'
+        confirmingDelete
+          ? '무비 삭제 확인'
+          : step === 'rename'
+            ? '무비 이름 바꾸기'
+            : step === 'finish'
+              ? '무비 끝내기 확인'
+              : '무비 더보기'
       }
     >
-      {step === 'rename' ? (
+      {step === 'finish' ? (
+        // 끝내기 (MOV-17) as a step here, for the same reason delete and rename
+        // are: one Modal, no race. The feature's confirm carries the words that
+        // make the loss plain and the request that makes it so.
+        <FinishMovieConfirm
+          movieId={movie.id}
+          title={movie.title}
+          onCancel={() => setStep('menu')}
+          onFinished={close}
+        />
+      ) : step === 'rename' ? (
         // Keyed by the stored name so reopening the step starts from what the
         // movie is called now rather than from the last edit's leftovers.
         <RenameMovieForm
@@ -153,6 +173,17 @@ export function MovieActionsSheet({
               divider
               onPress={act(onShare)}
             />
+            {/* Only a movie with a file to give up can be finished; the note
+                says what the act is, since the word alone could mean anything. */}
+            {movie.render ? (
+              <ActionRow
+                icon="checkmark-done"
+                label="끝내기"
+                note="완성 파일을 저장했다면 서버의 파일을 정리해요"
+                divider
+                onPress={() => setStep('finish')}
+              />
+            ) : null}
           </View>
           <View style={[styles.group, { borderColor: theme.border }]}>
             <ActionRow
