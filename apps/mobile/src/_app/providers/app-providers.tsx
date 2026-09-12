@@ -13,6 +13,7 @@ import { Colors, useResolvedColorScheme } from '@/shared/ui/theme';
 import { GeofenceGate } from './geofence-gate';
 import { LibraryScopeGate } from './library-scope-gate';
 import { MovieGenerationBridge } from './movie-generation-bridge';
+import { NotificationTapRouter } from './notification-tap-router';
 import { PushTokenGate } from './push-token-gate';
 import { queryClient } from './query-client';
 import { SnapMetadataBackfill } from './snap-metadata-backfill';
@@ -60,6 +61,10 @@ export function AppProviders({ children }: PropsWithChildren) {
             grace period; this is what collects it once that has run out. */}
         <DeletedLibraryPurgeGate />
         <PushTokenGate />
+        {/* A tapped notification lands where it points — the movie it names, or
+            the library for an expiry notice — instead of merely opening the app.
+            Waits for the navigator and the sign-in, so it may mount this early. */}
+        <NotificationTapRouter />
         <GeofenceGate />
         {/* Movie generation runs here rather than on the movie screen: a job is meant
             to keep going after the user leaves the screen, and to be picked back

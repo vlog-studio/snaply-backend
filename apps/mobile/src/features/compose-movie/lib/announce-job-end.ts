@@ -38,9 +38,9 @@ export function announceJobEnd(
       await presentLocalNotification({
         title,
         body: `${movie.title} · ${detail ?? fallbackBody}`,
-        // Carried for a notification-tap handler to route on. Nothing subscribes
-        // to responses yet, so tapping only opens the app.
-        data: { movieId: movie.id, outcome },
+        // The same shape the server's pushes carry (`kind` + `movieId`), so the
+        // app-layer tap router opens this movie whichever way the news arrived.
+        data: { kind: outcome === 'ready' ? 'movie_ready' : 'movie_failed', movieId: movie.id },
       });
     } catch (error) {
       if (__DEV__) console.warn('[movie] could not announce job end:', String(error));

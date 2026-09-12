@@ -18,3 +18,15 @@ export function presentLocalNotification(_input: {
 }): Promise<string> {
   return Promise.resolve('');
 }
+
+export type LocalNotificationResponse = { id: string; data: Record<string, unknown> };
+
+export function onLocalNotificationResponse(
+  _listener: (response: LocalNotificationResponse) => void,
+): () => void {
+  return () => {};
+}
+
+export function getOpeningLocalNotificationResponse(): Promise<LocalNotificationResponse | null> {
+  return Promise.resolve(null);
+}

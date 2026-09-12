@@ -74,3 +74,40 @@ export function presentLocalNotification({
     trigger: null,
   });
 }
+
+/** A tap on a locally presented notification: which one, and what it carried. */
+export type LocalNotificationResponse = {
+  /** The notification's own id — the one `presentLocalNotification` returned. */
+  id: string;
+  data: Record<string, unknown>;
+};
+
+function toResponse(response: Notifications.NotificationResponse): LocalNotificationResponse {
+  const { identifier, content } = response.notification.request;
+  return { id: identifier, data: (content.data ?? {}) as Record<string, unknown> };
+}
+
+/**
+ * Subscribe to the user tapping a notification this app presented. Fires for a
+ * tap while the app is running or backgrounded; the tap that launched the app
+ * from a quit state is answered by `getOpeningLocalNotificationResponse`.
+ */
+export function onLocalNotificationResponse(
+  listener: (response: LocalNotificationResponse) => void,
+): () => void {
+  const subscription = Notifications.addNotificationResponseReceivedListener((response) =>
+    listener(toResponse(response)),
+  );
+  return () => subscription.remove();
+}
+
+/**
+ * The last notification tap the platform recorded for this process — on a cold
+ * start, the one that launched the app. `null` when there was none. It stays
+ * answered for the life of the process, so a caller asking more than once has
+ * to remember which ids it already acted on.
+ */
+export async function getOpeningLocalNotificationResponse(): Promise<LocalNotificationResponse | null> {
+  const response = await Notifications.getLastNotificationResponseAsync();
+  return response ? toResponse(response) : null;
+}

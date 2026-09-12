@@ -20,3 +20,11 @@ export function onFcmTokenRefresh(_listener: (token: string) => void): () => voi
 export function onForegroundMessage(_listener: (message: unknown) => void): () => void {
   return () => {};
 }
+
+export function onNotificationOpened(_listener: (message: unknown) => void): () => void {
+  return () => {};
+}
+
+export function getOpeningNotification(): Promise<null> {
+  return Promise.resolve(null);
+}

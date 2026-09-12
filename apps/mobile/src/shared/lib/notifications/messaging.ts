@@ -71,3 +71,22 @@ export function onForegroundMessage(listener: (message: RemoteMessage) => void):
   if (!messaging) return () => {};
   return messaging.onMessage(messaging.getMessaging(), listener);
 }
+
+/**
+ * Subscribe to the user opening the app by tapping a push that arrived while it
+ * was in the background. A push tapped from a quit state does not reach this
+ * listener — see `getOpeningNotification`.
+ */
+export function onNotificationOpened(listener: (message: RemoteMessage) => void): () => void {
+  if (!messaging) return () => {};
+  return messaging.onNotificationOpenedApp(messaging.getMessaging(), listener);
+}
+
+/**
+ * The push whose tap launched the app from a quit state, or `null` when the app
+ * was opened any other way. Ask once at startup; the answer does not change.
+ */
+export async function getOpeningNotification(): Promise<RemoteMessage | null> {
+  if (!messaging) return null;
+  return messaging.getInitialNotification(messaging.getMessaging());
+}
