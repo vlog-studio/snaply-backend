@@ -5,17 +5,20 @@ import { useCaptureMoment } from './use-capture-moment';
 const mockAddSnap = jest.fn();
 const mockPersist = jest.fn();
 const mockReadPlace = jest.fn();
-const mockReadDuration = jest.fn();
+const mockReadMetadata = jest.fn();
 
 // Mock each dependency at its slice Public API so the test stays at the seam.
+// The entity's pure rules (orientation, stand-in size) stay real: a snap built
+// against recreated ones would prove nothing about the snap the app stores.
 jest.mock('@/entities/snap', () => ({
+  ...jest.requireActual('@/entities/snap'),
   useAddSnap: () => mockAddSnap,
 }));
 jest.mock('@/shared/lib/recording-files', () => ({
   persistLocalRecording: (uri: string) => mockPersist(uri),
 }));
-jest.mock('@/shared/lib/video-duration', () => ({
-  readVideoDuration: (uri: string) => mockReadDuration(uri),
+jest.mock('@/shared/lib/video-metadata', () => ({
+  readVideoMetadata: (uri: string) => mockReadMetadata(uri),
 }));
 // Same-slice sibling: mocked at its own path, and covered by its own test.
 jest.mock('../lib/read-capture-place', () => ({
@@ -35,7 +38,7 @@ describe('useCaptureMoment', () => {
     jest.clearAllMocks();
     mockPersist.mockResolvedValue(recording);
     mockReadPlace.mockResolvedValue(undefined);
-    mockReadDuration.mockResolvedValue(undefined);
+    mockReadMetadata.mockResolvedValue({});
   });
 
   it('persists the file and creates a snap, filing it into nothing', async () => {
@@ -58,28 +61,51 @@ describe('useCaptureMoment', () => {
   // so the file is what the snap is measured by — the timeline draws the snap at
   // exactly this number.
   it('records the length read back from the persisted file, not the one asked for', async () => {
-    mockReadDuration.mockResolvedValue(1.2);
+    mockReadMetadata.mockResolvedValue({ durationSec: 1.2 });
     const { result } = await renderHook(() => useCaptureMoment());
 
     await act(async () => {
       await result.current.captureMoment('file:///cache/snap.mov', { durationSec: 3 });
     });
 
-    expect(mockReadDuration).toHaveBeenCalledWith(recording.uri);
+    expect(mockReadMetadata).toHaveBeenCalledWith(recording.uri);
     expect(mockAddSnap).toHaveBeenCalledWith(
       expect.objectContaining({ durationSec: 1.2, durationMeasured: true }),
     );
   });
 
-  it('falls back to the requested length, unmeasured, when the file cannot be read', async () => {
+  // The camera records 720p and a phone held sideways records landscape; the
+  // snap is sized by what the file says, not by an upright stand-in.
+  it('records the size read back from the persisted file, rotation applied', async () => {
+    mockReadMetadata.mockResolvedValue({ durationSec: 1.2, width: 1280, height: 720 });
+    const { result } = await renderHook(() => useCaptureMoment());
+
+    await act(async () => {
+      await result.current.captureMoment('file:///cache/snap.mov', { durationSec: 3 });
+    });
+
+    expect(mockAddSnap).toHaveBeenCalledWith(
+      expect.objectContaining({
+        width: 1280,
+        height: 720,
+        orientation: 'landscape',
+        dimensionsMeasured: true,
+      }),
+    );
+  });
+
+  it('falls back to the requested length and the stand-in, unmeasured, when the file cannot be read', async () => {
     const { result } = await renderHook(() => useCaptureMoment());
 
     await act(async () => {
       await result.current.captureMoment('file:///cache/snap.mov', { durationSec: 5 });
     });
 
-    expect(mockAddSnap).toHaveBeenCalledWith(expect.objectContaining({ durationSec: 5 }));
+    expect(mockAddSnap).toHaveBeenCalledWith(
+      expect.objectContaining({ durationSec: 5, width: 1080, height: 1920 }),
+    );
     expect(mockAddSnap.mock.calls[0][0]).not.toHaveProperty('durationMeasured');
+    expect(mockAddSnap.mock.calls[0][0]).not.toHaveProperty('dimensionsMeasured');
   });
 
   it('tags the snap with where it was captured when a fix is available', async () => {

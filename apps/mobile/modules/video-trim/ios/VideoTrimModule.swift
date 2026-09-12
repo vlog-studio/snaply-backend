@@ -10,10 +10,20 @@ import ExpoModulesCore
  MP4. The output lands in the caches directory; the caller moves it into
  permanent storage (`shared/lib/recording-files`), the same hand-off the
  camera's temporary recording makes.
+
+ `probe` reads the same properties off any local video without cutting it, so
+ a camera recording is described exactly the way a trimmed output is.
  */
 public class VideoTrimModule: Module {
   public func definition() -> ModuleDefinition {
     Name("VideoTrim")
+
+    AsyncFunction("probe") { (sourceUri: String) -> [String: Any] in
+      guard let sourceUrl = URL(string: sourceUri), sourceUrl.isFileURL else {
+        throw VideoTrimError.notAFileUri
+      }
+      return Self.describe(AVURLAsset(url: sourceUrl))
+    }
 
     AsyncFunction("trim") { (sourceUri: String, startMs: Double, endMs: Double, promise: Promise) in
       guard endMs > startMs else {
@@ -81,7 +91,18 @@ public class VideoTrimModule: Module {
    (`preferredTransform`).
    */
   private static func describeOutput(at outputUrl: URL) -> [String: Any] {
-    let asset = AVURLAsset(url: outputUrl)
+    var described = describe(AVURLAsset(url: outputUrl))
+    described["uri"] = outputUrl.absoluteString
+    return described
+  }
+
+  /**
+   A video file's display size and length. `naturalSize` is the encoded frame,
+   which a phone held upright stores landscape with a 90° `preferredTransform`;
+   applying the transform gives the size the video is seen at. Zeros mean the
+   file could not be read — the caller falls back to its own numbers.
+   */
+  private static func describe(_ asset: AVURLAsset) -> [String: Any] {
     var width = 0
     var height = 0
     if let track = asset.tracks(withMediaType: .video).first {
@@ -89,9 +110,9 @@ public class VideoTrimModule: Module {
       width = Int(abs(size.width).rounded())
       height = Int(abs(size.height).rounded())
     }
-    let durationMs = Int((CMTimeGetSeconds(asset.duration) * 1000).rounded())
+    let seconds = CMTimeGetSeconds(asset.duration)
+    let durationMs = seconds.isFinite ? Int((seconds * 1000).rounded()) : 0
     return [
-      "uri": outputUrl.absoluteString,
       "width": width,
       "height": height,
       "durationMs": max(durationMs, 0),
@@ -100,6 +121,7 @@ public class VideoTrimModule: Module {
 }
 
 private enum VideoTrimError: Error {
+  case notAFileUri
   case sessionUnavailable
   case exportFailed
 }

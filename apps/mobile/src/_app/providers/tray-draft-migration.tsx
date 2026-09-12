@@ -15,7 +15,7 @@ const LegacyTrayKey = 'snaply.tray';
  * purpose. A draft is exactly what those picks were headed for, so that is what
  * they become; in pick order, `user`-arranged, like every hand-picked movie.
  *
- * Startup work rather than a feature, like `SnapDurationBackfill`: nothing here
+ * Startup work rather than a feature, like `SnapMetadataBackfill`: nothing here
  * is an action the user takes. It waits for the movie store to hydrate because
  * a write that lands before hydration is overwritten by it, and it removes the
  * key afterwards so the promotion can never run twice. Delete this provider

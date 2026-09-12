@@ -45,6 +45,7 @@ describe('createExtractedSnap', () => {
     expect(snap.width).toBe(width);
     expect(snap.height).toBe(height);
     expect(snap.orientation).toBe(orientation);
+    expect(snap.dimensionsMeasured).toBe(true);
   });
 
   it('falls back to the requested length when the file was unreadable', () => {
@@ -57,7 +58,7 @@ describe('createExtractedSnap', () => {
     expect(snap.durationMeasured).toBeUndefined();
   });
 
-  it('falls back to the portrait stand-in when dimensions were unreadable', () => {
+  it('falls back to the portrait stand-in, unmarked, when dimensions were unreadable', () => {
     const snap = createExtractedSnap(recording, {
       trimmed: trimmed({ width: 0, height: 0 }),
       requestedDurationSec: 3,
@@ -66,6 +67,8 @@ describe('createExtractedSnap', () => {
     expect(snap.width).toBe(1080);
     expect(snap.height).toBe(1920);
     expect(snap.orientation).toBe('portrait');
+    // A stand-in is not a measurement: the backfill has to know to come back.
+    expect(snap).not.toHaveProperty('dimensionsMeasured');
   });
 
   it('carries no place — a gallery video was not shot where the user stands', () => {

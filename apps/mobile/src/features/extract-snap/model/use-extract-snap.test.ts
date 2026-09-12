@@ -3,7 +3,11 @@ import { act, renderHook } from '@testing-library/react-native';
 import { useExtractSnap } from './use-extract-snap';
 
 const mockAddSnap = jest.fn();
+// The entity's pure rules (orientation, stand-in size) stay real behind the
+// mocked store hook: a snap built against recreated ones would prove nothing
+// about the snap the app stores.
 jest.mock('@/entities/snap', () => ({
+  ...jest.requireActual('@/entities/snap'),
   useAddSnap: () => mockAddSnap,
 }));
 

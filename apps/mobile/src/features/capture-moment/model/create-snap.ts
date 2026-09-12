@@ -1,11 +1,12 @@
 import type { CaptureDuration } from '@/entities/capture-session';
-import type { Snap, SnapPlace } from '@/entities/snap';
+import {
+  orientationOf,
+  SNAP_STAND_IN_SIZE,
+  type Snap,
+  type SnapMeasurement,
+  type SnapPlace,
+} from '@/entities/snap';
 import type { LocalRecording } from '@/shared/lib/recording-files';
-
-// Portrait is the capture default; real orientation/dimension detection lands
-// when a movie can target a ratio other than 9:16.
-const DEFAULT_PORTRAIT_WIDTH = 1080;
-const DEFAULT_PORTRAIT_HEIGHT = 1920;
 
 export type CreateSnapInput = {
   /**
@@ -14,8 +15,8 @@ export type CreateSnapInput = {
    * not its length.
    */
   durationSec: CaptureDuration;
-  /** The recorded file's real length, when it could be read back. */
-  measuredDurationSec?: number;
+  /** What could be read back off the recorded file, when anything could. */
+  measured?: SnapMeasurement;
   /** Where the capture happened, when a fix was available (see `readCapturePlace`). */
   place?: SnapPlace;
 };
@@ -30,17 +31,30 @@ export type CreateSnapInput = {
  * option only when it could not, because the two differ on every capture the
  * user ended by lifting their finger — and the timeline draws a snap by that
  * number.
+ *
+ * The size comes from the file too, rotation applied: the camera records 720p,
+ * not the 1080×1920 the stand-in claims, and a phone held sideways records
+ * landscape. The stand-in is what an unreadable file gets, unmarked, so the
+ * backfill knows to come back for it.
  */
 export function createSnap(recording: LocalRecording, input: CreateSnapInput): Snap {
+  const measured = input.measured ?? {};
+  const measuredSize =
+    measured.width !== undefined && measured.height !== undefined
+      ? { width: measured.width, height: measured.height }
+      : undefined;
+  const { width, height } = measuredSize ?? SNAP_STAND_IN_SIZE;
+
   return {
     id: recording.id,
     uri: recording.uri,
-    durationSec: input.measuredDurationSec ?? input.durationSec,
-    ...(input.measuredDurationSec !== undefined ? { durationMeasured: true as const } : {}),
+    durationSec: measured.durationSec ?? input.durationSec,
+    ...(measured.durationSec !== undefined ? { durationMeasured: true as const } : {}),
     capturedAt: recording.createdAt,
-    width: DEFAULT_PORTRAIT_WIDTH,
-    height: DEFAULT_PORTRAIT_HEIGHT,
-    orientation: 'portrait',
+    width,
+    height,
+    orientation: orientationOf(width, height),
+    ...(measuredSize ? { dimensionsMeasured: true as const } : {}),
     // Spread rather than assign, so a snap with no fix carries no `place` key at
     // all instead of an explicit `undefined` the store would persist as null.
     ...(input.place ? { place: input.place } : {}),

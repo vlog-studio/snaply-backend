@@ -31,12 +31,21 @@ private class VideoTrimException(message: String, cause: Throwable? = null) :
  * The output lands in the app's cache directory — the caller is expected to
  * move it into permanent storage (`shared/lib/recording-files`), the same
  * hand-off the camera's temporary recording makes.
+ *
+ * `probe` reads the same properties off any local video without cutting it, so
+ * a camera recording is described exactly the way a trimmed output is.
  */
 class VideoTrimModule : Module() {
   private val mainHandler = Handler(Looper.getMainLooper())
 
   override fun definition() = ModuleDefinition {
     Name("VideoTrim")
+
+    AsyncFunction("probe") { sourceUri: String ->
+      val context = appContext.reactContext
+        ?: throw VideoTrimException("The app context is gone.")
+      describe { retriever -> retriever.setDataSource(context, Uri.parse(sourceUri)) }
+    }
 
     AsyncFunction("trim") { sourceUri: String, startMs: Double, endMs: Double, promise: Promise ->
       val context = appContext.reactContext
@@ -109,12 +118,25 @@ class VideoTrimModule : Module() {
    * the container stores as metadata.
    */
   private fun describeOutput(outputFile: File): Map<String, Any> {
+    val described = describe { retriever -> retriever.setDataSource(outputFile.absolutePath) }
+    described["uri"] = Uri.fromFile(outputFile).toString()
+    return described
+  }
+
+  /**
+   * A video file's display size and length. The container stores the encoded
+   * frame size, which a phone held upright records landscape with a 90°
+   * rotation flag; swapping on that flag gives the size the video is seen at.
+   * Zeros mean the file could not be read — the caller falls back to its own
+   * numbers.
+   */
+  private fun describe(open: (MediaMetadataRetriever) -> Unit): MutableMap<String, Any> {
     var width = 0
     var height = 0
     var durationMs = 0L
     val retriever = MediaMetadataRetriever()
     try {
-      retriever.setDataSource(outputFile.absolutePath)
+      open(retriever)
       val rawWidth = retriever
         .extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)
         ?.toIntOrNull() ?: 0
@@ -139,8 +161,7 @@ class VideoTrimModule : Module() {
         // Releasing a retriever that failed to open can itself throw.
       }
     }
-    return mapOf(
-      "uri" to Uri.fromFile(outputFile).toString(),
+    return mutableMapOf(
       "width" to width,
       "height" to height,
       "durationMs" to durationMs,

@@ -15,7 +15,7 @@ import { LibraryScopeGate } from './library-scope-gate';
 import { MovieGenerationBridge } from './movie-generation-bridge';
 import { PushTokenGate } from './push-token-gate';
 import { queryClient } from './query-client';
-import { SnapDurationBackfill } from './snap-duration-backfill';
+import { SnapMetadataBackfill } from './snap-metadata-backfill';
 import { TrayDraftMigration } from './tray-draft-migration';
 
 // Navigation chrome recolors the matching base theme with the app palette of
@@ -65,10 +65,11 @@ export function AppProviders({ children }: PropsWithChildren) {
             to keep going after the user leaves the screen, and to be picked back
             up on the next app start if they left before it finished. */}
         <MovieGenerationBridge />
-        {/* Snaps captured before their length was measured claim the capture
-            option they were shot with; this reads the real length back from the
-            files, once, in the background. */}
-        <SnapDurationBackfill />
+        {/* Snaps captured before their length and size were measured claim the
+            capture option they were shot with and an upright 1080×1920 frame;
+            this reads the real numbers back from the files, once, in the
+            background. */}
+        <SnapMetadataBackfill />
         {/* Picks left in the removed 담기 트레이 by an older build become the
             draft movie they were headed for, once. */}
         <TrayDraftMigration />

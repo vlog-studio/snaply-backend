@@ -5,8 +5,8 @@ export {
   purgeSnapScope,
   readScopedSnaps,
   useAddSnap,
+  useRecordSnapMeasurement,
   useRemoveSnaps,
-  useSetMeasuredSnapDuration,
   useSnaps,
   useSnapsHydrated,
 } from './model/snap-store';
@@ -31,4 +31,11 @@ export {
   type SnapSyncEntry,
   type SnapSyncStatus,
 } from './model/snap-sync-store';
-export type { Snap, SnapOrientation, SnapPlace } from './model/snap';
+export {
+  orientationOf,
+  SNAP_STAND_IN_SIZE,
+  type Snap,
+  type SnapMeasurement,
+  type SnapOrientation,
+  type SnapPlace,
+} from './model/snap';

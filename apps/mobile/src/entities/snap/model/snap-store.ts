@@ -8,7 +8,7 @@ import {
   readScopedState,
 } from '@/shared/lib/scoped-store';
 
-import type { Snap } from './snap';
+import { orientationOf, type Snap, type SnapMeasurement } from './snap';
 
 const SnapStoreName = 'snaply.snaps';
 
@@ -30,9 +30,9 @@ const SnapStoreName = 'snaply.snaps';
  * fully-formed `Snap` so id/timestamp generation stays in the capture feature
  * that owns those side effects, keeping this store deterministic and testable.
  *
- * `setMeasuredDuration` is the one exception, and it is a correction rather than
- * an edit: it writes the length that was read back from the snap's own file over
- * the length that was assumed when it was captured. Nothing about the snap
+ * `recordMeasurement` is the one exception, and it is a correction rather than
+ * an edit: it writes the length and size that were read back from the snap's
+ * own file over what was assumed when it was captured. Nothing about the snap
  * changes — what it always was is finally recorded.
  *
  * Exported for co-located tests only. Application code consumes the focused
@@ -43,9 +43,36 @@ type SnapState = {
   hasHydrated: boolean;
   addSnap: (snap: Snap) => void;
   removeSnaps: (ids: readonly string[]) => void;
-  setMeasuredDuration: (id: string, durationSec: number) => void;
+  recordMeasurement: (id: string, measurement: SnapMeasurement) => void;
   setHasHydrated: (value: boolean) => void;
 };
+
+/**
+ * The snap with the measurement written over it, or the same object when there
+ * is nothing new in it. A field the platform did not answer is left alone; a
+ * size needs both numbers before it counts as measured.
+ */
+function applyMeasurement(snap: Snap, measurement: SnapMeasurement): Snap {
+  let next = snap;
+  const { durationSec, width, height } = measurement;
+  if (durationSec !== undefined && !(snap.durationMeasured && snap.durationSec === durationSec)) {
+    next = { ...next, durationSec, durationMeasured: true };
+  }
+  if (
+    width !== undefined &&
+    height !== undefined &&
+    !(snap.dimensionsMeasured && snap.width === width && snap.height === height)
+  ) {
+    next = {
+      ...next,
+      width,
+      height,
+      orientation: orientationOf(width, height),
+      dimensionsMeasured: true,
+    };
+  }
+  return next;
+}
 
 export const useSnapStore = create<SnapState>()(
   persist(
@@ -64,14 +91,15 @@ export const useSnapStore = create<SnapState>()(
           if (removed.size === 0) return state;
           return { snaps: state.snaps.filter((snap) => !removed.has(snap.id)) };
         }),
-      setMeasuredDuration: (id, durationSec) =>
+      recordMeasurement: (id, measurement) =>
         set((state) => {
           let corrected = false;
           const snaps = state.snaps.map((snap) => {
             if (snap.id !== id) return snap;
-            if (snap.durationMeasured && snap.durationSec === durationSec) return snap;
+            const measured = applyMeasurement(snap, measurement);
+            if (measured === snap) return snap;
             corrected = true;
-            return { ...snap, durationSec, durationMeasured: true };
+            return measured;
           });
           // A no-op correction must not write: the backfill walks the whole
           // library on every start, and a new object each time would persist the
@@ -141,18 +169,18 @@ export function useRemoveSnaps(): (ids: readonly string[]) => void {
 }
 
 /**
- * Records the length read back from a snap's own file, replacing the length that
- * was assumed at capture time. See the store's note on why this is the one write
- * that changes a stored snap.
+ * Records what was read back from a snap's own file — its length, its size, or
+ * both — replacing what was assumed at capture time. See the store's note on
+ * why this is the one write that changes a stored snap.
  */
-export function useSetMeasuredSnapDuration(): (id: string, durationSec: number) => void {
-  return useSnapStore((state) => state.setMeasuredDuration);
+export function useRecordSnapMeasurement(): (id: string, measurement: SnapMeasurement) => void {
+  return useSnapStore((state) => state.recordMeasurement);
 }
 
 /**
  * Non-reactive read of the whole library. For work that walks every snap once
  * and must not restart whenever its own writes land back in the store — the
- * duration backfill is the only such caller today.
+ * metadata backfill is the only such caller today.
  */
 export function getSnaps(): Snap[] {
   return useSnapStore.getState().snaps;

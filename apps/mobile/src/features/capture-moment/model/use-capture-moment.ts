@@ -3,7 +3,7 @@ import { useState } from 'react';
 import type { CaptureDuration } from '@/entities/capture-session';
 import { useAddSnap, type Snap } from '@/entities/snap';
 import { persistLocalRecording } from '@/shared/lib/recording-files';
-import { readVideoDuration } from '@/shared/lib/video-duration';
+import { readVideoMetadata } from '@/shared/lib/video-metadata';
 
 import { readCapturePlace } from '../lib/read-capture-place';
 
@@ -17,8 +17,8 @@ type CaptureMomentInput = {
 
 /**
  * The capture action: persist a recorded moment's video file and create its snap
- * metadata, tagged with where it was shot and how long it actually runs when
- * those can be answered.
+ * metadata, tagged with where it was shot, how long it actually runs, and how
+ * big its frame really is when those can be answered.
  *
  * That is the whole job. Capturing no longer files the snap into anything —
  * automatic collection is gone along with the daily roll and its all-day rule. A
@@ -49,11 +49,12 @@ export function useCaptureMoment() {
         readCapturePlace(),
       ]);
       // Measured after the move rather than beside it: reading a file that is
-      // being relocated is not a race worth taking, and the requested length is
-      // there to fall back on. It costs the saving stage a few tens of
-      // milliseconds and it is the only moment the real length is free to get.
-      const measuredDurationSec = await readVideoDuration(recording.uri);
-      const snap = createSnap(recording, { ...input, measuredDurationSec, place });
+      // being relocated is not a race worth taking, and the requested length and
+      // the stand-in size are there to fall back on. It costs the saving stage a
+      // few tens of milliseconds and it is the only moment the real numbers are
+      // free to get.
+      const measured = await readVideoMetadata(recording.uri);
+      const snap = createSnap(recording, { ...input, measured, place });
       addSnap(snap);
       return snap;
     } catch {

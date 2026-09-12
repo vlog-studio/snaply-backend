@@ -1,12 +1,6 @@
-import type { Snap, SnapOrientation } from '@/entities/snap';
+import { orientationOf, SNAP_STAND_IN_SIZE, type Snap } from '@/entities/snap';
 import type { LocalRecording } from '@/shared/lib/recording-files';
 import type { TrimmedVideo } from '@/shared/lib/video-trim';
-
-// What a snap claims when the trimmer could not read the output back — the
-// same portrait stand-in the capture path stores (see
-// `features/capture-moment/model/create-snap.ts`).
-const DEFAULT_PORTRAIT_WIDTH = 1080;
-const DEFAULT_PORTRAIT_HEIGHT = 1920;
 
 export type CreateExtractedSnapInput = {
   /** What the trimmer measured off the output file. */
@@ -15,22 +9,16 @@ export type CreateExtractedSnapInput = {
   requestedDurationSec: number;
 };
 
-function orientationOf(width: number, height: number): SnapOrientation {
-  if (width > height) return 'landscape';
-  if (width < height) return 'portrait';
-  return 'square';
-}
-
 /**
  * Builds snap metadata for a cut extracted out of a gallery video. The snap id
  * reuses the recording's id (its unique filename), exactly like a captured
  * snap, so everything downstream — upload, deletion, movies — treats the two
  * identically.
  *
- * Unlike the capture path, the dimensions are real: a gallery video is as
- * often landscape or square as portrait, and the stand-in 1080×1920 would
- * mis-describe it. They fall back to the portrait stand-in only when the
- * trimmer could not read the output back.
+ * The dimensions are the trimmed file's own, rotation applied — a gallery
+ * video is as often landscape or square as portrait, and the stand-in would
+ * mis-describe it. They fall back to the stand-in, unmarked, only when the
+ * trimmer could not read the output back; the backfill measures those later.
  *
  * No `place`: where a gallery video was shot is metadata the picker's cache
  * copy does not carry, and where the user is *now* is not where the video
@@ -43,8 +31,8 @@ export function createExtractedSnap(
   const { trimmed, requestedDurationSec } = input;
   const measured = trimmed.durationMs > 0;
   const hasDimensions = trimmed.width > 0 && trimmed.height > 0;
-  const width = hasDimensions ? trimmed.width : DEFAULT_PORTRAIT_WIDTH;
-  const height = hasDimensions ? trimmed.height : DEFAULT_PORTRAIT_HEIGHT;
+  const width = hasDimensions ? trimmed.width : SNAP_STAND_IN_SIZE.width;
+  const height = hasDimensions ? trimmed.height : SNAP_STAND_IN_SIZE.height;
 
   return {
     id: recording.id,
@@ -59,5 +47,6 @@ export function createExtractedSnap(
     width,
     height,
     orientation: orientationOf(width, height),
+    ...(hasDimensions ? { dimensionsMeasured: true as const } : {}),
   };
 }

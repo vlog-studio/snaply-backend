@@ -56,6 +56,7 @@ describe('extracted snap library integration', () => {
       width: 1920,
       height: 1080,
       orientation: 'landscape',
+      dimensionsMeasured: true,
     });
 
     await act(async () => result.current.removeSnaps(['snaply-extracted.mp4']));
