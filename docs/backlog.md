@@ -8,9 +8,12 @@
 > 진행 기록([progress.md](./progress.md))은 **완료된 것**만 담는다.
 >
 > 각 항목은 `왜 막혀 있는지` + `무엇이 있으면 닫히는지(완료 조건)` 형식이다.
-> 마지막 정리: 2026-09-11 — 서버의 생애주기 작업이 끝난 뒤 앱 소스를 대조해 A-1 의 `앱` 항목을
-> 실제 상태로 다시 썼다. 인수인계에 없던 틈 둘(완료 알림 중복·푸시 탭 라우팅)과 문서 갱신 의무를
-> 추가했고, 완료된 FCM 전환에 기대던 낡은 서술을 고쳤다.
+> 마지막 정리: 2026-09-12 — A-1 의 앱 항목을 구현했다(무비 서버 전환·끝내기·로컬 완료 알림 제거·컷
+> 만료 표시·푸시 탭 라우팅, A-4 해상도 하드코딩). 결정은
+> [decisions/movie-client-cache.md](./decisions/movie-client-cache.md). 남은 앱 항목은 **실기기 검증**,
+> 스냅 목록의 만료 표시(reconcile 뒤), reconcile 3단계다. 알림 설정이 서버 판정에 닿지 않는 틈은 B-6.
+> 그 전 정리(2026-09-11): 서버의 생애주기 작업이 끝난 뒤 앱 소스를 대조해 A-1 의 `앱` 항목을 실제
+> 상태로 다시 썼다.
 
 ---
 
@@ -59,45 +62,42 @@
 [progress.md](./progress.md)) → **앱 전환** → e2e 실검증.
 착수 계획과 순서는 [plans/lifecycle-alignment.md](./plans/lifecycle-alignment.md) §5-A.
 
-서버 API 는 2026-09-09 에 끝났다. 앱이 붙여야 할 것은
-[mobile-handover-lifecycle.md](./mobile-handover-lifecycle.md) 에 계약·주의점과 함께 풀어 두었다.
+서버 API 는 2026-09-09 에 끝났고 **앱 전환은 2026-09-12 에 구현됐다**
+([decisions/movie-client-cache.md](./decisions/movie-client-cache.md) · 인수인계와 착수 계획은
+[archive/](./archive/README.md)). 아래는 그 결과다 — 닫힌 것은 취소선, 남은 것은 체크박스.
 
-**2026-09-11 앱 소스 대조** — 아래 `앱` 항목은 전부 미착수다. `entities/movie/model/movie-store.ts` 는
-여전히 zustand `persist` 이고, 생성은 `features/compose-movie/api/create-edit-job.ts` 가 `POST /edit-jobs`
-를 부르며, `/movies` 계열 호출은 앱 소스에 한 건도 없다. 계약 타입은 shared-types 로 이미 앱에
-도달해 있어(`shared/api/paths.ts`) 바로 쓸 수 있다. 권장 순서는 A-4 의 해상도 하드코딩 해소 →
-서버 전환(완료 알림 정리·푸시 탭 라우팅을 같은 묶음으로) → 끝내기 → 만료 표시 → reconcile.
-
-- [ ] **`앱`** **무비 서버 전환** — `entities/movie` 의 zustand persist 를 서버 쿼리/뮤테이션으로.
-      기존 로컬 무비는 이관하지 않는다(개발 단계). 이것이 끝나야 "기기를 바꾸면 무비가 사라진다"가 닫힌다.
-      **선행**: A-4 의 촬영 해상도 하드코딩 해소 — 서버가 원천이 된 뒤에는 틀린 값을 백필할 수 없다
-- [ ] **`앱`** **끝내기 버튼** — 공유 시트는 저장 여부를 알려주지 않으므로(MOV-18) **사용자의
-      명시적 행동**을 받아 `POST /movies/{id}/finish` 를 부른다. 시트를 연 것만으로 부르면 취소한
-      사용자의 파일이 사라진다. **이름 충돌 주의**: 앱의 `finishMovieJob` 은 "생성 작업이 끝났다"는
-      로컬 스토어 액션이라 서버의 "끝내기(finish)" 와 뜻이 다르다 — 전환 때 한쪽 이름을 바꾼다
-- [ ] **`앱`** **만료 표시** — 만료된 스냅을 목록에서 빼지 말고 "만료됨"으로. 사용자 삭제와
-      기간 만료를 다른 문구로. 남은 보관 기간 표시(SNAP-13). 무비 컷의 `unavailable` 그리기.
-      스냅 엔티티에 `removalReason`·`purgedAt` 에 해당하는 필드가 아직 없다
-- [ ] **`앱`** **로컬 완료 알림 제거와 설정 정합** ⚠️ 2026-09-11 신규. 서버가 `movie_ready` 푸시를
-      보내기 시작했는데 `features/compose-movie/lib/announce-job-end.ts` 가 여전히 로컬 알림을
-      띄워 **완료 알림이 두 번 온다.** 걷어낼 때 함께 정할 것 둘: ① 로컬 알림은 **실패**도 알리지만
-      서버는 성공만 보낸다 — 실패 안내를 어디에 남길지 ② 앱의 "무비 완성 알림" 스위치는 **로컬 전용
-      설정**(`movieReady`)인데 서버는 사용자의 전체 `notificationEnabled` 만 본다 — 스위치를 꺼도
-      서버 푸시가 온다. 설정을 서버로 올리거나(계약·스키마 변경) 스위치를 없앤다.
-      **완료 조건**: 완성 알림이 한 번만 오고, 앱의 스위치가 실제 발송 여부와 일치한다
-- [ ] **`앱`** **푸시 탭 라우팅** ⚠️ 2026-09-11 신규. `shared/lib/notifications/messaging.ts` 에
-      `onMessage` 만 있고 탭 응답 처리(`onNotificationOpenedApp` · `getInitialNotification`)가 없어
-      **푸시를 탭해도 앱만 열린다.** 서버가 싣는 `kind: movie_ready`(+`movieId`)는 그 무비로,
-      `kind: snap_expiry` 는 라이브러리로 보내야 한다 — 만료 예고는 탭해서 라이브러리에 닿아야
-      알림의 목적(SNAP-13)이 성립한다. `announce-job-end.ts` 도 "nothing subscribes to responses yet" 이라
-      적고 있다. **완료 조건**: 종류별 목적지가 정해지고, 종료 상태에서 탭한 경우(cold start)까지 도달한다
-- [ ] **`앱`** **모바일 기능 문서 갱신** — 위 항목이 들어갈 때 같은 변경에서
-      [apps/mobile/docs/features/movie.md](../apps/mobile/docs/features/movie.md) 를 고친다(생성 경로가
-      `POST /edit-jobs` 로, "Announce the end" 가 FCM 미연결로 적혀 있다). 지금 이미 어긋난 것 하나:
-      [snaps.md](../apps/mobile/docs/features/snaps.md) 의 데이터 절은 `capturedAt` 이 로컬에만 남는다고
-      하는데 같은 문서의 파이프라인 절은 이미 보낸다고 적고 있다 — 후자가 맞다
+- [x] ~~**`앱`** **무비 서버 전환**~~ — **2026-09-12 완료.** `entities/movie` 스토어는 서버 무비의 캐시 +
+      아웃박스가 됐고(훅 계약 유지, 34개 소비자 무변경), 생성은 `POST /movies/{id}/export` 로 간다.
+      무비 id 는 앱이 정한 uuid 를 서버가 받는다(`POST /movies` `id`, 멱등). 서버 계약 변경:
+      `Movie.jobId` 노출 · `PATCH` `clips: []` 허용 · 취소된 작업은 `draft` 로 보정. 기존 로컬 무비는
+      이관하지 않았다(스토어 v1 마이그레이션이 비운다). **실기기 미검증** — 아래 "서버 전환 실기기 검증"
+- [x] ~~**`앱`** **끝내기 버튼**~~ — **2026-09-12 완료.** `features/finish-movie`: ⋯ 시트의 끝내기 행과, 공유
+      시트가 올라온 뒤 감상 화면에 뜨는 안내 → "저장했나요?" 확인 시트 → `POST /movies/{id}/finish`.
+      시트를 연 것만으로는 부르지 않는다(MOV-18). 스토어 액션 `finishMovieJob` 은 `completeMovieJob` 로
+      바꿔 사용자의 끝내기(`useFinishMovie`)와 이름을 분리했다
+- [ ] **`앱`** **만료 표시 — 스냅 목록** — 무비 컷의 `unavailable` 그리기는 **2026-09-12 완료**(타임라인의
+      "만료" 배지, 삭제된 원본과 문구 구분, export 400 은 서버 문구로 표시). **남은 것**: 스냅 라이브러리에서
+      만료된 스냅을 "만료됨"으로, 남은 보관 기간 표시(SNAP-13). 앱은 서버의 스냅 목록을 읽지 않으므로
+      **A-4 3단계(reconcile)와 같은 변경**에서 붙인다 — 그 전에는 서버 만료를 알 방법이 없다
+- [x] ~~**`앱`** **로컬 완료 알림 제거**~~ — **2026-09-12 완료.** export 전환과 같은 변경에서
+      `announce-job-end.ts` 의 성공 알림을 뺐다. 실패 알림은 서버가 보내지 않으므로 로컬로 남기고, 서버에서
+      읽어 온(`adopted`) 작업의 실패는 알리지 않는다. 스위치와 서버 판정의 정합은 **B-6**
+- [x] ~~**`앱`** **푸시 탭 라우팅**~~ — **2026-09-12 완료**([progress.md](./progress.md)).
+      `_app/providers/notification-tap-router.tsx` 가 FCM(`onNotificationOpenedApp`·`getInitialNotification`)과
+      로컬 알림 응답 두 채널을 듣고 `kind` 별 목적지(`movie_ready`·`movie_failed` → 무비, `snap_expiry` →
+      라이브러리)로 보낸다. cold start 는 네비게이터·로그인 준비 뒤 도달. **실기기 미검증** — Android 에서
+      FCM 과 expo-notifications 가 같은 탭을 둘 다 보고하는지(중복 억제 창 2초)를 확인해야 닫힌다
+- [x] ~~**`앱`** **모바일 기능 문서 갱신**~~ — **2026-09-12 완료.** movie.md 에 "Movies live on the server" ·
+      "Finishing it" 절을 추가하고 생성 경로·완료 알림·소유권·제한을 고쳤다. studio.md · snaps.md ·
+      README · app-shell · me.md · location-and-push 도 같은 변경에서
 - [ ] ~~**e2e 실검증**~~ — **2026-09-11 완료**. `media:e2e` 가 앱과 같은 길을 간다
       (`POST /movies` → `export` → 무비에서 결과물 찾기). 실제 아이폰 영상으로의 재검증은 남아 있다
+- [ ] **`앱`** **서버 전환 실기기 검증** ⚠️ 2026-09-12 신규. 단위 테스트와 인메모리 목으로만 검증됐다.
+      Android dev build 에서 실제 서버에 대해: ① 촬영 직후 담은 초안이 업로드가 끝난 뒤 서버에 생긴다
+      ② 편집이 PATCH 된다 ③ 생성 → **완성 푸시가 한 번만** 오고 탭하면 그 무비가 열린다(cold start 포함)
+      ④ 끝내기 → 결과물이 사라지고 초안으로 돌아온다 ⑤ 앱 삭제·재설치 → 로그인 → 무비 목록이 돌아온다
+      (컷 원본은 reconcile 전이라 없다) ⑥ 계정 전환 → 다른 계정 무비가 보이지 않는다.
+      **완료 조건**: 여섯 가지가 통과하면 MOV-2·17·18·19·NTF-6 의 "실기기 미검증" 표기를 지운다
 
 - [ ] **`서버`** **`POST /edit-jobs` 폐기** — 결정 ⑤ 는 "한 버전 공존 후 폐기"다. 앱이 Movie export 로
       옮긴 릴리스의 **다음 릴리스**에서 제거한다. 시점을 항목으로 남기지 않으면 영구 공존이
@@ -245,9 +245,12 @@
 - [x] 삭제 유예 기간 값 — **30일 확정**, 계정 삭제에 먼저 적용
       ([decisions/account-deletion.md](./decisions/account-deletion.md))
 - [ ] egress 비용 실측 후 렌디션 기본 다운로드 정책 재평가
-- [ ] **`앱`** 선행 과제: 촬영 스냅 해상도 하드코딩(1080×1920) 해소 — 틀린 값이 서버 원천이 되면 백필 불가.
-      2026-09-11 확인: `features/capture-moment/model/create-snap.ts` 와
-      `features/extract-snap/model/create-extracted-snap.ts` 두 곳에 남아 있다. **A-1 무비 서버 전환보다 먼저** 닦는다
+- [x] ~~**`앱`** 선행 과제: 촬영 스냅 해상도 하드코딩(1080×1920) 해소~~ — **2026-09-12 완료**
+      ([progress.md](./progress.md)). 촬영 스냅도 파일에서 회전 반영 치수를 읽고(`shared/lib/video-metadata`,
+      네이티브 `VideoTrim.probe`), 못 읽은 스냅만 스탠드인을 **`dimensionsMeasured` 없이** 갖는다.
+      기존 라이브러리는 시작 시 백필(`SnapMetadataBackfill`)이 고친다. **서버 계약에는 아직 치수가 없다** —
+      `POST /videos` 에 `width`·`height` 를 싣는 것은 reconcile(3단계) 설계 때 함께 정하며, 그때
+      플래그 없는 스탠드인은 보내지 않는다
 
 **2026-09-09**: 로컬 파일을 언제 지울지는 결정됐다 — 최종 목표는 "로컬은 캐시"이되 **켜는 것은
 아래 두 단계가 실기기에서 검증된 뒤**로 연기한다(SNAP-14,
@@ -428,6 +431,20 @@ geofence 쿨다운 판정용 이력이 무한히 쌓인다. 쿨다운은 30분 �
   경계 스키마는 `apiRequest`의 할당 가능성 규칙으로 계약과 대조한다
 - [ ] `openapi.json`의 `*Input` 사본 스키마 — type provider 가 입력/출력 레지스트리를 둘 다 내는 동작.
   무해하지만 Swagger 가독성을 위해 upstream 옵션이 생기면 끈다
+
+### B-6. 알림 설정의 서버 반영 — 종류별 스위치와 `notificationEnabled`
+
+2026-09-12 발견. 서버 발송(위치 도착·만료 예고·무비 완성)은 `users.notification_enabled`(기본 `true`)
+하나로만 판정되는데 `PATCH /auth/me` 본문(`patchMeBodySchema`)에 이 필드가 없어 **앱이 서버 판정을
+바꿀 방법이 없다.** 앱의 "무비 완성 알림"·"위치 알림 받기" 스위치는 로컬 저장이라
+[specs/notifications.md](./specs/notifications.md) NTF-7("꺼진 종류는 발송 경로와 무관하게 울리지
+않는다")이 서버 푸시에 대해 성립하지 않는다. 앱의 "무비 완성 알림" 스위치는 OS 알림 권한을 얻는
+유일한 컨트롤이기도 해서(`PushTokenGate` 의 recheck 키) 없애면 토큰 등록 경로가 사라진다.
+
+**결정할 것**: ① `PATCH /auth/me` 에 `notificationEnabled`·`quietStart`·`quietEnd` 를 열고 앱 스위치를
+서버로 쓰기(단일 플래그 — 무비 완성을 끄면 위치 도착도 꺼진다) ② `User` 에 종류별 플래그 추가
+(스키마 변경, 공동 소유) ③ 스위치를 "푸시 알림 받기" 하나로 합치고 종류별 설정을 포기.
+`User` 스키마와 `routes/auth` 는 Dev B/공동 소유라 합의가 필요하다.
 
 ---
 

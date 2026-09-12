@@ -1408,7 +1408,7 @@ Metro/Jest 해석 확인 필요), `openapi.json` 의 `*Input` 사본 스키마.
 
 **검증**: API 27 파일 358 테스트(만료 9건 신설), dry-run 실행 확인, typecheck·lint 통과.
 
-**앱에 넘긴 것**: [mobile-handover-lifecycle.md](./mobile-handover-lifecycle.md) —
+**앱에 넘긴 것**: [mobile-handover-lifecycle.md](./archive/mobile-handover-lifecycle.md) —
 무비 서버 전환·만료 표시·끝내기 버튼과 그 계약. 백로그 항목에 `앱`/`서버` 라벨을 달았다.
 
 ---
@@ -1435,7 +1435,7 @@ Metro/Jest 해석 확인 필요), `openapi.json` 의 `*Input` 사본 스키마.
 결과물은 h264 High/yuv420p 이고 `moov` 가 `mdat` 앞에 있다(faststart). API 358 테스트 통과.
 
 **FE 에 열린 것**: 3단계(reconcile)의 선행 조건이 풀렸다 —
-[mobile-handover-lifecycle.md](./mobile-handover-lifecycle.md).
+[mobile-handover-lifecycle.md](./archive/mobile-handover-lifecycle.md).
 
 ---
 
@@ -1513,3 +1513,99 @@ Metro/Jest 해석 확인 필요), `openapi.json` 의 `*Input` 사본 스키마.
 검증: `npm test -w apps/api` 387건 통과(완성 알림 7건 신규). **Python 이 넣은 작업을 Node 가
 실제로 꺼내는지** 로컬 Redis 로 확인했다 — 라이브러리가 갈라지면 테스트가 전부 초록인 채
 알림만 도착하지 않는다.
+
+---
+
+## 2026-09-12 — 촬영 스냅 해상도 하드코딩 해소 (Dev A 트랙, 앱)
+
+백로그 A-4 의 앱 선행 과제. 촬영 스냅은 카메라가 720p 로 찍는데도 `1080×1920` 세로 스탠드인을
+치수로 저장했고, 가로로 든 폰의 촬영도 세로로 기록됐다. 기기 안에서는 참아졌지만 **서버가
+원천이 된 뒤에는 스탠드인과 실측을 구분할 수 없어 백필이 불가능**하다 — 그래서 무비 서버 전환(A-1)
+보다 먼저 닦았다.
+
+**측정 경로**: `expo-video` 는 iOS `naturalSize`·Android `Format.width/height` 를 그대로 넘겨
+**회전 플래그를 반영하지 않는다**(세로 촬영이 가로 치수로 읽힘). 대신 이미 추출 스냅이 쓰던
+네이티브 `VideoTrim` 모듈의 회전 반영 읽기를 `probe(uri)` 로 분리해 노출했다(Swift·Kotlin 양쪽,
+`trim` 의 출력 기술과 같은 코드). 앱 쪽은 `shared/lib/video-metadata` 가 네이티브 probe →
+`expo-video` 길이 폴백으로 `{ durationSec, width, height }` 를 한 번에 돌려준다. Expo Go 처럼
+모듈이 없는 곳에서는 길이만 측정되고 치수는 스탠드인으로 남는다.
+
+**모델**: `Snap.dimensionsMeasured` 플래그를 `durationMeasured` 와 같은 꼴로 추가했다.
+스탠드인은 **플래그 없이만** 기록되므로 나중에 `POST /videos` 에 치수를 실을 때 스탠드인을
+실측처럼 보내는 일이 없다. `orientationOf`·`SNAP_STAND_IN_SIZE` 는 두 feature 에 중복돼 있던 것을
+`entities/snap` 으로 올렸다. 스토어 액션은 `setMeasuredDuration` → `recordMeasurement`(길이·치수
+각각 독립 보정, 변화 없으면 같은 객체 반환)로 일반화했고, 시작 시 백필도
+`SnapDurationBackfill` → `SnapMetadataBackfill` 로 확장해 기존 라이브러리의 스탠드인을 고친다.
+
+**서버 계약은 건드리지 않았다** — `createVideoBodySchema` 와 `Video` 모델에 치수 컬럼이 없다.
+치수를 서버에 싣는 시점은 A-4 3단계(reconcile) 설계에서 정한다.
+
+검증: `npm run verify:mobile` 통과 — 124 스위트 963건(신규: `video-metadata` 6건, `probeVideo` 4건,
+스토어 보정 8건, 촬영·추출 치수 케이스). Swift 는 `swiftc -parse` 로 구문만 확인했고
+**Kotlin 은 컴파일하지 않았다.** 네이티브 변경이라 dev build 재빌드가 필요하며, **실기기(Android)
+검증은 아직이다** — 세로·가로 촬영 각각 저장된 `width/height/orientation` 과 기존 스냅의 백필을
+확인해야 닫힌다. iOS 는 기기가 없어 미검증.
+
+---
+
+## 2026-09-12 (이어서) — 알림 탭 라우팅 · 무비 서버 전환 계획 (Dev A 트랙, 앱)
+
+백로그 A-1 의 앱 항목 "푸시 탭 라우팅" 을 구현했다. `shared/lib/notifications` 에 탭 채널 어댑터를
+추가하고(FCM `onNotificationOpenedApp`·`getInitialNotification`, expo-notifications 응답 리스너·
+`getLastNotificationResponseAsync`), `_app/providers/notification-tap-router.tsx` 가 두 채널을 한 번씩
+듣고 시작 시 각각 "앱을 연 탭"을 묻는다. 목적지는 순수 함수 `notificationTarget` 이 `kind` 로 정한다 —
+`movie_ready`·`movie_failed` 는 그 무비, `snap_expiry` 는 라이브러리(SNAP-13). 네비게이터와 로그인이
+준비되기 전에 온 탭은 보류하고 준비되는 순간 보낸다(cold start). 같은 탭이 두 채널로 오면 한 번만
+움직인다(id 기억 + 같은 목적지 2초 창). 앱의 로컬 알림 데이터도 서버와 같은 `kind` 꼴로 바꿨다.
+
+**정정한 사실**: 백로그가 "완료 알림이 두 번 온다"고 적었지만, 서버의 `notifyMovieReady` 는 결과물이
+속한 서버 `Movie` 가 없으면(`no_movie`) 보내지 않고 앱은 아직 `POST /edit-jobs` 를 직접 쓴다 —
+**지금은 서버 완성 푸시가 오지 않는다.** 로컬 알림 제거는 export 전환과 같은 변경에서 해야 한다.
+같은 조사에서 `PATCH /auth/me` 가 `notificationEnabled` 를 받지 않아 앱 스위치가 서버 발송에 닿지
+않는 틈을 찾아 B-6 으로 올렸다(스키마·라우트가 공동 소유).
+
+**무비 서버 전환은 착수하지 않고 계획으로 남겼다**([archive/movie-server-transition.md](archive/movie-server-transition.md)).
+34개 파일이 `entities/movie` 에 의존하고, 업로드 전 스냅을 담은 초안의 자리·진행 중 jobId 복구·
+실패 안내 세 가지가 구조를 갈라 결정 없이 진행하면 되돌릴 비용이 크다. 훅 계약을 유지하는
+"서버 캐시 + 아웃박스" 설계를 권했다.
+
+검증: `npm run verify:mobile` 통과 — 126 스위트 981건(신규: 목적지 매핑 9건, 탭 라우터 9건).
+**실기기 미검증** — Android 에서 FCM 과 expo-notifications 가 같은 탭을 둘 다 보고하는지, cold start
+에서 무비까지 도달하는지 확인해야 닫힌다.
+
+---
+
+## 2026-09-12 (이어서) — 무비 서버 전환 · 끝내기 · 완료 알림 정리 (Dev A 트랙, 앱 + API)
+
+권장안이 승인되어 [archive/movie-server-transition.md](archive/movie-server-transition.md) 의 순서대로
+구현했다. 결정과 기각 대안은 [decisions/movie-client-cache.md](decisions/movie-client-cache.md).
+
+**API(계약 변경 3건 + 보정 1건)**: `Movie.jobId` 노출(목록은 결과물 id 를 모아 한 번에 조회) ·
+`POST /movies` 의 `id`(앱이 정한 uuid, 같은 id 재전송은 멱등, 타인 id 는 409) · `PATCH` 의 `clips: []` 허용
+(마지막 스냅을 지운 무비도 초안으로 남는다) · 취소된 작업은 읽기 시 `draft` 로 보정하고 결과물 포인터를
+비운다(전에는 `failed`). OpenAPI 재생성, [api-spec.md](api-spec.md) 갱신. 테스트 394건 통과.
+
+**앱 — 엔티티**: `entities/movie` 스토어를 서버 무비의 **캐시 + 아웃박스**로 바꿨다. 훅 계약을 유지해 34개
+소비자 파일은 그대로다. 로컬 쓰기는 `pending`(`create`/`update`)·버전을 남기고, 삭제는 `pendingDeletes` 로.
+`api/movie.dto.ts`(양방향 매퍼 — 스타일↔프리셋, 트림 ms, `videoId`↔`snapId` 는 주입된 리졸버) ·
+`api/get-movies.ts`(전 페이지) · `api/write-movie.ts`(create/update/delete/export/finish) ·
+`api/mock-movies.ts`(인메모리 목 서버) · `lib/movie-sync.ts`(순수 병합: pending 은 로컬, 나머지는 서버,
+이 기기만 아는 렌더·진행률·실패 문구는 같은 결과물일 때 유지, 본 적 없는 결과물은 `adopted` 작업으로 러너에
+넘김, `settledJobId` 로 재채택 방지). 무비 id 는 `shared/lib/uuid`. `SnapRef` 에 `videoId`·`unavailable`,
+`Movie` 에 `finishedAt`·`settledJobId`, `MovieJob` 에 `adopted`. 기존 로컬 무비는 스토어 v1 마이그레이션이
+비운다(이관 안 함, 결정 그대로). 자막 기본값을 서버와 같이 `false` 로(MOV-9).
+
+**앱 — 기능**: `features/compose-movie` 에 `MovieSyncGate`(`use-movie-sync.ts`: 로그인·포그라운드 복귀 시
+읽기, 아웃박스·업로드 상태 변화 시 드레인; `movie-outbox.ts`: 무비 하나 전송, 스냅 리졸버) 추가.
+`startGeneration` 은 아웃박스를 먼저 보낸 뒤 `POST /movies/{id}/export`. `create-edit-job.ts` 삭제.
+러너는 `completeMovieJob`(개명) 을 쓰고 **완료 알림을 띄우지 않는다** — 서버 푸시가 대신한다; 실패 알림만
+로컬로 남기며 `adopted` 작업의 실패는 알리지 않는다. 새 기능 `features/finish-movie`(끝내기: 서버 먼저,
+스토어는 응답에 따름; 확인 시트 문구). 화면: ⋯ 시트에 끝내기 단계, 공유 시트가 올라온 뒤(`useShareMovie.offered`)
+감상 화면에 끝내기 안내, 타임라인에 만료 컷 "만료" 배지(삭제된 원본과 문구 구분). 앱 프로바이더에
+`MovieSyncGate` 마운트.
+
+**문서**: 모바일 기능 문서 7개(movie.md 에 "Movies live on the server"·"Finishing it" 절), specs
+MOV-2·17·18·19·NTF-6·SNAP-12 상태, decisions README, 인수인계·계획 문서 archive 이동, backlog A-1 정리.
+
+**검증**: `npm run verify:mobile` 통과 — 128 스위트 1,016건(신규: 병합 17건, 스토어 아웃박스 14건, 끝내기 4건,
+uuid 3건, 컴포즈·러너 갱신). API 394건. **실기기 미검증** — 여섯 가지 확인 항목은 backlog A-1.

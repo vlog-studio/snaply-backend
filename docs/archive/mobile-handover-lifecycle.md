@@ -1,12 +1,16 @@
 # 앱 인수인계 — 무비 서버 전환과 만료 표시
 
 **작성일**: 2026-09-09
-**상태**: 현행 — 서버가 준비를 마친 것과 앱이 붙여야 할 것의 경계. 앱 작업이 끝나면 archive 로 옮긴다.
-**미결 작업의 원천은 [backlog.md](./backlog.md) A-1 이다** — 이 문서는 그 항목들을 앱 관점에서
+**상태**: 2026-09-12 보관 — §2-1(서버 전환)·§2-3(끝내기)·§2-2 의 컷 `unavailable` 표시가 구현됐다.
+남은 것(스냅 라이브러리의 만료 표시·잔여 기간, 서버 목록 동기화 3단계, §4 의 정책 판단)은
+[backlog.md](../backlog.md) A-1·A-4 에만 있다. 현행 앱 동작은
+[apps/mobile/docs/features/movie.md](../../apps/mobile/docs/features/movie.md) 를 본다.
+> 보관하면서 깨지는 상대 링크의 경로만 archive 기준으로 고쳤다.
+**미결 작업의 원천은 [backlog.md](../backlog.md) A-1 이다** — 이 문서는 그 항목들을 앱 관점에서
 풀어 쓴 것이고, 목록이 어긋나면 백로그가 맞다.
-**계약의 원천은 [packages/shared-types/src/contract/](../packages/shared-types/src/contract/)** 와
+**계약의 원천은 [packages/shared-types/src/contract/](../../packages/shared-types/src/contract/)** 와
 Swagger `/docs` 다. 아래는 그 계약에서 **화면이 알아야 할 것**만 추린다 —
-전체 형태는 [api-spec.md](./api-spec.md) §무비.
+전체 형태는 [api-spec.md](../api-spec.md) §무비.
 
 ---
 
@@ -120,5 +124,5 @@ Swagger `/docs` 다. 아래는 그 계약에서 **화면이 알아야 할 것**�
   몇 달 뒤 무비를 열면 컷이 대부분 비어 있을 수 있다. 서버는 그 컷을 `unavailable` 로 표시하고
   그 상태의 `export` 를 400 으로 막는다 — 화면이 그다음에 무엇을 제안할지는 앱의 판단이다
   (컷을 빼고 다시 만들기? 무비를 지우기?). "무비에 쓰인 스냅은 만료 예외" 로 할지의 정책
-  판단도 아직 열려 있다([backlog.md](./backlog.md) A-1).
+  판단도 아직 열려 있다([backlog.md](../backlog.md) A-1).
 - **끝내기를 어느 화면에서, 어떤 문구로 받을지.** 되돌릴 수 없다는 것이 사용자에게 분명해야 한다.
