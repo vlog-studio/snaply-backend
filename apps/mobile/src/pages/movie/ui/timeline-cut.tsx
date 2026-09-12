@@ -203,6 +203,9 @@ export function TimelineCut({
   const reducedMotion = useReducedMotion();
   const snap = cut.snap;
   const missing = snap === undefined;
+  // The original is here but its server copy is gone (expired or deleted
+  // there): it still previews, but no run can be made from it (SNAP-12).
+  const expired = !missing && cut.unavailable;
   const durationSec = snap?.durationSec ?? 0;
   /** The full snap's width — what the tiles fill and the trim drags along. */
   const reelWidth = snap ? durationSec * pxPerSec : width;
@@ -310,7 +313,7 @@ export function TimelineCut({
 
       <AnimatedPressable
         accessibilityRole="button"
-        accessibilityLabel={`컷 ${index + 1}${missing ? ' · 원본 삭제됨' : ''} · ${formatSeconds(shown.endSec - shown.startSec)}`}
+        accessibilityLabel={`컷 ${index + 1}${missing ? ' · 원본 삭제됨' : expired ? ' · 서버에서 만료됨' : ''} · ${formatSeconds(shown.endSec - shown.startSec)}`}
         accessibilityHint={focused ? '다시 탭하면 선택이 해제됩니다' : undefined}
         accessibilityState={{ selected }}
         onPress={() => onSelect(index)}
@@ -318,8 +321,8 @@ export function TimelineCut({
           styles.clip,
           {
             backgroundColor: theme.media,
-            borderColor: missing ? theme.danger : selected ? theme.amber : theme.border,
-            borderWidth: missing || selected ? 2 : 1,
+            borderColor: missing || expired ? theme.danger : selected ? theme.amber : theme.border,
+            borderWidth: missing || expired || selected ? 2 : 1,
           },
           // Square while the handles are on: the rounded corners belong to the
           // handles' outer edges, so the three pieces read as one frame rather
@@ -347,6 +350,13 @@ export function TimelineCut({
           <ThemedText selectable={false} style={styles.number}>
             {index + 1}
           </ThemedText>
+          {/* Worded apart from a deleted original: this one is our retention,
+              not the user's act, and the fix is to take the cut out. */}
+          {expired ? (
+            <ThemedText selectable={false} style={[styles.expired, { color: theme.danger }]}>
+              만료
+            </ThemedText>
+          ) : null}
           <ThemedText selectable={false} style={styles.duration}>
             {formatSeconds(shown.endSec - shown.startSec)}
           </ThemedText>
@@ -398,6 +408,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   tile: { width: TileWidth, height: '100%' },
+  expired: {
+    fontSize: 10,
+    lineHeight: 12,
+    fontWeight: '700',
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    borderRadius: Radius.small,
+    paddingHorizontal: 4,
+  },
   missingMark: {
     position: 'absolute',
     top: 0,

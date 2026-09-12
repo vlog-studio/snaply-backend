@@ -23,6 +23,7 @@ function makeCut(
   return {
     ref: { snapId: id, order: 0, trim: options.trim },
     snap,
+    unavailable: false,
     usedSec: snap
       ? options.trim
         ? options.trim.endSec - options.trim.startSec

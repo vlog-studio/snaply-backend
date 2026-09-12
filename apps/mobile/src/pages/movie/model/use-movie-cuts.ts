@@ -25,6 +25,13 @@ export type Cut = {
   snap: Snap | undefined;
   /** How long this cut plays: its trim window, or the whole snap. */
   usedSec: number;
+  /**
+   * The server says this cut's snap is gone there — expired past its retention
+   * or deleted — so a run cannot be made from it, even though the original may
+   * still play on this device. Distinct from `snap === undefined`, which is the
+   * original deleted *here*; the two are worded apart (SNAP-12).
+   */
+  unavailable: boolean;
 };
 
 export type MovieCuts = {
@@ -132,7 +139,12 @@ export function useMovieCuts(movieId: string | undefined): MovieCuts {
     () =>
       storedRefs.map((ref) => {
         const snap = snapIndex.get(ref.snapId);
-        return { ref, snap, usedSec: snap ? cutDurationSec(ref, snap.durationSec) : 0 };
+        return {
+          ref,
+          snap,
+          usedSec: snap ? cutDurationSec(ref, snap.durationSec) : 0,
+          unavailable: ref.unavailable === true,
+        };
       }),
     [storedRefs, snapIndex],
   );

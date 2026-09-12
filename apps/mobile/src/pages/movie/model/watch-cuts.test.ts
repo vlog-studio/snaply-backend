@@ -53,6 +53,7 @@ describe('watchDurationSec', () => {
     ref: ref(snapId, 0),
     snap: undefined,
     usedSec,
+    unavailable: false,
   });
 
   it('quotes the render length while the render remembers its composition', () => {

@@ -60,7 +60,12 @@ export function useWatchCuts(movie: Movie | undefined): Cut[] {
     if (!movie) return [];
     return watchRefs(movie).map((ref) => {
       const snap = snapIndex.get(ref.snapId);
-      return { ref, snap, usedSec: snap ? cutDurationSec(ref, snap.durationSec) : 0 };
+      return {
+        ref,
+        snap,
+        usedSec: snap ? cutDurationSec(ref, snap.durationSec) : 0,
+        unavailable: ref.unavailable === true,
+      };
     });
   }, [movie, snapIndex]);
 }
