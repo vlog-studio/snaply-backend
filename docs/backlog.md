@@ -404,6 +404,11 @@ B 트랙 잔여 검증이 전부 여기서 막힌다.
 geofence 쿨다운 판정용 이력이 무한히 쌓인다. 쿨다운은 30분 기준이라 그보다 오래된 행은
 조회에 쓰이지 않는다.
 
+**2026-09-11 이후 만료 예고 행도 여기 쌓인다**(`kind = snap_expiry`). 다만 성격이 다르다 —
+이쪽은 "이 스냅의 D-3 을 보냈는가" 를 판정하는 **유일한 근거**라, 스냅이 살아 있는 동안은
+지우면 안 된다(지우면 예고가 다시 나간다). 스냅이 purge 되면 FK Cascade 로 함께 사라지므로
+방치해도 무한히 쌓이지는 않는다. 보관 정책을 정할 때 두 종류를 같은 기준으로 묶지 말 것.
+
 **결정할 것**: 보관 기간(감사 목적이 있는지), 정리 방식(주기적 삭제 / 파티셔닝).
 
 ### B-5. API 계약을 스키마 우선으로 — Zod 계약 패키지 ★
@@ -658,16 +663,12 @@ cloudflared tunnel login                        # 브라우저 인증, 1회
 판정한다. 전부 mock 이면 경고하지 않는다(실업로드를 하지 않는다).
 미설정 동작은 기존대로 "SNS 업로드 비활성 + 400" 이다.
 
-### E-3. S3 삭제 실패분 정리 배치 (미구현)
+### E-3. ~~S3 삭제 실패분 정리 배치~~ — 2026-09-09 완료
 
-`video.service.ts` 의 주석이 가리키는 미구현 배치. 스냅 서버 원천 전환의 GC 배치
-(pending TTL 회수 / 삭제 유예 만료분 실삭제)와 함께 설계하는 것이 자연스럽다 —
-[decisions/snap-source-of-truth.md](./decisions/snap-source-of-truth.md) §5 병행 항목.
-계정 실삭제 배치(`accounts:purge`, [decisions/account-deletion.md](./decisions/account-deletion.md))가
-먼저 생겼으므로, 이 배치를 만들 때 같은 실행 방식(스케줄 실행 + dry-run 기본)을 따르면 된다.
-단 계정 purge 는 유저 prefix 전체를 지우므로 **영상 단건** S3 실패분 회수는 여전히 필요하다.
-GC ①(pending TTL 회수)은 `videos:purge-pending` 으로 구현 완료(2026-08-12, progress.md 참고) —
-남은 것은 ③ 이 항목뿐이다.
+만료 정리 배치(`media:purge-expired`)의 세 번째 경로로 들어갔다 —
+`deleted_at` 은 있는데 `purged_at` 이 없고 키가 남은 행을 찾아 객체를 회수한다
+(`findOrphanedObjects`/`purgeOrphanedObjects`). 계정 purge 는 유저 prefix 전체를 지우므로
+**영상 단건** 회수는 이 경로가 맡는다.
 
 ### E-4. ~~빌드한 이미지가 실제로 뜨는지 아무도 확인하지 않는다~~ — 2026-09-11 완료
 
