@@ -379,6 +379,26 @@ e2e 실검증.
 `NODE_ENV=production` 주입을 빠뜨리지 말 것 — 빠뜨려도 배포는 성공한다
 ([decisions/env-management.md](./decisions/env-management.md)).
 
+**API 만 띄우면 안 된다** (2026-09-14 추가). 상주 프로세스와 스케줄 배치가 따로 있고, 빠뜨려도
+**배포는 성공하며 아무 에러도 나지 않는다** — 대신 알림이 영영 안 가거나 파일이 무한히 쌓인다.
+특히 만료 예고 배치는 "유예 없이 바로 삭제" 결정의 근거라, 삭제 배치만 돌고 예고 배치가 빠지면
+**사용자가 예고 없이 영상을 잃는다.**
+
+| 무엇 | 실행 | 주기 |
+|---|---|---|
+| API 서버 | `node dist/index.js` | 상주 |
+| 편집·분석·렌디션 워커 | `python worker.py` / `analysis_worker.py` / `rendition_worker.py` | 상주 |
+| **알림 발송 워커** | `node dist/notification-worker.js` | 상주 |
+| **만료 예고 알림** | `npm run media:notify-expiring -w apps/api -- --yes` | 매일 **KST 10시** |
+| 만료 정리(스냅·결과물·남은 객체) | `npm run media:purge-expired -w apps/api -- --yes` | 매일 1회(새벽) |
+| 계정 실삭제 | `npm run accounts:purge -w apps/api -- --yes` | 매일 1회 |
+| pending 영상 회수 | `npm run videos:purge-pending -w apps/api -- --yes` | 매일 1회 |
+
+예고와 정리를 **같은 시각에 묶지 말 것** — 조용한 시간대(기본 22-08시)에 예고를 보내면
+발송되지 않고 버려진다([decisions/expiry-notice-schedule.md](./decisions/expiry-notice-schedule.md)).
+또한 만료 예고 배치는 FCM 서비스 계정이 없으면 **시작하지 않고 멈춘다**(dry-run 을 발송으로
+기록하지 않기 위해서다) — `FIREBASE_SERVICE_ACCOUNT_KEY` 주입이 이 배치의 전제다.
+
 **연결된 병목**: **고정 도메인**(D-1)이 SNS 콜백·결제(RevenueCat) 웹훅·Meta 검수의 전제 —
 B 트랙 잔여 검증이 전부 여기서 막힌다.
 
