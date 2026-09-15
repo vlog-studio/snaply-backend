@@ -38,3 +38,6 @@ apps/ai-worker/assets/bgm/**/*.flac
 .DS_Store
 *.log
 coverage/
+
+# 배포가 서버에 남기는 "지금 돌고 있는 이미지" 기록 (서버 상태이지 소스가 아니다)
+deploy/.current-images

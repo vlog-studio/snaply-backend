@@ -1,0 +1,121 @@
+# 사내 서버 배포용 오버레이 — 빌드하지 않고 **GHCR 에서 받은 이미지**를 띄운다.
+#
+#   docker compose --env-file /etc/snaply/snaply.env \
+#     -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# 왜 빌드하지 않는가: CI 가 빌드하고 스모크 검사를 통과시킨 **그 이미지**가 그대로 와야 한다.
+# 서버에서 다시 빌드하면 검사한 것과 다른 물건이 뜬다(.github/workflows/deploy.yml).
+#
+# 시크릿은 저장소에 없다. 서버의 root 전용 파일 하나에 둔다 — 컨테이너에 넣을 값(`env_file`)과
+# 이 파일의 `${...}` 치환값이 모두 거기서 온다. 그래서 실행할 때 `--env-file` 로도 같은 파일을
+# 넘긴다. 넣을 값의 목록은 docs/deployment.md.
+#
+# **개발용 기본 자격증명을 쓰지 않는다.** base compose 는 MinIO 를 minioadmin 으로, Postgres 를
+# postgres 로 띄우는데 그건 로컬 편의를 위한 값이다. 사내망에 열린 MinIO 에 그 값이 그대로
+# 있으면 같은 망의 누구나 영상을 가져갈 수 있다. 값이 없으면 기동을 거부한다(`:?`).
+#
+# 사내망 전용 서버라 **바깥에서 우리를 불러야 하는 기능은 동작하지 않는다** — SNS 게시·결제
+# 웹훅·광고 보상 검증. 그래서 mock 을 켠 채로 둔다(docs/plans/on-prem-deploy.md §7).
+
+x-db-env: &db-env
+  DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/snaply
+  DIRECT_URL: postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/snaply
+  AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
+  AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
+
+x-secrets: &secrets
+  - path: ${SNAPLY_ENV_FILE:-/etc/snaply/snaply.env}
+    required: true
+
+services:
+  postgres:
+    # 사내망에 DB 를 열지 않는다. 컨테이너끼리는 내부 네트워크로 붙으므로 이걸로 충분하다.
+    ports:
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5433}:5432"
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?시크릿 파일에 지정할 것 (개발 기본값 금지)}
+
+  redis:
+    ports:
+      - "127.0.0.1:6380:6379"
+    restart: unless-stopped
+
+  minio:
+    # MinIO 는 **열어 둔다.** 앱이 영상을 직접 내려받는 주소이므로 사내 WiFi 에서 닿아야 한다.
+    # 열어 두는 만큼 계정이 기본값이면 안 된다.
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?시크릿 파일에 지정할 것 (개발 기본값 금지)}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?시크릿 파일에 지정할 것 (개발 기본값 금지)}
+
+  migrate:
+    image: ${API_IMAGE:?배포가 커밋 SHA 태그를 넣는다}
+    pull_policy: always
+    env_file: *secrets
+    environment:
+      <<: *db-env
+      NODE_ENV: production
+
+  api:
+    image: ${API_IMAGE}
+    pull_policy: always
+    restart: unless-stopped
+    env_file: *secrets
+    environment:
+      <<: *db-env
+      # 빠뜨려도 배포는 성공하고, 대신 Swagger 가 열린다. 그래서 여기에 못 박는다.
+      NODE_ENV: production
+      # 바깥에서 우리를 부를 수 없는 망이라 실연동을 켜면 실패만 쌓인다.
+      SNS_MOCK: "true"
+      BILLING_MOCK: "true"
+      # 앱이 영상을 받아갈 주소. 서버의 **사내망 IP** 여야 한다 — localhost 면 폰에서 못 연다.
+      S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:?사내망에서 접근 가능한 MinIO 주소를 지정할 것}
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  notification-worker:
+    image: ${API_IMAGE}
+    pull_policy: always
+    restart: unless-stopped
+    env_file: *secrets
+    environment:
+      <<: *db-env
+      NODE_ENV: production
+
+  ai-worker:
+    image: ${WORKER_IMAGE:?배포가 커밋 SHA 태그를 넣는다}
+    pull_policy: always
+    restart: unless-stopped
+    env_file: *secrets
+    environment:
+      <<: *db-env
+      S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT}
+
+  analysis-worker:
+    image: ${WORKER_IMAGE}
+    pull_policy: always
+    # OPENAI_API_KEY 가 없으면 기동 단계에서 스스로 종료된다(의도된 동작). 그 경우
+    # `unless-stopped` 가 재시작을 반복하므로, 키를 넣지 않을 거면 이 서비스는 빼고 올린다.
+    restart: unless-stopped
+    env_file: *secrets
+    environment:
+      <<: *db-env
+      S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT}
+
+  rendition-worker:
+    image: ${WORKER_IMAGE}
+    pull_policy: always
+    restart: unless-stopped
+    env_file: *secrets
+    environment:
+      <<: *db-env
+      S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT}

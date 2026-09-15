@@ -1,0 +1,28 @@
+# Snaply 야간·정기 배치 (사내 서버)
+#
+# 설치:
+#   sudo cp deploy/batches.cron /etc/cron.d/snaply
+#   sudo chown root:root /etc/cron.d/snaply && sudo chmod 644 /etc/cron.d/snaply
+#
+# 빠뜨려도 **배포는 성공하고 에러도 나지 않는다.** 대신 알림이 영영 안 가거나 파일이 무한히
+# 쌓인다. 특히 만료 예고가 빠진 채 정리만 돌면 사용자가 예고 없이 영상을 잃는다.
+#
+# 경로(SNAPLY_DIR)는 저장소를 체크아웃한 위치로 맞춘다.
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+CRON_TZ=Asia/Seoul
+SNAPLY_DIR=/opt/snaply
+
+# 만료 예고 — 오전 10시. **정리 배치와 같은 시각에 두지 말 것**: 조용한 시간대(22-08시)에
+# 보낸 예고는 발송되지 않고 버려지고, 그러면 예고 없는 삭제가 된다.
+# (docs/decisions/expiry-notice-schedule.md)
+0 10 * * *  snaply  $SNAPLY_DIR/deploy/run-batch.sh media:notify-expiring   >> /var/log/snaply/notify-expiring.log 2>&1
+
+# 정리 — 새벽. 서로 겹치지 않게 20분씩 띄운다.
+0  4 * * *  snaply  $SNAPLY_DIR/deploy/run-batch.sh media:purge-expired     >> /var/log/snaply/purge-expired.log 2>&1
+20 4 * * *  snaply  $SNAPLY_DIR/deploy/run-batch.sh accounts:purge          >> /var/log/snaply/accounts-purge.log 2>&1
+40 4 * * *  snaply  $SNAPLY_DIR/deploy/run-batch.sh videos:purge-pending    >> /var/log/snaply/purge-pending.log 2>&1
+
+# DB 백업 — 관리형 DB 가 아니므로 이것이 유일한 안전망이다. 영상 파일은 MinIO 에 있지만
+# DB 가 날아가면 무엇이 누구 것인지를 잃는다.
+30 3 * * *  snaply  $SNAPLY_DIR/deploy/backup-db.sh                          >> /var/log/snaply/backup.log 2>&1
