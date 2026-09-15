@@ -84,3 +84,86 @@ describe('GET /auth/me', () => {
     expect(await h.prisma.user.count({ where: { supabaseUid: sub } })).toBe(1);
   });
 });
+
+/**
+ * 알림 설정의 서버 반영 (backlog B-6).
+ *
+ * 앱에는 종류별 스위치가 있었지만 기기에만 저장돼서, **사용자가 끈 알림을 서버가 계속
+ * 보냈다.** 이 엔드포인트가 그 스위치가 실제로 사는 곳이다.
+ */
+describe('PATCH /auth/me — 알림 설정', () => {
+  it('종류별 스위치와 방해 금지 시간을 저장하고 되돌려준다', async () => {
+    const user = await h.createUser();
+
+    const res = await h.app.inject({
+      method: 'PATCH',
+      url: '/auth/me',
+      headers: user.auth,
+      payload: {
+        notificationEnabled: true,
+        locationNotificationEnabled: false,
+        movieNotificationEnabled: true,
+        quietStart: 23,
+        quietEnd: 7,
+      },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().data).toMatchObject({
+      notificationEnabled: true,
+      locationNotificationEnabled: false,
+      movieNotificationEnabled: true,
+      quietStart: 23,
+      quietEnd: 7,
+    });
+
+    const saved = await h.prisma.user.findUniqueOrThrow({ where: { id: user.id } });
+    expect(saved.locationNotificationEnabled).toBe(false);
+    expect(saved.quietStart).toBe(23);
+  });
+
+  it('보낸 필드만 바꾼다 — 닉네임만 보내도 알림 설정이 초기화되지 않는다', async () => {
+    const user = await h.createUser();
+    await h.app.inject({
+      method: 'PATCH',
+      url: '/auth/me',
+      headers: user.auth,
+      payload: { movieNotificationEnabled: false },
+    });
+
+    const res = await h.app.inject({
+      method: 'PATCH',
+      url: '/auth/me',
+      headers: user.auth,
+      payload: { nickname: '다연' },
+    });
+
+    expect(res.json().data).toMatchObject({ nickname: '다연', movieNotificationEnabled: false });
+  });
+
+  it('기본값은 전부 켜짐이다 — 설정한 적 없는 사용자에게는 알림이 간다', async () => {
+    const user = await h.createUser();
+
+    const res = await h.app.inject({ method: 'GET', url: '/auth/me', headers: user.auth });
+
+    expect(res.json().data).toMatchObject({
+      notificationEnabled: true,
+      locationNotificationEnabled: true,
+      movieNotificationEnabled: true,
+    });
+  });
+
+  it('시각이 0~23 을 벗어나면 400', async () => {
+    const user = await h.createUser();
+
+    for (const payload of [{ quietStart: 24 }, { quietEnd: -1 }]) {
+      const res = await h.app.inject({
+        method: 'PATCH',
+        url: '/auth/me',
+        headers: user.auth,
+        payload,
+      });
+      expect(res.statusCode).toBe(400);
+    }
+  });
+});

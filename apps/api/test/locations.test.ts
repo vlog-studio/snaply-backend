@@ -228,6 +228,35 @@ describe('POST /notifications/geofence-enter', () => {
     expect(await h.prisma.notificationLog.count()).toBe(0);
   });
 
+  it('위치 알림만 꺼도 미발송 — 전체 알림을 끌 필요가 없다', async () => {
+    const user = await h.createUser();
+    await makeNotifiable(user);
+    await h.prisma.user.update({
+      where: { id: user.id },
+      data: { locationNotificationEnabled: false },
+    });
+    const location = await createLocation();
+
+    const res = await enterGeofence(user, location.id);
+
+    expect(res.json().data).toEqual({ notified: false, reason: 'notifications_disabled' });
+    expect(await h.prisma.notificationLog.count()).toBe(0);
+  });
+
+  it('무비 알림만 꺼둔 것은 위치 알림에 영향을 주지 않는다', async () => {
+    const user = await h.createUser();
+    await makeNotifiable(user);
+    await h.prisma.user.update({
+      where: { id: user.id },
+      data: { movieNotificationEnabled: false },
+    });
+    const location = await createLocation();
+
+    const res = await enterGeofence(user, location.id);
+
+    expect(res.json().data).toEqual({ notified: true });
+  });
+
   it('FCM 토큰이 없으면 미발송이고 로그도 남기지 않는다 (쿨다운 소모 안 함)', async () => {
     const user = await h.createUser();
     // fcmToken 을 등록하지 않는다

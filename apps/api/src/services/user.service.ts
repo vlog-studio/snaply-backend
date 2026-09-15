@@ -48,6 +48,8 @@ export async function getProfile(userId: string): Promise<UserProfile | null> {
       avatarUrl: true,
       interests: true,
       notificationEnabled: true,
+      locationNotificationEnabled: true,
+      movieNotificationEnabled: true,
       quietStart: true,
       quietEnd: true,
     },
@@ -63,6 +65,8 @@ export async function getProfile(userId: string): Promise<UserProfile | null> {
     avatarUrl: user.avatarUrl,
     interests: user.interests,
     notificationEnabled: user.notificationEnabled,
+    locationNotificationEnabled: user.locationNotificationEnabled,
+    movieNotificationEnabled: user.movieNotificationEnabled,
     quietStart: user.quietStart,
     quietEnd: user.quietEnd,
   };
@@ -72,6 +76,11 @@ export interface ProfileUpdate {
   nickname?: string;
   avatarUrl?: string | null;
   interests?: string[];
+  notificationEnabled?: boolean;
+  locationNotificationEnabled?: boolean;
+  movieNotificationEnabled?: boolean;
+  quietStart?: number;
+  quietEnd?: number;
 }
 
 export async function updateProfile(userId: string, patch: ProfileUpdate): Promise<UserProfile> {
@@ -81,6 +90,17 @@ export async function updateProfile(userId: string, patch: ProfileUpdate): Promi
       ...(patch.nickname !== undefined ? { nickname: patch.nickname } : {}),
       ...(patch.avatarUrl !== undefined ? { avatarUrl: patch.avatarUrl } : {}),
       ...(patch.interests !== undefined ? { interests: patch.interests } : {}),
+      ...(patch.notificationEnabled !== undefined
+        ? { notificationEnabled: patch.notificationEnabled }
+        : {}),
+      ...(patch.locationNotificationEnabled !== undefined
+        ? { locationNotificationEnabled: patch.locationNotificationEnabled }
+        : {}),
+      ...(patch.movieNotificationEnabled !== undefined
+        ? { movieNotificationEnabled: patch.movieNotificationEnabled }
+        : {}),
+      ...(patch.quietStart !== undefined ? { quietStart: patch.quietStart } : {}),
+      ...(patch.quietEnd !== undefined ? { quietEnd: patch.quietEnd } : {}),
     },
   });
 

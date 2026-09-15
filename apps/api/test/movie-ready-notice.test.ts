@@ -160,3 +160,32 @@ describe('보내지 않는 경우', () => {
     expect(result).toEqual({ notified: false, reason: 'no_movie' });
   });
 });
+
+describe('종류별 스위치', () => {
+  it('무비 알림만 꺼도 보내지 않는다 — 전체를 끌 필요가 없다', async () => {
+    const user = await userWithToken();
+    await h.prisma.user.update({
+      where: { id: user.id },
+      data: { movieNotificationEnabled: false },
+    });
+    const { videoId } = await readyMovie(user.id);
+
+    const result = await notifyMovieReady({ logger, userId: user.id, videoId, now: daytime });
+
+    expect(result).toEqual({ notified: false, reason: 'notifications_disabled' });
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it('위치 알림만 꺼둔 것은 무비 알림에 영향을 주지 않는다', async () => {
+    const user = await userWithToken();
+    await h.prisma.user.update({
+      where: { id: user.id },
+      data: { locationNotificationEnabled: false },
+    });
+    const { videoId } = await readyMovie(user.id);
+
+    const result = await notifyMovieReady({ logger, userId: user.id, videoId, now: daytime });
+
+    expect(result).toMatchObject({ notified: true });
+  });
+});

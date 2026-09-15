@@ -67,13 +67,19 @@ export async function handleGeofenceEnter(params: {
 
   const user = await prisma.user.findUnique({
     where: { id: params.userId },
-    select: { notificationEnabled: true, quietStart: true, quietEnd: true },
+    select: {
+      notificationEnabled: true,
+      locationNotificationEnabled: true,
+      quietStart: true,
+      quietEnd: true,
+    },
   });
   if (!user) {
     throw AppError.notFound('유저를 찾을 수 없습니다.');
   }
 
-  if (!user.notificationEnabled) {
+  // 전체 스위치와 종류별 스위치 둘 다 켜져 있어야 보낸다.
+  if (!user.notificationEnabled || !user.locationNotificationEnabled) {
     return { notified: false, reason: 'notifications_disabled' };
   }
   if (isQuietNow(user.quietStart, user.quietEnd, now)) {

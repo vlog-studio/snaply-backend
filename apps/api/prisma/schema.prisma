@@ -19,7 +19,14 @@ model User {
   avatarUrl           String?   @map("avatar_url")
   fcmToken            String?   @map("fcm_token")
   interests           String[]  @default([])
+  /// 푸시 전체 스위치. 끄면 종류와 무관하게 아무것도 가지 않는다.
   notificationEnabled Boolean   @default(true) @map("notification_enabled")
+  /// 위치 도착 알림(NTF-1). 사용자가 끌 수 있다.
+  locationNotificationEnabled Boolean @default(true) @map("location_notification_enabled")
+  /// 무비 완성 알림(NTF-6). 사용자가 끌 수 있다.
+  movieNotificationEnabled    Boolean @default(true) @map("movie_notification_enabled")
+  //  만료 예고(SNAP-13)에는 종류별 스위치가 없다 — 끄면 사용자가 모르는 채로 영상을 잃는다.
+  //  전체 스위치를 끈 경우에만 가지 않으며, 그때는 화면의 남은 기간 표시가 유일한 안내다.
   quietStart          Int       @default(22) @map("quiet_start")
   quietEnd            Int       @default(8) @map("quiet_end")
   createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)

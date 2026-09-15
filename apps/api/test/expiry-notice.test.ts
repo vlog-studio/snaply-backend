@@ -243,3 +243,21 @@ describe('dry-run 실행(--yes 없이)', () => {
     expect(await h.prisma.notificationLog.count()).toBe(0);
   });
 });
+
+describe('종류별 스위치가 없다', () => {
+  it('무비·위치 알림을 꺼도 만료 예고는 간다 — 끄면 모르는 채로 영상을 잃는다', async () => {
+    const user = await userWithToken();
+    await h.prisma.user.update({
+      where: { id: user.id },
+      data: { movieNotificationEnabled: false, locationNotificationEnabled: false },
+    });
+    await snapUploadedDaysAgo(user.id, SNAP_RETENTION_DAYS - 3);
+
+    const outcome = await sendExpiryNotices({ logger, now, apply: true });
+
+    expect(outcome.notified).toBe(1);
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
+  // 전체 스위치를 끈 경우만 가지 않는다 — 위 '보내지 못한 것을...' 의 마지막 테스트가 고정한다.
+});

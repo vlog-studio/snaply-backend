@@ -64,8 +64,10 @@ async function findDueSnaps(daysBefore: number, now: Date) {
  * 때문이다(`EXPIRY_NOTICE_HOUR_KST`). 시간으로 거르면 걸린 알림이 그냥 사라지는데,
  * 만료 예고는 사라지면 사용자가 파일을 잃는다.
  *
- * 알림을 끈 사용자에게는 보내지 않는다 — 라이브러리 화면의 남은 기간 표시(SNAP-13)가
- * 그 경우의 안전망이다.
+ * **이 알림에는 종류별 스위치가 없다.** 끌 수 있게 하면 사용자가 모르는 채로 영상을 잃는데,
+ * 만료에 유예가 없는 근거가 "미리 알린다" 였다(docs/decisions/notification-preferences.md).
+ * 푸시 전체를 끈 사용자에게만 가지 않으며, 그때는 라이브러리 화면의 남은 기간 표시(SNAP-13)가
+ * 유일한 안내다.
  */
 async function canNotify(userId: string): Promise<boolean> {
   const user = await getPrisma().user.findUnique({

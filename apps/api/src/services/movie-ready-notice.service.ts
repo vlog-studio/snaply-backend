@@ -54,9 +54,16 @@ export async function notifyMovieReady(params: {
 
   const user = await prisma.user.findUnique({
     where: { id: params.userId },
-    select: { notificationEnabled: true, quietStart: true, quietEnd: true, deletedAt: true },
+    select: {
+      notificationEnabled: true,
+      movieNotificationEnabled: true,
+      quietStart: true,
+      quietEnd: true,
+      deletedAt: true,
+    },
   });
-  if (!user || user.deletedAt || !user.notificationEnabled) {
+  // 전체 스위치와 무비 스위치 둘 다 켜져 있어야 보낸다.
+  if (!user || user.deletedAt || !user.notificationEnabled || !user.movieNotificationEnabled) {
     return { notified: false, reason: 'notifications_disabled' };
   }
   if (isQuietNow(user.quietStart, user.quietEnd, now)) {
