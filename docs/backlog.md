@@ -457,19 +457,16 @@ geofence 쿨다운 판정용 이력이 무한히 쌓인다. 쿨다운은 30분 �
 - [ ] `openapi.json`의 `*Input` 사본 스키마 — type provider 가 입력/출력 레지스트리를 둘 다 내는 동작.
   무해하지만 Swagger 가독성을 위해 upstream 옵션이 생기면 끈다
 
-### B-6. 알림 설정의 서버 반영 — 종류별 스위치와 `notificationEnabled`
+### B-6. ~~알림 설정의 서버 반영~~ — 2026-09-15 완료(서버)
 
-2026-09-12 발견. 서버 발송(위치 도착·만료 예고·무비 완성)은 `users.notification_enabled`(기본 `true`)
-하나로만 판정되는데 `PATCH /auth/me` 본문(`patchMeBodySchema`)에 이 필드가 없어 **앱이 서버 판정을
-바꿀 방법이 없다.** 앱의 "무비 완성 알림"·"위치 알림 받기" 스위치는 로컬 저장이라
-[specs/notifications.md](./specs/notifications.md) NTF-7("꺼진 종류는 발송 경로와 무관하게 울리지
-않는다")이 서버 푸시에 대해 성립하지 않는다. 앱의 "무비 완성 알림" 스위치는 OS 알림 권한을 얻는
-유일한 컨트롤이기도 해서(`PushTokenGate` 의 recheck 키) 없애면 토큰 등록 경로가 사라진다.
+`PATCH /auth/me` 가 `notificationEnabled` · `locationNotificationEnabled` ·
+`movieNotificationEnabled` · `quietStart` · `quietEnd` 를 받는다. 종류별로 나눈 이유와
+**만료 예고에만 종류별 스위치를 두지 않은 이유**는
+[decisions/notification-preferences.md](./decisions/notification-preferences.md).
 
-**결정할 것**: ① `PATCH /auth/me` 에 `notificationEnabled`·`quietStart`·`quietEnd` 를 열고 앱 스위치를
-서버로 쓰기(단일 플래그 — 무비 완성을 끄면 위치 도착도 꺼진다) ② `User` 에 종류별 플래그 추가
-(스키마 변경, 공동 소유) ③ 스위치를 "푸시 알림 받기" 하나로 합치고 종류별 설정을 포기.
-`User` 스키마와 `routes/auth` 는 Dev B/공동 소유라 합의가 필요하다.
+- [ ] **`앱`** 설정 화면의 스위치를 `PATCH /auth/me` 로 쓰기. 지금은 기기 저장만이라 서버
+      발송에 닿지 않는다. **조용한 시간도 서버로 보내야 실제로 억제된다** — 현재 앱의 조용한
+      시간 UI 는 아무것도 억제하지 않는다
 
 ---
 

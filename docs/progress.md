@@ -1609,3 +1609,24 @@ MOV-2·17·18·19·NTF-6·SNAP-12 상태, decisions README, 인수인계·계획
 
 **검증**: `npm run verify:mobile` 통과 — 128 스위트 1,016건(신규: 병합 17건, 스토어 아웃박스 14건, 끝내기 4건,
 uuid 3건, 컴포즈·러너 갱신). API 394건. **실기기 미검증** — 여섯 가지 확인 항목은 backlog A-1.
+
+---
+
+## 2026-09-15 — 알림 설정이 서버에 닿는다 (Dev A)
+
+**사용자가 끈 알림을 서버가 계속 보내고 있었다**(backlog B-6 닫힘). 서버 발송 세 종류가
+`notificationEnabled` 하나로만 판정되는데 `PATCH /auth/me` 가 그 필드를 받지 않았고, 앱 화면의
+스위치는 기기에만 저장됐다. 결정 문서들이 "알림을 끈 사용자에게는 보내지 않는다" 고 적어둔 것이
+실제로는 성립하지 않고 있었다.
+
+이제 `PATCH /auth/me` 가 `notificationEnabled`(전체) · `locationNotificationEnabled` ·
+`movieNotificationEnabled` · `quietStart` · `quietEnd` 를 받는다. 종류별로 나눈 이유는
+**앱에 이미 종류별 스위치가 있었기 때문**이다 — 전체 스위치 하나로 합치는 안이 더 쌌지만 그건
+이미 만든 화면을 걷어내는 작업이고 사용자는 "위치 알림만 끄기" 를 잃는다
+([decisions/notification-preferences.md](decisions/notification-preferences.md)).
+
+**만료 예고에만 종류별 스위치를 두지 않았다.** 다른 알림은 놓쳐도 잃는 것이 없지만 이건 못 받으면
+영상이 사라지고, 유예 기간을 두지 않기로 한 근거가 이 예고였다. 전체를 끈 경우에만 가지 않는다.
+
+검증: `npm test -w apps/api` 403건 통과(신규 9건 — 저장·부분 수정·기본값·범위 검증과, 종류별
+스위치가 서로 간섭하지 않는 것, 그리고 **무비·위치를 꺼도 만료 예고는 나간다**는 것).
