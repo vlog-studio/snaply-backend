@@ -37,7 +37,9 @@ export const ENV_VARS = [
   // ── Database ─────────────────────────────────────────
   {
     key: 'DATABASE_URL',
-    required: false,
+    // 없으면 기동에 실패한다. 예전에는 선택이라 주입을 빠뜨려도 서버가 뜨고 헬스체크는
+    // "DB 설정 안 됨" 으로 통과했다 — 요청이 들어와야 터지는 구성이었다.
+    required: true,
     origin: 'shared',
     description: 'Prisma 런타임 연결 문자열. 운영은 pgbouncer(6543) 경유',
   },
@@ -553,6 +555,12 @@ export const ENV_VARS = [
     required: false,
     origin: 'local',
     description: '위 계정의 비밀번호',
+  },
+  {
+    key: 'TEST_JWT',
+    required: false,
+    origin: 'local',
+    description: '로그인 대신 쓸 JWT. auth:stub 토큰이면 Supabase 없이 media:e2e 를 돌릴 수 있다',
   },
 ] as const satisfies readonly EnvVarSpec[];
 
