@@ -1,7 +1,8 @@
 # 사내 서버 배포 계획
 
 **작성일**: 2026-09-15
-**상태**: 제안 — 착수 전 계획이다. 실행이 시작되면 결정은 `decisions/`, 남은 일은 `backlog.md` B-1
+**상태**: 착수함(2026-09-15). **절차·시크릿·배치의 현행 원천은 [deployment.md](../deployment.md)** 이며,
+이 문서는 *왜 이 구성인지*(사내망 제약, DB 위치, self-hosted runner)를 남긴다
 **관련**: [backlog.md](../backlog.md) B-1 · [decisions/env-management.md](../decisions/env-management.md)
 
 ---

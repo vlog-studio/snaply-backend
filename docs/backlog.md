@@ -379,6 +379,19 @@ e2e 실검증.
 둔다. DB 는 같은 서버 컨테이너(Supabase 는 로그인 전용 유지). 실사용 서버는 그때 따로 만들며
 이미지·파이프라인은 그대로 재사용한다.
 
+**2026-09-15 저장소 쪽 준비 완료** — 운영 compose 오버레이(`docker-compose.prod.yml`),
+self-hosted runner 배포 잡(`.github/workflows/deploy.yml`), 배치 cron·DB 백업(`deploy/`),
+절차 문서([deployment.md](./deployment.md)). **남은 것은 서버에서 하는 일**이다:
+
+- [ ] **`서버작업`** Docker 설치 · `snaply` 계정 · 저장소 체크아웃(`/opt/snaply`)
+- [ ] **`서버작업`** 시크릿 파일 `/etc/snaply/snaply.env` 작성 (개발 기본 자격증명 금지)
+- [ ] **`서버작업`** self-hosted runner 설치 — 라벨에 `snaply` 포함, 서비스로 등록
+- [ ] **`서버작업`** `deploy/batches.cron` 등록 · 로그·백업 디렉터리 생성
+- [ ] **`서버작업`** 저장소 Variables 에 `DEPLOY_ENABLED=true` → 첫 배포 확인
+- [ ] **DB 백업의 외부 보관** — 지금 덤프는 같은 서버에 쌓인다. 서버가 통째로 죽으면 함께 사라진다
+- [ ] **실사용 서버** — 사내망 전용이라 이 서버로는 사용자를 받을 수 없다. 외부 접속이 되는
+      곳이 생기면 고정 도메인(D-1)과 SNS·결제·광고 mock 해제만 추가하면 된다
+
 **막혀 있던 이유**(해소): 후보(Fly / Render / ECS 등)가 확정되지 않았다.
 `.github/workflows/deploy.yml` 은 `DEPLOY_ENABLED` 게이트로 준비돼 있고,
 워커 이미지는 검증 완료([progress.md](./progress.md) 실검증 라운드 2)라 결정만 되면 배포 가능하다.
