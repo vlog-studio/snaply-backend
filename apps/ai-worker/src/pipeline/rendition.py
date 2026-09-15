@@ -15,6 +15,8 @@ from dataclasses import dataclass
 
 from loguru import logger
 
+import pipeline.hdr as hdr
+
 #: 배포본의 세로 상한. 원본이 이보다 작으면 키우지 않는다 — 화질은 늘지 않고 용량만 는다.
 MAX_HEIGHT = 1920
 #: 썸네일을 뽑을 시점(초). 첫 프레임은 검은 화면인 경우가 많다.
@@ -65,18 +67,18 @@ def _has_audio(path: str) -> bool:
     return bool(json.loads(out.stdout).get("streams"))
 
 
-def _video_filter() -> str:
+def _video_filter(source_path: str | None = None) -> str:
     """
     HDR → SDR 톤매핑 + 세로 상한.
 
-    `zscale` 로 톤매핑하면 정확하지만 그 필터가 없는 빌드가 흔하다. 여기서는 어느 빌드에서나
-    도는 방법을 쓴다 — 색공간을 BT.709 로 강제 변환하고 `format=yuv420p` 로 떨어뜨린다.
-    HDR 원본은 다소 어둡게 나올 수 있지만 **재생되지 않는 것보다 낫다**. 정밀 톤매핑은
-    A-7 의 렌더 파이프라인에서 다룬다.
+    `zscale`+`tonemap` 이 있는 빌드에서는 제대로 톤매핑하고, 없으면 8bit 로 떨구기만 한다
+    (pipeline/hdr.py). **어느 쪽이든 출력 색 태그는 bt709 로 적는다** — 픽셀만 내리고 PQ 태그를
+    남기면 플레이어가 톤매핑을 한 번 더 걸어 화면이 망가진다.
 
-    `-2` 는 짝수로 맞춘 자동 계산이다 — H.264 는 홀수 해상도를 받지 않는다.
+    `trunc(iw/2)*2` 는 짝수로 맞추는 것이다 — H.264 는 홀수 해상도를 받지 않는다.
     """
-    return (
+    prefix = "".join(f + "," for f in hdr.source_filters(source_path)) if source_path else ""
+    return prefix + (
         f"scale='min(iw,iw*{MAX_HEIGHT}/ih)':'min({MAX_HEIGHT},ih)':force_original_aspect_ratio=decrease,"
         "scale=trunc(iw/2)*2:trunc(ih/2)*2,"
         "format=yuv420p"
@@ -88,7 +90,7 @@ def build(source_path: str, work_dir: str) -> RenditionOutcome:
     duration_ms = probe_duration_ms(source_path)
     video_path = os.path.join(work_dir, "rendition.mp4")
 
-    cmd = ["ffmpeg", "-y", "-i", source_path, "-vf", _video_filter(),
+    cmd = ["ffmpeg", "-y", "-i", source_path, "-vf", _video_filter(source_path),
            "-c:v", "libx264", "-preset", "veryfast", "-crf", "23",
            "-profile:v", "high", "-pix_fmt", "yuv420p",
            # 스트리밍 재생을 위해 moov 를 앞으로 — 없으면 플레이어가 전체를 받고서야 시작한다.
@@ -103,7 +105,7 @@ def build(source_path: str, work_dir: str) -> RenditionOutcome:
     thumbnail_path: str | None = os.path.join(work_dir, "thumbnail.jpg")
     try:
         _run(["ffmpeg", "-y", "-ss", str(THUMBNAIL_AT_SECONDS), "-i", source_path,
-              "-frames:v", "1", "-q:v", "3", "-vf", _video_filter(), thumbnail_path])
+              "-frames:v", "1", "-q:v", "3", "-vf", _video_filter(source_path), thumbnail_path])
     except RenditionError:
         # 0.5초보다 짧은 클립 등. 표지가 없을 뿐 배포본은 멀쩡하다.
         logger.warning("썸네일 생성 실패 — 배포본만 저장한다")

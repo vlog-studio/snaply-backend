@@ -165,6 +165,65 @@ class RenditionContract(unittest.TestCase):
             self.assertFalse([s for s in probe(outcome.video_path)["streams"] if s["codec_type"] == "audio"])
 
 
+@unittest.skipUnless(FFMPEG_AVAILABLE, "ffmpeg/ffprobe 없음")
+class HdrContract(unittest.TestCase):
+    """
+    HDR 원본을 내릴 때 **파일이 자기 자신에 대해 거짓말하면 안 된다** (2026-09-15 실검증).
+
+    픽셀만 8bit 로 내리고 색 태그를 PQ 로 남겨 두면, 플레이어가 이미 평평해진 영상에 HDR
+    톤매핑을 한 번 더 걸어 화면이 망가진다. 실제로 그 상태였다.
+
+    톤매핑 자체는 빌드에 `zscale`+`tonemap` 이 있어야 제대로 되지만(워커 이미지에는 있고
+    macOS Homebrew 빌드에는 없다), **태그가 bt709 여야 한다는 것은 어느 빌드에서나 같다.**
+    그래서 여기서는 태그를 검사한다.
+    """
+
+    def make_hdr10(self, path: str) -> None:
+        subprocess.run(
+            ["ffmpeg", "-y",
+             "-f", "lavfi", "-i", "testsrc=size=720x1280:rate=30:duration=1",
+             "-c:v", "libx265", "-pix_fmt", "yuv420p10le",
+             "-x265-params", "colorprim=bt2020:transfer=smpte2084:colormatrix=bt2020nc",
+             "-color_primaries", "bt2020", "-color_trc", "smpte2084", "-colorspace", "bt2020nc",
+             "-tag:v", "hvc1", path],
+            capture_output=True,
+            check=True,
+        )
+
+    def assert_sdr_tagged(self, path: str) -> None:
+        info = probe(path)["video"]
+        self.assertEqual(info["pix_fmt"], "yuv420p", "8bit SDR 로 내려와야 한다")
+        self.assertEqual(info.get("color_transfer"), "bt709")
+        self.assertEqual(info.get("color_primaries"), "bt709")
+        self.assertEqual(info.get("color_space"), "bt709")
+
+    def test_rendition_of_hdr_source_is_tagged_sdr(self) -> None:
+        with tempfile.TemporaryDirectory() as work:
+            src = os.path.join(work, "hdr.mov")
+            self.make_hdr10(src)
+
+            self.assert_sdr_tagged(rendition.build(src, work).video_path)
+
+    def test_edit_of_hdr_source_is_tagged_sdr(self) -> None:
+        with tempfile.TemporaryDirectory() as work:
+            src = os.path.join(work, "hdr.mov")
+            self.make_hdr10(src)
+
+            out = edit([ClipSource(src)], get_preset("일상"), DEFAULT_RENDER_SPEC, work)
+
+            self.assert_sdr_tagged(out)
+
+    def test_sdr_source_tags_are_left_alone(self) -> None:
+        """SDR 원본의 태그는 이미 사실이다 — 덮어쓸 이유가 없다."""
+        with tempfile.TemporaryDirectory() as work:
+            src = os.path.join(work, "sdr.mp4")
+            make_clip(src, width=720, height=1280)
+
+            info = probe(rendition.build(src, work).video_path)["video"]
+
+            self.assertNotEqual(info.get("color_transfer"), "smpte2084")
+
+
 def _movflags_state(path: str) -> str:
     """moov 가 mdat 보다 앞에 있으면 faststart 다. 박스 순서를 직접 읽는다."""
     with open(path, "rb") as f:

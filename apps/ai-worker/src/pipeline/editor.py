@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 from loguru import logger
 
+import pipeline.hdr as hdr
 from pipeline.render_spec import RenderSpec, build_video_filter
 
 
@@ -104,7 +105,10 @@ def normalize_clip(
     if not has_audio:
         cmd += ["-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=48000"]
     audio_input = "[0:a:0]" if has_audio else "[1:a:0]"
-    video_trim = f"[0:v:0]trim=start={start:.3f}:end={end:.3f}[trimmed_v]"
+    # HDR 원본은 트림 직후 SDR 로 내린다 — 이후 스케일·블러 배경은 SDR 에서 돌아야
+    # 색이 어긋나지 않는다. 필터가 없는 빌드에서는 빈 목록이라 그대로 지나간다.
+    tonemap = "".join("," + f for f in hdr.source_filters(src))
+    video_trim = f"[0:v:0]trim=start={start:.3f}:end={end:.3f}{tonemap}[trimmed_v]"
     if has_audio:
         audio_filter = (
             f"{audio_input}aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo,"
