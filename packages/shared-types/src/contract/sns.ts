@@ -9,6 +9,12 @@ export const snsConnectionSchema = z
     platform: snsPlatformSchema,
     platformUsername: z.string().nullable(),
     connectedAt: z.iso.datetime(),
+    tokenExpiresAt: z.iso
+      .datetime()
+      .nullable()
+      .describe(
+        '연동 토큰의 만료 시각. **`null` 은 "모른다"** 이지 "만료되지 않는다" 가 아니다 — 그런 연동은 조용히 만료될 수 있어 게시가 플랫폼 에러로 실패한다. 이 시각이 지났거나 `null` 이면 재연동을 안내한다.',
+      ),
   })
   .meta({ id: 'SnsConnection' });
 export type SnsConnection = z.infer<typeof snsConnectionSchema>;

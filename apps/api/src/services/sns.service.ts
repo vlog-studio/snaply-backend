@@ -2,6 +2,7 @@ import type { SnsPlatform, SnsUploadStatus } from '@vlog-studio/shared-types';
 import type { SnsConfig, SnsProviderConfig } from '../config.js';
 import { getPrisma } from '../db/client.js';
 import { AppError } from '../lib/errors.js';
+import { captureException } from '../lib/sentry.js';
 import { encrypt, decrypt, encodeState, decodeState } from '../lib/crypto.js';
 import { finishMovieForResult } from './movie.service.js';
 import { createDownloadUrl } from './storage.service.js';
@@ -104,18 +105,22 @@ export interface ConnectionDto {
   platform: SnsPlatform;
   platformUsername: string | null;
   connectedAt: string;
+  /** `null` 은 "만료 시각을 모른다" — 값을 지어내지 않는다(backlog E-1). */
+  tokenExpiresAt: string | null;
 }
 
 export async function listConnections(userId: string): Promise<ConnectionDto[]> {
   const rows = await getPrisma().snsConnection.findMany({
     where: { userId },
-    select: { platform: true, platformUsername: true, createdAt: true },
+    select: { platform: true, platformUsername: true, createdAt: true, tokenExpiresAt: true },
     orderBy: { createdAt: 'desc' },
   });
   return rows.map((r) => ({
     platform: r.platform as SnsPlatform,
     platformUsername: r.platformUsername,
     connectedAt: r.createdAt.toISOString(),
+    // null 은 "만료 시각을 모른다" 다 — 값을 지어내지 않는다(E-1).
+    tokenExpiresAt: r.tokenExpiresAt?.toISOString() ?? null,
   }));
 }
 
@@ -137,6 +142,52 @@ const REFRESH_WINDOW_MS: Record<SnsPlatform, number> = {
 };
 
 /** access_token 만료가 임박했으면 갱신하고 저장한다. */
+/**
+ * 만료 시각을 모르는 연동에 대해 갱신을 한 번 시도해 **진짜 만료 시각을 알아낸다.**
+ *
+ * 성공하면 새 토큰과 만료 시각을 저장하고 새 토큰을 돌려준다. 실패하면 `null` —
+ * 호출자는 현재 토큰으로 계속 진행한다. **여기서 예외를 올리지 않는 것이 요점이다.**
+ * 이 경로는 지금까지 아무 문제 없이 게시되던 경로라, 상태를 고치려다 게시를 깨면 안 된다.
+ */
+async function tryLearnExpiry(params: {
+  connectionId: string;
+  platform: SnsPlatform;
+  refreshTokenEnc: string | null;
+  currentAccess: string;
+}): Promise<string | null> {
+  try {
+    let refreshed;
+    if (params.platform === 'tiktok') {
+      if (!params.refreshTokenEnc) {
+        return null; // 갱신 수단이 없다
+      }
+      refreshed = await tiktok.refreshAccessToken(
+        providerConfig('tiktok'),
+        decrypt(params.refreshTokenEnc),
+      );
+    } else {
+      refreshed = await instagram.refreshAccessToken(providerConfig('instagram'), params.currentAccess);
+    }
+    if (!refreshed.expiresAt) {
+      // 갱신은 됐는데 여전히 만료 시각이 없다 — 알아낸 것이 없으므로 저장하지 않는다.
+      return null;
+    }
+    await getPrisma().snsConnection.update({
+      where: { id: params.connectionId },
+      data: {
+        accessToken: encrypt(refreshed.accessToken),
+        refreshToken: refreshed.refreshToken ? encrypt(refreshed.refreshToken) : undefined,
+        tokenExpiresAt: refreshed.expiresAt,
+      },
+    });
+    return refreshed.accessToken;
+  } catch (err) {
+    // 단기 토큰이라 장기 교환이 안 되는 경우 등. 재연동이 필요하지만 지금 막지는 않는다.
+    captureException(err, { connectionId: params.connectionId, phase: 'sns-learn-expiry' });
+    return null;
+  }
+}
+
 async function ensureFreshToken(params: {
   connectionId: string;
   platform: SnsPlatform;
@@ -145,8 +196,19 @@ async function ensureFreshToken(params: {
   expiresAt: Date | null;
 }): Promise<string> {
   const currentAccess = decrypt(params.accessTokenEnc);
+
+  // 만료 시각을 모르는 연동 (E-1).
+  //
+  // 지금까지는 그냥 썼는데, 그러면 이 토큰은 **조용히 만료되고** 그 뒤 게시는 우리 쪽
+  // "재연동 안내" 가 아니라 플랫폼 에러로 실패한다 — 사용자는 왜 안 되는지 알 수 없다.
+  //
+  // 가짜 만료값을 넣지는 않는다. 멀쩡한 토큰에 "재연동 필요" 가 뜨는 쪽이 더 나쁘다.
+  // 대신 **한 번 갱신을 시도해 진짜 값을 알아낸다** — 성공하면 그 응답이 만료 시각을 주므로
+  // 데이터가 실제로 고쳐지고, 실패하면 오늘과 똑같이 현재 토큰으로 진행한다(되던 게시가
+  // 여기서 깨지지 않는다).
   if (params.expiresAt === null) {
-    return currentAccess;
+    const repaired = await tryLearnExpiry({ ...params, currentAccess });
+    return repaired ?? currentAccess;
   }
 
   // 이미 만료됐으면 두 플랫폼 모두 갱신이 불가능하다 — 재연동을 안내한다.
@@ -379,9 +441,20 @@ export async function upload(params: {
         errorMessage: errorSummary(err),
       },
     });
+    // 만료 시각을 모르는 연동은 **조용히 만료됐을 수 있다**(E-1). 그 경우 플랫폼은 그냥
+    // 거절하고 우리는 이유를 모르므로, 사용자가 다음에 할 일을 가리켜 준다. 단정하지는
+    // 않는다 — 다른 이유로 실패했을 수도 있다.
+    //
+    // 안내는 `AppError` 재던지기보다 **앞**에 있어야 한다. 플랫폼 거절은 클라이언트가 이미
+    // `AppError` 로 감싸 올리므로, 뒤에 두면 가장 흔한 경로가 안내를 못 받는다.
+    const hint =
+      connection.tokenExpiresAt === null
+        ? ' 연동이 만료됐을 수 있으니 계정을 다시 연동해 보세요.'
+        : '';
     if (err instanceof AppError) {
-      throw err;
+      // 원인(플랫폼 응답)은 사후 추적에 필요하므로 지우지 않고 뒤에 덧붙인다.
+      throw hint ? AppError.badRequest(`${err.message}${hint}`) : err;
     }
-    throw AppError.badRequest('SNS 업로드에 실패했습니다.');
+    throw AppError.badRequest(`SNS 업로드에 실패했습니다.${hint}`);
   }
 }

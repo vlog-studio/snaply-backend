@@ -390,3 +390,89 @@ describe('snsUploadReadiness', () => {
     expect(snsUploadReadiness('http://localhost:9100/snaply')).toBeNull();
   });
 });
+
+/**
+ * 만료 시각을 모르는 연동 (backlog E-1).
+ *
+ * `token_expires_at = null` 인 연동은 지금까지 그냥 쓰였다. 그러면 그 토큰은 **조용히
+ * 만료되고**, 그 뒤 게시는 우리 쪽 "재연동 안내" 가 아니라 플랫폼 에러로 실패해서 사용자가
+ * 원인을 알 수 없다.
+ *
+ * 고친 방향은 "가짜 만료값을 넣는다" 가 아니라 **한 번 갱신을 시도해 진짜 값을 알아낸다** 다.
+ * 지어낸 값은 멀쩡한 토큰에 "재연동 필요" 를 띄우고, 그쪽이 더 나쁘다.
+ */
+describe('만료 시각을 모르는 연동', () => {
+  /** 연동 직후 만료 시각을 지운다 — 개인 계정 시절 장기 토큰 교환이 실패했던 상태의 재현. */
+  async function connectionWithUnknownExpiry(user: TestUser, platform: 'instagram' | 'tiktok') {
+    await connect(user, platform);
+    const conn = await h.prisma.snsConnection.findFirstOrThrow({ where: { userId: user.id } });
+    await h.prisma.snsConnection.update({
+      where: { id: conn.id },
+      data: { tokenExpiresAt: null },
+    });
+    return conn;
+  }
+
+  it('업로드할 때 만료 시각을 알아내 채운다', async () => {
+    const user = await h.createUser();
+    const conn = await connectionWithUnknownExpiry(user, 'instagram');
+    const video = await createEditedVideo(user.id);
+
+    const res = await h.app.inject({
+      method: 'POST',
+      url: '/sns/instagram/upload',
+      headers: user.auth,
+      payload: { videoId: video.id },
+    });
+
+    expect(res.statusCode).toBe(200);
+    const after = await h.prisma.snsConnection.findUniqueOrThrow({ where: { id: conn.id } });
+    expect(after.tokenExpiresAt).not.toBeNull();
+    expect(after.tokenExpiresAt!.getTime()).toBeGreaterThan(Date.now());
+  });
+
+  it('갱신 수단이 없어도 게시는 그대로 된다 — 상태를 고치려다 게시를 깨지 않는다', async () => {
+    const user = await h.createUser();
+    const conn = await connectionWithUnknownExpiry(user, 'tiktok');
+    // 틱톡은 refresh_token 이 있어야 갱신할 수 있다. 없애서 "알아낼 수 없는" 상태로 만든다.
+    await h.prisma.snsConnection.update({ where: { id: conn.id }, data: { refreshToken: null } });
+    const video = await createEditedVideo(user.id);
+
+    const res = await h.app.inject({
+      method: 'POST',
+      url: '/sns/tiktok/upload',
+      headers: user.auth,
+      payload: { videoId: video.id },
+    });
+
+    expect(res.statusCode).toBe(200);
+    const after = await h.prisma.snsConnection.findUniqueOrThrow({ where: { id: conn.id } });
+    expect(after.tokenExpiresAt).toBeNull(); // 알아낸 것이 없으므로 지어내지 않는다
+  });
+
+  it('연동 목록이 만료 시각을 그대로 보여준다 — null 은 "모른다" 다', async () => {
+    const user = await h.createUser();
+    await connectionWithUnknownExpiry(user, 'instagram');
+
+    const res = await h.app.inject({
+      method: 'GET',
+      url: '/sns/connections',
+      headers: user.auth,
+    });
+
+    expect(res.json().data[0]).toMatchObject({ platform: 'instagram', tokenExpiresAt: null });
+  });
+
+  it('만료 시각을 아는 연동은 목록에 그 값이 실린다', async () => {
+    const user = await h.createUser();
+    await connect(user, 'instagram');
+
+    const res = await h.app.inject({
+      method: 'GET',
+      url: '/sns/connections',
+      headers: user.auth,
+    });
+
+    expect(res.json().data[0].tokenExpiresAt).toEqual(expect.any(String));
+  });
+});

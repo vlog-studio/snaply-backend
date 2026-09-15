@@ -908,3 +908,67 @@ describe('snsUploadReadiness (실키 모드)', () => {
     expect(snsUploadReadiness('')).toContain('미설정');
   });
 });
+
+/**
+ * 만료 시각을 모르는 연동의 게시 실패 (backlog E-1).
+ *
+ * 이 연동은 조용히 만료됐을 수 있고, 그러면 플랫폼은 그냥 거절한다. 우리는 이유를 모르므로
+ * **단정하지 않되 다음에 할 일은 가리킨다.** mock 은 항상 성공해서 이 분기를 탈 수 없다.
+ */
+describe('만료 시각을 모르는 연동의 실패 안내 (실키 모드)', () => {
+  async function setup(tokenExpiresAt: Date | null) {
+    const user = await h.createUser();
+    await h.prisma.snsConnection.create({
+      data: {
+        userId: user.id,
+        platform: 'tiktok',
+        platformUserId: 'tt-1',
+        accessToken: encrypt('token'),
+        refreshToken: encrypt('refresh'),
+        tokenExpiresAt,
+      },
+    });
+    const video = await h.prisma.video.create({
+      data: {
+        userId: user.id,
+        originalUrls: [],
+        editedUrl: 'https://cdn.example.com/v.mp4',
+        status: 'completed',
+      },
+      select: { id: true },
+    });
+    return { user, video };
+  }
+
+  async function uploadExpectingFailure(user: { auth: Record<string, string> }, videoId: string) {
+    // 만료 시각 학습(갱신)도, 게시도 전부 거절당하는 상태.
+    stubFetch((url) => {
+      if (url.includes('open.tiktokapis.com')) return { status: 401, body: { error: { message: 'invalid token' } } };
+      return undefined;
+    });
+    return h.app.inject({
+      method: 'POST',
+      url: '/sns/tiktok/upload',
+      headers: user.auth,
+      payload: { videoId },
+    });
+  }
+
+  it('만료 시각을 모르면 재연동을 안내한다', async () => {
+    const { user, video } = await setup(null);
+
+    const res = await uploadExpectingFailure(user, video.id);
+
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error.message).toContain('다시 연동');
+  });
+
+  it('만료 시각을 아는 연동의 실패에는 재연동을 끌어들이지 않는다 — 다른 이유다', async () => {
+    const { user, video } = await setup(new Date(Date.now() + 20 * 60 * 60 * 1000));
+
+    const res = await uploadExpectingFailure(user, video.id);
+
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error.message).not.toContain('다시 연동');
+  });
+});

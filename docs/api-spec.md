@@ -207,7 +207,9 @@ FE 가 알아야 할 동작:
 
 경로는 `/sns/{platform}/…` 이고 `platform` 은 `instagram | tiktok` 이다(그 외 값은 400).
 
-- `GET /sns/connections` 🔒 — 연동된 계정 목록.
+- `GET /sns/connections` 🔒 — 연동된 계정 목록. `tokenExpiresAt` 의 **`null` 은 "만료 시각을
+  모른다"** 이지 "만료되지 않는다" 가 아니다 — 그런 연동은 조용히 만료돼 게시가 플랫폼 에러로
+  실패할 수 있으므로, `null` 이거나 이미 지났으면 재연동을 안내한다([backlog E-1](./backlog.md)).
 - `GET /sns/{platform}/connect` 🔒 — `authorizeUrl` 로 앱에서 OAuth 를 진행한다. 인스타그램은 비즈니스/크리에이터 계정만 허용.
 - `GET /sns/{platform}/callback` (인증 없음) — OAuth 콜백. **항상 302 딥링크**로 응답한다(실패해도 JSON 을 주지 않으므로 앱은 딥링크만 처리한다):
   `snaplyapp://sns/connected?platform=…`(성공) / `snaplyapp://sns/error?platform=…&reason=<사유>`(실패).
