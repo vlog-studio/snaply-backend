@@ -3,7 +3,7 @@ import type { RequiredEnvKey } from './env-spec.js';
 export interface AppConfig {
   port: number;
   host: string;
-  databaseUrl: string | undefined;
+  databaseUrl: string;
   supabaseUrl: string;
   /** Swagger 개발 로그인에서 사용하는 공개 API 키. */
   supabasePublishableKey: string | undefined;
@@ -150,7 +150,7 @@ export function loadConfig(): AppConfig {
   return {
     port: Number(process.env.API_PORT ?? 3000),
     host: process.env.API_HOST ?? '0.0.0.0',
-    databaseUrl: process.env.DATABASE_URL,
+    databaseUrl: requireEnv('DATABASE_URL'),
     supabaseUrl,
     supabasePublishableKey:
       process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || undefined,

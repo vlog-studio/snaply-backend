@@ -115,6 +115,10 @@ services:
     build:
       context: .
       dockerfile: apps/ai-worker/Dockerfile
+    # whisper 모델은 이미지에 굽지 않고 첫 자막 작업에서 내려받는다(~27초). 볼륨이 없으면
+    # 배포할 때마다 다시 받는다.
+    volumes:
+      - whisper-cache:/root/.cache/huggingface
     depends_on:
       migrate: { condition: service_completed_successfully }
       redis: { condition: service_healthy }
@@ -218,3 +222,4 @@ services:
 volumes:
   pgdata:
   miniodata:
+  whisper-cache:
