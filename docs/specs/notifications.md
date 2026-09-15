@@ -32,8 +32,11 @@
 
 ## 알림 설정
 
-- **NTF-7** `부분` — 사용자는 알림을 종류별로 켜고 끌 수 있다(위치 도착, 무비 완성 등).
-  설정이 꺼진 종류는 발송 경로와 무관하게 울리지 않는다. **현재 틈**: 서버 발송(위치 도착·
-  만료 예고·무비 완성)은 서버의 `notificationEnabled`(기본 `true`) 하나로만 판정되는데
-  `PATCH /auth/me` 가 이 필드를 받지 않아 앱의 스위치가 서버 발송에 닿지 않는다. 종류별
-  설정을 서버에 두는 방식은 [backlog.md](../backlog.md) B-6 에서 합의한다.
+- **NTF-7** `구현됨`(서버, 앱 연결 대기) — 사용자는 알림을 **종류별로** 켜고 끌 수 있다.
+  스위치는 서버에 있고 `PATCH /auth/me` 로 쓴다: `notificationEnabled`(전체) ·
+  `locationNotificationEnabled` · `movieNotificationEnabled` · `quietStart`/`quietEnd`.
+  전체를 끄면 종류와 무관하게 아무것도 가지 않는다.
+- **NTF-9** `구현됨` — **스냅 만료 예고에는 종류별 스위치가 없다.** 끌 수 있게 하면 사용자가
+  모르는 채로 영상을 잃는다 — 만료에 유예가 없는 근거가 "미리 알린다" 였다. 전체 스위치를 끈
+  경우에만 가지 않으며, 그때는 라이브러리의 남은 기간 표시(SNAP-13)가 유일한 안내다
+  ([decisions/notification-preferences.md](../decisions/notification-preferences.md)).
