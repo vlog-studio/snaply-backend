@@ -373,7 +373,13 @@ e2e 실검증.
 
 ### B-1. 배포 인프라 결정 ★
 
-**막힌 이유**: 후보(Fly / Render / ECS 등)가 확정되지 않았다.
+**2026-09-15 방향 결정**: **사내 물리 서버**에 docker compose 로 올린다. 계획은
+[plans/on-prem-deploy.md](./plans/on-prem-deploy.md). 사내망 전용이라 **실사용자를 받을 수는 없고**
+팀 공용 통합 서버가 된다 — 외부에서 우리를 불러야 하는 SNS 게시·결제 웹훅·광고 검증은 mock 으로
+둔다. DB 는 같은 서버 컨테이너(Supabase 는 로그인 전용 유지). 실사용 서버는 그때 따로 만들며
+이미지·파이프라인은 그대로 재사용한다.
+
+**막혀 있던 이유**(해소): 후보(Fly / Render / ECS 등)가 확정되지 않았다.
 `.github/workflows/deploy.yml` 은 `DEPLOY_ENABLED` 게이트로 준비돼 있고,
 워커 이미지는 검증 완료([progress.md](./progress.md) 실검증 라운드 2)라 결정만 되면 배포 가능하다.
 
