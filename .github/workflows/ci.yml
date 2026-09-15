@@ -118,7 +118,7 @@ jobs:
         run: npm test -- --filter=@vlog-studio/api
 
   python:
-    name: Syntax check (AI Worker)
+    name: Tests (AI Worker)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -129,6 +129,11 @@ jobs:
           cache: pip
           cache-dependency-path: apps/ai-worker/requirements.txt
 
+      # 산출물 계약 테스트는 진짜 ffmpeg 을 돌린다. 명령줄만 검사해서는 잡히지 않는 결함이
+      # 실제로 두 번 났다(가로로 나온 쇼츠, 재생되지 않는 배포본) — tests/test_ffmpeg_contract.py.
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
       - name: Install dependencies
         run: pip install -r requirements.txt
         working-directory: apps/ai-worker
@@ -138,5 +143,7 @@ jobs:
         working-directory: apps/ai-worker
 
       - name: Unit tests
-        run: python -m unittest discover -s tests
+        # REQUIRE_FFMPEG=1: ffmpeg 이 없으면 **건너뛰지 말고 실패**하라는 뜻이다. 로컬에서는
+        # 건너뛰는 것이 관행이지만, CI 에서까지 조용히 건너뛰면 검사가 있으나 마나다.
+        run: REQUIRE_FFMPEG=1 python -m unittest discover -s tests
         working-directory: apps/ai-worker
