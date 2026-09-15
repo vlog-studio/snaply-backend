@@ -57,6 +57,7 @@ function parseArgs(argv) {
     if (a === '--style') opts.style = argv[++i];
     else if (a === '--email') opts.email = argv[++i];
     else if (a === '--password') opts.password = argv[++i];
+    else if (a === '--token') opts.token = argv[++i];
     else if (a === '--upload-only') opts.uploadOnly = true;
     else if (a === '--subtitles') opts.subtitles = true;
     else if (a === '--help' || a === '-h') opts.help = true;
@@ -73,6 +74,7 @@ const USAGE = `사용법: node scripts/media-e2e.mjs [옵션] <클립 파일...>
   --subtitles               소프트 자막 생성 (기본: 안 함 — 쇼츠용)
   --upload-only             업로드·등록까지만 하고 편집 요청은 건너뜀
   --email / --password      로그인 정보 (없으면 TEST_EMAIL/TEST_PASSWORD 환경변수)
+  --token <jwt>             로그인 대신 이 JWT 를 쓴다 (auth:stub 토큰 등, TEST_JWT 환경변수도 가능)
 
 예시:
   TEST_EMAIL=dayeon-test@dweax.com TEST_PASSWORD=... \\
@@ -126,6 +128,13 @@ function makeApi(baseUrl, token) {
 }
 
 async function login(env, opts) {
+  // 이미 토큰이 있으면 로그인하지 않는다 — `npm run auth:stub` 토큰으로 Supabase 없이
+  // 검증할 수 있다(프로젝트가 자동 일시정지된 동안에도).
+  const token = opts.token ?? process.env.TEST_JWT;
+  if (token) {
+    ok('전달받은 토큰 사용 (로그인 건너뜀)');
+    return token;
+  }
   const email = opts.email ?? process.env.TEST_EMAIL;
   const password = opts.password ?? process.env.TEST_PASSWORD;
   if (!email || !password) {
