@@ -11,7 +11,9 @@
  * 결정: docs/decisions/snap-retention-period.md · movie-cleanup-after-export.md
  * 설계: docs/plans/lifecycle-alignment.md §6
  *
- * S3 호출은 하지 않는다 — 하네스에 MinIO 가 없고, 없는 키 삭제는 어차피 no-op 다.
+ * 삭제 경로는 실제 MinIO 에 DeleteObject 를 보낸다. 없는 **키** 삭제는 no-op 이지만 없는 **버킷**은
+ * NoSuchBucket 이라, 이 파일이 버킷을 만드는 다른 테스트보다 먼저 돌면(신선한 MinIO · 실행 순서
+ * 캐시 없음 = CI) 모든 purge 가 `failed` 로 떨어진다. 그래서 beforeAll 에서 버킷을 보장한다.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import {
@@ -27,12 +29,15 @@ import {
   purgeExpiredSnaps,
   purgeOrphanedObjects,
 } from '../src/services/retention.service.js';
+import { ensureBucketForDev } from '../src/services/storage.service.js';
 import { createHarness, type Harness, type TestUser } from './helpers/harness.js';
 
 let h: Harness;
 
 beforeAll(async () => {
   h = await createHarness();
+  // S3 객체 삭제가 실제 MinIO 를 치므로 버킷이 있어야 한다
+  await ensureBucketForDev();
 });
 afterAll(async () => {
   await h.close();
