@@ -2,8 +2,9 @@
  * Phase 2 — 인증 미들웨어.
  * 공통 소유 영역이지만, 모든 트랙의 테스트가 이 경로 위에서 돌기 때문에 여기서 먼저 고정한다.
  */
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
+import { Prisma } from '@prisma/client';
 import { createHarness, type Harness } from './helpers/harness.js';
 
 let h: Harness;
@@ -82,6 +83,67 @@ describe('GET /auth/me', () => {
 
     expect(user2.id).toBe(user1.id);
     expect(await h.prisma.user.count({ where: { supabaseUid: sub } })).toBe(1);
+  });
+
+  /**
+   * 첫 로그인 직후 앱은 템플릿·크레딧·무비 요청을 한꺼번에 보낸다. Prisma 의 upsert 는
+   * 원자적이지 않아 같은 sub 의 create 가 경합하고, 지는 쪽이 P2002 로 500 을 받았다
+   * (2026-09-23 iOS 시뮬레이터 검증에서 /movies 가 실패). 유니크 위반은 다시 읽어 흡수해야 한다.
+   */
+  describe('첫 로그인 경합', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('upsert 가 유니크 위반으로 실패해도 기존 행을 읽어 200 을 돌려준다', async () => {
+      const sub = randomUUID();
+      await h.createUser({ sub });
+
+      // 경합에서 진 쪽이 받는 에러를 그대로 흉내 낸다.
+      const violation = new Prisma.PrismaClientKnownRequestError(
+        'Unique constraint failed on the fields: (`supabase_uid`)',
+        { code: 'P2002', clientVersion: Prisma.prismaVersion.client, meta: { target: ['supabase_uid'] } },
+      );
+      const upsert = vi.spyOn(h.prisma.user, 'upsert').mockRejectedValueOnce(violation);
+
+      const res = await h.app.inject({
+        method: 'GET',
+        url: '/auth/me',
+        headers: { authorization: `Bearer ${await h.stub.mint({ sub })}` },
+      });
+
+      expect(upsert).toHaveBeenCalledTimes(1);
+      expect(res.statusCode).toBe(200);
+      expect(await h.prisma.user.count({ where: { supabaseUid: sub } })).toBe(1);
+    });
+
+    it('유니크 위반이 아닌 에러는 그대로 전파한다', async () => {
+      const sub = randomUUID();
+      vi.spyOn(h.prisma.user, 'upsert').mockRejectedValueOnce(new Error('connection lost'));
+
+      const res = await h.app.inject({
+        method: 'GET',
+        url: '/auth/me',
+        headers: { authorization: `Bearer ${await h.stub.mint({ sub })}` },
+      });
+
+      expect(res.statusCode).toBe(500);
+      expect(await h.prisma.user.count({ where: { supabaseUid: sub } })).toBe(0);
+    });
+
+    it('같은 sub 의 첫 요청 여러 개가 동시에 와도 모두 200 이고 유저는 하나다', async () => {
+      const sub = randomUUID();
+      const token = await h.stub.mint({ sub });
+
+      const responses = await Promise.all(
+        Array.from({ length: 6 }, () =>
+          h.app.inject({ method: 'GET', url: '/auth/me', headers: { authorization: `Bearer ${token}` } }),
+        ),
+      );
+
+      expect(responses.map((r) => r.statusCode)).toEqual(Array(6).fill(200));
+      expect(await h.prisma.user.count({ where: { supabaseUid: sub } })).toBe(1);
+    });
   });
 });
 

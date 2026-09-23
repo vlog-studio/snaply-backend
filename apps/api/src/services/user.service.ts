@@ -1,7 +1,16 @@
 import type { UserProfile } from '@vlog-studio/shared-types';
+import { Prisma } from '@prisma/client';
 import { getPrisma } from '../db/client.js';
 import { captureException } from '../lib/sentry.js';
 import { grantSignupBonus } from './credit.service.js';
+
+const UNIQUE_VIOLATION = 'P2002';
+
+function isUniqueViolation(err: unknown): boolean {
+  return err instanceof Prisma.PrismaClientKnownRequestError && err.code === UNIQUE_VIOLATION;
+}
+
+const USER_SELECT = { id: true, supabaseUid: true, deletedAt: true } as const;
 
 /** 미들웨어에서 request.user에 담는 최소 정보 */
 export interface AuthUser {
@@ -19,12 +28,7 @@ export interface AuthUser {
  * (docs/decisions/credit-payment-model.md).
  */
 export async function resolveUser(supabaseUid: string): Promise<AuthUser> {
-  const user = await getPrisma().user.upsert({
-    where: { supabaseUid },
-    update: {},
-    create: { supabaseUid },
-    select: { id: true, supabaseUid: true, deletedAt: true },
-  });
+  const user = await upsertUser(supabaseUid);
 
   // 가입 보너스는 지급 여부를 원장으로 판정하므로 여기서 매번 호출해도 한 번만 들어간다.
   // 지급 실패가 로그인을 막아서는 안 된다 — 보고만 하고 통과시킨다.
@@ -37,6 +41,33 @@ export async function resolveUser(supabaseUid: string): Promise<AuthUser> {
     supabaseUid: user.supabaseUid,
     deletedAt: user.deletedAt,
   };
+}
+
+/**
+ * Prisma 의 upsert 는 원자적이지 않다(findUnique → create). 첫 로그인 직후 앱은 요청 여러 개를
+ * 동시에 보내므로, 같은 supabase_uid 의 create 가 경합해 한쪽이 P2002 로 실패한다 — 실제로
+ * 첫 로그인의 /movies 가 500 을 받았다(2026-09-23 시뮬레이터 검증). 유니크 위반은 "누군가
+ * 먼저 만들었다"는 뜻이므로 그 행을 다시 읽어 돌려준다.
+ */
+async function upsertUser(supabaseUid: string): Promise<AuthUser> {
+  const prisma = getPrisma();
+  try {
+    return await prisma.user.upsert({
+      where: { supabaseUid },
+      update: {},
+      create: { supabaseUid },
+      select: USER_SELECT,
+    });
+  } catch (err) {
+    if (!isUniqueViolation(err)) {
+      throw err;
+    }
+    const existing = await prisma.user.findUnique({ where: { supabaseUid }, select: USER_SELECT });
+    if (!existing) {
+      throw err;
+    }
+    return existing;
+  }
 }
 
 export async function getProfile(userId: string): Promise<UserProfile | null> {
