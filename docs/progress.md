@@ -1705,3 +1705,23 @@ uuid 3건, 컴포즈·러너 갱신). API 394건. **실기기 미검증** — �
 
 **남은 것**: 돌비비전 실물은 아직 검증하지 못했다(합성 HDR10 으로만 확인). `media:e2e` 에
 `--token` 을 추가해 Supabase 없이 auth 스텁 토큰으로도 돌릴 수 있게 했다.
+
+### iOS 시뮬레이터 모바일 검증 + 첫 로그인 경합 수정 (2026-09-23)
+
+iPhone 17 시뮬레이터(Xcode 27, Expo Go 57.0.9)에서 앱을 실제 로컬 API 에 붙여 검증했다.
+로그인 전 화면(로그인·가입·재설정, 유효성 메시지, OS 다크 전환), 4개 탭, 설정 5화면(크레딧·알림·
+테마·관심사·소셜), 뷰파인더 모달, 재시작 후 세션 유지가 모두 정상이었다. 이 Mac 에는 Simulator.app 이
+없고 Xcode 번들 안의 `DeviceHub.app` 이 시뮬레이터 창이다 — 상세 절차는
+[`apps/mobile/docs/workflows/local-development-and-testing.md`](../apps/mobile/docs/workflows/local-development-and-testing.md).
+
+**첫 로그인에서 500 을 찾았다.** 새 계정이 앱에 들어가면 템플릿·크레딧·무비 요청이 동시에 나가고,
+인증 미들웨어의 `resolveUser` 가 요청마다 Prisma `user.upsert` 를 돈다. 이 upsert 는 원자적이지 않아
+(findUnique → create) 같은 `supabase_uid` 의 create 가 경합했고, 진 쪽이 P2002 로 500 을 받았다 —
+앱은 그 결과 무비 탭을 빈 상태로 보여줬다. 유니크 위반을 "이미 만들어졌다"로 읽어 그 행을 다시
+조회하도록 고쳤다(`apps/api/src/services/user.service.ts`). 유니크 위반이 아닌 에러는 그대로 전파한다.
+
+검증: `test/auth.test.ts` 에 3건 추가 — upsert 가 P2002 를 던지는 결정적 재현(수정 전 실패 확인),
+다른 에러의 전파, 같은 sub 6개 동시 요청. API 전체 412건 + tsc 통과.
+
+**남은 것**: 재설정 화면 카피가 "인증 코드"라 말하지만 구현은 딥링크다(모바일, 미수정). 실제 촬영·
+푸시·햅틱은 시뮬레이터에서 검증 대상이 아니며 iOS 실기기는 없다.
