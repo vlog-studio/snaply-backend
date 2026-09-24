@@ -174,7 +174,9 @@ async function performRequest<P extends ApiPath, T, M extends HttpMethod = 'GET'
       body: body === undefined ? undefined : JSON.stringify(body),
     });
   } catch (cause) {
-    throw new ApiError('network_error', '네트워크 요청에 실패했습니다.', { cause });
+    throw new ApiError('network_error', '연결하지 못했어요. 인터넷 연결을 확인해 주세요.', {
+      cause,
+    });
   } finally {
     if (timer !== undefined) clearTimeout(timer);
     signal?.removeEventListener('abort', abortDeadline);
@@ -184,24 +186,36 @@ async function performRequest<P extends ApiPath, T, M extends HttpMethod = 'GET'
   try {
     payload = await response.json();
   } catch (cause) {
-    throw new ApiError('malformed_response', '서버 응답을 해석할 수 없습니다.', {
-      status: response.status,
-      cause,
-    });
+    throw new ApiError(
+      'malformed_response',
+      '요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.',
+      {
+        status: response.status,
+        cause,
+      },
+    );
   }
 
   if (!isEnvelope(payload)) {
-    throw new ApiError('malformed_response', '서버 응답 형식이 올바르지 않습니다.', {
-      status: response.status,
-    });
+    throw new ApiError(
+      'malformed_response',
+      '요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.',
+      {
+        status: response.status,
+      },
+    );
   }
 
   if (!payload.success) {
     const { code, message, ...details } = payload.error ?? {};
-    throw new ApiError(code ?? 'unknown_error', message ?? '요청을 처리하지 못했습니다.', {
-      status: response.status,
-      details,
-    });
+    throw new ApiError(
+      code ?? 'unknown_error',
+      message ?? '요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.',
+      {
+        status: response.status,
+        details,
+      },
+    );
   }
 
   return schema.parse(payload.data);

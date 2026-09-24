@@ -18,7 +18,7 @@ export type TemplateOffer = {
  * cards read out.
  *
  * The point of showing the shortfall rather than hiding templates that do not
- * fit is that the shortfall is the invitation: "4/6컷 있음" is the app naming
+ * fit is that the shortfall is the invitation: "6컷 중 4컷 있어요" is the app naming
  * two shots the user could go take. A template the library cannot fill at all
  * still belongs on the shelf for the same reason.
  *

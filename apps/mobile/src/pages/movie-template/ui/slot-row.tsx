@@ -183,7 +183,7 @@ export function SlotRow({
  * and the server that has is scoring a *position*, not naming a subject.
  */
 export function confidenceLabel(kind: ConfidenceKind): string {
-  return kind === 'slot-fit' ? '슬롯 적합도' : '같은 외출 확신';
+  return kind === 'slot-fit' ? '어울림' : '같은 외출일 가능성';
 }
 
 type MoveButtonProps = {

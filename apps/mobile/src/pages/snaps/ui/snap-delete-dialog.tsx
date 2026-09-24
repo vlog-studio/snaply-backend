@@ -39,12 +39,10 @@ export function SnapDeleteDialog({
   return (
     <BottomSheet accessibilityLabel="스냅 삭제 확인" visible={visible} onClose={onCancel}>
       <ThemedText type="note" themeColor="danger">
-        원본 삭제
+        스냅 삭제
       </ThemedText>
-      <ThemedText type="heading">스냅 {count}개를 지울까요?</ThemedText>
-      <ThemedText themeColor="textSecondary">
-        영상 파일까지 지워져요. 되돌릴 수 없습니다.
-      </ThemedText>
+      <ThemedText type="heading">스냅 {count}개를 삭제할까요?</ThemedText>
+      <ThemedText themeColor="textSecondary">스냅 파일까지 삭제되고, 되돌릴 수 없어요.</ThemedText>
 
       {impact.length > 0 ? (
         <View style={[styles.impact, { borderColor: theme.border }]}>
@@ -98,7 +96,7 @@ export function SnapDeleteDialog({
           ]}
         >
           <ThemedText selectable={false} type="button" style={{ color: theme.onPrimary }}>
-            {isDeleting ? '지우는 중…' : '삭제'}
+            {isDeleting ? '삭제하는 중…' : '삭제'}
           </ThemedText>
         </Pressable>
       </View>

@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useScrollToTop } from 'expo-router';
 import { useRef } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -91,11 +92,9 @@ export function StudioPage() {
           ]}
         >
           <ThemedText selectable={false} type="smallBold">
-            새 무비
+            스냅 골라 새 무비
           </ThemedText>
-          <ThemedText selectable={false} type="smallBold" themeColor="primary">
-            스냅 고르기
-          </ThemedText>
+          <Ionicons color={theme.textSecondary} name="chevron-forward" size={16} />
         </Pressable>
 
         <TemplatePanel offers={templateOffers} onOpen={openTemplate} />

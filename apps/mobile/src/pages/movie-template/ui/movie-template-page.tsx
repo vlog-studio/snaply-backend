@@ -75,7 +75,7 @@ export function MovieTemplatePage({ templateId }: MovieTemplatePageProps) {
         <BackBar onPress={goBack} />
         <View style={[styles.screen, styles.centered]}>
           <ThemedText type="heading">템플릿을 찾을 수 없어요</ThemedText>
-          <ThemedText themeColor="textSecondary">이미 사라졌거나 잘못된 주소예요.</ThemedText>
+          <ThemedText themeColor="textSecondary">이미 삭제됐거나 없는 템플릿이에요.</ThemedText>
         </View>
       </View>
     );
@@ -93,7 +93,7 @@ export function MovieTemplatePage({ templateId }: MovieTemplatePageProps) {
       bgm: template.bgm,
     });
     if (!movie) {
-      setError('채워진 컷이 하나도 없어요. 빈 자리를 찍어서 채워주세요.');
+      setError('채운 컷이 없어요. 빈 컷을 찍어 채워 주세요.');
       return;
     }
     router.replace(movieHref(movie.id));
@@ -174,7 +174,7 @@ export function MovieTemplatePage({ templateId }: MovieTemplatePageProps) {
       >
         <View style={styles.footerHead}>
           <ThemedText type="small" themeColor="textSecondary">
-            {fill.filledCount} / {template.slots.length}칸 채움
+            {template.slots.length}컷 중 {fill.filledCount}컷 채웠어요
           </ThemedText>
           <ThemedText type="note" themeColor="textSecondary">
             {formatSeconds(fill.totalSec)}

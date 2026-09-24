@@ -273,16 +273,16 @@ export function SnapsPage({ startSelecting = false }: SnapsPageProps) {
             ]}
           >
             <ThemedText type="small" style={styles.uploadNoticeText}>
-              스냅 {failedUploadCount}개를 업로드하지 못했어요.
+              스냅 {failedUploadCount}개를 올리지 못했어요.
             </ThemedText>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="업로드 다시 시도"
+              accessibilityLabel="다시 올리기"
               hitSlop={12}
               onPress={retryFailedUploads}
             >
               <ThemedText selectable={false} type="smallBold" themeColor="primary">
-                다시 시도
+                다시 올리기
               </ThemedText>
             </Pressable>
           </View>

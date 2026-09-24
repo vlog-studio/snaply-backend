@@ -275,7 +275,7 @@ function CaptureRecordScreen() {
           {stage === 'idle' && !showCollectedBadge ? (
             <View style={styles.focusFrame} pointerEvents="none">
               <ThemedText selectable={false} type="note" style={styles.frameMeta}>
-                꾹 눌러 촬영
+                꾹 눌러 찍기
               </ThemedText>
             </View>
           ) : null}
@@ -300,7 +300,7 @@ function CaptureRecordScreen() {
                 type={session.remaining > 0 ? 'edge' : 'note'}
                 style={[styles.whiteText, styles.tabularNumber]}
               >
-                {session.remaining > 0 ? `${session.remaining}s` : '마무리 중…'}
+                {session.remaining > 0 ? `${session.remaining}초` : '마무리 중…'}
               </ThemedText>
             </View>
           ) : null}
@@ -362,12 +362,12 @@ function CaptureRecordScreen() {
           ) : null}
           {stage === 'review' ? (
             <View style={styles.reviewActions}>
-              <SnaplyButton title="다시 담기" style={styles.reviewButton} onPress={retake} />
+              <SnaplyButton title="다시 찍기" style={styles.reviewButton} onPress={retake} />
             </View>
           ) : (
             <View style={styles.captureControls}>
               <Pressable
-                accessibilityLabel={`저장 영상 ${library.recordings.length}개 보기`}
+                accessibilityLabel={`찍은 스냅 ${library.recordings.length}개 보기`}
                 accessibilityRole="button"
                 disabled={session.isBusy}
                 onPress={openLibrary}
@@ -387,8 +387,8 @@ function CaptureRecordScreen() {
                   size={HOLD_RING_SIZE}
                 />
                 <Pressable
-                  accessibilityHint="누르는 동안 담기고, 손을 떼면 끝나요"
-                  accessibilityLabel="꾹 눌러 담기"
+                  accessibilityHint="누르는 동안 찍히고, 손을 떼면 끝나요"
+                  accessibilityLabel="꾹 눌러 찍기"
                   accessibilityRole="button"
                   accessibilityState={{
                     disabled: stage === 'saving' || !isReady || !isRecordingSupported,

@@ -1,6 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 
 import { movieJobRatio, type Movie } from '@/entities/movie';
+import { editStepLabel } from '@/features/compose-movie';
 import { Spacing } from '@/shared/ui/theme';
 import { ThemedText } from '@/shared/ui/themed-text';
 
@@ -13,9 +14,6 @@ export type GenerationProgressProps = {
 
 const RingSize = 132;
 
-/** Before the first milestone arrives, and for a job stored without one. */
-const QueuedStep = '작업을 기다리고 있어요';
-
 /**
  * The progress the user came back to see — the ring and what the run is doing —
  * in the stage where the player otherwise sits. Leaving is expected and safe: the
@@ -24,7 +22,8 @@ const QueuedStep = '작업을 기다리고 있어요';
  *
  * **Both numbers are the backend's** (2026-08-07). The ring is filled to the
  * percentage the pipeline last published and the line under it is the stage it
- * named, in its own words. There is no local checklist any more: the five steps
+ * named — worded by the app (`editStepLabel`), never the worker's raw log line
+ * (2026-09-24). There is no local checklist any more: the five steps
  * this panel used to draw were paced by a clock against a table of durations that
  * stood for nothing, and a run's real stages are the backend's to change — a
  * table here would eventually show the wrong stage confidently. What the app
@@ -49,7 +48,7 @@ export function GenerationProgress({ movie }: GenerationProgressProps) {
       </ThemedText>
 
       <ThemedText type="small" themeColor="textSecondary" style={styles.centerText}>
-        {movie.job.step ?? QueuedStep}
+        {editStepLabel(movie.job.step)}
       </ThemedText>
     </View>
   );

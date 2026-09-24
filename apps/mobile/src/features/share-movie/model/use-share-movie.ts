@@ -20,8 +20,8 @@ export type ShareBlock = 'no-render' | 'unresolved';
 
 /** What each block says, so three surfaces cannot word the same rule differently. */
 export const ShareBlockMessages: Record<ShareBlock, string> = {
-  'no-render': '아직 완성 파일이 만들어지지 않아 공유할 수 없어요.',
-  unresolved: '완성 파일을 불러오지 못했어요. 연결을 확인해주세요.',
+  'no-render': '아직 완성된 무비가 없어서 공유할 수 없어요.',
+  unresolved: '완성된 무비를 불러오지 못했어요. 연결을 확인해 주세요.',
 };
 
 /**

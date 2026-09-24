@@ -71,7 +71,7 @@ export function openApiSocket(path: string, handlers: ApiSocketHandlers): ApiSoc
     try {
       headers = await authHeader();
     } catch (cause) {
-      fail(new Error('소켓 인증 토큰을 읽지 못했습니다.', { cause }));
+      fail(new Error('실시간 연결을 열지 못했어요.', { cause }));
       return;
     }
     if (closed) return;
@@ -80,7 +80,7 @@ export function openApiSocket(path: string, handlers: ApiSocketHandlers): ApiSoc
     try {
       socket = openWithHeaders(url, headers);
     } catch (cause) {
-      fail(new Error('소켓을 열지 못했습니다.', { cause }));
+      fail(new Error('실시간 연결을 열지 못했어요.', { cause }));
       return;
     }
 
@@ -100,7 +100,7 @@ export function openApiSocket(path: string, handlers: ApiSocketHandlers): ApiSoc
     // `onerror` is followed by `onclose`, so the close handler is left to run
     // once rather than being called from both.
     socket.onerror = () => {
-      if (!closed) handlers.onError?.(new Error('소켓 연결에 오류가 발생했습니다.'));
+      if (!closed) handlers.onError?.(new Error('실시간 연결이 끊겼어요.'));
     };
     socket.onclose = () => {
       if (closed) return;

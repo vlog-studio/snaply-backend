@@ -34,7 +34,7 @@ export function SnapImportCell({ width, disabled = false, onPress }: SnapImportC
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel="동영상에서 스냅 가져오기"
+      accessibilityLabel="영상에서 스냅 가져오기"
       accessibilityState={disabled ? { disabled: true } : undefined}
       disabled={disabled}
       onPress={onPress}

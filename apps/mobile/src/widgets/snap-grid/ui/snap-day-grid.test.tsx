@@ -9,8 +9,8 @@ import { SnapDayGrid } from './snap-day-grid';
 // module — the one boundary a grid test has no answer for.
 jest.mock('@/shared/ui/video-frame', () => ({ VideoFrame: () => null }));
 
-// 동영상에서 스냅 가져오기
-const importLabel = '\uB3D9\uC601\uC0C1\uC5D0\uC11C \uC2A4\uB0C5 \uAC00\uC838\uC624\uAE30';
+// 영상에서 스냅 가져오기
+const importLabel = '\uC601\uC0C1\uC5D0\uC11C \uC2A4\uB0C5 \uAC00\uC838\uC624\uAE30';
 
 function makeSnap(id: string): Snap {
   return {

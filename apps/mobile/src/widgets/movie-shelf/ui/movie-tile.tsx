@@ -121,7 +121,7 @@ export function MovieTile({
         {movie.title}
       </ThemedText>
       <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-        {movie.dateLabel} · 스냅 {movie.snapCount}
+        {movie.dateLabel} · 컷 {movie.snapCount}
       </ThemedText>
       {movie.status === 'failed' ? (
         <MovieFailureNotice

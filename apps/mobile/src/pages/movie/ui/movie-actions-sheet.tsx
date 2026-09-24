@@ -81,7 +81,7 @@ export function MovieActionsSheet({
           : step === 'rename'
             ? '무비 이름 바꾸기'
             : step === 'finish'
-              ? '무비 끝내기 확인'
+              ? '무비 정리 확인'
               : '무비 더보기'
       }
     >
@@ -110,7 +110,7 @@ export function MovieActionsSheet({
           <ThemedText type="note" themeColor="danger">
             무비 삭제
           </ThemedText>
-          <ThemedText type="heading">이 무비를 지울까요?</ThemedText>
+          <ThemedText type="heading">이 무비를 삭제할까요?</ThemedText>
 
           <View style={[styles.summary, { borderColor: theme.border }]}>
             <ThemedText type="smallBold" numberOfLines={1}>
@@ -122,7 +122,7 @@ export function MovieActionsSheet({
           </View>
 
           <ThemedText themeColor="textSecondary">
-            컷 구성과 완성 기록이 함께 사라져요. 스냅 원본 영상은 그대로 남아요.
+            컷 구성과 완성된 무비가 함께 사라져요. 스냅은 그대로 남아요.
           </ThemedText>
 
           <View style={styles.confirmActions}>
@@ -178,8 +178,8 @@ export function MovieActionsSheet({
             {movie.render ? (
               <ActionRow
                 icon="checkmark-done"
-                label="끝내기"
-                note="완성 파일을 저장했다면 서버의 파일을 정리해요"
+                label="앱에서 무비 정리하기"
+                note="기기에 저장했다면 앱의 무비 파일을 정리해요"
                 divider
                 onPress={() => setStep('finish')}
               />

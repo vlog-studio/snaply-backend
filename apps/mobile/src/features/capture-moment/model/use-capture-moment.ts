@@ -9,7 +9,7 @@ import { readCapturePlace } from '../lib/read-capture-place';
 
 import { createSnap } from './create-snap';
 
-const CAPTURE_MOMENT_FAILED = '순간을 담지 못했어요. 다시 시도해 주세요.'; // 순간을 담지 못했어요.
+const CAPTURE_MOMENT_FAILED = '스냅을 저장하지 못했어요. 다시 시도해 주세요.';
 
 type CaptureMomentInput = {
   durationSec: CaptureDuration;

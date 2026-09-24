@@ -28,7 +28,7 @@ export function useLocalRecordings() {
         setErrorMessage(undefined);
       }
     } catch {
-      if (isMounted.current) setErrorMessage('저장된 영상 목록을 불러오지 못했어요.');
+      if (isMounted.current) setErrorMessage('찍은 스냅을 불러오지 못했어요.');
     } finally {
       if (isMounted.current) setIsLoading(false);
     }
@@ -45,7 +45,7 @@ export function useLocalRecordings() {
         }
       })
       .catch(() => {
-        if (isMounted.current) setErrorMessage('저장된 영상 목록을 불러오지 못했어요.');
+        if (isMounted.current) setErrorMessage('찍은 스냅을 불러오지 못했어요.');
       })
       .finally(() => {
         if (isMounted.current) setIsLoading(false);
@@ -65,8 +65,7 @@ export function useLocalRecordings() {
       }
       return recording;
     } catch {
-      if (isMounted.current)
-        setErrorMessage('촬영한 영상을 저장하지 못했어요. 다시 시도해 주세요.');
+      if (isMounted.current) setErrorMessage('스냅을 저장하지 못했어요. 다시 시도해 주세요.');
       return undefined;
     }
   };

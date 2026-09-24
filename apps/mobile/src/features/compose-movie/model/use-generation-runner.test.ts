@@ -313,7 +313,7 @@ describe('useGenerationRunner', () => {
       await renderHook(() => useGenerationRunner());
     });
 
-    expect(mockFail).toHaveBeenCalledWith('m1', expect.stringContaining('\uC11C\uBC84'), undefined); // 서버
+    expect(mockFail).toHaveBeenCalledWith('m1', expect.stringContaining('\uAE30\uB85D'), undefined); // 기록
   });
 
   it('leaves a job running when this device cannot reach the backend', async () => {
@@ -344,9 +344,9 @@ describe('useGenerationRunner', () => {
 
     expect(mockFail).toHaveBeenCalledWith(
       'm1',
-      expect.stringContaining('\uC2A4\uB0C5 \uC6D0\uBCF8'),
+      expect.stringContaining('\uC2A4\uB0C5\uC774 \uBAA8\uB450 \uC0AD\uC81C'),
       undefined,
-    ); // 스냅 원본
+    ); // 스냅이 모두 삭제
     expect(mockGetEditJob).not.toHaveBeenCalled();
   });
 

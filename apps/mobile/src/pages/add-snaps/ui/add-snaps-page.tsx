@@ -76,12 +76,12 @@ export function AddSnapsPage({ movieId }: AddSnapsPageProps) {
         <BackBar onPress={goBack} />
         <View style={[styles.screen, styles.centered]}>
           <ThemedText type="heading">
-            {movie ? '지금은 컷을 더 넣을 수 없어요' : '무비를 찾을 수 없어요'}
+            {movie ? '지금은 스냅을 더 넣을 수 없어요' : '무비를 찾을 수 없어요'}
           </ThemedText>
           <ThemedText themeColor="textSecondary" style={styles.centerText}>
             {movie
-              ? '생성이 끝나면 이 무비에 스냅을 더 넣을 수 있어요.'
-              : '이미 사라졌거나 잘못된 주소예요.'}
+              ? '다 만들어지면 이 무비에 스냅을 더 넣을 수 있어요.'
+              : '이미 삭제됐거나 없는 무비예요.'}
           </ThemedText>
         </View>
       </View>
