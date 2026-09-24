@@ -215,7 +215,7 @@ Never mix sort and filter into one unlabeled control.
 - **Knows.** What it costs (time, quota, money), what they get, and that they can inspect before committing.
 - **First.** The result-to-be — the cut list, the style, the length — as a reviewable summary.
 - **Default.** All inputs defaulted so the action is one tap for the common case; never pre-commit; never auto-start on screen entry.
-- **CTA.** Outcome plus cost adjacency: `AI로 생성 시작` with the cost stated next to it, not after the tap.
+- **CTA.** Outcome plus cost adjacency: `무비 만들기` with the cost stated next to it, not after the tap.
 - **Disclosure.** Fine-grained control is available before the commit and stays available after the result (per this project's decision that edits follow generation — see [`../features/movie.md`](../features/movie.md)).
 
 Cost is always disclosed *before* the commit. `Value first, cost later` orders the reveal; it never hides the bill.

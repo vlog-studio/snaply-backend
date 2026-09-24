@@ -98,7 +98,7 @@ The replacement for explanation. A read-out is a short labeled fact that makes t
 | Upload in progress | `2개 올리는 중` |
 | Offline queue | `연결되면 올라가요` |
 | Generation running | `만드는 중 · 1분 정도 걸려요` |
-| Template match | `4칸 중 3칸 채웠어요` |
+| Template match | `4컷 중 3컷 채웠어요` |
 
 **Form.** `[object] [number]`, or `[verb]-는 중`. Present tense. No terminal punctuation. Numerals as digits. Units in Korean (`초`, `분`, `개`). Never a percentage the user cannot act on.
 
@@ -141,17 +141,24 @@ Fixed product vocabulary. Use exactly these words; never introduce a synonym.
 
 | Term | Means | Never |
 | --- | --- | --- |
-| 스냅 | One short recorded or extracted clip | 클립, 영상, 필름, 사진 |
-| 무비 | One generated video, or the draft collecting toward it | 비디오, 결과물, 프로젝트 |
-| 컷 | One snap inside a movie | 장면, 조각 |
+| 스냅 | One short recorded or extracted clip | 클립, 영상, 동영상, 순간, 필름, 사진 |
+| 영상 | Only a gallery video a snap is cut from (`영상에서 스냅 가져오기`, `다른 영상 고르기`) | Any snap |
+| 무비 | One generated video, or the draft collecting toward it | 브이로그, 비디오, 결과물, 프로젝트, 완성 파일 |
+| 컷 | One snap inside a movie, and one slot of a template | 장면, 조각, 칸, 자리, 슬롯 |
+| 만들기 | Making a movie (`무비 만들기`, `만드는 중`, `다시 만들기`) | 생성 |
 | 스튜디오 | The tab where a movie is started | 홈, 메인 |
-| 가져오기 | Importing from the gallery | 업로드, 임포트 |
+| 가져오기 | Importing from the gallery | 업로드, 임포트, 추출 |
+| 올리기 | Sending a snap to the server (`올리는 중`, `다시 올리기`) | 업로드 |
+| 삭제 | Removing something: `…삭제할까요?` / `삭제` / `삭제하는 중…` | 지우기, 지울까요 |
+| 정리 | Removing a finished movie's server copy once the user saved it (`무비 정리`, `정리하기`) | 끝내기, 서버에서 삭제 |
 
 `트레이` left the vocabulary with the tray's removal (2026-08-12): picks now go straight into a movie (`이 스냅으로 새 무비`, `스냅 더 넣기`), and no surface may name a destination other than a movie. Do not reintroduce it.
 
-`담기` / `담김` stayed, because it names the **act** of taking a snap and the confirmation that one was taken, which no other word covers: the shutter's `꾹 눌러 담기` and `다시 담기`, the `담김 · 스냅 N개` badge after a capture or an extraction, and the picker cell's `담김` badge for a snap the target movie already holds. Use it for the act and its confirmation only — never for a place things are collected into, which is what the tray was.
+`담김` stayed, because it names the confirmation that a snap was taken, which no other word covers: the `담김 · 스냅 N개` badge after a capture or an extraction, and the picker cell's `담김` badge for a snap the target movie already holds. Use it for that confirmation only — never for a place things are collected into, which is what the tray was.
 
-Internal vocabulary that must never appear on screen: queue, job, sync, geofence, model, generation id, error codes, enum values, route names.
+The camera's own controls say `찍기` (owner decision, 2026-09-24): the shutter's `꾹 눌러 찍기`, the review stage's `다시 찍기`, and the template's `지금 찍기` — the everyday word a first-time user already has for pointing a camera. Never `촬영` or `담기` on a camera control. Cutting a snap out of a gallery video is not shooting, so the extract screen's `이 구간을 스냅으로 담기` keeps `담기`.
+
+Internal vocabulary that must never appear on screen: queue, job, sync, geofence, model, generation id, error codes, enum values, route names — and their Korean forms: 서버, 작업, 소켓, 슬롯, 스팟, 원본 다운로드, 예약 크레딧. Server and worker messages (API error text, `errorDetail`, generation step names) are never shown verbatim; the app maps them to its own copy.
 
 When a new concept needs a name: pick a Korean word a first-time user would use, add it to this table, and use it in every surface at once. Renaming later costs more than naming carefully now.
 
@@ -159,7 +166,9 @@ When a new concept needs a name: pick a Korean word a first-time user would use,
 
 ## Tone
 
-- 해요체 everywhere, including errors and system-initiated messages.
+- 해요체 everywhere, including errors, push notifications, and system-initiated messages. No 합니다체, and no ~시 honorific (`잊었나요`, not `잊으셨나요`; `없나요`, not `없으신가요`).
+- Spacing: the auxiliary 주다 is spaced (`시도해 주세요`, `넣어 주세요`, `빼 주세요`, `채워 보세요`); `드려요` stays joined (`보내드려요`, `알려드려요`). The ellipsis is `…`, never `...`.
+- No English in product copy except brand names (Snaply, Google, TikTok, Instagram): durations are `3초`, not `3s`, and a CTA says `무비 만들기`, not `AI로 생성 시작`.
 - Active and positive: `와이파이에서만 올려요` over `모바일 데이터로는 올릴 수 없습니다`.
 - Calm, not cute. No exclamation marks except in genuine celebration, and at most one per screen.
 - No urgency pressure, no fear, no dark-pattern framing of the decline option (`Suggest over force`).
