@@ -53,6 +53,8 @@ Classify a document by its primary audience before creating or editing it:
 
 Preserve code identifiers, commands, API names, product names, and other technical terms when translating them would reduce precision.
 
+These rules govern documents only. Replies to the user — answers, progress updates, questions, and change reports — are written in Korean, per the root [`AGENTS.md`](../../AGENTS.md) "응답 언어" section.
+
 ## Verification
 
 - Run `npm run verify:mobile` from the monorepo root, or `npm run verify` from `apps/mobile`, before finishing any code change. Both invoke the same canonical gate; its check list is defined once in `apps/mobile/package.json`, and CI runs the workspace command.
