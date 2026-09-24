@@ -33,7 +33,7 @@ export function SignInPage() {
               SNAPLY
             </ThemedText>
             <ThemedText type="title" style={styles.centerText}>
-              {'찍기만 하세요.\n나머지는 스냅리가.'}
+              {'3초씩 찍으면\n한 편의 무비가 돼요'}
             </ThemedText>
           </View>
 
@@ -52,13 +52,13 @@ export function SignInPage() {
 
             <Link href="/reset-password" style={styles.centerLink}>
               <ThemedText type="link" themeColor="textSecondary">
-                비밀번호를 잊으셨나요?
+                비밀번호를 잊었나요?
               </ThemedText>
             </Link>
 
             <View style={styles.signUpRow}>
               <ThemedText type="small" themeColor="textSecondary">
-                계정이 없으신가요?
+                계정이 없나요?
               </ThemedText>
               <Link href="/sign-up">
                 <ThemedText type="linkPrimary">가입하기</ThemedText>
@@ -66,7 +66,7 @@ export function SignInPage() {
             </View>
 
             <ThemedText type="small" themeColor="textSecondary" style={styles.disclaimer}>
-              계속하면 서비스 이용약관과 개인정보 처리방침에 동의하게 됩니다.
+              계속하면 서비스 이용약관과 개인정보 처리방침에 동의하게 돼요.
             </ThemedText>
           </View>
         </ScrollView>
