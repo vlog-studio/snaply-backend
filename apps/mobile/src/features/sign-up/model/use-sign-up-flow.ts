@@ -6,7 +6,7 @@ import { mockSignUpProvider } from './mock-sign-up-provider';
 import { EmailAlreadyRegisteredError, type SignUpProvider } from './sign-up-provider';
 import { supabaseSignUpProvider } from './supabase-sign-up-provider';
 
-const SIGN_UP_ERROR_MESSAGE = '가입에 실패했어요. 잠시 후 다시 시도해 주세요.';
+const SIGN_UP_ERROR_MESSAGE = '가입하지 못했어요. 잠시 후 다시 시도해 주세요.';
 const EMAIL_TAKEN_MESSAGE = '이미 가입된 이메일이에요. 로그인해 주세요.';
 
 // Real sign-up over Supabase; the offline mock is used only in development builds

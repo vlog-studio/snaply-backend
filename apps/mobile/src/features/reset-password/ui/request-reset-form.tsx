@@ -27,7 +27,7 @@ export function RequestResetForm({ onSubmit, isPending, error }: Props) {
   return (
     <View style={styles.form}>
       <ThemedText type="small" themeColor="textSecondary">
-        가입한 이메일 주소로 인증 코드를 보내드려요.
+        가입한 이메일 주소로 재설정 링크를 보내드려요.
       </ThemedText>
       <FormTextField
         control={control}
@@ -48,7 +48,7 @@ export function RequestResetForm({ onSubmit, isPending, error }: Props) {
         </ThemedText>
       ) : null}
       <SnaplyButton
-        title={isPending ? '전송 중…' : '인증 코드 받기'}
+        title={isPending ? '보내는 중…' : '재설정 링크 받기'}
         disabled={isPending}
         onPress={() => void submit()}
       />

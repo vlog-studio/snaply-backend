@@ -20,7 +20,7 @@ export function EmailSentNotice({ email, onResend, isPending, error }: Props) {
     <View style={styles.container}>
       <ThemedText type="heading">메일을 확인해 주세요</ThemedText>
       <ThemedText themeColor="textSecondary">
-        {`${email} 주소로 인증 링크를 보냈어요. 이 기기에서 메일의 링크를 누르면 인증이 완료되고 자동으로 로그인됩니다.`}
+        {`${email} 주소로 인증 링크를 보냈어요. 이 기기에서 메일의 링크를 누르면 인증이 끝나고 바로 로그인돼요.`}
       </ThemedText>
       {error ? (
         <ThemedText type="small" themeColor="danger">

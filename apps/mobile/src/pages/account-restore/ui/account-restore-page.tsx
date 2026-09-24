@@ -39,7 +39,7 @@ export function AccountRestorePage() {
         <ThemedText type="small" themeColor="textSecondary">
           {purgeAfter
             ? `${formatFullDate(purgeAfter.getTime())} 이후 영구 삭제`
-            : '기한이 지나면 영구 삭제됩니다'}
+            : '기한이 지나면 영구 삭제돼요'}
         </ThemedText>
       </View>
 

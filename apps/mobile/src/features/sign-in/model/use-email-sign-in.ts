@@ -9,7 +9,7 @@ import { supabaseEmailAuthProvider } from './supabase-email-auth-provider';
 
 const SIGN_IN_ERROR_MESSAGE = '이메일 또는 비밀번호를 확인해 주세요.';
 const EMAIL_NOT_CONFIRMED_MESSAGE =
-  '이메일 인증이 아직 완료되지 않았어요. 받은 인증 코드로 인증을 완료해 주세요.';
+  '이메일 인증이 아직 안 됐어요. 가입할 때 받은 메일의 링크를 눌러 주세요.';
 
 // Real email/password auth over Supabase. In development builds without Supabase
 // credentials, fall back to the offline mock so the flow can be exercised end to

@@ -7,7 +7,7 @@ import type { AuthProvider } from './auth-provider';
 import { mockAuthProvider } from './mock-auth-provider';
 import { SignInCancelledError, supabaseAuthProvider } from './supabase-auth-provider';
 
-const SIGN_IN_ERROR_MESSAGE = '로그인에 실패했어요. 잠시 후 다시 시도해 주세요.';
+const SIGN_IN_ERROR_MESSAGE = '로그인하지 못했어요. 잠시 후 다시 시도해 주세요.';
 
 // Real authentication over Supabase Auth. In development builds without Supabase
 // credentials, fall back to the offline mock provider so the sign-in flow can be
