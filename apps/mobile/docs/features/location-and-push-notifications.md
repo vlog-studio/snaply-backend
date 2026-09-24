@@ -2,7 +2,7 @@
 
 ## User goal
 
-While signed in, Snaply can notify the user when they arrive near a nearby capture spot ("주변 촬영 스팟"). The device registers for push, monitors the nearest points in the background, and reports arrivals so the backend can send an arrival push. The user's preference for this — the master switch, quiet hours, and interests — lives in [Me tab](me.md); this document owns the mechanism those preferences drive.
+While signed in, Snaply can notify the user when they arrive near a nearby place worth shooting (the opt-in sheet asks "주변 장소 알림을 받을까요?"). The device registers for push, monitors the nearest points in the background, and reports arrivals so the backend can send an arrival push. The user's preference for this — the master switch, quiet hours, and interests — lives in [Me tab](me.md); this document owns the mechanism those preferences drive.
 
 The backend owns the arrival decision and FCM send, and that pipeline is implemented. The client also registers push tokens and monitors OS geofences against the real API when an origin is configured. What remains unverified is the complete real-device path from a geofence enter event to a displayed notification.
 

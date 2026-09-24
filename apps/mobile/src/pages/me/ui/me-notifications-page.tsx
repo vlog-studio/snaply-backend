@@ -6,39 +6,23 @@ import {
   useMovieReadyAlerts,
   useQuietEnd,
   useQuietStart,
-  useReminderFrequency,
-  useReminderWindows,
   useSetQuietEnd,
   useSetQuietStart,
-  useSetReminderFrequency,
-  useSetReminderWindow,
-  type ReminderWindowId,
 } from '@/features/notification-settings';
 import { MaxContentWidth, Radius, Spacing, useTheme } from '@/shared/ui/theme';
 import { ThemedText } from '@/shared/ui/themed-text';
 
-import { reminderWindowOptions } from '../model/reminder-windows';
 import { LocationAlertsSheet } from './location-alerts-sheet';
-import { OptionPill, RowDivider, SettingRow, SettingsSection, type RowIconName } from './rows';
-
-const reminderWindowIcons: Record<ReminderWindowId, RowIconName> = {
-  morning: 'partly-sunny-outline',
-  lunch: 'sunny-outline',
-  evening: 'moon-outline',
-};
+import { RowDivider, SettingRow, SettingsSection } from './rows';
 
 /**
  * The 알림 settings screen (`/settings/notifications`) — every notification
- * preference in one place: the capture-reminder windows and daily frequency,
- * the movie-completion and location alerts, and the quiet hours that bound
- * them all. The 나 tab keeps only the one-line summary of what is set here.
+ * preference in one place: the capture-reminder placeholders (준비 중), the
+ * movie-completion and location alerts, and the quiet hours that bound them
+ * all. The 나 tab keeps only the one-line summary of what is set here.
  */
 export function MeNotificationsPage() {
   const theme = useTheme();
-  const reminderWindows = useReminderWindows();
-  const setReminderWindow = useSetReminderWindow();
-  const reminderFrequency = useReminderFrequency();
-  const setReminderFrequency = useSetReminderFrequency();
   const movieReadyAlerts = useMovieReadyAlerts();
   const locationAlerts = useLocationAlerts();
   // The OS prompts run only after the in-app sheet's yes; flipping the switch
@@ -55,44 +39,14 @@ export function MeNotificationsPage() {
       style={{ backgroundColor: theme.background }}
       contentContainerStyle={styles.content}
     >
-      <SettingsSection title="촬영 리마인더">
-        {reminderWindowOptions.map((window, index) => (
-          <View key={window.id}>
-            {index > 0 ? <RowDivider /> : null}
-            <SettingRow
-              icon={reminderWindowIcons[window.id]}
-              title={window.label}
-              sub={window.time}
-              right={
-                <Switch
-                  accessibilityLabel={`${window.label} 촬영 리마인더`}
-                  value={reminderWindows[window.id]}
-                  onValueChange={(value) => setReminderWindow(window.id, value)}
-                  trackColor={{ false: theme.border, true: theme.primary }}
-                  thumbColor="#FFFFFF"
-                  ios_backgroundColor={theme.border}
-                />
-              }
-            />
-          </View>
-        ))}
+      {/* Reminders are a placeholder for the planned capability (owner
+          decision, 2026-09-24): no scheduler consumes the stored windows or
+          frequency, so a control would promise a notification that never
+          comes. Same treatment as 소셜 연결 — a row that reads 준비 중. */}
+      <SettingsSection>
+        <SettingRow icon="alarm-outline" title="촬영 리마인더" sub="준비 중" />
         <RowDivider />
-        <SettingRow
-          title="하루 빈도"
-          right={
-            <View style={styles.frequencyOptions}>
-              {[1, 2, 3].map((value) => (
-                <OptionPill
-                  key={value}
-                  label={`${value}회`}
-                  accessibilityLabel={`하루 ${value}회`}
-                  selected={reminderFrequency === value}
-                  onPress={() => setReminderFrequency(value)}
-                />
-              ))}
-            </View>
-          }
-        />
+        <SettingRow icon="repeat-outline" title="하루 빈도" sub="준비 중" />
       </SettingsSection>
 
       <SettingsSection title="무비 알림">
@@ -249,7 +203,6 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.eight,
     gap: Spacing.five,
   },
-  frequencyOptions: { flexDirection: 'row', gap: Spacing.two },
   stepper: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   stepperButton: {
     width: 40,

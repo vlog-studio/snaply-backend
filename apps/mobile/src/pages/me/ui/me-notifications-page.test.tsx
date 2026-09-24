@@ -65,8 +65,8 @@ function permissionResponse(granted: boolean) {
 
 // 위치 알림 받기
 const locationSwitchLabel = '\uC704\uCE58 \uC54C\uB9BC \uBC1B\uAE30';
-// 주변 스팟 알림을 받을까요?
-const sheetHeading = '\uC8FC\uBCC0 \uC2A4\uD31F \uC54C\uB9BC\uC744 \uBC1B\uC744\uAE4C\uC694?';
+// 주변 장소 알림을 받을까요?
+const sheetHeading = '\uC8FC\uBCC0 \uC7A5\uC18C \uC54C\uB9BC\uC744 \uBC1B\uC744\uAE4C\uC694?';
 const acceptLabel = '\uC54C\uB9BC \uBC1B\uAE30'; // 알림 받기
 const declineLabel = '\uC54C\uB9BC \uC548 \uBC1B\uAE30'; // 알림 안 받기
 
@@ -127,5 +127,23 @@ describe('MeNotificationsPage movie-ready alerts', () => {
 
     await waitFor(() => expect(screen.getByLabelText(settingsRowLabel)).toBeTruthy());
     expect(screen.getByLabelText(movieSwitchLabel).props.value).toBe(false);
+  });
+});
+
+// 촬영 리마인더 / 하루 빈도 / 준비 중
+const reminderTitle = '촬영 리마인더';
+const frequencyTitle = '하루 빈도';
+const comingSoon = '준비 중';
+
+describe('MeNotificationsPage capture reminders', () => {
+  it('shows the reminder rows as 준비 중 placeholders with no control', async () => {
+    await renderPage();
+
+    expect(screen.getByText(reminderTitle)).toBeTruthy();
+    expect(screen.getByText(frequencyTitle)).toBeTruthy();
+    expect(screen.getAllByText(comingSoon)).toHaveLength(2);
+    // Only the movie-completion and location switches remain.
+    expect(screen.getAllByRole('switch')).toHaveLength(2);
+    expect(screen.queryAllByRole('radio')).toHaveLength(0);
   });
 });

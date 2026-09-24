@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
+import Constants from 'expo-constants';
 import { useRouter, useScrollToTop } from 'expo-router';
 import { useRef } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -10,8 +11,8 @@ import { useClearSession, useCurrentUser } from '@/entities/session';
 import { useSnaps } from '@/entities/snap';
 import {
   useInterests,
-  useReminderFrequency,
-  useReminderWindows,
+  useMovieReadyEnabled,
+  useNotificationEnabled,
 } from '@/features/notification-settings';
 import {
   MaxContentWidth,
@@ -25,10 +26,11 @@ import {
 } from '@/shared/ui/theme';
 import { ThemedText } from '@/shared/ui/themed-text';
 
-import { reminderWindowOptions } from '../model/reminder-windows';
 import { recordedDayCount, weekRecord } from '../model/week-record';
 import { RowDivider, SettingRow } from './rows';
 import { WeekRing } from './week-ring';
+
+const appVersion = Constants.expoConfig?.version;
 
 const themeModeLabels: Record<ThemeMode, string> = {
   system: '시스템',
@@ -56,8 +58,8 @@ export function MePage() {
   const clearSession = useClearSession();
   const snaps = useSnaps();
   const movies = useMovies();
-  const reminderWindows = useReminderWindows();
-  const reminderFrequency = useReminderFrequency();
+  const movieReadyAlerts = useMovieReadyEnabled();
+  const locationAlerts = useNotificationEnabled();
   const themeMode = useThemeMode();
   const interests = useInterests();
   const creditBalance = useQuery(creditQueries.balance());
@@ -65,12 +67,12 @@ export function MePage() {
   const days = weekRecord(snaps.map((snap) => snap.capturedAt));
   const recordedDays = recordedDayCount(days);
 
-  const enabledWindows = reminderWindowOptions
-    .filter((window) => reminderWindows[window.id])
-    .map((window) => window.label);
-  const reminderSummary = enabledWindows.length
-    ? `${enabledWindows.join(' · ')} · 하루 ${reminderFrequency}회`
-    : '리마인더 꺼짐';
+  // Reminders are 준비 중, so the read-out summarizes only the alerts that
+  // actually arrive.
+  const enabledAlerts = [movieReadyAlerts && '무비 완성', locationAlerts && '위치'].filter(
+    (label): label is string => Boolean(label),
+  );
+  const alertSummary = enabledAlerts.length ? enabledAlerts.join(' · ') : '모두 꺼짐';
   const interestSummary = interests.length ? interests.join(' · ') : '선택 안 함';
 
   return (
@@ -123,7 +125,7 @@ export function MePage() {
         <SettingRow
           icon="notifications-outline"
           title="알림"
-          sub={reminderSummary}
+          sub={alertSummary}
           subLines={1}
           right={<Chevron />}
           onPress={() => router.push('/settings/notifications')}
@@ -150,7 +152,7 @@ export function MePage() {
         <SettingRow
           icon="link-outline"
           title="소셜 연결"
-          sub="연결 안 됨"
+          sub="준비 중"
           subLines={1}
           right={<Chevron />}
           onPress={() => router.push('/settings/social')}
@@ -179,7 +181,7 @@ export function MePage() {
       </View>
 
       <ThemedText type="small" themeColor="textSecondary" style={styles.version}>
-        Snaply 1.0 · 찍으면 알아서 됩니다.
+        {appVersion ? `Snaply ${appVersion}` : 'Snaply'}
       </ThemedText>
     </ScrollView>
   );

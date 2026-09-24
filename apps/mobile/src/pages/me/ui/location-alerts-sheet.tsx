@@ -25,10 +25,10 @@ export function LocationAlertsSheet({ visible, onAccept, onDecline }: LocationAl
 
   return (
     <BottomSheet accessibilityLabel="위치 알림 켜기" visible={visible} onClose={onDecline}>
-      <ThemedText type="heading">주변 스팟 알림을 받을까요?</ThemedText>
+      <ThemedText type="heading">주변 장소 알림을 받을까요?</ThemedText>
       <ThemedText themeColor="textSecondary">
-        촬영 스팟에 도착하면 알려드려요. 앱을 열지 않아도 알리려면 위치 &apos;항상 허용&apos;이
-        필요해요.
+        찍기 좋은 장소에 도착하면 알려드려요. 앱을 열지 않아도 알리려면 위치를 &apos;항상
+        허용&apos;해야 해요.
       </ThemedText>
 
       <View style={styles.actions}>
