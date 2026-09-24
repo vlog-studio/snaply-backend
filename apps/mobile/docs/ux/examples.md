@@ -203,7 +203,7 @@ An "after" is a recommendation, so it must never stand on a concept the product 
   L1  컷 6개 · 15초
   L3  스타일  기본 ▾        ← default applied, visible, one tap to change
   L3  순서    찍은 순서 ▾
-  L2  [AI로 생성 시작]  · 1분 정도 걸려요     ← cost adjacent to the commit
+  L2  [무비 만들기]  · 1분 정도 걸려요     ← cost adjacent to the commit
   L5  세부 조정 →           ← music, transitions, per-cut trim
   policy: model, auto-cut
 ```

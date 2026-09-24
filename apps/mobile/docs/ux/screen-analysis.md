@@ -196,7 +196,7 @@ Before calling the analysis done, run these checks. They are cheap and catch mos
 
 **Step 1.** The user wants to see whether their video came out right, and fix it if not.
 
-**Step 2.** Primary action depends on state: draft → `AI로 생성 시작`; watch → play. Two states, two primary actions on one route — record that the screen is state-switched, and analyze each state separately.
+**Step 2.** Primary action depends on state: draft → `무비 만들기`; watch → play. Two states, two primary actions on one route — record that the screen is state-switched, and analyze each state separately.
 
 **Step 3 (draft).** Required: how many cuts, in what order, the chosen style, and that generation is the costly step. **Step 4.** `supports`: cut list, style. `later`: per-cut trim precision. `elsewhere`: nothing. **Step 5.** Decisions on the primary path: order (user, answerable, common → keep), style (user, answerable, common → keep with default), model/length (system → default it).
 
