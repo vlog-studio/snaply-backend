@@ -25,7 +25,7 @@ const PageGutter = Spacing.five;
  *
  * It sits beside the tray rather than replacing it, because the two answer
  * different questions — the tray is "these ones", a template is "something like
- * this" — and because the shortfall a card prints ("4/6컷 있음") is the one thing
+ * this" — and because the shortfall a card prints ("6컷 중 4컷 있어요") is the one thing
  * in the app that tells a user what to go out and shoot.
  *
  * The row scrolls out through the page's own padding: bleeding to the screen
@@ -54,7 +54,7 @@ export function TemplatePanel({ offers, onOpen }: TemplatePanelProps) {
             <Pressable
               key={template.id}
               accessibilityRole="button"
-              accessibilityLabel={`${template.name} · ${template.description} · ${slotCount}컷 중 ${filled}컷 있음`}
+              accessibilityLabel={`${template.name} · ${template.description} · ${slotCount}컷 중 ${filled}컷 있어요`}
               onPress={() => onOpen(template.id)}
               style={({ pressed }) => [
                 styles.card,
@@ -82,9 +82,7 @@ export function TemplatePanel({ offers, onOpen }: TemplatePanelProps) {
                 type="note"
                 themeColor={isComplete ? 'lumen' : 'textSecondary'}
               >
-                {isComplete
-                  ? `${slotCount}/${slotCount}컷 있음`
-                  : `${filled}/${slotCount}컷 있음 · ${slotCount - filled}컷 더`}
+                {isComplete ? '바로 만들 수 있어요' : `${slotCount}컷 중 ${filled}컷 있어요`}
               </ThemedText>
             </Pressable>
           );

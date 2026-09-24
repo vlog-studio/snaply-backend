@@ -8,8 +8,8 @@ import { CancelRunControl } from './cancel-run-control';
 const cancelLabel = '만들기 취소';
 // 계속 만들기
 const keepLabel = '계속 만들기';
-// 서버에 연결하지 못했어요 (the unreachable line's head)
-const unreachableHead = '서버에 연결하지 못했어요';
+// 연결하지 못했어요 (the unreachable line's head)
+const unreachableHead = '^연결하지 못했어요';
 
 function renderControl(cancel: () => Promise<CancellationOutcome>) {
   return render(<CancelRunControl cancel={cancel} />);

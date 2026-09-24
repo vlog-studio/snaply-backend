@@ -32,7 +32,7 @@ jest.mock('@/features/share-movie', () => ({
   // The bar words the block from this table, so the mock has to carry it.
   ShareBlockMessages: {
     'no-render':
-      '\uC544\uC9C1 \uC644\uC131 \uD30C\uC77C\uC774 \uB9CC\uB4E4\uC5B4\uC9C0\uC9C0 \uC54A\uC544 \uACF5\uC720\uD560 \uC218 \uC5C6\uC5B4\uC694.',
+      '\uC544\uC9C1 \uC644\uC131\uB41C \uBB34\uBE44\uAC00 \uC5C6\uC5B4\uC11C \uACF5\uC720\uD560 \uC218 \uC5C6\uC5B4\uC694.',
   },
 }));
 
@@ -161,9 +161,9 @@ describe('MoviesPage', () => {
     );
     expect(mockDeleteMovie).not.toHaveBeenCalled();
 
-    // 무비 2편을 지울까요? → 2편 삭제
+    // 무비 2편을 삭제할까요? → 2편 삭제
     expect(
-      await screen.findByText('\uBB34\uBE44 2\uD3B8\uC744 \uC9C0\uC6B8\uAE4C\uC694?'),
+      await screen.findByText('\uBB34\uBE44 2\uD3B8\uC744 \uC0AD\uC81C\uD560\uAE4C\uC694?'),
     ).toBeTruthy();
     await fireEvent.press(screen.getByRole('button', { name: '2\uD3B8 \uC0AD\uC81C' }));
 

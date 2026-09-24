@@ -201,7 +201,7 @@ describe('useTemplateFill', () => {
     expect(result.current.hasMatch).toBe(false);
     expect(result.current.filledCount).toBe(0);
     expect(result.current.slots).toHaveLength(3);
-    expect(result.current.summary).toContain('빈 자리를 찍어서');
+    expect(result.current.summary).toContain('빈 컷을 찍어');
   });
 
   it('answers empty for no template at all', async () => {

@@ -51,7 +51,7 @@ describe('useLocalRecordings', () => {
     const { result } = await renderHook(() => useLocalRecordings());
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(result.current.errorMessage).toBe('저장된 영상 목록을 불러오지 못했어요.');
+    expect(result.current.errorMessage).toBe('찍은 스냅을 불러오지 못했어요.');
     expect(result.current.recordings).toEqual([]);
   });
 
@@ -88,9 +88,7 @@ describe('useLocalRecordings', () => {
     });
 
     expect(returned).toBeUndefined();
-    expect(result.current.errorMessage).toBe(
-      '촬영한 영상을 저장하지 못했어요. 다시 시도해 주세요.',
-    );
+    expect(result.current.errorMessage).toBe('스냅을 저장하지 못했어요. 다시 시도해 주세요.');
     expect(result.current.recordings).toEqual([existing]);
   });
 

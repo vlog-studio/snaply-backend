@@ -156,7 +156,7 @@ function SnapExtractScreen({ sourceUri, knownDurationSec }: SnapExtractPageProps
     >
       <View style={styles.topBar}>
         <Pressable
-          accessibilityLabel="추출 닫기"
+          accessibilityLabel="가져오기 닫기"
           onPress={() => router.back()}
           style={styles.utilityButton}
         >
@@ -166,7 +166,7 @@ function SnapExtractScreen({ sourceUri, knownDurationSec }: SnapExtractPageProps
         </Pressable>
         <View style={styles.modePill}>
           <ThemedText selectable={false} type="note" style={styles.whiteText}>
-            {collectedCount > 0 ? `스냅 ${collectedCount}개 담김` : '스냅 추출'}
+            {collectedCount > 0 ? `스냅 ${collectedCount}개 담김` : '스냅 가져오기'}
           </ThemedText>
         </View>
         <Pressable
@@ -305,7 +305,7 @@ function SnapExtractScreen({ sourceUri, knownDurationSec }: SnapExtractPageProps
 
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="추출 마치기"
+          accessibilityLabel="가져오기 마치기"
           onPress={() => router.back()}
           style={styles.sideControl}
         >

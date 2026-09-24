@@ -18,7 +18,7 @@ export type MovieFailureNoticeProps = {
   variant?: 'row' | 'tile';
 };
 
-const UnknownError = '알 수 없는 이유로 생성이 멈췄어요.';
+const UnknownError = '무비를 만들지 못했어요.';
 
 /**
  * A failed movie's way back: what went wrong, and running it again.
@@ -61,7 +61,7 @@ export function MovieFailureNotice({
       {snapCount > 0 ? (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="생성 다시 시도"
+          accessibilityLabel="다시 만들기"
           hitSlop={8}
           // A refusal here has nowhere to be shown — this notice is one line on a
           // card — so a retry that cannot start simply leaves the movie failed,
@@ -79,7 +79,7 @@ export function MovieFailureNotice({
         </Pressable>
       ) : (
         <ThemedText type="note" themeColor="textSecondary" numberOfLines={1}>
-          무비를 열어 스냅을 다시 넣어주세요.
+          무비를 열어 스냅을 다시 넣어 주세요.
         </ThemedText>
       )}
     </View>

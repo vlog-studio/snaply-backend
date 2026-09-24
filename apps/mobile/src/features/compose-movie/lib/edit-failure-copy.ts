@@ -16,14 +16,14 @@
  * layers that may not import each other.
  */
 const EditFailureMessages: Record<string, string> = {
-  TIMEOUT: '시간이 오래 걸려 만들지 못했어요. 다시 시도해주세요.',
-  SOURCE_UNAVAILABLE: '서버에서 스냅 원본을 찾지 못했어요. 다시 시도해주세요.',
-  QUEUE_FAILED: '작업을 시작하지 못했어요. 다시 시도해주세요.',
-  INTERNAL: '서버 문제로 만들지 못했어요. 다시 시도해주세요.',
+  TIMEOUT: '시간이 오래 걸려 만들지 못했어요. 다시 시도해 주세요.',
+  SOURCE_UNAVAILABLE: '스냅 파일을 찾지 못했어요. 다시 시도해 주세요.',
+  QUEUE_FAILED: '만들기를 시작하지 못했어요. 다시 시도해 주세요.',
+  INTERNAL: '무비를 만들지 못했어요. 다시 시도해 주세요.',
 };
 
 /** A run that failed without saying why — no code, nothing to classify. */
-const UnexplainedFailureMessage = '만들지 못했어요. 다시 시도해주세요.';
+const UnexplainedFailureMessage = '무비를 만들지 못했어요. 다시 시도해 주세요.';
 
 /** The user-facing reason for a failure classified as `code`. */
 export function editFailureMessage(code: string | undefined): string {

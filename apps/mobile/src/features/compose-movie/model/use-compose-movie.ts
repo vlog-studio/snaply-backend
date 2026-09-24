@@ -54,9 +54,10 @@ export type CutsOutcome = {
  * than discovered as a refusal after the user has pressed the button.
  * `rejected` — the backend refused the run and said why: a cut whose snap has
  * expired or been deleted on the server (`unavailable`, a 400), or a video that
- * is not the caller's or not ready (a 403). It carries the server's own message,
- * because one status does not say which of those it was — and the set can grow,
- * which is the other reason nothing here rewords it.
+ * is not the caller's or not ready (a 403). It carries the server's own message
+ * for debugging, because one status does not say which of those it was; the
+ * screen never shows that text — it is a server diagnostic, not user copy
+ * (2026-09-24).
  * `no-credit` — the backend refused to reserve the run's 100 credits
  * (`402 INSUFFICIENT_CREDITS`). Its own refusal rather than a `rejected`,
  * because it is the one the screen can do something about: say the numbers and
@@ -72,8 +73,9 @@ export type GenerationOutcome = {
   refused?: GenerationRefusal;
   /**
    * What the backend said, for the refusals only it can explain (`rejected`).
-   * Shown as-is: the server distinguishes one cause from another in the message
-   * and nowhere else, so wording it here would mean guessing which one it was.
+   * Kept for debugging only: the server distinguishes one cause from another in
+   * the message and nowhere else, but its text is not user copy, so screens word
+   * the refusal themselves.
    */
   message?: string;
   /** The 402's numbers, when a `no-credit` refusal carried them. */
@@ -360,7 +362,7 @@ export function useComposeMovie() {
       try {
         jobId = await exportRemoteMovie(movieId);
       } catch (error) {
-        // A refusal the backend can explain is reported in its own words; a
+        // A refusal the backend can explain keeps its words for debugging; a
         // transport failure is not the user's to interpret.
         if (error instanceof ApiError && (error.status === 400 || error.status === 403)) {
           return { started: false, refused: 'rejected', message: error.message };

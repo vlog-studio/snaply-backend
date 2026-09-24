@@ -14,32 +14,46 @@ export const CutsRefusalMessages: Record<CutsRefusal, string> = {
 /**
  * Why a run could not be started, in the user's words.
  *
- * `rejected` has no entry: that refusal carries the backend's own message, which
- * is the only thing that tells one cause from another — an ownership problem, a
- * video that is not ready, and whatever the backend refuses next all arrive as
- * one status with one code.
+ * `rejected` is worded here too, never with the backend's own message: that
+ * refusal lumps an ownership problem, a video that is not ready, and whatever
+ * the backend refuses next into one status with one code, and its text is a
+ * server diagnostic, not user copy (2026-09-24).
+ *
+ * `no-credit` says only the shortfall: there is no purchase, so the one way to
+ * top up — watching a rewarded ad — is named only when that door is open
+ * (`generationRefusalMessage`'s `adsEnabled`).
  */
-export const GenerationRefusalMessages: Record<Exclude<GenerationRefusal, 'rejected'>, string> = {
-  empty: '컷이 하나도 없어서 만들 수 없어요. 스냅을 먼저 넣어주세요.',
+export const GenerationRefusalMessages: Record<GenerationRefusal, string> = {
+  empty: '컷이 하나도 없어서 만들 수 없어요. 스냅을 먼저 넣어 주세요.',
   frozen: '이미 만드는 중이에요.',
-  uploading: '스냅을 서버에 올리는 중이에요. 잠시 뒤에 다시 시도해주세요.',
-  'no-credit': '크레딧이 부족해요. 나 탭의 크레딧에서 채울 수 있어요.',
-  unreachable: '서버에 연결하지 못했어요. 연결을 확인하고 다시 시도해주세요.',
+  uploading: '스냅을 올리는 중이에요. 다 올라가면 만들 수 있어요.',
+  'no-credit': '크레딧이 부족해요.',
+  unreachable: '연결하지 못했어요. 인터넷 연결을 확인하고 다시 시도해 주세요.',
+  rejected: '지금은 무비를 만들 수 없어요. 잠시 후 다시 시도해 주세요.',
 };
 
-/** The line for a refusal, using the server's wording when it sent one. */
+/** Appended to a credit refusal only while the rewarded-ad entry is open. */
+const AdTopUpHint = ' 나 탭 크레딧에서 광고를 보고 받을 수 있어요.';
+
+/**
+ * The line for a refusal.
+ *
+ * `adsEnabled` mirrors what the credits screen reads to show its ad row
+ * (`adRewardQueries.availability().enabled`); without it a credit refusal
+ * names no way out rather than one that is not there.
+ */
 export function generationRefusalMessage(
   refused: GenerationRefusal,
-  message?: string,
   shortfall?: CreditShortfall,
+  adsEnabled = false,
 ): string {
-  if (refused === 'rejected') return message ?? '지금은 만들 수 없어요.';
+  if (refused !== 'no-credit') return GenerationRefusalMessages[refused];
   // The 402's own numbers, when it carried them: what this run costs and what
   // the account holds is the whole decision the user is about to make.
-  if (refused === 'no-credit' && shortfall) {
-    return `크레딧이 부족해요 · ${shortfall.balance}/${shortfall.required}. 나 탭의 크레딧에서 채울 수 있어요.`;
-  }
-  return GenerationRefusalMessages[refused];
+  const base = shortfall
+    ? `크레딧이 부족해요 · ${shortfall.balance}/${shortfall.required}.`
+    : GenerationRefusalMessages['no-credit'];
+  return adsEnabled ? `${base}${AdTopUpHint}` : base;
 }
 
 /**

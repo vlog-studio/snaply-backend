@@ -30,7 +30,7 @@ export function RecordingLibrary({
   const theme = useTheme();
 
   const confirmDelete = (recording: LocalRecording) => {
-    Alert.alert('영상을 삭제할까요?', '삭제한 영상은 복구할 수 없어요.', [
+    Alert.alert('스냅을 삭제할까요?', '삭제한 스냅은 되돌릴 수 없어요.', [
       { text: '취소', style: 'cancel' },
       {
         text: '삭제',
@@ -59,9 +59,9 @@ export function RecordingLibrary({
       >
         <View style={styles.header}>
           <View style={styles.titleBlock}>
-            <ThemedText type="heading">내 촬영 영상</ThemedText>
+            <ThemedText type="heading">찍은 스냅</ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
-              앱에 저장된 영상 {recordings.length}개
+              앱에 저장된 스냅 {recordings.length}개
             </ThemedText>
           </View>
           <Pressable
@@ -92,7 +92,7 @@ export function RecordingLibrary({
                 </ThemedText>
               </View>
               <ThemedText type="heading">
-                {isLoading ? '영상을 불러오는 중' : '아직 저장된 영상이 없어요'}
+                {isLoading ? '스냅을 불러오는 중' : '아직 찍은 스냅이 없어요'}
               </ThemedText>
             </View>
           }
@@ -107,8 +107,8 @@ export function RecordingLibrary({
                 ]}
               >
                 <Pressable
-                  accessibilityHint="영상을 재생하고 사용할 수 있어요"
-                  accessibilityLabel={`${formatDateTime(item.createdAt)} 촬영 영상`}
+                  accessibilityHint="스냅을 재생하고 쓸 수 있어요"
+                  accessibilityLabel={`${formatDateTime(item.createdAt)} 찍은 스냅`}
                   accessibilityRole="button"
                   disabled={isDeleting}
                   onPress={() => onSelect(item)}
@@ -127,14 +127,14 @@ export function RecordingLibrary({
                   </View>
                 </Pressable>
                 <Pressable
-                  accessibilityLabel={`${formatDateTime(item.createdAt)} 영상 삭제`}
+                  accessibilityLabel={`${formatDateTime(item.createdAt)} 스냅 삭제`}
                   accessibilityRole="button"
                   disabled={isDeleting}
                   onPress={() => confirmDelete(item)}
                   style={styles.deleteButton}
                 >
                   <ThemedText type="smallBold" themeColor="danger">
-                    {isDeleting ? '삭제 중' : '삭제'}
+                    {isDeleting ? '삭제하는 중…' : '삭제'}
                   </ThemedText>
                 </Pressable>
               </View>

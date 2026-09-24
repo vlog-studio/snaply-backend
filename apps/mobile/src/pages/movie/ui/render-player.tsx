@@ -93,7 +93,7 @@ export function RenderPlayer({ uri, style }: RenderPlayerProps) {
       {status === 'error' ? (
         <View style={styles.stateLayer}>
           <ThemedText selectable={false} style={styles.stateText}>
-            완성 파일을 재생할 수 없어요.{'\n'}연결을 확인하고 다시 열어주세요.
+            완성된 무비를 재생할 수 없어요.{'\n'}연결을 확인하고 다시 열어 주세요.
           </ThemedText>
         </View>
       ) : (

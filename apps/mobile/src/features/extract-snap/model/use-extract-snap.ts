@@ -7,7 +7,7 @@ import { trimVideo } from '@/shared/lib/video-trim';
 import { createExtractedSnap } from './create-extracted-snap';
 import { MaxExtractSec } from './extract-limits';
 
-const EXTRACT_SNAP_FAILED = '컷을 담지 못했어요. 다시 시도해 주세요.';
+const EXTRACT_SNAP_FAILED = '스냅을 담지 못했어요. 다시 시도해 주세요.';
 
 /**
  * The extraction action: cut the chosen window out of a gallery video into a

@@ -28,7 +28,7 @@ export const MovieTemplateCatalog: readonly MovieTemplate[] = [
   {
     id: 'walk',
     name: '동네 산책',
-    description: '걸으며 담은 여섯 장면',
+    description: '걸으며 찍은 6컷',
     style: 'emotional',
     bgm: 'lofi-walk',
     slots: [
@@ -43,7 +43,7 @@ export const MovieTemplateCatalog: readonly MovieTemplate[] = [
   {
     id: 'day',
     name: '하루 요약',
-    description: '오늘 하루를 네 장면으로',
+    description: '오늘 하루를 4컷으로',
     style: 'daily',
     bgm: 'morning-tape',
     slots: [
@@ -56,7 +56,7 @@ export const MovieTemplateCatalog: readonly MovieTemplate[] = [
   {
     id: 'cafe',
     name: '카페 한 곳',
-    description: '다녀온 카페를 소개하는 다섯 장면',
+    description: '다녀온 카페를 소개하는 5컷',
     style: 'emotional',
     bgm: 'sunny-side',
     slots: [

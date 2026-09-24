@@ -89,7 +89,7 @@ export function DetailSheet({
           <View style={[styles.divider, { backgroundColor: theme.border }]} />
 
           <View style={styles.row}>
-            <ThemedText type="small">목표 길이</ThemedText>
+            <ThemedText type="small">전체 길이</ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
               컷 합계 ({formatSeconds(totalSec)})
             </ThemedText>

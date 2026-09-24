@@ -47,10 +47,10 @@ describe('MovieSelectionBar', () => {
     expect(share).toBeDisabled();
     await fireEvent.press(share);
     expect(handlers.onShare).not.toHaveBeenCalled();
-    // 아직 완성 파일이 만들어지지 않아 공유할 수 없어요.
+    // 아직 완성된 무비가 없어서 공유할 수 없어요.
     expect(
       screen.getByText(
-        '\uC544\uC9C1 \uC644\uC131 \uD30C\uC77C\uC774 \uB9CC\uB4E4\uC5B4\uC9C0\uC9C0 \uC54A\uC544 \uACF5\uC720\uD560 \uC218 \uC5C6\uC5B4\uC694.',
+        '\uC544\uC9C1 \uC644\uC131\uB41C \uBB34\uBE44\uAC00 \uC5C6\uC5B4\uC11C \uACF5\uC720\uD560 \uC218 \uC5C6\uC5B4\uC694.',
       ),
     ).toBeTruthy();
   });

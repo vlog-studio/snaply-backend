@@ -293,7 +293,7 @@ export function ExtractWindow({
         >
           <View
             accessibilityRole="adjustable"
-            accessibilityLabel="컷 시작 지점"
+            accessibilityLabel="구간 시작 지점"
             accessibilityValue={{ text: formatPositionSec(shown.startSec) }}
             style={[styles.handle, styles.handleStart, { backgroundColor: theme.amber }]}
           >
@@ -306,7 +306,7 @@ export function ExtractWindow({
         >
           <Animated.View
             accessibilityRole="adjustable"
-            accessibilityLabel="추출 구간"
+            accessibilityLabel="가져올 구간"
             accessibilityValue={{
               text: `${formatPositionSec(shown.startSec)}부터 ${formatSeconds(shown.endSec - shown.startSec)}`,
             }}
@@ -323,7 +323,7 @@ export function ExtractWindow({
         >
           <View
             accessibilityRole="adjustable"
-            accessibilityLabel="컷 끝 지점"
+            accessibilityLabel="구간 끝 지점"
             accessibilityValue={{ text: formatPositionSec(shown.endSec) }}
             style={[styles.handle, styles.handleEnd, { backgroundColor: theme.amber }]}
           >

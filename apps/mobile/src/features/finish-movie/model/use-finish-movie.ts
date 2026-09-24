@@ -28,9 +28,9 @@ export type MovieFinishing = {
 };
 
 export const FinishRefusalMessages: Record<FinishRefusal, string> = {
-  generating: '만드는 중에는 끝낼 수 없어요.',
-  gone: '이 무비는 이미 사라졌어요.',
-  unreachable: '서버에 연결하지 못했어요. 연결을 확인하고 다시 시도해주세요.',
+  generating: '만드는 중에는 정리할 수 없어요.',
+  gone: '이미 삭제됐거나 없는 무비예요.',
+  unreachable: '연결하지 못했어요. 인터넷 연결을 확인하고 다시 시도해 주세요.',
 };
 
 /**

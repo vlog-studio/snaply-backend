@@ -25,14 +25,14 @@ export type SnapCellProps = {
  * What the sync badge says per status. `uploaded` is the normal state and says
  * nothing — a library where every snap is announcing success would be noise.
  * `pending` is also silent: it is every snap's resting state whenever the
- * worker cannot run (signed out, offline), and a permanent "업로드 중" would be
+ * worker cannot run (signed out, offline), and a permanent "올리는 중" would be
  * a lie. Only an actual transfer and an actual failure speak.
  */
 const SyncBadgeLabel: Record<SnapSyncStatus, string | undefined> = {
   pending: undefined,
-  uploading: '업로드 중',
+  uploading: '올리는 중',
   uploaded: undefined,
-  failed: '업로드 실패',
+  failed: '올리지 못함',
 };
 
 /**
