@@ -9,6 +9,11 @@ jest.mock('@/entities/session', () => ({
   useSetSession: () => mockSetSession,
 }));
 
+// Kakao is on here so the list renders and signs in with both providers.
+jest.mock('@/shared/config/auth', () => ({
+  KAKAO_SIGN_IN_ENABLED: true,
+}));
+
 jest.mock('@/shared/lib/supabase', () => ({
   isSupabaseConfigured: true,
 }));
@@ -47,6 +52,19 @@ describe('SocialLoginList', () => {
 
     await waitFor(() =>
       expect(mockSetSession).toHaveBeenCalledWith(expect.objectContaining({ provider: 'google' })),
+    );
+  });
+
+  it('signs in with Kakao when its button is pressed', async () => {
+    const kakao = socialProviders.find((provider) => provider.id === 'kakao')!;
+    await render(<SocialLoginList />);
+
+    await act(async () => {
+      fireEvent.press(screen.getByRole('button', { name: kakao.label }));
+    });
+
+    await waitFor(() =>
+      expect(mockSetSession).toHaveBeenCalledWith(expect.objectContaining({ provider: 'kakao' })),
     );
   });
 });

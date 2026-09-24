@@ -1725,3 +1725,15 @@ iPhone 17 시뮬레이터(Xcode 27, Expo Go 57.0.9)에서 앱을 실제 로컬 A
 
 **남은 것**: 재설정 화면 카피가 "인증 코드"라 말하지만 구현은 딥링크다(모바일, 미수정). 실제 촬영·
 푸시·햅틱은 시뮬레이터에서 검증 대상이 아니며 iOS 실기기는 없다.
+
+### 카카오 로그인 — 앱 구현, 콘솔 설정 대기 (2026-09-24)
+
+Supabase 의 내장 `kakao` 프로바이더로 Google 과 같은 PKCE 흐름을 탄다. 버튼(`카카오 로그인`, 카카오
+디자인 가이드의 #FEE500·검정 심볼·85% 라벨)은 `EXPO_PUBLIC_KAKAO_SIGN_IN_ENABLED=true` 빌드에서만
+Google 앞에 보인다 — 콘솔 설정 전에는 눌러도 "provider is not enabled" 로만 끝나기 때문이다.
+Supabase 는 카카오에 `account_email` 동의항목을 **항상** 요청하므로, 카카오 앱은 비즈 앱 전환이
+선행돼야 한다(절차: [`authentication.md`](../apps/mobile/docs/features/authentication.md)).
+백엔드는 사용자를 `supabase_uid` 로만 식별해 변경이 없다.
+
+검증: `npm run verify:mobile` 통과(프로바이더 목록·카카오 버튼 스타일·카카오 로그인 흐름·사용자 매핑 테스트 추가).
+실제 카카오 로그인은 콘솔 설정 전이라 확인하지 못했다.

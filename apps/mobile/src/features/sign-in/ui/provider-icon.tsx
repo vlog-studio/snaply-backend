@@ -6,6 +6,7 @@ import type { SocialProvider } from '@/entities/session';
 const providerIcons: Record<SocialProvider, ImageSource> = {
   google: require('./provider-icons/google.svg'),
   apple: require('./provider-icons/apple.svg'),
+  kakao: require('./provider-icons/kakao.svg'),
 };
 
 type ProviderIconProps = {

@@ -4,6 +4,7 @@ import type { AuthMethod, User } from '../model/user';
 
 function toAuthMethod(value: unknown): AuthMethod {
   if (value === 'apple') return 'apple';
+  if (value === 'kakao') return 'kakao';
   if (value === 'email') return 'email';
   return 'google';
 }

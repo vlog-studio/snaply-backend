@@ -5,6 +5,7 @@ import type { AuthProvider } from './auth-provider';
 const MOCK_DISPLAY_NAMES: Record<SocialProvider, string> = {
   google: 'Google 사용자',
   apple: 'Apple 사용자',
+  kakao: '카카오 사용자',
 };
 
 const SIMULATED_LATENCY_MS = 600;

@@ -1,5 +1,5 @@
 /** Supported social identity providers a session can be created from. */
-export type SocialProvider = 'google' | 'apple';
+export type SocialProvider = 'google' | 'apple' | 'kakao';
 
 /**
  * How the current session was authenticated: a social provider or an

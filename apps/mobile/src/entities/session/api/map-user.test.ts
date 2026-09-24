@@ -43,6 +43,25 @@ describe('mapSupabaseUser', () => {
     expect(user.avatarUrl).toBe('https://cdn/apple.png');
   });
 
+  it('reads the kakao provider and its nickname without an email', () => {
+    // Supabase maps the Kakao profile nickname to `name`/`full_name`; an account
+    // that declined the optional email consent has no email at all.
+    const user = mapSupabaseUser(
+      supabaseUser({
+        app_metadata: { provider: 'kakao' },
+        email: undefined,
+        user_metadata: { full_name: 'Kakao Friend', avatar_url: 'https://cdn/kakao.png' },
+      }),
+    );
+
+    expect(user).toEqual({
+      id: 'user-1',
+      provider: 'kakao',
+      displayName: 'Kakao Friend',
+      avatarUrl: 'https://cdn/kakao.png',
+    });
+  });
+
   it('falls back to email then a default when no name is present', () => {
     const withEmail = mapSupabaseUser(supabaseUser({ email: 'me@example.com', user_metadata: {} }));
     expect(withEmail.displayName).toBe('me@example.com');

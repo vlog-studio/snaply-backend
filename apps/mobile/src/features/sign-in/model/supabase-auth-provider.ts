@@ -19,7 +19,9 @@ export class SignInCancelledError extends Error {
  * `signInWithOAuth` yields a provider consent URL, an in-app browser session
  * runs the consent, and the returned authorization code is exchanged for a
  * session. Supabase persists and owns that session; the store's auth listener
- * mirrors the resulting user. Only Google and Apple are configured.
+ * mirrors the resulting user. Google is enabled in the Supabase project; Kakao
+ * is wired the same way (Supabase has a built-in `kakao` provider) and offered
+ * only where `KAKAO_SIGN_IN_ENABLED` says its console setup is done.
  */
 export const supabaseAuthProvider: AuthProvider = {
   async signIn(provider) {
