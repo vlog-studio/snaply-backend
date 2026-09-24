@@ -97,12 +97,12 @@ export async function handleGeofenceEnter(params: {
     return { notified: false, reason: 'cooldown' };
   }
 
-  const body = (location.messageTemplate ?? '{name}에서 기록을 남겨보세요!').replace(
+  const body = (location.messageTemplate ?? '{name}에서 스냅을 찍어 보세요.').replace(
     '{name}',
     location.name,
   );
   const message: PushMessage = {
-    title: 'Snaply',
+    title: '근처에 찍기 좋은 곳이 있어요',
     body,
     data: { locationId: location.id },
   };
