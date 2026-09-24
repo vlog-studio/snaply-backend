@@ -112,7 +112,7 @@ describe('GET /movie-templates', () => {
     // 한 템플릿의 문구만 고쳐도 앱 캐시가 갱신돼야 한다.
     const touched = await h.prisma.movieTemplate.update({
       where: { id: 'day' },
-      data: { description: '오늘 하루를 네 장면으로 ' },
+      data: { description: '오늘 하루를 4컷으로 ' },
     });
     try {
       const after = (await getCatalog(user)).json().data.updatedAt;
@@ -121,7 +121,7 @@ describe('GET /movie-templates', () => {
     } finally {
       await h.prisma.movieTemplate.update({
         where: { id: 'day' },
-        data: { description: '오늘 하루를 네 장면으로' },
+        data: { description: '오늘 하루를 4컷으로' },
       });
     }
   });
