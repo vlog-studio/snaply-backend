@@ -367,6 +367,33 @@ e2e 실검증.
 
 **의존**: A-1(Movie와 직접 편집 API 수명) · A-2(해상도·워터마크) · E-5.
 
+### A-8. 카카오 로그인 — 서비스 완성 후 인증 추가 계획
+
+**왜 막혀 있는지**: 오너 결정(2026-09-24)으로 서비스 기능을 먼저 완성하고 인증 수단은 그 뒤에
+늘린다. 앱 구현은 한 번 해 봤다가 되돌렸다 — 닫힌 PR
+[#32](https://github.com/vlog-studio/snaply-backend/pull/32)(커밋 `a2ee3d6`)에 그대로 남아 있어,
+재개할 때 참고하거나 가져다 쓰면 된다.
+
+조사로 확인된 사실(재개 시 다시 조사하지 않아도 되는 것):
+
+- Supabase Auth 에 **내장 `kakao` 프로바이더**가 있어 커스텀 OIDC 가 필요 없다. 앱은 Google 과 같은
+  PKCE 흐름(`signInWithOAuth({ provider: 'kakao' })`)을 타고, 백엔드는 사용자를 `supabase_uid` 로만
+  식별하므로 서버 변경이 없다.
+- Supabase 는 카카오에 **`account_email` 동의항목을 항상 요청**한다(끄는 옵션 없음 —
+  `supabase/auth` 의 `internal/api/provider/kakao.go`). 항목이 없으면 카카오가 KOE205 로 거부한다.
+  `account_email` 은 **비즈 앱**에서만 쓸 수 있으므로 비즈 앱 전환(사업자 정보, 또는 본인인증 기반
+  개인 개발자 비즈 앱)이 선행 조건이다. 이메일을 선택 동의로 두고 Supabase 에서
+  **Allow users without an email** 을 켜면 이메일을 거부한 사용자도 로그인된다.
+- 버튼은 [카카오 로그인 디자인 가이드](https://developers.kakao.com/docs/ko/kakaologin/design-guide)
+  규격을 따른다: 라벨 `카카오 로그인`(`카카오로 시작하기`는 카카오싱크 전용), 배경 `#FEE500`, 검정 심볼,
+  검정 85% 라벨, 다른 로그인 버튼보다 약하게 보이면 안 된다. 심볼은 공식 리소스를 쓴다.
+- Supabase 는 **같은 인증 이메일일 때만** identity 를 합친다 — 이메일을 동의하지 않은 카카오 사용자가
+  Google 로도 로그인하면 계정이 둘이 된다. 병합 정책을 같이 정해야 한다.
+
+**완료 조건**: 카카오 앱 비즈 앱 전환 → Kakao Developers 설정(REST API 키·Client Secret·Redirect URI
+`https://<project-ref>.supabase.co/auth/v1/callback`·카카오 로그인 ON·동의항목) → Supabase Kakao 프로바이더
+활성화 → 앱 버튼 추가(#32 참고) → 개발 빌드에서 실제 로그인 확인 → 스펙 ACC-1 갱신.
+
 ---
 
 ## B. 개발 합의 필요 (A·B 트랙 공동 소유)
