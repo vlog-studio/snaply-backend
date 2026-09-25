@@ -1,0 +1,86 @@
+name: MinIO image
+
+# MinIO 커뮤니티 이미지는 더 이상 받을 곳이 없어(Docker Hub 삭제, quay.io 401) 소스에서 빌드해
+# GHCR 로 올린다. 로컬 · CI · 사내 서버 compose 가 이 이미지를 쓴다. 배경은 backlog E-7.
+#
+# PR 에서는 빌드와 스모크만 하고, main 과 수동 실행에서만 올린다 — 공유 태그를 리뷰 전에
+# 덮어쓰지 않는다. 태그는 업스트림 릴리스 그대로라, 같은 Dockerfile 이면 같은 이미지다.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'deploy/minio/**'
+      - '.github/workflows/minio-image.yml'
+  pull_request:
+    paths:
+      - 'deploy/minio/**'
+      - '.github/workflows/minio-image.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: minio-image-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  IMAGE: ghcr.io/${{ github.repository }}/minio:RELEASE.2025-09-07T16-13-09Z
+
+jobs:
+  build:
+    name: Build, smoke & push MinIO
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # Go 는 러너에서 크로스 컴파일하고, arm64 런타임 단계(apk add)만 QEMU 로 돈다.
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build amd64 image for smoke
+        uses: docker/build-push-action@v6
+        with:
+          context: deploy/minio
+          platforms: linux/amd64
+          load: true
+          tags: minio:smoke
+          cache-from: type=gha,scope=minio
+          cache-to: type=gha,scope=minio,mode=max
+
+      # compose 와 CI 가 기대하는 것: 업스트림 버전 문자열, `server /data` 기동, 컨테이너 안 curl.
+      - name: Smoke test
+        run: |
+          set -euo pipefail
+          docker run --rm minio:smoke --version | tee /dev/stderr | grep -q 'RELEASE.2025-09-07T16-13-09Z'
+          docker run -d --name minio -p 9100:9000 \
+            -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=minioadmin123 \
+            minio:smoke server /data
+          for i in $(seq 1 30); do
+            if docker exec minio curl -sf http://localhost:9000/minio/health/live -o /dev/null; then
+              echo "MinIO 기동 확인"; exit 0
+            fi
+            sleep 1
+          done
+          echo "MinIO 가 기동되지 않았습니다" >&2
+          docker logs minio >&2
+          exit 1
+
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Apple Silicon 개발 머신을 위해 arm64 도 올린다.
+      - name: Push multi-arch image
+        if: github.event_name != 'pull_request'
+        uses: docker/build-push-action@v6
+        with:
+          context: deploy/minio
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ env.IMAGE }}
+          cache-from: type=gha,scope=minio
