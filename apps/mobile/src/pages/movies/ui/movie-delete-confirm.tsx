@@ -40,7 +40,7 @@ export function MovieDeleteConfirm({ movies, onCancel, onConfirm }: MovieDeleteC
         무비 삭제
       </ThemedText>
       <ThemedText type="heading">
-        {movies.length === 1 ? '이 무비를 지울까요?' : `무비 ${movies.length}편을 지울까요?`}
+        {movies.length === 1 ? '이 무비를 삭제할까요?' : `무비 ${movies.length}편을 삭제할까요?`}
       </ThemedText>
 
       <View style={[styles.movies, { borderColor: theme.border }]}>
@@ -70,12 +70,12 @@ export function MovieDeleteConfirm({ movies, onCancel, onConfirm }: MovieDeleteC
       </View>
 
       <ThemedText themeColor="textSecondary">
-        컷 구성과 완성 기록이 함께 사라져요. 스냅 원본 영상은 그대로 남아요.
+        컷 구성과 완성된 무비가 함께 사라져요. 스냅은 그대로 남아요.
       </ThemedText>
 
       {generatingCount > 0 ? (
         <ThemedText type="small" themeColor="danger">
-          지금 만드는 중인 작업도 함께 사라져요.
+          만드는 중인 무비도 함께 사라져요.
         </ThemedText>
       ) : null}
 

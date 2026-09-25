@@ -51,7 +51,7 @@ export function EditExitSheet({
       <View style={styles.step}>
         <ThemedText type="heading">편집을 마칠까요?</ThemedText>
         <ThemedText themeColor="textSecondary">
-          완성한 뒤에 컷 구성이 달라졌어요. 다시 만들기 전까지는 완성 당시 구성으로 재생돼요.
+          완성한 뒤에 컷 구성이 달라졌어요. 다시 만들기 전까지 무비는 완성 당시 구성으로 재생돼요.
         </ThemedText>
 
         <View style={[styles.group, { borderColor: theme.border }]}>

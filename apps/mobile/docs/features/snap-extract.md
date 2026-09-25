@@ -5,14 +5,16 @@
 Users can bring a video they already have — the phone's gallery — into Snaply by cutting snaps out of it: pick a video, slide a window (0.5–5 seconds) along a filmstrip of it, watch exactly that window loop, and cut as many snaps out of one video as they want. An extracted snap lands in the library exactly like a captured one: it uploads in the background and can be picked into movies.
 
 ```text
-/snaps 헤더 가져오기  (or the empty state's 동영상에서 가져오기)
+/snaps 가져오기 cell  (accessibility label 영상에서 스냅 가져오기)
   → system photo picker (videos only; no media permission needed)
   → /extract?source=<uri>   full-screen modal over a dark video ground
+      ├── top pill          스냅 가져오기, then 스냅 N개 담김 once one is cut
       ├── stage             loops the chosen window; tap to pause; ♪/∅ sound toggle
       ├── window readout    0:42.5 – 0:45.7 · 3.2초
       ├── filmstrip         the whole source on a seconds scale, ruler above
       │   └── window        ember frame, amber edge handles, draggable body
-      ├── 영상 변경 · ✂ (추출) · 완료
+      │                     (accessibility: 가져올 구간 · 구간 시작 지점 · 구간 끝 지점)
+      ├── 영상 변경 · ✂ (이 구간을 스냅으로 담기) · 완료 (가져오기 마치기)
       └── each ✂ cuts the window into a snap and stays for the next one
 ```
 
@@ -30,7 +32,7 @@ Users can bring a video they already have — the phone's gallery — into Snapl
 | Tap to move | `Functional` | Tapping the footage outside the window glides the window there (260ms, the movie strip's jump cadence; instant under reduced motion), centred on the tapped moment at its current length, clamped and step-snapped — the coarse positioning a minutes-long source needs, with a selection-tick haptic. A scroll cancels the press, and touches on the window or its handles are claimed by their own gestures, so only a deliberate tap moves it. |
 | Filmstrip | `Functional` | The whole source at 60pt/sec (`ExtractPxPerSec`) with a ruler above (dots every second, labels every fifth — every second under 20s). Thumbnails come from `shared/lib/video-thumbnails` at explicit offsets, resolved strictly one at a time, budgeted at 60 frames per strip (longer sources widen tiles instead). |
 | Window playback | `Functional` | The stage loops the window: `timeUpdate` past the window's end seeks back to its start. Sound starts muted with a toggle. Position-driven logic is gated on "meant to be playing" (Android fires `timeUpdate` while paused). A settled window drag seeks playback to the new start. A thin line glides across the window while playing. |
-| Extraction | `Functional`* | `features/extract-snap`: native trim (`shared/lib/video-trim`) → `persistLocalRecording` → snap metadata → `addSnap`. While one extraction is in flight, duplicate requests are rejected synchronously, including calls made before React commits the pending state. From there the snap is indistinguishable from a captured one — the upload worker finds it pending, the library lists it. Success gives haptics, a `담김 · 스냅 N개` badge, and a counter in the top pill; the screen stays for the next cut. *Functional in JS terms; the native layer is unverified on hardware (see status summary). |
+| Extraction | `Functional`* | `features/extract-snap`: native trim (`shared/lib/video-trim`) → `persistLocalRecording` → snap metadata → `addSnap`. While one extraction is in flight, duplicate requests are rejected synchronously, including calls made before React commits the pending state. From there the snap is indistinguishable from a captured one — the upload worker finds it pending, the library lists it. Success gives haptics, a `담김 · 스냅 N개` badge, and a counter in the top pill; the screen stays for the next cut. A failed cut shows 스냅을 담지 못했어요. 다시 시도해 주세요. *Functional in JS terms; the native layer is unverified on hardware (see status summary). |
 | Real dimensions | `Functional` | Extracted snaps store the output file's real `width`/`height`/`orientation` (read back natively, rotation applied) — a gallery video is as often landscape or square as portrait. Capture-path snaps are measured the same way, through the same native probe (see [Snap library](snaps.md#data-model)). No `place` is stored: where a gallery video was shot is not known, and where the user stands now is not it. |
 
 ## The native trim module

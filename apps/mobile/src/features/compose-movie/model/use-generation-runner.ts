@@ -33,10 +33,10 @@ import { editFailureMessage } from '../lib/edit-failure-copy';
 const PollIntervalMs = 20_000;
 
 /** The user deleted the last original a running job was built from. */
-const LostMaterialError = '이 무비가 쓰던 스냅 원본이 모두 지워져서 만들 수 없었어요.';
+const LostMaterialError = '이 무비가 쓰던 스냅이 모두 삭제돼서 만들 수 없었어요.';
 
 /** The backend has never heard of this job — see the stale-job note below. */
-const UnknownJobError = '이 무비의 편집 작업을 서버에서 찾을 수 없어요. 다시 만들어주세요.';
+const UnknownJobError = '만들던 기록을 찾지 못했어요. 다시 만들어 주세요.';
 
 export type GenerationRunnerOptions = {
   /**

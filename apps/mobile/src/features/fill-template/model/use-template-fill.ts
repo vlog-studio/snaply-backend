@@ -270,7 +270,7 @@ export function useTemplateFill(template: MovieTemplate | undefined): TemplateFi
     totalSec: used.reduce((total, snap) => total + snap.durationSec, 0),
     summary: session
       ? describeSession(session, used)
-      : '아직 한 편으로 묶을 만한 스냅이 없어요. 빈 자리를 찍어서 채워보세요.',
+      : '아직 한 편으로 묶을 스냅이 없어요. 빈 컷을 찍어 채워 보세요.',
     confidenceKind,
     hasMatch: session !== undefined,
     dropSlot,

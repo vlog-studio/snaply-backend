@@ -6,7 +6,9 @@
  * (예: 개발용 .env 에 REVENUECAT_API_KEY 를 넣는 순간 모든 결제 테스트가 실키 모드로 바뀐다.)
  * 실키 경로를 검증하는 테스트는 harness(env) 로 그때만 주입한다.
  *
- * SUPABASE_URL 만은 auth 스텁 포트가 동적이라 harness 에서 주입한다.
+ * SUPABASE_URL 은 harness 가 auth 스텁 주소(포트가 동적)로 덮어쓴다. 여기서는 자리표시자만 박는다 —
+ * harness 없이 `loadConfig()` 를 직접 부르는 테스트(openapi-snapshot)가 개인 .env 에 기대지 않고
+ * CI(.env 없음)에서도 돌아야 하기 때문이다. 이 값으로 실제 요청이 나가는 경로는 없다.
  */
 import { TEST_DATABASE_URL, TEST_REDIS_URL, TEST_S3_ENDPOINT } from './constants.js';
 import { clearExternalCredentials } from './hermetic.js';
@@ -18,6 +20,9 @@ process.env.LOG_LEVEL = process.env.TEST_LOG_LEVEL ?? 'silent';
 
 process.env.DATABASE_URL = TEST_DATABASE_URL;
 process.env.DIRECT_URL = TEST_DATABASE_URL;
+
+// harness 가 스텁 주소로 덮어쓴다(위 주석). 값이 없으면 loadConfig() 가 기동 자체를 거부한다.
+process.env.SUPABASE_URL ??= 'http://supabase.test.invalid';
 
 process.env.REDIS_URL = TEST_REDIS_URL;
 process.env.EDIT_QUEUE_NAME = 'edit-jobs-test';

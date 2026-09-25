@@ -82,7 +82,7 @@ describe('useRecordingPermissions', () => {
 
     expect(result.current.isCameraGranted).toBe(true);
     expect(result.current.isPermissionReady).toBe(true);
-    expect(result.current.message).toBe('영상을 촬영하려면 카메라 접근 권한이 필요해요.');
+    expect(result.current.message).toBe('스냅을 찍으려면 카메라 권한이 필요해요.');
   });
 
   it('skips the microphone prompt when it is already granted', async () => {

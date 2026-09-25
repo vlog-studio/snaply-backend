@@ -75,14 +75,14 @@ export function GenerateFooter({
 
   return (
     <View style={styles.footer}>
-      {/* An edited finished movie says so: the stage is playing the changed
-          composition, not the one that was made, and only 다시 만들기 closes
-          that gap. The restore is the one-tap way back when the edit was a
+      {/* An edited finished movie says so: this stage previews the changed
+          composition, but the movie itself — watch mode, 공유 — still plays the
+          render as it was made, and only 다시 만들기 closes that gap. The restore is the one-tap way back when the edit was a
           mis-tap — screen-local undo dies with the visit, this does not. */}
       {isReady && editedSinceRender ? (
         <View style={[styles.notice, { borderColor: theme.border }]}>
           <ThemedText type="small" themeColor="textSecondary">
-            완성한 뒤에 컷 구성이 달라졌어요. 다시 만들기 전까지는 바뀐 구성으로 재생돼요.
+            완성한 뒤에 컷 구성이 달라졌어요. 다시 만들기 전까지 무비는 완성 당시 구성으로 재생돼요.
           </ThemedText>
           <Pressable
             accessibilityRole="button"
@@ -102,17 +102,13 @@ export function GenerateFooter({
         // The stored reason, not a generic apology: the user has to know
         // whether running it again is worth anything, and today's one failure
         // is only answered by putting cuts back first. The server's own
-        // diagnostic, when one was kept, rides under it demoted — it is what a
-        // bug report needs, not what the failure means.
+        // diagnostic (`movie.errorDetail`) stays in the store for debugging but
+        // is never drawn: it is what a bug report needs, not what the failure
+        // means, and raw server text is not user copy.
         <View style={[styles.notice, { borderColor: theme.danger }]}>
           <ThemedText type="small" themeColor="danger">
-            {movie.error ?? '알 수 없는 이유로 생성이 멈췄어요.'}
+            {movie.error ?? '무비를 만들지 못했어요.'}
           </ThemedText>
-          {movie.errorDetail ? (
-            <ThemedText type="note" themeColor="textSecondary">
-              {movie.errorDetail}
-            </ThemedText>
-          ) : null}
         </View>
       ) : null}
 
@@ -133,9 +129,7 @@ export function GenerateFooter({
               />
             ) : null}
             <SnaplyButton
-              title={
-                hasFailed ? '다시 시도' : isReady ? '이 구성으로 다시 만들기' : 'AI로 생성 시작'
-              }
+              title={hasFailed ? '다시 시도' : isReady ? '이 구성으로 다시 만들기' : '무비 만들기'}
               variant="ai"
               disabled={cutCount === 0}
               onPress={onStart}

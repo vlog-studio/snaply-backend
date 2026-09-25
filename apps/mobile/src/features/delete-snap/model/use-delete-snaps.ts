@@ -5,8 +5,8 @@ import { useForgetSnapSync, useRemoveSnaps } from '@/entities/snap';
 import { deleteLocalRecording } from '@/shared/lib/recording-files';
 import { deleteVideoThumbnail } from '@/shared/lib/video-thumbnails';
 
-const PartialFailureMessage = '일부 스냅을 삭제하지 못했어요.'; // 일부 스냅을 삭제하지 못했어요.
-const TotalFailureMessage = '스냅을 삭제하지 못했어요.'; // 스냅을 삭제하지 못했어요.
+const PartialFailureMessage = '일부 스냅을 삭제하지 못했어요. 다시 시도해 주세요.';
+const TotalFailureMessage = '스냅을 삭제하지 못했어요. 다시 시도해 주세요.';
 
 /**
  * The minimum a delete needs to know: which snap, and where its file is. Stated

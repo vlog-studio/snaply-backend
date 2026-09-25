@@ -18,11 +18,11 @@ function makeSummary(overrides: Partial<MovieSummary> = {}): MovieSummary {
   };
 }
 
-const singleHeading = '\uC774 \uBB34\uBE44\uB97C \uC9C0\uC6B8\uAE4C\uC694?'; // 이 무비를 지울까요?
+const singleHeading = '\uC774 \uBB34\uBE44\uB97C \uC0AD\uC81C\uD560\uAE4C\uC694?'; // 이 무비를 삭제할까요?
 const cancelLabel = '\uC0AD\uC81C \uCDE8\uC18C'; // 삭제 취소
-// 지금 만드는 중인 작업도 함께 사라져요.
+// 만드는 중인 무비도 함께 사라져요.
 const generatingWarning =
-  '\uC9C0\uAE08 \uB9CC\uB4DC\uB294 \uC911\uC778 \uC791\uC5C5\uB3C4 \uD568\uAED8 \uC0AC\uB77C\uC838\uC694.';
+  '\uB9CC\uB4DC\uB294 \uC911\uC778 \uBB34\uBE44\uB3C4 \uD568\uAED8 \uC0AC\uB77C\uC838\uC694.';
 
 describe('MovieDeleteConfirm', () => {
   it('confirms a single movie by name', async () => {
@@ -45,8 +45,10 @@ describe('MovieDeleteConfirm', () => {
     );
     await render(<MovieDeleteConfirm movies={movies} onCancel={jest.fn()} onConfirm={jest.fn()} />);
 
-    // 무비 5편을 지울까요?
-    expect(screen.getByText('\uBB34\uBE44 5\uD3B8\uC744 \uC9C0\uC6B8\uAE4C\uC694?')).toBeTruthy();
+    // 무비 5편을 삭제할까요?
+    expect(
+      screen.getByText('\uBB34\uBE44 5\uD3B8\uC744 \uC0AD\uC81C\uD560\uAE4C\uC694?'),
+    ).toBeTruthy();
     expect(screen.getByText('\uBB34\uBE44 c')).toBeTruthy(); // 무비 c
     expect(screen.queryByText('\uBB34\uBE44 d')).toBeNull(); // 무비 d
     expect(screen.getByText('\uC678 2\uD3B8')).toBeTruthy(); // 외 2편

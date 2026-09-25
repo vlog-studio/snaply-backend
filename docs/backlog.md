@@ -367,6 +367,33 @@ e2e 실검증.
 
 **의존**: A-1(Movie와 직접 편집 API 수명) · A-2(해상도·워터마크) · E-5.
 
+### A-8. 카카오 로그인 — 서비스 완성 후 인증 추가 계획
+
+**왜 막혀 있는지**: 오너 결정(2026-09-24)으로 서비스 기능을 먼저 완성하고 인증 수단은 그 뒤에
+늘린다. 앱 구현은 한 번 해 봤다가 되돌렸다 — 닫힌 PR
+[#32](https://github.com/vlog-studio/snaply-backend/pull/32)(커밋 `a2ee3d6`)에 그대로 남아 있어,
+재개할 때 참고하거나 가져다 쓰면 된다.
+
+조사로 확인된 사실(재개 시 다시 조사하지 않아도 되는 것):
+
+- Supabase Auth 에 **내장 `kakao` 프로바이더**가 있어 커스텀 OIDC 가 필요 없다. 앱은 Google 과 같은
+  PKCE 흐름(`signInWithOAuth({ provider: 'kakao' })`)을 타고, 백엔드는 사용자를 `supabase_uid` 로만
+  식별하므로 서버 변경이 없다.
+- Supabase 는 카카오에 **`account_email` 동의항목을 항상 요청**한다(끄는 옵션 없음 —
+  `supabase/auth` 의 `internal/api/provider/kakao.go`). 항목이 없으면 카카오가 KOE205 로 거부한다.
+  `account_email` 은 **비즈 앱**에서만 쓸 수 있으므로 비즈 앱 전환(사업자 정보, 또는 본인인증 기반
+  개인 개발자 비즈 앱)이 선행 조건이다. 이메일을 선택 동의로 두고 Supabase 에서
+  **Allow users without an email** 을 켜면 이메일을 거부한 사용자도 로그인된다.
+- 버튼은 [카카오 로그인 디자인 가이드](https://developers.kakao.com/docs/ko/kakaologin/design-guide)
+  규격을 따른다: 라벨 `카카오 로그인`(`카카오로 시작하기`는 카카오싱크 전용), 배경 `#FEE500`, 검정 심볼,
+  검정 85% 라벨, 다른 로그인 버튼보다 약하게 보이면 안 된다. 심볼은 공식 리소스를 쓴다.
+- Supabase 는 **같은 인증 이메일일 때만** identity 를 합친다 — 이메일을 동의하지 않은 카카오 사용자가
+  Google 로도 로그인하면 계정이 둘이 된다. 병합 정책을 같이 정해야 한다.
+
+**완료 조건**: 카카오 앱 비즈 앱 전환 → Kakao Developers 설정(REST API 키·Client Secret·Redirect URI
+`https://<project-ref>.supabase.co/auth/v1/callback`·카카오 로그인 ON·동의항목) → Supabase Kakao 프로바이더
+활성화 → 앱 버튼 추가(#32 참고) → 개발 빌드에서 실제 로그인 확인 → 스펙 ACC-1 갱신.
+
 ---
 
 ## B. 개발 합의 필요 (A·B 트랙 공동 소유)
@@ -736,6 +763,39 @@ A-7 의 비트 싱크가 들어오면 컷 지점까지 달라져 피해가 커�
 
 **완료 조건**: 선택된 트랙 ID·난수 시드를 `editSpec` 에 핀으로 남기고, 재생성이 같은 산출물을
 내는 것을 테스트로 고정한다. 트랙 ID 를 가지려면 `bgm_tracks` 가 필요하므로 A-7 과 함께 간다.
+
+### E-7. MinIO 커뮤니티 이미지의 수명 — 로컬·CI·사내 서버 스토리지 대체 검토 ⚠️ 2026-09-23 신규 · 2026-09-25 미러로 복구
+
+MinIO 가 **2026-09-11 에 Docker Hub 의 `minio/minio`·`minio/mc` 를 삭제했다.** 2025-10 무료 이미지
+배포 중단, 2026-02 OSS 저장소 아카이브에 이은 마지막 단계이며, 커뮤니티 에디션은 유료 AIStor 로
+대체되는 중이다. `npm run infra:up` 이 pull 거부로 깨져 compose 3곳(dev · 풀스택 · CI)을
+`quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z` 로 옮기고 **태그를 고정**했다(2026-09-23).
+이 태그는 amd64·arm64 둘 다 있다 — `.hotfix.*` 태그들은 amd64 만 있어 Apple Silicon 에서
+pull 이 실패하므로 태그를 올릴 때 매니페스트를 확인한다.
+
+**2026-09-25 quay.io 도 막혔다**(익명 pull 401). 위에서 걱정한 대로 CI · Deploy 가 같은 날 깨졌다.
+같은 릴리스를 **아카이브된 소스에서 빌드해 우리 GHCR 로 올리는 것**으로 옮겼다 —
+[`deploy/minio/Dockerfile`](../deploy/minio/Dockerfile)(태그 커밋 SHA 고정, 버전 문자열·커밋이
+업스트림 이미지와 같다), [`minio-image.yml`](../.github/workflows/minio-image.yml)(main 에서
+amd64·arm64 로 `ghcr.io/vlog-studio/snaply-backend/minio:RELEASE.2025-09-07T16-13-09Z` push).
+패키지는 비공개라 로그인 없이 받을 수 없으므로 [`scripts/ensure-minio-image.sh`](../scripts/ensure-minio-image.sh)
+가 받지 못하면 같은 Dockerfile 로 로컬 빌드한다(CI · Deploy 스모크 · `infra:up` · `stack` 이 부른다).
+이제 외부 배포처가 사라져도 깨지지 않는다 — 남는 의존은 GitHub 의 소스 아카이브와 Go 모듈뿐이다.
+
+**왜 열려 있는지**: 미러는 공급 문제만 푼다.
+
+- 커뮤니티 릴리스는 2025-09-07 이후 패치가 없다. 보안 수정은 AIStor 에만 간다 — 우리가 빌드해도 같다
+- **사내 서버(B-1)는 MinIO 를 운영 스토리지로 쓰고 사내망에 열려 있다** — 패치가 끊긴 S3 서버를
+  계속 노출하는 것은 로컬 개발용보다 무거운 문제다
+
+**결정할 것**: 대체 S3 호환 서버(RustFS · Garage · SeaweedFS 등)로 바꿀지, 사내 서버만 바꿀지,
+실사용 서버는 AWS S3 라 무관하므로 로컬 · CI 는 미러로 둘지. 코드는 `S3_ENDPOINT` 만 바꾸는
+구조라 교체 비용은 compose 3곳 · [ONBOARDING.md](../ONBOARDING.md) · [deployment.md](./deployment.md)
+와, MinIO 전용 API 에 기대는 곳이 있는지 확인(`dev:public-bucket` 스크립트 · 헬스체크 경로) 정도다.
+GHCR 패키지를 공개로 돌릴지도 정한다 — 공개면 새 개발자가 로그인 없이 받고, 로컬 빌드(몇 분)를 건너뛴다.
+
+**완료 조건**: 대체 여부 결정 → 바꾼다면 compose 3곳 + 문서 갱신 + `npm test -w apps/api`
+(통합 테스트가 MinIO 를 쓴다) 통과. 두기로 하면 이 항목을 "소스 빌드 미러 유지"로 좁혀 닫는다.
 
 ---
 

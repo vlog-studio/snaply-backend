@@ -42,9 +42,9 @@ export function FinishMovieConfirm({
   return (
     <View style={styles.step}>
       <ThemedText type="note" themeColor="textSecondary">
-        끝내기
+        무비 정리
       </ThemedText>
-      <ThemedText type="heading">완성 파일을 저장했나요?</ThemedText>
+      <ThemedText type="heading">무비를 기기에 저장했나요?</ThemedText>
 
       <View style={[styles.summary, { borderColor: theme.border }]}>
         <ThemedText type="smallBold" numberOfLines={1}>
@@ -53,8 +53,8 @@ export function FinishMovieConfirm({
       </View>
 
       <ThemedText themeColor="textSecondary">
-        끝내면 서버에 있는 완성 파일이 지워지고 이 앱에서 다시 볼 수 없어요. 컷 구성은 남아서 고쳐
-        다시 만들 수 있어요 — 다시 만들기는 새 생성이라 크레딧이 들어요.
+        정리하면 이 앱에서 무비를 다시 볼 수 없어요. 컷 구성은 남아서 고쳐 다시 만들 수 있어요. 다시
+        만들면 크레딧이 들어요.
       </ThemedText>
 
       {errorMessage ? (
@@ -66,7 +66,7 @@ export function FinishMovieConfirm({
       <View style={styles.actions}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="끝내기 취소"
+          accessibilityLabel="정리 취소"
           disabled={busy}
           onPress={onCancel}
           style={[styles.action, { borderColor: theme.border, opacity: busy ? 0.6 : 1 }]}
@@ -77,7 +77,7 @@ export function FinishMovieConfirm({
         </Pressable>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`${title} 끝내기`}
+          accessibilityLabel={`${title} 정리하기`}
           accessibilityState={{ disabled: busy, busy }}
           disabled={busy}
           onPress={confirm}
@@ -91,7 +91,7 @@ export function FinishMovieConfirm({
           ]}
         >
           <ThemedText selectable={false} type="button" style={{ color: theme.onPrimary }}>
-            {busy ? '끝내는 중…' : '저장했어요, 끝내기'}
+            {busy ? '정리하는 중…' : '저장했어요, 정리하기'}
           </ThemedText>
         </Pressable>
       </View>

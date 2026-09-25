@@ -199,7 +199,7 @@ function CaptureButton({ bottom }: { bottom: number }) {
   return (
     <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
       <Pressable
-        accessibilityLabel="촬영"
+        accessibilityLabel="스냅 찍기"
         accessibilityRole="button"
         onPress={openCapture}
         style={[

@@ -30,7 +30,7 @@ export function MovieRow({ movie, onPress }: MovieRowProps) {
       accessibilityLabel={[
         movie.title,
         MovieStatusLabels[movie.status],
-        `스냅 ${movie.snapCount}`,
+        `컷 ${movie.snapCount}`,
         movie.progress === undefined ? undefined : `${Math.round(movie.progress * 100)}%`,
       ]
         .filter(Boolean)
@@ -63,7 +63,7 @@ export function MovieRow({ movie, onPress }: MovieRowProps) {
         </ThemedText>
         <View style={styles.tags}>
           <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-            스냅 {movie.snapCount} · {formatSeconds(movie.totalSec)}
+            컷 {movie.snapCount} · {formatSeconds(movie.totalSec)}
           </ThemedText>
           <MovieStatusBadge status={movie.status} />
           <ThemedText type="note" themeColor="textSecondary">

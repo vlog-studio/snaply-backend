@@ -8,13 +8,15 @@ Users pick the shape of the movie first — 동네 산책, 하루 요약 — and
 /  (스튜디오)  템플릿으로 시작 card   →  /template/[id]
 
 /template/[id]  (템플릿)
-├── column heading        같은 외출 확신 · 슬롯 적합도 — what the NN% on the rows measures
+├── column heading        같은 외출일 가능성 · 어울림 — what the NN% on the rows measures
 ├── slot rows            per scene: the frame, 2026.07.28 13:35 · 3초, NN%
 │   ├── filled           ⌃ ⌄ reorder · ✕ drop
 │   ├── dropped          지금 찍기 · 되돌리기
 │   └── empty            지금 찍기        → /capture, and back into this row
 ├── 고친 것 되돌리기        shown once anything is dropped, shot, or reordered
+├── footer               6컷 중 4컷 채웠어요 · total length
 └── 이대로 만들기          → /movie/[id], an editable draft
+                          (N컷으로 만들기 while some cuts are empty)
 ```
 
 This is the second way into a movie and it sits beside hand-picking rather than replacing it: picked snaps are "make a movie out of *these*", a template is "make me something like *this*". Both entries stay on the studio ([Studio and movies](studio.md)).
@@ -74,12 +76,12 @@ The recommendation replaces the *proposal*, which is the only thing on the scree
 
 The number is printed bare on each row, and **one heading over the column** says what it measures. Which of two things it is depends on which stage filled the rows:
 
-- `같은 외출 확신` — stage 1. How sure the app is that this snap belongs to the outing the others came from, from two measurements: how close in time the snap sits to its nearest neighbour, and how far it is from where the outing started. A snap with no coordinates is scored on time alone and scaled down, because that is a genuinely weaker claim.
-- `슬롯 적합도` — stage 2. How well the server thinks this snap suits *this position*.
+- `같은 외출일 가능성` — stage 1. How sure the app is that this snap belongs to the outing the others came from, from two measurements: how close in time the snap sits to its nearest neighbour, and how far it is from where the outing started. A snap with no coordinates is scored on time alone and scaled down, because that is a genuinely weaker claim.
+- `어울림` — stage 2. How well the server thinks this snap suits *this position*.
 
 **Neither is a claim about the picture.** Stage 1 has not looked at it; stage 2's server has, but what it scores is a position, not a subject — `골목` is still shooting direction. The number keeps its distance from the label for that reason: `골목 70%` set flush together reads as "70% sure this is an alley", which neither stage can say.
 
-Two earlier attempts at explaining this were removed and are **not** the form to return to — an `AI가 고른 이유` panel ran four lines deep and pushed the slots under the fold; a per-row `같은 외출 확신 NN%` caption repeated a constant on every row and cost a third of each row's width. The column heading says it once, in the place the eye already goes, and the number carries the same words in its accessibility label where repeating them costs no width at all.
+Two earlier attempts at explaining this were removed and are **not** the form to return to — an `AI가 고른 이유` panel ran four lines deep and pushed the slots under the fold; a per-row `같은 외출 확신 NN%` caption (the heading's wording at the time) repeated a constant on every row and cost a third of each row's width. The column heading says it once, in the place the eye already goes, and the number carries the same words in its accessibility label where repeating them costs no width at all.
 
 A row the user moves out of the position its score was computed for **loses its number** rather than showing a score about somewhere else.
 
@@ -87,8 +89,8 @@ A row the user moves out of the position its score was computed for **loses its 
 
 | Capability | Status | Actual behavior |
 | --- | --- | --- |
-| Template catalog | `Functional` | Served by `GET /movie-templates` and cached for the session; the four templates that ship with the build answer the first render and stand in whenever the request fails. Ids and copy are the same on both sides, so the two can never disagree about *which* template a screen is showing. A template whose style is a preset this build does not know is skipped by the app — the server does not filter, because it cannot know what a given build understands. |
-| Template cards | `Functional` | The studio lists every template with how far the library gets through it (`4/6컷 있음 · 2컷 더`). A template the library cannot fill still appears — the shortfall is the invitation. **Ordered by shortfall, closest to filled first**, with the shorter template and then the catalog breaking a tie: the row is a horizontal scroll that fits two cards and a sliver, so catalog order decided by luck which templates a user ever saw. Card width is set so the third card is cut by the screen edge — the row bleeds through the studio's own padding — because a card the edge cuts is the only signal that more exist. |
+| Template catalog | `Functional` | Served by `GET /movie-templates` and cached for the session; the four templates that ship with the build answer the first render and stand in whenever the request fails. Ids and copy are meant to be the same on both sides, so the two can never disagree about *which* template a screen is showing. **Known drift (2026-09-24):** the shipped descriptions now count cuts (오늘 하루를 4컷으로 · 다녀온 카페를 소개하는 5컷 · 걸으며 찍은 6컷), while the server's seed (`apps/api` migration `20260819010000_add_movie_templates`) still carries the old 장면 wording, which is what a signed-in device shows until the server copy is updated. A template whose style is a preset this build does not know is skipped by the app — the server does not filter, because it cannot know what a given build understands. |
+| Template cards | `Functional` | The studio lists every template with how far the library gets through it (`6컷 중 4컷 있어요`; a template the library fills completely reads `바로 만들 수 있어요`). A template the library cannot fill still appears — the shortfall is the invitation. **Ordered by shortfall, closest to filled first**, with the shorter template and then the catalog breaking a tie: the row is a horizontal scroll that fits two cards and a sliver, so catalog order decided by luck which templates a user ever saw. Card width is set so the third card is cut by the screen edge — the row bleeds through the studio's own padding — because a card the edge cuts is the only signal that more exist. |
 | Stage 1 match | `Functional` | Runs on open and again whenever the library changes, so a snap shot mid-session shows up without a refresh. Pure and unit-tested (`lib/match-template.ts`). |
 | Stage 2 recommendation | `Functional`, dormant | Request, poll, and merge are implemented and unit-tested (`model/use-template-recommendation.ts`). The backend refuses it until the feature flag is on, and every refusal resolves to "keep stage 1" without a message. Skipped entirely in mock mode and when fewer than two of the outing's snaps have uploaded. |
 | 지금 찍기 | `Functional` | Opens `/capture` and remembers which row asked. On return, if the library has a newer snap than it did on the way out, that snap goes into that row. Coming back without shooting leaves the row empty. The snap is filed in the library like any other — nothing about capture changes. |
@@ -96,7 +98,7 @@ A row the user moves out of the position its score was computed for **loses its 
 | ⌃ ⌄ (reorder) | `Functional` | Swaps a snap with the one above or below it, so the cuts play in an order other than the one the clock proposed. The **slots** never move — `출발` stays the template's first scene — so a move trades the two snaps' positions. Held as a permutation of the proposal (`model/use-template-fill.ts`), which is what keeps each snap's number with it across a swap. |
 | Rows that cannot be reordered | `Functional` | A row the user shot for, or dropped, is bound to its slot rather than to a position in the running order, so no swap could move it. Both arrows either side of such a row are drawn dimmed and inert rather than silently doing nothing. The arrows are also absent from an empty row, which has nothing to move. |
 | 고친 것 되돌리기 | `Functional` | Puts every slot back the way the proposal had it, order included, and un-pins the proposal so a recommendation that arrived meanwhile takes effect. Shown only once something has been dropped, shot, or reordered. |
-| Nothing to propose | `Functional` | A library with no outing in it says so and leaves every slot empty with its `지금 찍기`. The screen is still useful — that is the case it was designed for. |
+| Nothing to propose | `Functional` | A library with no outing in it says so (아직 한 편으로 묶을 스냅이 없어요. 빈 컷을 찍어 채워 보세요.) and leaves every slot empty with its `지금 찍기`. Pressing 만들기 with nothing filled is refused in the footer: 채운 컷이 없어요. 빈 컷을 찍어 채워 주세요. The screen is still useful — that is the case it was designed for. |
 | 이대로 만들기 | `Functional` | Creates a movie from the filled slots in slot order, with the template's style and BGM — the style is what a run is actually made with, while the track is only stored, since the app offers no track picker and sends none ([The movie screen](movie.md)) — marked `arranger: 'ai'`, and replaces the screen with the movie — **an editable draft, not a running job**. Generation is slow remote work, so cut lengths, order, and style are settled on the movie screen first and the run starts there ([The movie screen](movie.md)). |
 | Manual changes are not stored | `Functional` | Dropping and shooting are held on the screen. Nothing exists to write to until the movie is created, and leaving costs nothing. |
 | One snap, one slot | `Functional` | A snap shot for an empty slot joins the library, so the next match would happily propose it for another slot as well. The slot it was shot for claims it, and the other one stays empty — a duplicate would have become two cuts of the same three seconds. The server applies the same rule to its own answer: one snap fills one slot. |

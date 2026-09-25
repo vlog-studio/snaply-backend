@@ -6,7 +6,7 @@ import { ThemedText } from '@/shared/ui/themed-text';
 
 export const MovieStatusLabels: Record<MovieStatus, string> = {
   draft: '초안',
-  generating: '생성 중',
+  generating: '만드는 중',
   ready: '완성',
   failed: '실패',
 };

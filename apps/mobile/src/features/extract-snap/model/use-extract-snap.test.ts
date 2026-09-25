@@ -143,7 +143,7 @@ describe('useExtractSnap', () => {
 
     expect(snap).toBeNull();
     expect(mockAddSnap).not.toHaveBeenCalled();
-    expect(result.current.error).toBe('컷을 담지 못했어요. 다시 시도해 주세요.');
+    expect(result.current.error).toBe('스냅을 담지 못했어요. 다시 시도해 주세요.');
     expect(result.current.isExtracting).toBe(false);
   });
 

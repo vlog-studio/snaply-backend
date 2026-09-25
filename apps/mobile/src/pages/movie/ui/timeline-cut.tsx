@@ -313,8 +313,8 @@ export function TimelineCut({
 
       <AnimatedPressable
         accessibilityRole="button"
-        accessibilityLabel={`컷 ${index + 1}${missing ? ' · 원본 삭제됨' : expired ? ' · 서버에서 만료됨' : ''} · ${formatSeconds(shown.endSec - shown.startSec)}`}
-        accessibilityHint={focused ? '다시 탭하면 선택이 해제됩니다' : undefined}
+        accessibilityLabel={`컷 ${index + 1}${missing ? ' · 스냅 삭제됨' : expired ? ' · 보관 기간 끝남' : ''} · ${formatSeconds(shown.endSec - shown.startSec)}`}
+        accessibilityHint={focused ? '다시 탭하면 선택을 해제해요' : undefined}
         accessibilityState={{ selected }}
         onPress={() => onSelect(index)}
         style={[

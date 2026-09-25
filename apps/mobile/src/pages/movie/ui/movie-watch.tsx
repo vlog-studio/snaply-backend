@@ -117,13 +117,13 @@ export function MovieWatch({
           // stage in the finished movie's place — the substitution 공유 refuses
           // to make — and it would look like the run had produced nothing.
           <View style={[styles.empty, { borderColor: theme.border }]}>
-            <ThemedText type="heading">완성 파일을 불러오지 못했어요</ThemedText>
+            <ThemedText type="heading">완성된 무비를 불러오지 못했어요</ThemedText>
             <ThemedText themeColor="textSecondary" style={styles.centerText}>
-              연결을 확인하고 다시 시도해주세요.
+              연결을 확인하고 다시 시도해 주세요.
             </ThemedText>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="완성 파일 다시 불러오기"
+              accessibilityLabel="완성된 무비 다시 불러오기"
               onPress={renderSource.retry}
               hitSlop={Spacing.two}
               style={({ pressed }) => [
@@ -144,7 +144,7 @@ export function MovieWatch({
           <View style={[styles.empty, { borderColor: theme.border }]}>
             <ThemedText type="heading">재생할 컷이 없어요</ThemedText>
             <ThemedText themeColor="textSecondary" style={styles.centerText}>
-              이 무비가 쓰던 스냅 원본이 모두 지워졌어요.
+              이 무비가 쓰던 스냅이 모두 삭제됐어요.
             </ThemedText>
           </View>
         )}
@@ -158,7 +158,7 @@ export function MovieWatch({
         {editedSinceRender ? (
           <View style={[styles.notice, { borderColor: theme.border }]}>
             <ThemedText type="small" themeColor="textSecondary">
-              편집한 컷 구성이 있어요. 다시 만들기 전까지는 완성 당시 구성으로 재생돼요.
+              편집한 컷 구성이 있어요. 다시 만들기 전까지 무비는 완성 당시 구성으로 재생돼요.
             </ThemedText>
             <Pressable
               accessibilityRole="button"
@@ -187,7 +187,7 @@ export function MovieWatch({
           </ThemedText>
         ) : sharing.failed ? (
           <ThemedText type="note" themeColor="textSecondary" style={styles.centerText}>
-            완성 파일을 내려받지 못했어요. 연결을 확인하고 다시 시도해주세요.
+            완성된 무비를 내려받지 못했어요. 연결을 확인하고 다시 시도해 주세요.
           </ThemedText>
         ) : sharing.offered ? (
           // The share sheet has been up, which is the one moment 끝내기 is
@@ -196,17 +196,17 @@ export function MovieWatch({
           // for the user; the confirm asks them.
           <View style={[styles.notice, { borderColor: theme.border }]}>
             <ThemedText type="small" themeColor="textSecondary">
-              파일을 저장했다면 끝내기로 서버의 완성 파일을 정리할 수 있어요.
+              기기에 저장했다면 무비를 정리할 수 있어요.
             </ThemedText>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="무비 끝내기"
+              accessibilityLabel="무비 정리하기"
               onPress={onFinish}
               hitSlop={Spacing.two}
               style={({ pressed }) => [styles.review, { opacity: pressed ? 0.7 : 1 }]}
             >
               <ThemedText selectable={false} type="smallBold" themeColor="primary">
-                끝내기
+                정리하기
               </ThemedText>
             </Pressable>
           </View>

@@ -79,11 +79,10 @@ async function canNotify(userId: string): Promise<boolean> {
 
 function messageFor(daysBefore: number, count: number): { title: string; body: string } {
   const when = daysBefore === 1 ? '내일' : `${daysBefore}일 후`;
-  const what = count === 1 ? '영상 1개가' : `영상 ${count}개가`;
   return {
-    title: 'Snaply',
+    title: '스냅 보관 기간이 곧 끝나요',
     // 되돌릴 수 없다는 것과, 지금 무엇을 하면 되는지를 같이 말한다.
-    body: `${when} ${what} 보관 기간이 끝나 삭제됩니다. 남기고 싶다면 브이로그로 만들어 주세요.`,
+    body: `${when} 스냅 ${count}개가 삭제돼요. 남기려면 무비로 만들어 주세요.`,
   };
 }
 

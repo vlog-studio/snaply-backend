@@ -25,8 +25,8 @@ const reasonLabels: Record<string, string> = {
   purchase: '크레딧 구매',
   signup_bonus: '가입 보너스',
   export_reserve: '무비 만들기',
-  export_refund: '만들기 취소 환급',
-  store_refund_revoke: '구매 환불 회수',
+  export_refund: '만들기 취소로 환급',
+  store_refund_revoke: '환불로 회수',
   promo: '프로모션',
   ad_reward: '광고 보상',
 };
@@ -56,9 +56,9 @@ const adRefusalMessages: Record<AdRewardRefusal, string> = {
   cooldown: '잠시 뒤에 다시 볼 수 있어요.',
   limit: '오늘 볼 수 있는 광고를 다 봤어요.',
   dismissed: '광고를 끝까지 봐야 지급돼요.',
-  unavailable: '지금은 보여줄 광고가 없어요. 잠시 뒤에 다시 시도해주세요.',
+  unavailable: '지금은 보여줄 광고가 없어요. 잠시 뒤에 다시 시도해 주세요.',
   pending: '지급 확인 중이에요. 잔액에 곧 반영돼요.',
-  unreachable: '서버에 연결하지 못했어요. 다시 시도해주세요.',
+  unreachable: '연결하지 못했어요. 인터넷 연결을 확인하고 다시 시도해 주세요.',
 };
 
 function outcomeMessage(outcome: WatchRewardAdOutcome): string | undefined {
@@ -141,7 +141,7 @@ export function MeCreditsPage() {
         <SettingsSection>
           <SettingRow
             icon="play-circle-outline"
-            title={`광고 보고 +${availability.rewardCredits}`}
+            title={`광고 보고 크레딧 ${availability.rewardCredits} 받기`}
             sub={adRowSub}
             right={
               running ? undefined : (

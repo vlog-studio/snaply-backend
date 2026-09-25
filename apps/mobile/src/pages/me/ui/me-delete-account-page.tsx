@@ -24,13 +24,14 @@ export function MeDeleteAccountPage() {
       contentContainerStyle={styles.content}
     >
       <SettingsSection>
-        <SettingRow icon="card-outline" title="예약 크레딧 환급" />
+        <SettingRow
+          icon="film-outline"
+          title="만드는 중인 무비는 취소되고, 쓴 크레딧은 돌려드려요"
+        />
         <RowDivider />
-        <SettingRow icon="unlink-outline" title="소셜 연결·알림 해제" />
+        <SettingRow icon="notifications-off-outline" title="알림이 모두 꺼져요" />
         <RowDivider />
-        <SettingRow icon="film-outline" title="진행 중인 무비 생성 취소" />
-        <RowDivider />
-        <SettingRow icon="time-outline" title="30일 안에 로그인하면 복구 가능" />
+        <SettingRow icon="time-outline" title="30일 안에 다시 로그인하면 되돌릴 수 있어요" />
       </SettingsSection>
 
       {error ? (
@@ -54,7 +55,7 @@ export function MeDeleteAccountPage() {
         ]}
       >
         <ThemedText selectable={false} type="button" themeColor="danger">
-          {isPending ? '삭제 중…' : '계정 삭제'}
+          {isPending ? '삭제하는 중…' : '계정 삭제'}
         </ThemedText>
       </Pressable>
     </ScrollView>

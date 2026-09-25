@@ -5,7 +5,7 @@ function dto(over: Partial<Record<string, unknown>> = {}) {
   return {
     id: 'cafe',
     name: '카페 한 곳',
-    description: '다녀온 카페를 소개하는 다섯 장면',
+    description: '다녀온 카페를 소개하는 5컷',
     style: '감성',
     bgm: 'sunny-side',
     slots: [{ id: 'front', label: '외관', hint: '가게 앞' }],

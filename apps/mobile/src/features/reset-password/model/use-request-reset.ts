@@ -6,7 +6,7 @@ import { mockResetPasswordProvider } from './mock-reset-password-provider';
 import type { ResetPasswordProvider } from './reset-password-provider';
 import { supabaseResetPasswordProvider } from './supabase-reset-password-provider';
 
-const REQUEST_ERROR_MESSAGE = '요청에 실패했어요. 잠시 후 다시 시도해 주세요.';
+const REQUEST_ERROR_MESSAGE = '재설정 링크를 보내지 못했어요. 잠시 후 다시 시도해 주세요.';
 
 const provider: ResetPasswordProvider =
   __DEV__ && !isSupabaseConfigured ? mockResetPasswordProvider : supabaseResetPasswordProvider;

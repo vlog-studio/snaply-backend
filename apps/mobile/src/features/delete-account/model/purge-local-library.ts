@@ -40,7 +40,7 @@ export async function purgeLocalLibrary(userId: string): Promise<void> {
  * Cleans up after every deleted account whose grace period has run out, and
  * returns the ids it purged.
  *
- * Deletion is a soft delete: 30일 안에 로그인하면 복구 가능 is what the
+ * Deletion is a soft delete: 30일 안에 다시 로그인하면 되돌릴 수 있어요 is what the
  * confirmation screen promises, and a restored account whose videos were
  * deleted the moment it asked would find nothing to come back to — the local
  * originals are the only copy of a snap that exists. So a deletion is recorded

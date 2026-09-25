@@ -1705,3 +1705,57 @@ uuid 3건, 컴포즈·러너 갱신). API 394건. **실기기 미검증** — �
 
 **남은 것**: 돌비비전 실물은 아직 검증하지 못했다(합성 HDR10 으로만 확인). `media:e2e` 에
 `--token` 을 추가해 Supabase 없이 auth 스텁 토큰으로도 돌릴 수 있게 했다.
+
+### iOS 시뮬레이터 모바일 검증 + 첫 로그인 경합 수정 (2026-09-23)
+
+iPhone 17 시뮬레이터(Xcode 27, Expo Go 57.0.9)에서 앱을 실제 로컬 API 에 붙여 검증했다.
+로그인 전 화면(로그인·가입·재설정, 유효성 메시지, OS 다크 전환), 4개 탭, 설정 5화면(크레딧·알림·
+테마·관심사·소셜), 뷰파인더 모달, 재시작 후 세션 유지가 모두 정상이었다. 이 Mac 에는 Simulator.app 이
+없고 Xcode 번들 안의 `DeviceHub.app` 이 시뮬레이터 창이다 — 상세 절차는
+[`apps/mobile/docs/workflows/local-development-and-testing.md`](../apps/mobile/docs/workflows/local-development-and-testing.md).
+
+**첫 로그인에서 500 을 찾았다.** 새 계정이 앱에 들어가면 템플릿·크레딧·무비 요청이 동시에 나가고,
+인증 미들웨어의 `resolveUser` 가 요청마다 Prisma `user.upsert` 를 돈다. 이 upsert 는 원자적이지 않아
+(findUnique → create) 같은 `supabase_uid` 의 create 가 경합했고, 진 쪽이 P2002 로 500 을 받았다 —
+앱은 그 결과 무비 탭을 빈 상태로 보여줬다. 유니크 위반을 "이미 만들어졌다"로 읽어 그 행을 다시
+조회하도록 고쳤다(`apps/api/src/services/user.service.ts`). 유니크 위반이 아닌 에러는 그대로 전파한다.
+
+검증: `test/auth.test.ts` 에 3건 추가 — upsert 가 P2002 를 던지는 결정적 재현(수정 전 실패 확인),
+다른 에러의 전파, 같은 sub 6개 동시 요청. API 전체 412건 + tsc 통과.
+
+**남은 것**: 재설정 화면 카피가 "인증 코드"라 말하지만 구현은 딥링크다(모바일, 미수정). 실제 촬영·
+푸시·햅틱은 시뮬레이터에서 검증 대상이 아니며 iOS 실기기는 없다.
+
+### 앱 전반 카피 정리 — UX 검토 P0·P1 (2026-09-24)
+
+시뮬레이터 화면과 전체 문구 인벤토리를 [`ux-writing.md`](../apps/mobile/docs/ux/ux-writing.md) 기준으로
+검토하고, 오너 결정에 따라 동작과 어긋난 문구(P0)와 말투·용어 불일치(P1)를 고쳤다. 화면 구조는 바꾸지 않았다.
+
+- **동작과 어긋나던 문구**: 재설정·미인증 안내의 "인증 코드" → 재설정/인증 **링크**. 구매 기능이 없는데
+  "크레딧에서 채울 수 있어요"라던 안내는 광고 보상이 켜져 있을 때만 광고로 받는 길을 안내한다.
+  아무 동작도 없던 촬영 리마인더·하루 빈도·소셜 연결은 `준비 중` 행으로 바꿨다(값은 보존).
+- **서버 원문 노출 제거**: `rejected` 거절 메시지·`errorDetail`·워커 진행 단계 문자열을 화면에 그대로
+  보여주지 않는다. 진행 단계는 `features/compose-movie/lib/edit-step-label.ts` 가 앱 문구로 옮긴다.
+- **용어·말투 통일**: 스냅/컷/무비/만들기/올리기/삭제로 고정하고(생성·업로드·지우기·칸·슬롯·장면·
+  완성 파일 제거), 합니다체·~시 존대를 해요체로, `주세요` 띄어쓰기를 통일했다. 카메라 버튼은 `찍기`,
+  확인 배지는 `담김`. 서버에서 결과 파일을 지우는 "끝내기"는 화면에서 `정리하기`로 부른다.
+- **첫 화면**: 헤드라인 "3초씩 찍으면 / 한 편의 무비가 돼요"(브랜드 오기 "스냅리" 제거).
+- **푸시(API)**: 무비 완성·스냅 만료 예고·위치 알림의 제목/본문을 앱 용어의 해요체로 바꾸고 위치 시드
+  문구도 맞췄다. 템플릿 설명은 마이그레이션 `20260924000000_reword_movie_template_descriptions` 로 갱신
+  (운영자가 고친 설명은 건드리지 않는다).
+
+검증: `npm run verify:mobile`(1035건), API 전체 412건 통과. iPhone 17 시뮬레이터에서 스튜디오·나·알림·
+소셜 연결 화면의 새 문구를 확인했다. 로그인 화면·촬영·추출·무비 화면은 코드로만 확인했다.
+
+### MinIO 이미지를 소스 빌드 GHCR 미러로 — quay.io 차단 복구 (2026-09-25)
+
+quay.io 의 `minio/minio` 가 익명 pull 에 401 을 돌려주기 시작해 CI 통합 테스트와 Deploy 스모크가
+MinIO 기동 단계에서 깨졌다(backlog E-7 이 예고한 상황). 아카이브된 업스트림 소스의 같은 릴리스
+(`RELEASE.2025-09-07T16-13-09Z`, 커밋 `07c3a42` 고정)를 [`deploy/minio/Dockerfile`](../deploy/minio/Dockerfile)
+로 빌드하고 [`minio-image.yml`](../.github/workflows/minio-image.yml) 이 main 에서 amd64·arm64 로 GHCR 에
+올린다. compose 2곳과 CI 가 그 이미지를 가리키고, 받을 수 없으면(비공개 패키지 · 미러 전)
+[`scripts/ensure-minio-image.sh`](../scripts/ensure-minio-image.sh) 가 같은 Dockerfile 로 빌드한다.
+
+검증: 로컬 빌드 이미지의 `minio --version` 이 quay.io 이미지와 같은 버전·커밋을 찍는다. amd64·arm64
+buildx 빌드 성공. 개발 MinIO 를 새 이미지로 교체(기존 볼륨 데이터 유지)한 뒤 `npm test -w apps/api`
+412건 통과, 컨테이너 안 curl 헬스체크 200. GitHub Actions 에서의 실행(push · 스모크)은 PR 에서 확인한다.

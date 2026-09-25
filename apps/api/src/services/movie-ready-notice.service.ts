@@ -71,8 +71,8 @@ export async function notifyMovieReady(params: {
   }
 
   const result = await sendToUser(params.logger, params.userId, {
-    title: 'Snaply',
-    body: `'${movie.title}' 브이로그가 완성됐어요. 확인해 보세요!`,
+    title: '무비가 완성됐어요',
+    body: `'${movie.title}' 무비를 지금 볼 수 있어요.`,
     // 앱이 곧장 그 무비를 열 수 있게 id 를 싣는다.
     data: { kind: 'movie_ready', movieId: movie.id, videoId: params.videoId },
   });

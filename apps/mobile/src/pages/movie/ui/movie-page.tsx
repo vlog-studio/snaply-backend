@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { BackHandler, Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -9,6 +10,7 @@ import { useComposeMovie, useRenderSource } from '@/features/compose-movie';
 import { FinishMovieConfirm } from '@/features/finish-movie';
 import { RenameMovieSheet } from '@/features/rename-movie';
 import { useShareMovie } from '@/features/share-movie';
+import { adRewardQueries } from '@/features/watch-reward-ad';
 import { BackBar } from '@/shared/ui/back-bar';
 import { BottomSheet } from '@/shared/ui/bottom-sheet';
 import { MaxContentWidth, Radius, Spacing, useTheme } from '@/shared/ui/theme';
@@ -76,6 +78,7 @@ export type MoviePageProps = {
 export function MoviePage({ movieId }: MoviePageProps) {
   const theme = useTheme();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
   const { saveStyle, setArranger, startGeneration, cancelGeneration } = useComposeMovie();
   const list = useMovieCuts(movieId);
@@ -101,9 +104,9 @@ export function MoviePage({ movieId }: MoviePageProps) {
   // 끝내기 asked from the watch stage's own prompt (the ⋯ sheet hosts its own
   // copy of the step, so the two Modals are never up together).
   const [finishAsking, setFinishAsking] = useState(false);
-  // The refusal already in the user's words: one of them (`rejected`) is worded
-  // by the backend, so the message is resolved where the outcome arrives rather
-  // than by the footer that draws it.
+  // The refusal already in the user's words, resolved where the outcome arrives
+  // rather than by the footer that draws it: a credit refusal names the ad
+  // top-up only when the server says that door is open, which is read then.
   const [refusalMessage, setRefusalMessage] = useState<string>();
 
   // Which cut is being *worked on* — the strip's held clip and the inspector's
@@ -175,7 +178,7 @@ export function MoviePage({ movieId }: MoviePageProps) {
         <BackBar onPress={goBack} />
         <View style={[styles.screen, styles.centered]}>
           <ThemedText type="heading">무비를 찾을 수 없어요</ThemedText>
-          <ThemedText themeColor="textSecondary">이미 사라졌거나 잘못된 주소예요.</ThemedText>
+          <ThemedText themeColor="textSecondary">이미 삭제됐거나 없는 무비예요.</ThemedText>
         </View>
       </View>
     );
@@ -199,9 +202,19 @@ export function MoviePage({ movieId }: MoviePageProps) {
   // instead of having to be undone.
   const runGeneration = async () => {
     const outcome = await startGeneration(movie.id);
+    // The same answer the credits screen reads to show its ad row. Asked only
+    // on a credit refusal, and a failed read names no top-up rather than one
+    // that may not be there.
+    const adsEnabled =
+      outcome.refused === 'no-credit'
+        ? await queryClient
+            .fetchQuery(adRewardQueries.availability())
+            .then((availability) => availability.enabled)
+            .catch(() => false)
+        : false;
     setRefusalMessage(
       outcome.refused
-        ? generationRefusalMessage(outcome.refused, outcome.message, outcome.shortfall)
+        ? generationRefusalMessage(outcome.refused, outcome.shortfall, adsEnabled)
         : undefined,
     );
     // The result of this run should open as a result: back to watch mode when
@@ -298,7 +311,7 @@ export function MoviePage({ movieId }: MoviePageProps) {
               <View style={[styles.empty, { borderColor: theme.border }]}>
                 <ThemedText type="heading">재생할 컷이 없어요</ThemedText>
                 <ThemedText themeColor="textSecondary" style={styles.centerText}>
-                  이 무비가 쓰던 스냅 원본이 모두 지워졌어요.
+                  이 무비가 쓰던 스냅이 모두 삭제됐어요.
                 </ThemedText>
               </View>
             )}
@@ -340,7 +353,7 @@ export function MoviePage({ movieId }: MoviePageProps) {
                   </Pressable>
                   <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel="복원하기"
+                    accessibilityLabel="다시 실행"
                     accessibilityState={{ disabled: !list.canRedo }}
                     disabled={!list.canRedo}
                     onPress={list.redo}
@@ -508,7 +521,7 @@ export function MoviePage({ movieId }: MoviePageProps) {
           mode — is gone the moment it succeeds; closing it first keeps the
           Modal from outliving the face that opened it. */}
       <BottomSheet
-        accessibilityLabel="무비 끝내기 확인"
+        accessibilityLabel="무비 정리 확인"
         visible={finishAsking}
         onClose={() => setFinishAsking(false)}
       >
