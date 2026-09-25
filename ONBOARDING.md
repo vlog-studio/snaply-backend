@@ -147,6 +147,9 @@ npm run db:seed
 ```
 
 `infra:up`은 PostgreSQL `:5432`, MinIO `:9100/:9101`, Redis `:6379`를 시작한다.
+MinIO 이미지는 공개 배포처가 없어 우리가 소스에서 빌드한 GHCR 이미지를 쓴다. `docker login ghcr.io`
+가 되어 있으면 받아 오고, 아니면 첫 실행에서 `deploy/minio`로 로컬 빌드한다(몇 분, 한 번만)
+— [`scripts/ensure-minio-image.sh`](scripts/ensure-minio-image.sh), 배경은 backlog E-7.
 MinIO 콘솔은 `http://localhost:9101`이며 기본 로그인은 `minioadmin` / `minioadmin123`이다.
 버킷은 API 첫 기동 시 자동 생성된다. 공유 Supabase DB를 쓰는 경우에는 `DATABASE_URL`과
 `DIRECT_URL`만 팀 값으로 바꾸고 로컬 PostgreSQL 대신 그 DB에 migration을 적용한다.

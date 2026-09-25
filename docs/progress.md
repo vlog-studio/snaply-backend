@@ -1746,3 +1746,16 @@ iPhone 17 시뮬레이터(Xcode 27, Expo Go 57.0.9)에서 앱을 실제 로컬 A
 
 검증: `npm run verify:mobile`(1035건), API 전체 412건 통과. iPhone 17 시뮬레이터에서 스튜디오·나·알림·
 소셜 연결 화면의 새 문구를 확인했다. 로그인 화면·촬영·추출·무비 화면은 코드로만 확인했다.
+
+### MinIO 이미지를 소스 빌드 GHCR 미러로 — quay.io 차단 복구 (2026-09-25)
+
+quay.io 의 `minio/minio` 가 익명 pull 에 401 을 돌려주기 시작해 CI 통합 테스트와 Deploy 스모크가
+MinIO 기동 단계에서 깨졌다(backlog E-7 이 예고한 상황). 아카이브된 업스트림 소스의 같은 릴리스
+(`RELEASE.2025-09-07T16-13-09Z`, 커밋 `07c3a42` 고정)를 [`deploy/minio/Dockerfile`](../deploy/minio/Dockerfile)
+로 빌드하고 [`minio-image.yml`](../.github/workflows/minio-image.yml) 이 main 에서 amd64·arm64 로 GHCR 에
+올린다. compose 2곳과 CI 가 그 이미지를 가리키고, 받을 수 없으면(비공개 패키지 · 미러 전)
+[`scripts/ensure-minio-image.sh`](../scripts/ensure-minio-image.sh) 가 같은 Dockerfile 로 빌드한다.
+
+검증: 로컬 빌드 이미지의 `minio --version` 이 quay.io 이미지와 같은 버전·커밋을 찍는다. amd64·arm64
+buildx 빌드 성공. 개발 MinIO 를 새 이미지로 교체(기존 볼륨 데이터 유지)한 뒤 `npm test -w apps/api`
+412건 통과, 컨테이너 안 curl 헬스체크 200. GitHub Actions 에서의 실행(push · 스모크)은 PR 에서 확인한다.
