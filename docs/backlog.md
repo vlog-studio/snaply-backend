@@ -764,7 +764,7 @@ A-7 의 비트 싱크가 들어오면 컷 지점까지 달라져 피해가 커�
 **완료 조건**: 선택된 트랙 ID·난수 시드를 `editSpec` 에 핀으로 남기고, 재생성이 같은 산출물을
 내는 것을 테스트로 고정한다. 트랙 ID 를 가지려면 `bgm_tracks` 가 필요하므로 A-7 과 함께 간다.
 
-### E-7. MinIO 커뮤니티 이미지의 수명 — 로컬·CI·사내 서버 스토리지 대체 검토 ⚠️ 2026-09-23 신규
+### E-7. MinIO 커뮤니티 이미지의 수명 — 로컬·CI·사내 서버 스토리지 대체 검토 ⚠️ 2026-09-23 신규 · 2026-09-25 미러로 복구
 
 MinIO 가 **2026-09-11 에 Docker Hub 의 `minio/minio`·`minio/mc` 를 삭제했다.** 2025-10 무료 이미지
 배포 중단, 2026-02 OSS 저장소 아카이브에 이은 마지막 단계이며, 커뮤니티 에디션은 유료 AIStor 로
@@ -773,21 +773,29 @@ MinIO 가 **2026-09-11 에 Docker Hub 의 `minio/minio`·`minio/mc` 를 삭제�
 이 태그는 amd64·arm64 둘 다 있다 — `.hotfix.*` 태그들은 amd64 만 있어 Apple Silicon 에서
 pull 이 실패하므로 태그를 올릴 때 매니페스트를 확인한다.
 
-**왜 열려 있는지**: quay.io 이관은 임시 조치다.
+**2026-09-25 quay.io 도 막혔다**(익명 pull 401). 위에서 걱정한 대로 CI · Deploy 가 같은 날 깨졌다.
+같은 릴리스를 **아카이브된 소스에서 빌드해 우리 GHCR 로 올리는 것**으로 옮겼다 —
+[`deploy/minio/Dockerfile`](../deploy/minio/Dockerfile)(태그 커밋 SHA 고정, 버전 문자열·커밋이
+업스트림 이미지와 같다), [`minio-image.yml`](../.github/workflows/minio-image.yml)(main 에서
+amd64·arm64 로 `ghcr.io/vlog-studio/snaply-backend/minio:RELEASE.2025-09-07T16-13-09Z` push).
+패키지는 비공개라 로그인 없이 받을 수 없으므로 [`scripts/ensure-minio-image.sh`](../scripts/ensure-minio-image.sh)
+가 받지 못하면 같은 Dockerfile 로 로컬 빌드한다(CI · Deploy 스모크 · `infra:up` · `stack` 이 부른다).
+이제 외부 배포처가 사라져도 깨지지 않는다 — 남는 의존은 GitHub 의 소스 아카이브와 Go 모듈뿐이다.
 
-- 커뮤니티 릴리스는 2025-09-07 이후 패치가 없다. 보안 수정은 AIStor 에만 간다
-- quay.io 이미지도 유지 보장이 없다. 사라지면 로컬 · CI · 사내 서버 배포가 같은 날 다시 깨진다
+**왜 열려 있는지**: 미러는 공급 문제만 푼다.
+
+- 커뮤니티 릴리스는 2025-09-07 이후 패치가 없다. 보안 수정은 AIStor 에만 간다 — 우리가 빌드해도 같다
 - **사내 서버(B-1)는 MinIO 를 운영 스토리지로 쓰고 사내망에 열려 있다** — 패치가 끊긴 S3 서버를
   계속 노출하는 것은 로컬 개발용보다 무거운 문제다
 
 **결정할 것**: 대체 S3 호환 서버(RustFS · Garage · SeaweedFS 등)로 바꿀지, 사내 서버만 바꿀지,
-실사용 서버는 AWS S3 라 무관하므로 로컬 · CI 는 그대로 둘지. 코드는 `S3_ENDPOINT` 만 바꾸는
+실사용 서버는 AWS S3 라 무관하므로 로컬 · CI 는 미러로 둘지. 코드는 `S3_ENDPOINT` 만 바꾸는
 구조라 교체 비용은 compose 3곳 · [ONBOARDING.md](../ONBOARDING.md) · [deployment.md](./deployment.md)
 와, MinIO 전용 API 에 기대는 곳이 있는지 확인(`dev:public-bucket` 스크립트 · 헬스체크 경로) 정도다.
+GHCR 패키지를 공개로 돌릴지도 정한다 — 공개면 새 개발자가 로그인 없이 받고, 로컬 빌드(몇 분)를 건너뛴다.
 
 **완료 조건**: 대체 여부 결정 → 바꾼다면 compose 3곳 + 문서 갱신 + `npm test -w apps/api`
-(통합 테스트가 MinIO 를 쓴다) 통과. 두기로 하면 이 항목을 "고정 태그 유지 · 이미지 소실 시 대응"
-으로 좁혀 닫는다.
+(통합 테스트가 MinIO 를 쓴다) 통과. 두기로 하면 이 항목을 "소스 빌드 미러 유지"로 좁혀 닫는다.
 
 ---
 
