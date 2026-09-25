@@ -84,7 +84,7 @@ services:
       migrate: { condition: service_completed_successfully }
       redis: { condition: service_healthy }
       minio: { condition: service_healthy }
-    # Supabase·결제·SNS 자격증명은 여기서 온다. 없으면 뜨긴 하지만 인증이 동작하지 않는다.
+    # Supabase·결제·SNS 자격증명은 여기서 온다. SUPABASE_URL 이 없으면 api 는 기동을 거부한다.
     env_file:
       - path: apps/api/.env
         required: false

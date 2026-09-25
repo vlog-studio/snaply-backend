@@ -15,6 +15,10 @@ services:
 
   api:
     image: ${API_IMAGE:-snaply-api:ci}
+    environment:
+      # api 는 SUPABASE_URL 없이 기동을 거부한다(config.ts requireEnv). 러너에는 apps/api/.env 가
+      # 없으므로 여기서 준다. JWKS 는 첫 인증 요청 때 받으므로 /health 만 보는 스모크에는 가짜로 충분하다.
+      SUPABASE_URL: https://smoke.invalid
 
   notification-worker:
     image: ${API_IMAGE:-snaply-api:ci}
