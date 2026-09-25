@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 import {
   getBackgroundLocationPermission,
   getForegroundLocationPermission,
@@ -45,8 +47,13 @@ export async function startGeofenceMonitoring(
   await startGeofencing(GEOFENCE_TASK_NAME, regions);
 }
 
-/** Stop all arrival monitoring, if any is active. */
+/**
+ * Stop all arrival monitoring, if any is active. Android's native module rejects
+ * both the has-started check and the stop without background location, and
+ * without it monitoring cannot have been started, so there is nothing to stop.
+ */
 export async function stopGeofenceMonitoring(): Promise<void> {
+  if (Platform.OS === 'android' && !(await getBackgroundLocationPermission()).granted) return;
   if (await hasStartedGeofencing(GEOFENCE_TASK_NAME)) {
     await stopGeofencing(GEOFENCE_TASK_NAME);
   }

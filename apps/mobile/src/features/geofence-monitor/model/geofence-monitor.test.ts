@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 import type { Location } from '@/entities/location';
 import {
   getBackgroundLocationPermission,
@@ -48,6 +50,10 @@ const nearby: Location[] = [
     category: 'test',
   },
 ];
+
+afterEach(() => {
+  jest.restoreAllMocks();
+});
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -123,6 +129,29 @@ describe('geofence monitoring lifecycle', () => {
     expect(stop).not.toHaveBeenCalled();
 
     hasStarted.mockResolvedValue(true);
+    await stopGeofenceMonitoring();
+    expect(stop).toHaveBeenCalledWith(GEOFENCE_TASK_NAME);
+  });
+
+  it('skips the native calls on Android when background access is missing', async () => {
+    jest.replaceProperty(Platform, 'OS', 'android');
+    hasStarted.mockResolvedValue(true);
+    backgroundPermission.mockResolvedValue({
+      granted: false,
+      canAskAgain: true,
+      status: 'denied' as Awaited<ReturnType<typeof getBackgroundLocationPermission>>['status'],
+      expires: 'never',
+    });
+
+    await expect(stopGeofenceMonitoring()).resolves.toBeUndefined();
+    expect(hasStarted).not.toHaveBeenCalled();
+    expect(stop).not.toHaveBeenCalled();
+  });
+
+  it('still stops on Android when background access is granted', async () => {
+    jest.replaceProperty(Platform, 'OS', 'android');
+    hasStarted.mockResolvedValue(true);
+
     await stopGeofenceMonitoring();
     expect(stop).toHaveBeenCalledWith(GEOFENCE_TASK_NAME);
   });
