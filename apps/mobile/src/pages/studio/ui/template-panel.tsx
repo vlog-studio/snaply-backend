@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import type { TemplateOffer } from '@/features/fill-template';
 import { Radius, Spacing, useTheme } from '@/shared/ui/theme';
 import { ThemedText } from '@/shared/ui/themed-text';
+import { VideoFrame } from '@/shared/ui/video-frame';
 
 export type TemplatePanelProps = {
   offers: TemplateOffer[];
@@ -32,6 +33,13 @@ const PageGutter = Spacing.five;
  * edge is what makes the next card visible, and a card cut by the edge is the
  * only honest signal that there are more than the two that fit. The offers
  * arrive ordered by shortfall, so the two that fit are the two worth seeing.
+ *
+ * Each card leads with its slots as a strip — the user's own snap in every slot
+ * the library fills, a dashed cell in every slot it cannot — so the shortfall
+ * is seen rather than counted, and the empty cells are the shots to go and
+ * take. Only the user's footage is ever drawn: an empty library draws every
+ * cell dashed, never a sample. The strip is decoration to a screen reader; the
+ * card's label already carries the same count.
  */
 export function TemplatePanel({ offers, onOpen }: TemplatePanelProps) {
   const theme = useTheme();
@@ -48,7 +56,7 @@ export function TemplatePanel({ offers, onOpen }: TemplatePanelProps) {
         style={styles.bleed}
         contentContainerStyle={styles.row}
       >
-        {offers.map(({ template, filled, slotCount }) => {
+        {offers.map(({ template, filled, slotCount, slots }) => {
           const isComplete = filled === slotCount;
           return (
             <Pressable
@@ -65,6 +73,23 @@ export function TemplatePanel({ offers, onOpen }: TemplatePanelProps) {
                 },
               ]}
             >
+              <View style={styles.strip}>
+                {template.slots.map((slot, index) => {
+                  const snap = slots[index];
+                  return snap ? (
+                    // `VideoFrame` absolute-fills its parent, so the cell owns
+                    // the size and the clipping.
+                    <View key={slot.id} style={[styles.slot, { borderColor: theme.border }]}>
+                      <VideoFrame uri={snap.uri} />
+                    </View>
+                  ) : (
+                    <View
+                      key={slot.id}
+                      style={[styles.slot, styles.emptySlot, { borderColor: theme.border }]}
+                    />
+                  );
+                })}
+              </View>
               <ThemedText selectable={false} type="smallBold" numberOfLines={1}>
                 {template.name}
               </ThemedText>
@@ -114,4 +139,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   description: { flex: 1 },
+  // One cell per slot across the card's width, tall enough to read as a
+  // frame: a six-slot card still gives each cut about a finger's width.
+  strip: { flexDirection: 'row', gap: Spacing.half, height: 40, marginBottom: Spacing.one },
+  slot: {
+    flex: 1,
+    borderRadius: Radius.xsmall,
+    borderCurve: 'continuous',
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  emptySlot: { borderStyle: 'dashed' },
 });

@@ -6,11 +6,13 @@ The Studio (`/`) is the workbench the app opens on: the ways into a new movie, a
 
 ```text
 /  (스튜디오)
-├── 새 무비           one row, whole-row tappable: 스냅 골라 새 무비 ›
-│                                                                    → /snaps?select=1
-├── 템플릿으로 시작    a card per template, closest to filled first, each with how
-│                    far the library gets through it (6컷 중 4컷 있어요, or
-│                    바로 만들 수 있어요 once every cut is there)
+├── 새 무비           one block, whole-block tappable: 스냅 골라 새 무비 ›, and — once
+│                    the library holds a snap — its size (2개 · 0:06) and its five
+│                    newest snaps as frames                          → /snaps?select=1
+├── 템플릿으로 시작    a card per template, closest to filled first, each leading with
+│                    its slots as a strip (the user's snap in a filled slot, a dashed
+│                    cell in an empty one) over how far the library gets through it
+│                    (6컷 중 4컷 있어요, or 바로 만들 수 있어요 once every cut is there)
 │                                                                    → /template/[id]
 └── 무비             unfinished first then finished, the first 3 of that order,
                      with 전체 보기 → /movies                         → /movie/[id]
@@ -41,7 +43,7 @@ They do not consume each other. The template half is documented in [Movie templa
 
 **Confirming a selection on the Snap tab creates a `user`-arranged draft movie directly and opens it. Do not add an intermediate basket.** A 담기 트레이 — a persistent basket picks landed in before becoming a movie — was built and removed, because **the draft movie already does everything it did without the extra stop**: a draft persists across restarts, takes more snaps later through the movie screen's 스냅 더 넣기, obeys the same ten-snap cap, and loses deleted originals through the same cascade — and drafts are plural, so gathering for two movies at once (the tray's own limitation) simply works. The tray cost a 담기 → 스튜디오 → 이 스냅으로 새 무비 detour: two screen transitions and one decision for nothing. The words `트레이` and 담김 are not interchangeable here — `트레이` is out of the vocabulary, while `담김` stays, because it names the act of taking a snap and the confirmation that one was taken (the capture and extraction screens, and a picker cell whose target movie already holds that snap — `widgets/snap-grid`'s `snap-cell.tsx`). See [`../ux/ux-writing.md`](../ux/ux-writing.md).
 
-What remains on the studio is the entry: a one-row `스냅 골라 새 무비` block (one label and a trailing chevron — the same words as the movie tab's empty state) opening the Snap tab in selection mode. A leftover `snaply.tray` from an older build is promoted to a draft once at startup (`_app/providers/tray-draft-migration.tsx`) and the key is deleted.
+What remains on the studio is the entry: a `스냅 골라 새 무비` block (the label and a trailing chevron — the same words as the movie tab's empty state) opening the Snap tab in selection mode. **It shows the material rather than describing it**: once the library holds a snap, the label gains the Snap tab's own header read-out under it (`2개 · 0:06`, from the same `widgets/snap-grid` `useSnapDays`, so the two cannot disagree) and a strip of the five newest snaps' frames. The strip always lays out five square cells, so two snaps draw at the size two hundred do; the frames are not tap targets of their own — the whole block is one button, labeled with the count for screen readers. An empty library, or one still reading itself back from disk, keeps the one-row shape: there is nothing to show yet, and the block must not flash as empty over a full library. The workbench is meant to have the material on it (concept §3), and the row was the one place on the studio a user's own footage never appeared. A leftover `snaply.tray` from an older build is promoted to a draft once at startup (`_app/providers/tray-draft-migration.tsx`) and the key is deleted.
 
 ## The board
 
@@ -83,7 +85,7 @@ Two of these are deliberately identity-preserving: a write that changes nothing 
 
 ## Ownership
 
-- `src/pages/studio` owns the screen, the 새 무비 entry row, the template cards (`ui/template-panel.tsx`), and the navigation into snap selection, a template, and a movie.
+- `src/pages/studio` owns the screen, the 새 무비 entry block (it reads the library through `widgets/snap-grid`'s `useSnapDays` and draws frames with `shared/ui/video-frame`), the template cards (`ui/template-panel.tsx`, drawing each offer's `slots`), and the navigation into snap selection, a template, and a movie.
 - `src/pages/movies` owns the movie tab's grid and its selection mode — the bottom bar (`ui/movie-selection-bar.tsx`) and the delete confirmation (`ui/movie-delete-confirm.tsx`) — page-local because the grid is the actions' only entry point. Share is not its own: the page goes through `features/share-movie`'s export decision.
 - `src/features/compose-movie` owns starting a movie from picked snaps (`startMovieFromSnaps`) or a template, committing cut lists and style settings, the arrangement rules, starting generation, and the app-wide generation runner (see [The movie screen](movie.md)).
 - `src/entities/movie` owns movies and their persisted store — since 2026-09-12 **the device's cache of the account's server movies plus an outbox** (see [The movie screen](movie.md#movies-live-on-the-server)) — written per signed-in user as `snaply.movies.<userId>` and bound to an account by `applyMovieScope` (see [Snap library](snaps.md#file-model-and-storage-boundary) for why the local library is scoped and what signing out does to it). It never imports `entities/snap`; `SnapRef` is matched structurally by `entities/snap`'s `SnapRefLike`, and the `videoId`↔`snapId` translation the sync needs is injected by `features/compose-movie`.

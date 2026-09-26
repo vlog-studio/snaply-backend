@@ -4,6 +4,7 @@ import { useRef } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { useTemplateOffers } from '@/features/fill-template';
+import { formatDuration } from '@/shared/lib/datetime';
 import { movieHref, snapPickerHref } from '@/shared/routes';
 import { FadeInView } from '@/shared/ui/fade-in-view';
 import {
@@ -15,12 +16,22 @@ import {
   useTopContentInset,
 } from '@/shared/ui/theme';
 import { ThemedText } from '@/shared/ui/themed-text';
+import { VideoFrame } from '@/shared/ui/video-frame';
 import { MovieRow, useBoardMovies } from '@/widgets/movie-shelf';
+import { useSnapDays } from '@/widgets/snap-grid';
 
 import { TemplatePanel } from './template-panel';
 
 /** How many movies the board previews before deferring to the movie tab. */
 const BoardPreviewCount = 3;
+
+/**
+ * How many of the newest snaps the 새 무비 row shows. The row always lays out
+ * this many cells, so a library of two draws two cells of the same size as a
+ * library of two hundred — a strip whose cells grew to fill the row would look
+ * like a different control.
+ */
+const RecentSnapCount = 5;
 
 /**
  * The studio — the workbench the app opens on.
@@ -31,7 +42,10 @@ const BoardPreviewCount = 3;
  * resumes rather than restarts (concept §3).
  *
  * The 새 무비 row and the templates are two entrances to the same place: one is
- * "make a movie out of these", the other is "make me something like this". The
+ * "make a movie out of these", the other is "make me something like this". Both
+ * show the user's own material rather than describing it: the row carries the
+ * library's size and its newest snaps, the template cards their filled and empty
+ * slots — the workbench has the material on it (concept §3). The
  * row replaced the 담기 트레이 panel (2026-08-12): picks now become a draft
  * movie directly, and a draft is the basket the tray was — persistent, refill-
  * able through the movie screen, and plural — so the studio's job here shrank
@@ -52,6 +66,14 @@ export function StudioPage() {
 
   const templateOffers = useTemplateOffers();
   const boardMovies = useBoardMovies();
+  const library = useSnapDays();
+  // Newest first, as the Snap tab draws them. Held back until the store has
+  // read itself back, so a full library never flashes as an empty one; with no
+  // snaps the row keeps its one-line shape — there is nothing to show yet.
+  const hasMaterial = library.isHydrated && library.totalCount > 0;
+  const recentSnaps = hasMaterial
+    ? library.days.flatMap((day) => day.snaps).slice(0, RecentSnapCount)
+    : [];
 
   const pickSnaps = () => router.push(snapPickerHref());
   // Every movie opens on the same screen, whatever it is waiting for: watching a
@@ -76,14 +98,20 @@ export function StudioPage() {
       </View>
 
       <FadeInView duration={260} style={styles.blocks}>
-        {/* One row, whole-row tappable: picking the snaps is the first real
-            decision of a hand-made movie, and it happens on the Snap tab. */}
+        {/* One block, whole-block tappable: picking the snaps is the first
+            real decision of a hand-made movie, and it happens on the Snap tab.
+            The frames are what there is to pick from, not targets of their
+            own — one tap target keeps them from reading as separate buttons. */}
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="스냅 골라서 새 무비 만들기"
+          accessibilityLabel={
+            hasMaterial
+              ? `스냅 골라서 새 무비 만들기 · 스냅 ${library.totalCount}개`
+              : '스냅 골라서 새 무비 만들기'
+          }
           onPress={pickSnaps}
           style={({ pressed }) => [
-            styles.newMovieRow,
+            styles.newMovie,
             {
               backgroundColor: theme.backgroundElement,
               borderColor: theme.border,
@@ -91,10 +119,34 @@ export function StudioPage() {
             },
           ]}
         >
-          <ThemedText selectable={false} type="smallBold">
-            스냅 골라 새 무비
-          </ThemedText>
-          <Ionicons color={theme.textSecondary} name="chevron-forward" size={16} />
+          <View style={styles.newMovieHead}>
+            <View style={styles.newMovieTitle}>
+              <ThemedText selectable={false} type="smallBold">
+                스냅 골라 새 무비
+              </ThemedText>
+              {hasMaterial ? (
+                // The Snap tab's own header read-out, so the two never disagree.
+                <ThemedText selectable={false} type="note" themeColor="textSecondary">
+                  {library.totalCount}개 · {formatDuration(library.totalDurationSec)}
+                </ThemedText>
+              ) : null}
+            </View>
+            <Ionicons color={theme.textSecondary} name="chevron-forward" size={16} />
+          </View>
+          {hasMaterial ? (
+            <View style={styles.recentRow}>
+              {Array.from({ length: RecentSnapCount }, (_, index) => {
+                const snap = recentSnaps[index];
+                return snap ? (
+                  <View key={snap.id} style={[styles.recentCell, { borderColor: theme.border }]}>
+                    <VideoFrame uri={snap.uri} />
+                  </View>
+                ) : (
+                  <View key={`empty-${index}`} style={styles.recentCell} />
+                );
+              })}
+            </View>
+          ) : null}
         </Pressable>
 
         <TemplatePanel offers={templateOffers} onOpen={openTemplate} />
@@ -137,17 +189,35 @@ const styles = StyleSheet.create({
   },
   header: { gap: Spacing.half },
   blocks: { gap: Spacing.five },
-  // The one-row weight the empty tray panel had settled on, kept.
-  newMovieRow: {
+  // The one-row weight the empty tray panel had settled on is still the shape
+  // of an empty library; the frames below it only arrive with snaps.
+  newMovie: {
     minHeight: 52,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     gap: Spacing.three,
     borderRadius: Radius.large,
     borderCurve: 'continuous',
     borderWidth: 1,
     paddingHorizontal: Spacing.four,
+    paddingVertical: Spacing.three,
+  },
+  newMovieHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: Spacing.three,
+  },
+  newMovieTitle: { flex: 1, gap: Spacing.half },
+  recentRow: { flexDirection: 'row', gap: Spacing.two },
+  // Square, as in the Snap tab's grid: a frame only has to be recognizable.
+  recentCell: {
+    flex: 1,
+    aspectRatio: 1,
+    borderRadius: Radius.small,
+    borderCurve: 'continuous',
+    borderWidth: 1,
+    borderColor: 'transparent',
+    overflow: 'hidden',
   },
   section: { gap: Spacing.two },
   sectionHead: {

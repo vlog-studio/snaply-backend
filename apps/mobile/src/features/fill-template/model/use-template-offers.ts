@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
 
 import { useMovieTemplates, type MovieTemplate } from '@/entities/movie-template';
-import { useSnaps } from '@/entities/snap';
+import { useSnaps, type Snap } from '@/entities/snap';
 
-import { groupIntoSessions, pickBestSession } from '../lib/match-template';
+import { groupIntoSessions, pickBestSession, spreadAcrossSlots } from '../lib/match-template';
 
 export type TemplateOffer = {
   template: MovieTemplate;
@@ -11,6 +11,13 @@ export type TemplateOffer = {
   filled: number;
   /** How many it asks for. */
   slotCount: number;
+  /**
+   * What each slot would hold if the template were opened now, in slot order,
+   * and `undefined` for a slot the library cannot fill — laid by the same
+   * spread the template screen proposes, so the studio card's strip shows the
+   * cuts the user will find on opening it rather than a guess of its own.
+   */
+  slots: (Snap | undefined)[];
 };
 
 /**
@@ -44,10 +51,14 @@ export function useTemplateOffers(): TemplateOffer[] {
         .map((template) => {
           const slotCount = template.slots.length;
           const best = pickBestSession(groupIntoSessions(snaps), slotCount);
+          const slots = best
+            ? spreadAcrossSlots(best.snaps, slotCount)
+            : Array.from({ length: slotCount }, () => undefined);
           return {
             template,
-            filled: Math.min(best?.snaps.length ?? 0, slotCount),
+            filled: slots.filter((snap) => snap !== undefined).length,
             slotCount,
+            slots,
           };
         })
         .sort(
