@@ -9,6 +9,11 @@ import { useTheme } from '../theme';
 export type VideoFrameProps = {
   /** Source video URI; its first frame is sampled and drawn. */
   uri: string;
+  /**
+   * Draw the frame this many seconds in instead of the first one — for a clip
+   * that is shown from a later point, so its picture is the one it opens on.
+   */
+  atSec?: number;
   style?: StyleProp<ViewStyle>;
 };
 
@@ -26,9 +31,9 @@ export type VideoFrameProps = {
  * (absolute fill); the caller owns the cell's shape, border, `overflow:
  * 'hidden'`, and anything drawn on top.
  */
-export function VideoFrame({ uri, style }: VideoFrameProps) {
+export function VideoFrame({ uri, atSec, style }: VideoFrameProps) {
   const theme = useTheme();
-  const thumbnailUri = useVideoThumbnail(uri);
+  const thumbnailUri = useVideoThumbnail(uri, atSec === undefined ? undefined : atSec * 1000);
   // Whether the frame was already known when this component mounted (the hook
   // answers synchronously for frames resolved earlier this session). A remount —
   // a grid swapping in and out of selection mode — must repaint instantly; only
