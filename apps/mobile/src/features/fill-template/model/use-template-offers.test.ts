@@ -75,6 +75,28 @@ describe('useTemplateOffers', () => {
     expect(result.current[0]).toMatchObject({ filled: 4, slotCount: 4 });
   });
 
+  // The studio card draws these as its strip, so they must be the cuts the
+  // template screen will propose on opening: the outing in capture order, the
+  // slots past it empty.
+  it('lays the matched outing into the slots, leaving the unfilled ones empty', async () => {
+    mockSnaps.mockReturnValue([makeSnap('b', 10), makeSnap('a', 0)]);
+
+    const { result } = await renderOffers();
+    const day = result.current.find((offer) => offer.template.id === 'day');
+
+    expect(day?.slots.map((snap) => snap?.id)).toEqual(['a', 'b', undefined, undefined]);
+    expect(day).toMatchObject({ filled: 2, slotCount: 4 });
+  });
+
+  it('draws every slot empty when the library has nothing to offer', async () => {
+    const { result } = await renderOffers();
+
+    for (const offer of result.current) {
+      expect(offer.slots).toHaveLength(offer.slotCount);
+      expect(offer.slots.every((snap) => snap === undefined)).toBe(true);
+    }
+  });
+
   it('falls back to the shortest template when the library fills none of them', async () => {
     const { result } = await renderOffers();
 
