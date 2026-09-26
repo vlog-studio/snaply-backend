@@ -48,9 +48,13 @@ function createDevice(overrides: Partial<RecordingDevice> = {}): jest.Mocked<Rec
 
 function renderSession(device: RecordingDevice, isMicrophoneGranted = true) {
   const ensureMicrophonePermission = jest.fn().mockResolvedValue(isMicrophoneGranted);
+  const onCaptureCollected = jest.fn();
   return {
     ensureMicrophonePermission,
-    rendered: renderHook(() => useCaptureSession({ device, ensureMicrophonePermission })),
+    onCaptureCollected,
+    rendered: renderHook(() =>
+      useCaptureSession({ device, ensureMicrophonePermission, onCaptureCollected }),
+    ),
   };
 }
 
@@ -84,9 +88,9 @@ describe('useCaptureSession', () => {
     expect(result.current.lastCollected).toBeUndefined();
   });
 
-  it('saves a held capture and reports it once for the counter', async () => {
+  it('saves a held capture and reports it once for the counter and the library', async () => {
     const { record, finish } = pendingRecording();
-    const { rendered } = renderSession(createDevice({ record }));
+    const { onCaptureCollected, rendered } = renderSession(createDevice({ record }));
     const { result } = await rendered;
 
     await act(async () => result.current.beginHold());
@@ -103,6 +107,9 @@ describe('useCaptureSession', () => {
     expect(record).toHaveBeenCalledWith(3);
     expect(mockCaptureMoment).toHaveBeenCalledWith('file:///tmp/clip.mov', { durationSec: 3 });
     expect(result.current.lastCollected).toEqual({ nonce: 1, uri: snap.uri });
+    // The in-camera library reads disk once on mount; without this it kept
+    // showing the pre-capture count.
+    expect(onCaptureCollected).toHaveBeenCalledTimes(1);
     expect(result.current.stage).toBe('idle');
     expect(result.current.errorMessage).toBeUndefined();
   });
@@ -142,7 +149,7 @@ describe('useCaptureSession', () => {
   it('returns to idle when the capture action could not save the snap', async () => {
     mockCaptureMoment.mockResolvedValue(null);
     const { record, finish } = pendingRecording();
-    const { rendered } = renderSession(createDevice({ record }));
+    const { onCaptureCollected, rendered } = renderSession(createDevice({ record }));
     const { result } = await rendered;
 
     await act(async () => result.current.beginHold());
@@ -156,6 +163,7 @@ describe('useCaptureSession', () => {
 
     expect(result.current.stage).toBe('idle');
     expect(result.current.lastCollected).toBeUndefined();
+    expect(onCaptureCollected).not.toHaveBeenCalled();
   });
 
   it('refuses to record with sound on when the microphone is denied', async () => {
