@@ -4,12 +4,24 @@ import { useVideoPlayer, VideoView } from 'expo-video';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
+import { ImageFrame } from '@/shared/ui/image-frame';
 import { Radius, Spacing, useTheme } from '@/shared/ui/theme';
 import { ThemedText } from '@/shared/ui/themed-text';
+import { VideoFrame } from '@/shared/ui/video-frame';
 
 export type RenderPlayerProps = {
   /** The rendered file — `movie.render.uri`. A remote URL on real backends. */
   uri: string;
+  /**
+   * The render's own cover, a local image (`movie.render.thumbnailUri`) —
+   * what the stage shows until the movie first plays.
+   */
+  coverUri?: string;
+  /**
+   * A video whose cached first frame stands in when there is no cover, or the
+   * cover's file is gone — the render's first cut.
+   */
+  fallbackFrameUri?: string;
   style?: StyleProp<ViewStyle>;
 };
 
@@ -29,14 +41,34 @@ export type RenderPlayerProps = {
  * remote URL can rot (the row outlives the object) or the network can be
  * gone, and a silent black stage would read as a broken app rather than an
  * unreachable file.
+ *
+ * Until the movie first plays the stage shows a poster — the render's cover,
+ * else its first cut's frame — for the same reason: opening a finished movie
+ * on a black 9:16 box looks like opening an empty one, and a streamed file (or
+ * a paused player whose first frame never reaches the screen, as on the Android
+ * emulator) can leave the box black for as long as the user looks. The error
+ * face drops the poster, so the failure is not mistaken for a movie.
  */
-export function RenderPlayer({ uri, style }: RenderPlayerProps) {
+export function RenderPlayer({ uri, coverUri, fallbackFrameUri, style }: RenderPlayerProps) {
   const theme = useTheme();
   const [isPlaying, setIsPlaying] = useState(false);
   const [isEnded, setIsEnded] = useState(false);
   // The player reports 'loading' while it opens the stream; 'error' is final
   // for this source (retrying is re-entering the screen).
   const [status, setStatus] = useState<'loading' | 'readyToPlay' | 'error'>('loading');
+  // The poster stays until the movie has been asked to play *and* has painted
+  // a frame. Not on the first-frame event alone: a player opened paused reports
+  // its first frame without it reaching the screen (seen on the Android
+  // emulator, where the stage stayed black under the event), and a poster
+  // lifted then is no poster at all. Watch mode has no scrubbing, so nothing
+  // but playing ever needs the video itself on the stage.
+  const [hasPlayed, setHasPlayed] = useState(false);
+  const [framePainted, setFramePainted] = useState(false);
+  // A cover the OS reclaimed from the cache fails to load; the cut frame is
+  // what is left to show.
+  const [coverFailed, setCoverFailed] = useState(false);
+  const cover = coverUri && !coverFailed ? coverUri : undefined;
+  const showPoster = !(hasPlayed && framePainted) && status !== 'error';
 
   // The render's own sound is the movie's sound — nothing here mixes or mutes.
   const player = useVideoPlayer(uri, (instance) => {
@@ -74,6 +106,7 @@ export function RenderPlayer({ uri, style }: RenderPlayerProps) {
     } else {
       player.play();
       setIsPlaying(true);
+      setHasPlayed(true);
     }
   };
 
@@ -88,7 +121,15 @@ export function RenderPlayer({ uri, style }: RenderPlayerProps) {
         nativeControls={false}
         player={player}
         style={StyleSheet.absoluteFill}
+        onFirstFrameRender={() => setFramePainted(true)}
       />
+      {showPoster ? (
+        cover ? (
+          <ImageFrame uri={cover} onError={() => setCoverFailed(true)} />
+        ) : fallbackFrameUri ? (
+          <VideoFrame uri={fallbackFrameUri} />
+        ) : null
+      ) : null}
 
       {status === 'error' ? (
         <View style={styles.stateLayer}>

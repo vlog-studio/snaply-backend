@@ -109,7 +109,12 @@ export function MovieWatch({
           </View>
         ) : renderSource.uri !== undefined ? (
           <View style={styles.playerBox}>
-            <RenderPlayer uri={renderSource.uri} style={styles.player} />
+            <RenderPlayer
+              uri={renderSource.uri}
+              coverUri={movie.render?.thumbnailUri}
+              fallbackFrameUri={playbackCuts[0]?.uri}
+              style={styles.player}
+            />
           </View>
         ) : renderSource.unresolved ? (
           // The movie has a file and this device could not reach its address.
