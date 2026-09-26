@@ -69,6 +69,23 @@ describe('useVideoThumbnail', () => {
     expect(getVideoThumbnailMock).toHaveBeenCalledTimes(1);
   });
 
+  // A cut shown from its trim start needs that frame, and the clip's first
+  // frame must not answer for it (or the other way round).
+  it('keeps a frame sampled mid-clip apart from the first frame', async () => {
+    const uri = uniqueUri();
+    getVideoThumbnailMock.mockImplementation(async (_uri, options) =>
+      options?.timeMs === undefined ? 'file:///thumbs/first.jpg' : 'file:///thumbs/at-1500.jpg',
+    );
+
+    const first = await renderHook(() => useVideoThumbnail(uri));
+    const later = await renderHook(() => useVideoThumbnail(uri, 1500));
+
+    await waitFor(() => expect(first.result.current).toBe('file:///thumbs/first.jpg'));
+    await waitFor(() => expect(later.result.current).toBe('file:///thumbs/at-1500.jpg'));
+    expect(getVideoThumbnailMock).toHaveBeenCalledWith(uri, undefined);
+    expect(getVideoThumbnailMock).toHaveBeenCalledWith(uri, { timeMs: 1500 });
+  });
+
   it('does not index a failed extraction, so the next mount retries it', async () => {
     const uri = uniqueUri();
     getVideoThumbnailMock.mockResolvedValueOnce(undefined);
