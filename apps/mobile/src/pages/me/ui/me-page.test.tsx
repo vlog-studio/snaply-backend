@@ -44,6 +44,8 @@ jest.mock('@/features/notification-settings', () => ({
 
 const interestsTitle = '\uAD00\uC2EC\uC0AC'; // 관심사
 const comingSoon = '\uC900\uBE44 \uC911'; // 준비 중
+const socialTitle = '\uC18C\uC15C \uC5F0\uACB0'; // 소셜 연결
+const socialReadOut = 'TikTok \u00B7 Instagram \uC900\uBE44 \uC911'; // TikTok · Instagram 준비 중
 const notificationsTitle = '\uC54C\uB9BC'; // 알림
 
 async function renderPage() {
@@ -70,14 +72,24 @@ describe('MePage', () => {
     await renderPage();
 
     expect(screen.getByText(interestsTitle)).toBeTruthy();
+    expect(screen.getByText(comingSoon)).toBeTruthy();
     expect(screen.queryByRole('button', { name: interestsTitle })).toBeNull();
-    // 관심사 and 소셜 연결 are the two capabilities not ready yet.
-    expect(screen.getAllByText(comingSoon)).toHaveLength(2);
+  });
+
+  // The planned connections stay visible, but no screen sits behind them: the
+  // row names the platforms itself, and nothing offers to connect.
+  it('shows 소셜 연결 as a placeholder naming both platforms, opening nothing', async () => {
+    await renderPage();
+
+    expect(screen.getByText(socialTitle)).toBeTruthy();
+    expect(screen.getByText(socialReadOut)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: socialTitle })).toBeNull();
   });
 
   it('keeps the rows that have a screen behind them as buttons', async () => {
     await renderPage();
 
     expect(screen.getByRole('button', { name: notificationsTitle })).toBeTruthy();
+    expect(mockPush).not.toHaveBeenCalled();
   });
 });

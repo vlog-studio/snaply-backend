@@ -141,13 +141,16 @@ export function MePage() {
             happens. The same placeholder the capture reminders use. */}
         <SettingRow icon="heart-outline" title="관심사" sub="준비 중" subLines={1} />
         <RowDivider />
+        {/* The planned connections stay visible (owner decision) but open
+            nothing: the screen behind the row only repeated 준비 중 for each
+            platform, so the row names the platforms itself. No 연결 button
+            anywhere — the backend integration works for a single test account,
+            and a connect control would promise what no other user can do. */}
         <SettingRow
           icon="link-outline"
           title="소셜 연결"
-          sub="준비 중"
+          sub="TikTok · Instagram 준비 중"
           subLines={1}
-          right={<Chevron />}
-          onPress={() => router.push('/settings/social')}
         />
       </View>
 
