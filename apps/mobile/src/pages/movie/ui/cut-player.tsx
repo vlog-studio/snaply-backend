@@ -6,6 +6,7 @@ import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'rea
 
 import { Radius, Spacing, useTheme } from '@/shared/ui/theme';
 import { ThemedText } from '@/shared/ui/themed-text';
+import { VideoFrame } from '@/shared/ui/video-frame';
 
 import { PlaybackProgressIntervalSec, type PlaybackCut } from '../model/playback-cuts';
 
@@ -115,15 +116,27 @@ export function CutPlayer({
   const [activeSlot, setActiveSlot] = useState<0 | 1>(0);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isEnded, setIsEnded] = useState(false);
+  // Whether the stage is still exactly as it opened — nothing played, jumped,
+  // scrubbed, or edited yet. Until then the first cut's cached frame stands in,
+  // sampled at its trim start so it is the frame the stage itself would show:
+  // a player opened paused can report its first frame without it reaching the
+  // screen (on the Android emulator the stage stays black until something
+  // seeks or plays), and a black stage with a play button over it reads as a
+  // movie with nothing in it. Every later state is the player's own — a scrub
+  // must show the moment scrubbed to, which no cached frame can.
+  const [untouched, setUntouched] = useState(true);
   // Paused on arrival: the stage opens on the first cut's frame and waits —
   // watching is asked for (the transport, a tap), never assumed on entry.
   const [isPlaying, setIsPlaying] = useState(false);
   // Mirrors `isPlaying` for the async load completions, which must ask "is the
   // stage still supposed to be playing?" after an arbitrary delay.
   const isPlayingRef = useRef(false);
+  // Every change to the stage — a play, a pause, a jump, a scrub, an edited
+  // playlist, the end of the movie — passes through here.
   const setPlaying = (playing: boolean) => {
     isPlayingRef.current = playing;
     setIsPlaying(playing);
+    setUntouched(false);
   };
 
   // Both slots play their cut's own recorded sound — no track is mixed and
@@ -432,6 +445,9 @@ export function CutPlayer({
         surfaceType="textureView"
         style={[StyleSheet.absoluteFill, { opacity: activeSlot === 1 ? 1 : 0 }]}
       />
+      {untouched ? (
+        <VideoFrame uri={cuts[0].uri} atSec={cuts[0].startSec > 0 ? cuts[0].startSec : undefined} />
+      ) : null}
 
       <View style={styles.top} pointerEvents="none">
         <ThemedText selectable={false} style={styles.counter}>
