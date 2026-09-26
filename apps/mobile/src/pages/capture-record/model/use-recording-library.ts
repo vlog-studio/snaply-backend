@@ -47,6 +47,8 @@ export function useRecordingLibrary() {
   return {
     recordings,
     isLoading,
+    /** Re-read the list from disk, e.g. after a capture saved a new original. */
+    reload: reloadRecordings,
     errorMessage: listError ?? deleteError,
     deletingId,
     isVisible,

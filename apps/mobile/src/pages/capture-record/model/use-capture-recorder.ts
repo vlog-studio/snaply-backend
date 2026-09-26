@@ -37,6 +37,9 @@ export function useCaptureRecorder() {
     device: camera,
     ensureMicrophonePermission: permissions.ensureMicrophonePermission,
     onCaptureStart: clearSurroundingErrors,
+    // The library lists files on disk and is read once on mount, so a capture
+    // that lands while the screen is open must refresh it.
+    onCaptureCollected: () => void library.reload(),
   });
 
   // Reviewing is "a saved recording is selected"; capture never enters it.

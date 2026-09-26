@@ -21,6 +21,8 @@ type CaptureSessionInput = {
   ensureMicrophonePermission: () => Promise<boolean>;
   /** A capture actually began: the screen clears whatever else it was showing. */
   onCaptureStart?: () => void;
+  /** A snap was saved: anything listing saved recordings must pick it up. */
+  onCaptureCollected?: () => void;
 };
 
 /**
@@ -37,6 +39,7 @@ export function useCaptureSession({
   device,
   ensureMicrophonePermission,
   onCaptureStart,
+  onCaptureCollected,
 }: CaptureSessionInput) {
   const { captureMoment, error: momentError, clearError: clearMomentError } = useCaptureMoment();
 
@@ -130,6 +133,7 @@ export function useCaptureSession({
       }
 
       if (isAborted.current) return;
+      onCaptureCollected?.();
       // Continuous capture: stay in the viewfinder, ready for the next hold, so
       // the user is never yanked away mid-session.
       collectNonce.current += 1;
