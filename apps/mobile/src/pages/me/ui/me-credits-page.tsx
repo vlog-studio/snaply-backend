@@ -14,6 +14,7 @@ import { formatTimestamp } from '@/shared/lib/datetime';
 import { MaxContentWidth, Spacing, useTheme } from '@/shared/ui/theme';
 import { ThemedText } from '@/shared/ui/themed-text';
 
+import { balanceReadOut } from '../model/balance-read-out';
 import { RowDivider, SettingRow, SettingsSection } from './rows';
 
 /**
@@ -122,7 +123,7 @@ export function MeCreditsPage() {
           </ThemedText>
         )}
         <ThemedText type="small" themeColor="textSecondary">
-          보유 크레딧 · 무비 1편 = 100
+          {balanceReadOut(balanceQuery.data?.balance)}
         </ThemedText>
         {balanceQuery.isError ? (
           <Pressable
