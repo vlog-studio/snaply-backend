@@ -46,7 +46,6 @@ Root stack
     ├── /settings/credits          Credit balance, ledger, and the rewarded-ad row
     ├── /settings/notifications   Every notification preference (titled header)
     ├── /settings/theme           The theme-mode radio
-    ├── /settings/interests       The interest tags
     ├── /settings/social          The placeholder connection rows
     ├── /settings/delete-account  Deletion consequences + the confirm button
     ├── /capture           Camera recording with an inline 3초/5초 toggle

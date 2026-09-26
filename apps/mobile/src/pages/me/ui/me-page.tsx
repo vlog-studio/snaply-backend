@@ -9,11 +9,7 @@ import { creditQueries } from '@/entities/credit';
 import { useMovies } from '@/entities/movie';
 import { useClearSession, useCurrentUser } from '@/entities/session';
 import { useSnaps } from '@/entities/snap';
-import {
-  useInterests,
-  useMovieReadyEnabled,
-  useNotificationEnabled,
-} from '@/features/notification-settings';
+import { useMovieReadyEnabled, useNotificationEnabled } from '@/features/notification-settings';
 import {
   MaxContentWidth,
   Radius,
@@ -39,8 +35,9 @@ const themeModeLabels: Record<ThemeMode, string> = {
 };
 
 /**
- * The 나 tab — this week's record as the hero, and the preferences as four
- * summary rows that each open their own screen.
+ * The 나 tab — this week's record as the hero, and the preferences as summary
+ * rows that each open their own screen, except a capability that is 준비 중,
+ * whose row says so and opens nothing.
  *
  * The screen used to be every setting fully expanded, three viewports deep,
  * all at one visual weight. Now the state stays readable at the root (each
@@ -61,7 +58,6 @@ export function MePage() {
   const movieReadyAlerts = useMovieReadyEnabled();
   const locationAlerts = useNotificationEnabled();
   const themeMode = useThemeMode();
-  const interests = useInterests();
   const creditBalance = useQuery(creditQueries.balance());
 
   const days = weekRecord(snaps.map((snap) => snap.capturedAt));
@@ -73,7 +69,6 @@ export function MePage() {
     (label): label is string => Boolean(label),
   );
   const alertSummary = enabledAlerts.length ? enabledAlerts.join(' · ') : '모두 꺼짐';
-  const interestSummary = interests.length ? interests.join(' · ') : '선택 안 함';
 
   return (
     <ScrollView
@@ -140,14 +135,11 @@ export function MePage() {
           onPress={() => router.push('/settings/theme')}
         />
         <RowDivider />
-        <SettingRow
-          icon="heart-outline"
-          title="관심사"
-          sub={interestSummary}
-          subLines={1}
-          right={<Chevron />}
-          onPress={() => router.push('/settings/interests')}
-        />
+        {/* 준비 중, and a row with nothing behind it: nothing reads interests yet
+            — the app never sends them and the server's arrival push does not
+            consult them — so a picker would promise personalization that never
+            happens. The same placeholder the capture reminders use. */}
+        <SettingRow icon="heart-outline" title="관심사" sub="준비 중" subLines={1} />
         <RowDivider />
         <SettingRow
           icon="link-outline"

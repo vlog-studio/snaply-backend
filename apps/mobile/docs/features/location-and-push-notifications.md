@@ -2,7 +2,7 @@
 
 ## User goal
 
-While signed in, Snaply can notify the user when they arrive near a nearby place worth shooting (the opt-in sheet asks "주변 장소 알림을 받을까요?"). The device registers for push, monitors the nearest points in the background, and reports arrivals so the backend can send an arrival push. The user's preference for this — the master switch, quiet hours, and interests — lives in [Me tab](me.md); this document owns the mechanism those preferences drive.
+While signed in, Snaply can notify the user when they arrive near a nearby place worth shooting (the opt-in sheet asks "주변 장소 알림을 받을까요?"). The device registers for push, monitors the nearest points in the background, and reports arrivals so the backend can send an arrival push. The user's preference for this — the master switch and quiet hours — lives in [Me tab](me.md); this document owns the mechanism those preferences drive.
 
 The backend owns the arrival decision and FCM send, and that pipeline is implemented. The client also registers push tokens and monitors OS geofences against the real API when an origin is configured. What remains unverified is the complete real-device path from a geofence enter event to a displayed notification.
 
@@ -41,12 +41,12 @@ There is no screen or route for this feature. It is composed headlessly at the a
 | `src/features/geofence-monitor` | `model/geofence-task.ts` | `defineTask` at global scope; on *enter* applies a 5-minute in-memory client cooldown and calls `reportGeofenceEnter`. |
 | `src/features/geofence-monitor` | `lib/select-nearest-regions.ts` | Haversine sort + cap at `MAX_MONITORED_REGIONS` (20, the stricter iOS ceiling), mapped to `expo-location` regions with `notifyOnEnter` only. |
 | `src/features/geofence-monitor` | `api/report-geofence-enter.ts` | `POST /notifications/geofence-enter` (mock-routed). |
-| `src/features/notification-settings` | `model/*` | Owns the `notification_enabled` / `quiet_start` / `quiet_end` / `interests` preferences (persisted Zustand store), plus the local-only `movieReady` preference and the permission grant it needs. Surfaced in [Me tab](me.md). |
+| `src/features/notification-settings` | `model/*` | Owns the `notification_enabled` / `quiet_start` / `quiet_end` preferences (persisted Zustand store) and a stored `interests` list nothing reads (shown as 준비 중), plus the local-only `movieReady` preference and the permission grant it needs. Surfaced in [Me tab](me.md). |
 | `src/entities/location` | `model/location.ts`, `api/*` | The geofence-point domain model and `GET /locations` reads (DTO validation + mapping, TanStack Query options, in-code mock). |
 | `src/shared/lib/notifications` | `messaging.ts`, `local.ts` (+ `.web`) | Platform adapters for FCM (permission, remote registration, token, refresh/foreground subscriptions, and the two tap channels — `onNotificationOpened` for a background tap, `getOpeningNotification` for the quit-state launch) and local notification presentation, including its own permission request (`requestLocalNotificationPermission`) — separate from the FCM one, which resolves false wherever the Firebase native module is absent — and its own tap channels (`onLocalNotificationResponse`, `getOpeningLocalNotificationResponse`). Firebase is loaded lazily and degrades to inert stubs when the native module is absent. |
 | `src/shared/lib/location` | `permissions.ts`, `geofencing.ts`, `current-position.ts` | Raw `expo-location` permission, geofencing, and current-position calls. |
 
-Backend fields these map to: `POST /auth/fcm-token` (raw token), `POST /notifications/geofence-enter` (`locationId`), `GET /locations` (`lat`/`lng`/`radius`), and the user-profile fields enforced server-side (`notification_enabled`, `quiet_start`, `quiet_end`, `interests`).
+Backend fields these map to: `POST /auth/fcm-token` (raw token), `POST /notifications/geofence-enter` (`locationId`), `GET /locations` (`lat`/`lng`/`radius`), and the user-profile fields enforced server-side (`notification_enabled`, `quiet_start`, `quiet_end`). The arrival push does not read `interests` (`apps/api/src/services/location.service.ts`).
 
 The `GET /locations` response carries `id`, `name`, `lat`, `lng`, `radiusMeters`, `category` (free-form text), and `distanceMeters`, ordered nearest-first. The app maps all but `distanceMeters`, because it re-derives distance against its own resolved position when it selects the regions to monitor. The response has **no notification-copy template**: the arrival message is composed and sent entirely by the backend.
 
@@ -64,6 +64,6 @@ The `GET /locations` response carries `id`, `name`, `lat`, `lng`, `radiusMeters`
 - At most `MAX_MONITORED_REGIONS` (20) points are monitored at once, the nearest to the resolved position; the set is recomputed each time monitoring (re)starts.
 - The 5-minute client cooldown is in-memory only and resets on a cold background relaunch; the authoritative 30-minute per-(user, location) dedup is the backend's responsibility.
 - Notification-tap routing is covered by unit tests on both channels but has not been exercised on a device yet; the cold-start path in particular (a tap on a quit app reaching the movie) needs a dev-build check on Android, where FCM and `expo-notifications` may both report the same tap.
-- Quiet hours and interests are collected locally but not synced to the backend (`GET|PATCH /auth/me` are in the API spec, not yet called by the client); they are enforced server-side when the arrival push is decided (see [Me tab](me.md)).
+- Quiet hours are collected locally but not synced to the backend (`PATCH /auth/me` accepts them, but the client does not call it — backlog B-6); the server enforces its own copy when the arrival push is decided (see [Me tab](me.md)). Interests are not part of the decision at all.
 
-To close the partial status, verify end-to-end FCM display on a dev/release build, move `notification_enabled`/`quiet_start`/`quiet_end`/`interests` to server-backed queries/mutations on `/auth/me`, and record the verified success and failure paths here.
+To close the partial status, verify end-to-end FCM display on a dev/release build, move `notification_enabled`/`quiet_start`/`quiet_end` to server-backed queries/mutations on `/auth/me`, and record the verified success and failure paths here.
