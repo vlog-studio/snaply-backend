@@ -49,6 +49,26 @@ describe('useVideoThumbnail', () => {
     expect(getVideoThumbnailMock).not.toHaveBeenCalled();
   });
 
+  it('extracts once for consumers asking for the same video at the same time', async () => {
+    const uri = uniqueUri();
+    let release: (thumbnailUri: string) => void = () => {};
+    getVideoThumbnailMock.mockReturnValueOnce(
+      new Promise((resolve) => {
+        release = resolve;
+      }),
+    );
+
+    const first = await renderHook(() => useVideoThumbnail(uri));
+    const second = await renderHook(() => useVideoThumbnail(uri));
+    await act(async () => {
+      release('file:///thumbs/shared.jpg');
+    });
+
+    await waitFor(() => expect(first.result.current).toBe('file:///thumbs/shared.jpg'));
+    expect(second.result.current).toBe('file:///thumbs/shared.jpg');
+    expect(getVideoThumbnailMock).toHaveBeenCalledTimes(1);
+  });
+
   it('does not index a failed extraction, so the next mount retries it', async () => {
     const uri = uniqueUri();
     getVideoThumbnailMock.mockResolvedValueOnce(undefined);

@@ -11,6 +11,26 @@ import { getVideoThumbnail } from './video-thumbnails';
 // Safe to read during render: an entry is written once and never changes.
 const resolvedByUri = new Map<string, string>();
 
+// Extractions in flight, so consumers asking for the same video at the same
+// moment — the studio draws one snap in its recent row and in every template
+// card whose slot holds it — share one native call instead of racing each
+// other to write the same cache file. Cleared once the call settles, whatever
+// its answer, so a failure stays retryable.
+const pendingByUri = new Map<string, Promise<string | undefined>>();
+
+function resolveThumbnail(uri: string): Promise<string | undefined> {
+  const pending = pendingByUri.get(uri);
+  if (pending) return pending;
+  const request = getVideoThumbnail(uri)
+    .then((thumbnailUri) => {
+      if (thumbnailUri !== undefined) resolvedByUri.set(uri, thumbnailUri);
+      return thumbnailUri;
+    })
+    .finally(() => pendingByUri.delete(uri));
+  pendingByUri.set(uri, request);
+  return request;
+}
+
 /**
  * Lazily resolves a video's cached first frame. Returns `undefined` while the
  * frame is being extracted and when extraction fails, so a caller can hold its
@@ -29,8 +49,7 @@ export function useVideoThumbnail(uri: string | undefined): string | undefined {
   useEffect(() => {
     if (!uri || resolvedByUri.get(uri) !== undefined) return;
     let isActive = true;
-    void getVideoThumbnail(uri).then((thumbnailUri) => {
-      if (thumbnailUri !== undefined) resolvedByUri.set(uri, thumbnailUri);
+    void resolveThumbnail(uri).then((thumbnailUri) => {
       if (isActive) setResolved({ uri, thumbnailUri });
     });
     return () => {
