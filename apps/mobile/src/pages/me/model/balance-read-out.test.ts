@@ -1,10 +1,10 @@
 import { balanceReadOut } from './balance-read-out';
 
-const price = '보유 크레딧 · 무비 1편 = 100'; // 보유 크레딧 · 무비 1편 = 100
+const price = '\uBCF4\uC720 \uD06C\uB808\uB527 \u00B7 \uBB34\uBE44 1\uD3B8 = 100'; // 보유 크레딧 · 무비 1편 = 100
 
 /** 보유 크레딧 · 무비 N편을 만들 수 있어요 */
 function movies(count: number): string {
-  return `보유 크레딧 · 무비 ${count}편을 만들 수 있어요`;
+  return `\uBCF4\uC720 \uD06C\uB808\uB527 \u00B7 \uBB34\uBE44 ${count}\uD3B8\uC744 \uB9CC\uB4E4 \uC218 \uC788\uC5B4\uC694`;
 }
 
 describe('balanceReadOut', () => {

@@ -23,7 +23,7 @@ const startedAt = 1_754_000_000_000;
 function movie(overrides: Partial<Movie> = {}): Movie {
   return {
     id: 'm1',
-    title: '무비', // 무비
+    title: '\uBB34\uBE44', // 무비
     status: 'draft',
     createdAt: startedAt,
     updatedAt: startedAt,
@@ -119,7 +119,7 @@ describe('useRunCreditRefresh', () => {
 
     mockMovies.mockReturnValue([
       generating('m1', 'job-1', 60),
-      movie({ id: 'm2', title: '새 이름' }), // 새 이름
+      movie({ id: 'm2', title: '\uC0C8 \uC774\uB984' }), // 새 이름
     ]);
     await act(async () => rerender({}));
 
