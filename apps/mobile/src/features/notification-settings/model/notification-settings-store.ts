@@ -7,8 +7,8 @@ import { secureStorage } from '@/shared/lib/secure-storage';
  * Owns the user's notification preferences.
  *
  * Most of them are the location-alert settings, which map to the backend user
- * profile fields (`notification_enabled`, `quiet_start`, `quiet_end`,
- * `interests`) and are persisted locally for now; once `PATCH /auth/me` exists,
+ * profile fields (`notification_enabled`, `quiet_start`, `quiet_end`) and are
+ * persisted locally for now; once the app writes them through `PATCH /auth/me`,
  * those become a server-backed query/mutation and their local copies are
  * dropped. `movieReady` has no backend field yet — generation runs on the device,
  * so the device is also what announces it — but it is a notification preference
@@ -20,6 +20,10 @@ import { secureStorage } from '@/shared/lib/secure-storage';
  * the user's choice only — no scheduler consumes them yet, and they have no
  * backend field. They live here so the 나 tab's controls survive remounts and
  * restarts instead of silently resetting.
+ *
+ * `interests` is kept the same way: a choice made in an earlier build, which
+ * nothing reads — the 나 tab shows 관심사 as 준비 중 with no picker until
+ * something consumes it (backlog A-9). It is not cleared, so it can come back.
  */
 
 const REMINDER_WINDOW_IDS = ['morning', 'lunch', 'evening'] as const;
