@@ -159,13 +159,22 @@ MOV-16~19 다. 만료의 동작 구조(2단계 삭제 · 만료 스냅 식별 ·
       변환은 워커 계약 테스트(합성 HDR10)로만 확인됐다 — 2026-09-15 스트레스 검증의 아이폰 영상은 H.264 였고,
       **실제 아이폰 HEVC·돌비비전 원본으로 돌린 적이 없다**(아래 F 의 돌비비전 항목과 같은 공백). iPhone 실기기가
       생기면 iPhone 촬영 → Android 도착·재생, 그리고 그 반대를 확인한다. iOS 시뮬레이터에서 받은 사본의 재생은 확인했다
+- [ ] **iOS 출시 전 — iOS 실기기 검증 절차 문서** — `apps/mobile/docs/workflows/ios-device-verification.md` 는
+      오너에게 iOS 기기가 없어 쓰지 못했다([apps/mobile/AGENTS.md](../apps/mobile/AGENTS.md) "Planned documentation").
+      그때까지는 시뮬레이터 절차로 대신하고 실기기 미검증을 밝힌다. iPhone 실기기가 생기면 절차를 써서
+      AGENTS.md 의 문서 표에 올린다
+- [ ] **무비 컷의 `unavailable` 에 사유가 없다**(SNAP-12 `부분`) — 서버는 사라진 스냅을 쓰는 컷을
+      `unavailable` 로만 표시해, 다른 기기에서 지운 스냅의 컷이 그 기기의 무비 수정이 서버에 닿기 전 잠깐
+      "만료"로 보일 수 있다. **완료 조건**: 컷이 사라진 사유(사용자 삭제·기간 만료)를 앱이 구분해 그리고
+      SNAP-12 가 `구현됨` 이 된다
 - [ ] **스냅 휴지통(삭제 유예)** — soft delete + 유예 후 실삭제는 결정돼 있지만
       ([snap-source-of-truth.md](./decisions/snap-source-of-truth.md) §1) 스냅 삭제에는 구현되지 않았다.
       지금 서버는 삭제 즉시 파일을 지운다. reconcile 이 삭제를 모든 기기로 전파하므로
       ([snap-sync-across-devices.md](./decisions/snap-sync-across-devices.md) ①) 한 번의 실수 삭제가 모든
       기기에서 되돌릴 수 없게 된다
 - [ ] **전환을 켤 때 함께 볼 것**: 로컬이 캐시가 되는 순간 서버 만료(SNAP-9, 15일)가 곧 영상의
-      소멸이 된다. 보관 기간·구독 연장과 **같은 자리에서** 판단한다
+      소멸이 된다. 보관 기간·구독 연장과 **같은 자리에서** 판단한다. 두지 않았던 "이 기기에서만 제거"도
+      이때 다시 본다([snap-sync-across-devices.md](./decisions/snap-sync-across-devices.md) "두지 않은 것")
 
 ### A-6. 템플릿 기반 스냅 자동 추천 — 앱·백엔드 완료, 생산 활성화 대기
 
@@ -229,6 +238,15 @@ v3 는 **Movie export 에 붙인다** — `POST /edit-jobs` 는 한 버전 공�
       뒤로 미룰수록 마이그레이션 비용이 커진다(trend-editing-pipeline §8.3).
       **설계는 확정됐다**(edit-spec-v3 결정 C·D) — 앵커 어휘는 이미 공유 사전에 있고, 남은 것은
       매니페스트 본문을 저장소에 들이는 일이다. 폰트는 woff2 가 아니라 TTF/OTF 여야 한다
+- [ ] **editSpec v3·에셋 매니페스트 초안의 남은 개정** — 확정 결정([decisions/edit-spec-v3.md](./decisions/edit-spec-v3.md))을
+      두 스키마 초안에 반영하는 일이 남았다: ① editSpec 초안에 결정 A·B 의 잔여와 `fallback` 예시의
+      `prefer` → `ref` ② 매니페스트 초안에 결정 C·D 전부 — anchor 어휘를 별도 절로 떼고 `defaultAnchor` 를
+      지우며(`anchorAffinity[0]` 이 기본값) 남은 `prefer` 를 `ref` 로 ③ 두 초안의 "모든 좌표는 0~1" 문장이
+      좌표계 진술이지 범위 보장이 아님을 밝히고, 초안의 JSON Schema 예시와 v3 스펙 검증(`parseEditSpec` 확장)
+      모두 `resolved.xy` 에 범위 제약을 두지 않는다고 적는다. 사전은 이미 `ref` 를 쓰므로 지금 두 초안과
+      사전이 갈라져 있다.
+      **완료 조건**: 두 초안(`docs/plans/edit-spec-v3.md` · `docs/plans/asset-pack-manifest.md`)은 main 에 없고
+      미병합 브랜치 `feat/media/edit-spec-v3-vocabularies`(c8530f2)에만 있다 — 먼저 main 에 들이고 위 셋을 반영한다
 - [ ] 스티커를 어디서 확보할 것인가(디자이너 커미션 여부와 스타일 방향) —
       [decisions/sticker-asset-sourcing.md](./decisions/sticker-asset-sourcing.md) 결정 1(미결)
 - [ ] 스티커를 어떤 경로로 등록·관리할 것인가(관리자 페이지 도입 여부) — 같은 문서 결정 2(미결)
@@ -368,6 +386,10 @@ geofence 쿨다운 판정용 이력이 무한히 쌓인다. 쿨다운은 30분 �
   경계 스키마는 `apiRequest`의 할당 가능성 규칙으로 계약과 대조한다
 - [ ] `openapi.json`의 `*Input` 사본 스키마 — type provider 가 입력/출력 레지스트리를 둘 다 내는 동작.
   무해하지만 Swagger 가독성을 위해 upstream 옵션이 생기면 끈다
+- [ ] **모바일 응답 검증 범위** — 앱은 경계 Zod 로 자기가 쓰는 필드만 검증한다
+  ([api-contract-integration.md](../apps/mobile/docs/workflows/api-contract-integration.md) "Zod validation policy").
+  그보다 엄격한 필드 단위 검증이 필요한 응답이 있는지는 정해지지 않았다. **완료 조건**: 대상 응답(없음 포함)을
+  정하고 그 문서의 정책 절에 반영한다
 
 ### B-6. 앱의 알림 설정을 서버에 쓰기
 
@@ -377,6 +399,14 @@ geofence 쿨다운 판정용 이력이 무한히 쌓인다. 쿨다운은 30분 �
 - [ ] **`앱`** 설정 화면의 스위치를 `PATCH /auth/me` 로 쓰기. 지금은 기기 저장만이라 서버
       발송에 닿지 않는다. **조용한 시간도 서버로 보내야 실제로 억제된다** — 현재 앱의 조용한
       시간 UI 는 아무것도 억제하지 않는다
+
+### B-7. 트랙 소유 표에 새 모듈 배정
+
+[team.md](./team.md) §1 의 수직 도메인 분담 표에 그 뒤 생긴 모듈이 없다 — DB 모델 `Movie`·`MovieClip`,
+API 라우트 `movies`·`video-analyses`, 모바일 `features/{finish-movie,rename-movie,reconcile-snaps,manage-recordings}`·
+`entities/{capture-session,session}`. 누가 맡을지는 두 트랙이 합의해야 한다.
+
+**완료 조건**: 각 모듈의 담당을 합의해 team.md §1 표에 적는다.
 
 ---
 
@@ -443,6 +473,10 @@ TIKTOK_SCOPES=user.info.basic,video.publish
 엔드포인트는 코드가 자동 분기한다(`/inbox/video/init/` → `/video/init/`).
   `requiresUserAction` 이 응답에서 사라지므로 **모바일 안내 문구도 함께 정리**해야 한다
 ([api-spec.md](./api-spec.md) SNS 연동 절).
+
+**대안 후보(미결정)**: 영상 바이트를 우리가 직접 올리는 `FILE_UPLOAD` 방식 — 틱톡이 우리 URL 에서 영상을
+가져가지 않으므로 URL prefix 소유권 검증(D-3)이 필요 없어진다. 클라이언트 구현이 추가로 필요하고, 지금은
+`PULL_FROM_URL` 만 구현돼 있다(`services/sns/tiktok.client.ts`).
 
 ### C-4. FCM 실기기 수신
 
@@ -639,6 +673,13 @@ GHCR 패키지를 공개로 돌릴지도 정한다 — 공개면 새 개발자�
 **완료 조건**: export 의 402 를 `paymentRequiredErrorSchema` 로 선언 · `apps/api/test/movies.test.ts` 에 402
 `required`·`balance` 단언 추가 · `npm run openapi:write -w apps/api` 로 스냅샷 재생성 · `npm test -w apps/api` 통과.
 
+### E-10. 재생 화면의 길이 표시가 라이트 테마에서 거의 보이지 않는다
+
+재생 화면의 길이 표시가 라이트 테마에서 검은 바탕 위 어두운 글자로 그려진다 — 2026-09-27 스냅 reconcile
+실기기 검증 중에 찾았고 그 전부터 있던 문제다([progress.md](./progress.md) 2026-09-27).
+
+**완료 조건**: 라이트·다크 테마 모두에서 길이 표시가 읽히는 것을 확인한다.
+
 ---
 
 ## F. 남은 실검증
@@ -647,6 +688,9 @@ GHCR 패키지를 공개로 돌릴지도 정한다 — 공개면 새 개발자�
       확인했다. 실제 DV 원본이 생기면 편집 결과물과 렌디션 모두 다시 확인한다(아이폰 원본은 A-4 "iOS 출시 전"과
       같은 공백)
 - [ ] 실BGM 기준 whisper 자막 인식 재확인 (현재는 dev BGM 기준으로만 확인)
+- [ ] **워커 쪽 취소 중단·실패 환급** — 취소된 작업이 진행률 갱신에서 멈추는 것(`JobCanceled`)과 워커 실패 시
+      예약 크레딧 환급(`refund_export_credits` 호출)은 문법 검증만 했다([progress.md](./progress.md)
+      2026-08-13 · 2026-08-14). 실제 워커로 각각 한 번 확인한다
 
 ---
 

@@ -925,7 +925,7 @@ editSpec v3 착수의 세 번째 단위이자 이 계획의 중심 산출물. �
 않으면 기동 시 검증되지 않는다 — 테스트는 전부 초록인데 컨테이너에서 사전을 지워도 워커가 떴다.
 **사전을 추가할 때마다 `worker.py` 임포트와 기동 로그를 같이 늘려야 한다.**
 
-**다음**: 잔여 개정(kickoff §6) — 두 초안 · trend-editing-pipeline.md §3 · api-spec.md · backlog A-7.
+**남은 것**: 두 초안의 잔여 개정(kickoff §6)은 [backlog.md](./backlog.md) A-7 이 맡는다.
 
 ---
 
