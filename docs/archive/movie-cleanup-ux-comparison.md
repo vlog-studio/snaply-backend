@@ -1,7 +1,13 @@
 # D-c 판단 자료 — 선택지별로 화면이 실제로 어떻게 달라지는가
 
+> **2026-09-27 보관.** 같은 날(2026-09-09) 결정이 났고, 채택안("A 를 결과물 축에만")은 여기서 비교한 A·B·C
+> 어느 것과도 같지 않아 이 비교는 결정 이후 쓸 곳이 없다. §0 의 화면 묘사는 작성 당시 기준이다 — 현행 결정은
+> [decisions/movie-cleanup-after-export.md](../decisions/movie-cleanup-after-export.md), 현행 앱 화면은
+> [apps/mobile/docs/features/movie.md](../../apps/mobile/docs/features/movie.md) 가 원천이다. 판단 근거로 인용하지 않는다.
+> 보관하면서 깨지는 상대 링크 두 개(결정 문서 두 편)의 경로만 archive 기준으로 고쳤다.
+
 **작성일**: 2026-09-09
-**상태**: 판단 자료 — 결정 자체는 [movie-cleanup-after-export.md](movie-cleanup-after-export.md)에 기록한다.
+**상태**: 판단 자료 — 결정 자체는 [movie-cleanup-after-export.md](../decisions/movie-cleanup-after-export.md)에 기록한다.
 **근거**: 현재 앱 구현([apps/mobile/docs/features/movie.md](../../apps/mobile/docs/features/movie.md) ·
 [studio.md](../../apps/mobile/docs/features/studio.md)) · [specs/movie.md](../specs/movie.md)
 
@@ -130,5 +136,5 @@
   "주 동선 제거 + 재생성 100크레딧 + 결제 정책 재설계"보다 크다고 판단되면 A 가 맞다.
 - **B 는 아무것도 안 바꾸는 대신 회의가 원한 단순함을 주지 못한다.**
 
-A 를 택한다면 [storage-and-subscription-policy.md](storage-and-subscription-policy.md) §3 을
+A 를 택한다면 [storage-and-subscription-policy.md](../decisions/storage-and-subscription-policy.md) §3 을
 기각으로 바꾸고 A-2 구독 상품 범위를 다시 정하는 것까지 같은 결정에 포함한다.

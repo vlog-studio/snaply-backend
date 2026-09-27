@@ -4,8 +4,8 @@
 **상태**: 결정 — **결과물(브이로그)만 지우고 프로젝트(무비)는 남긴다.** 사용자가 다운로드·게시로
 "끝내면" 서버의 결과물 파일을 삭제하고, 다시 보기는 제공하지 않는다. 프로젝트는 영구 보존되어
 편집 화면에서 다시 고쳐 다시 생성할 수 있다(새 생성이므로 크레딧 100 을 다시 낸다).
-선택지 A 를 **결과물 축에만** 적용한 형태다 — 화면 비교는
-[movie-cleanup-ux-comparison.md](movie-cleanup-ux-comparison.md).
+선택지 A 를 **결과물 축에만** 적용한 형태다 — 결정 전 화면 비교(보관)는
+[archive/movie-cleanup-ux-comparison.md](../archive/movie-cleanup-ux-comparison.md).
 §결정 기록 앞의 요약·설명·선택지·권장은 결정 요청(2026-09-05) 당시의 기록이며, 확정 내용은 §결정 기록이다.
 **출처**: [meetings/2026-08-31-dev-sync.md](../meetings/2026-08-31-dev-sync.md) §4 "내보내기(완성하면 프로젝트 삭제!)", "vlog … 진행하면 삭제!"
 **관련 문서**: [specs/movie.md](../specs/movie.md) MOV-4 · MOV-14 · MOV-16 · [storage-and-subscription-policy.md](storage-and-subscription-policy.md) §3 ·
