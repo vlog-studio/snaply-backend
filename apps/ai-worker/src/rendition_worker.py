@@ -48,6 +48,18 @@ def _capture(exc: BaseException) -> None:
     sentry_sdk.capture_exception(exc)
 
 
+async def _discard(keys: list[str | None]) -> None:
+    """올렸지만 반영하지 못한 객체를 지운다. 실패는 기록만 한다 — 작업 결과를 바꾸지 않는다."""
+    for key in keys:
+        if not key:
+            continue
+        try:
+            await asyncio.to_thread(storage.delete, key)
+        except Exception as exc:  # noqa: BLE001 — 정리 실패로 작업을 재시도할 이유는 없다
+            logger.warning("반영하지 못한 객체 삭제 실패 key={} 이유={}", key, exc)
+            _capture(exc)
+
+
 async def _run(video_id: str, user_id: str, s3_key: str, work_dir: str) -> None:
     ctx = await rendition_db.fetch_context(video_id)
     if ctx is None or ctx["deleted_at"] is not None:
@@ -74,7 +86,9 @@ async def _run(video_id: str, user_id: str, s3_key: str, work_dir: str) -> None:
         video_id, rendition_key, thumbnail_key, outcome.duration_ms
     )
     if not saved:
-        # 변환 중 영상이 삭제됐다 — 만들어 둔 객체는 정리 배치가 회수한다.
+        # 변환 중 영상이 삭제됐다. 키가 행에 기록되지 않았으므로 정리 배치도 이 객체를 모른다 —
+        # 여기서 지우지 않으면 지운 스냅의 재생 가능한 사본이 계정 purge 전까지 남는다(backlog E-8).
+        await _discard([rendition_key, thumbnail_key])
         raise RenditionSkipped(f"반영 대상이 없습니다: {video_id}")
 
     logger.info("렌디션 완료 video_id={} key={}", video_id, rendition_key)
