@@ -84,7 +84,7 @@ Co-location keeps FSD ownership explicit and lets a slice move as one unit. A te
 - **Korean strings as escapes.** Assertions against Korean user-facing copy are written with `\uXXXX` escape sequences so the source stays ASCII-only and diffs stay stable. Match the existing tests:
 
   ```ts
-  const buttonTitle = '촬영 시작'; // 촬영 시작
+  const buttonTitle = '\uCD2C\uC601 \uC2DC\uC791'; // 촬영 시작
   ```
 
   Prefer asserting a message the module owns over re-typing long strings; when a literal is unavoidable, escape it.
