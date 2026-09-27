@@ -800,12 +800,10 @@ export function XPage() {
 skeletons; [writing unit tests](../workflows/writing-unit-tests.md) owns what to test,
 where a test file lives, and the naming/assertion conventions.
 
-Shared rules across all of §15:
-- Co-locate the test next to the unit (`*.test.ts` / `*.test.tsx`).
-- When an isolated test must mock another slice, mock its **Public API**
-  (`jest.mock('@/entities/session')`), never a deep internal path. Do not treat this as a
-  requirement to mock every slice dependency.
-- `render` and `renderHook` are asynchronous in RNTL v14 — always `await` them.
+Every recipe below follows that document's
+[tooling notes](../workflows/writing-unit-tests.md#tooling) (`render` and `renderHook` are awaited),
+[placement](../workflows/writing-unit-tests.md#where-a-test-lives), and
+[mocking policy](../workflows/writing-unit-tests.md#mocking-policy).
 
 ### 15a. Pure function (table-driven)
 
@@ -821,9 +819,7 @@ it.each([undefined, '', '3', '05'])('falls back to three seconds for %s', (value
 });
 ```
 
-**Rules**
-- Use `it.each` for a family of inputs exercising the same rule, instead of
-  copy-pasting near-identical `it` blocks.
+**Rules** — [table-driven cases](../workflows/writing-unit-tests.md#conventions).
 
 ### 15b. Component interaction (RNTL)
 
@@ -838,9 +834,8 @@ fireEvent.press(screen.getByRole('button', { name: title }));
 expect(onPress).toHaveBeenCalledTimes(1);
 ```
 
-**Rules**
-- Query by accessibility role and name (`screen.getByRole('button', { name })`).
-- Assert behavior, not styling — style values are verified on-device.
+**Rules** — query by role and name, and assert behavior rather than styling
+([conventions](../workflows/writing-unit-tests.md#conventions)).
 
 ### 15c. Hook test with an explicit boundary
 
@@ -887,13 +882,9 @@ await waitFor(() => expect(result.current.isLoading).toBe(false));
 - Wrap state updates in `await act(async …)`; wait for async transitions with `waitFor`.
 - Test the observable contract across branches — for an action hook: success, cancel
   (silent), failure (error surfaced).
-- Prefer a real `QueryClient` and provider to mocking `useQueryClient`, `useQuery`, or
-  `useMutation`. Set `gcTime: Infinity`, disable retries, and seed cache data when the test
-  must not perform HTTP.
-- Use real internal utilities and error classes. In particular, never create a simplified
-  stand-in for `ApiError`; constructor and `instanceof` behavior are part of the contract.
-- Add an integration-style case when several isolated mocks could agree with one another while
-  the actual modules are disconnected.
+- With a real `QueryClient` and provider
+  ([mocking policy](../workflows/writing-unit-tests.md#mocking-policy)), set `gcTime: Infinity`,
+  disable retries, and seed cache data when the test must not perform HTTP.
 
 ### 15d. Zustand store
 
@@ -917,9 +908,9 @@ snap and movie data, `secure-storage` for small preference stores.
 
 **Rules**
 - Drive the store through `renderHook` + `act` on its exported hooks.
-- Reset the store to its default in `beforeEach`/`afterEach` so ordering never matters.
-  A store exported for its co-located test only (`useSnapStore`) is reset directly with
-  `setState`; nothing outside the slice may import it.
+- Reset the store between tests ([conventions](../workflows/writing-unit-tests.md#conventions)). A store exported for
+  its co-located test only (`useSnapStore`) is reset directly with `setState`; nothing
+  outside the slice may import it.
 
 ### 15e. Mocking native modules and `react-native`
 
