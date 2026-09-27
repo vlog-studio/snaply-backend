@@ -160,3 +160,8 @@ compose 가 읽으면 `LEGAL_CONTACT_EMAIL`·`SITE_VERIFICATION_META`·`STRIPE_P
 
 이 결정은 배포 플랫폼을 고르지 않는다. Fly / Render / ECS 어느 쪽이든 위 구조는 유지하며,
 플랫폼 선택과 시크릿·Deploy 스텝 연결 작업은 [backlog.md](../backlog.md) B-1에서만 관리한다.
+
+- **사내 서버**([on-prem-deployment.md](./on-prem-deployment.md))에는 시크릿 저장소가 없어, 결정 2 의
+  "플랫폼 주입"을 root 만 읽는 서버 파일 `/etc/snaply/snaply.env` 로 대신한다. compose 가 그 파일을
+  `env_file` 과 `--env-file` 로 읽으며, 저장소·이미지에는 들어가지 않는다 — 절차는
+  [deployment.md](../deployment.md) §1-2.
