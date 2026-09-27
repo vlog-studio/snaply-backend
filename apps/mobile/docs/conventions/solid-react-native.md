@@ -166,7 +166,7 @@ Before implementing a feature or refactor:
 5. Decide whether an existing pattern is sufficient or whether there is evidence for a new abstraction.
 6. Write a short implementation plan.
 
-Do not add behavior that the user or requirement did not request. If documentation and implementation diverge, update the relevant documentation with the implementation or report the discrepancy instead of spreading an undocumented exception.
+Do not add behavior that the user or requirement did not request. When documentation and implementation diverge, follow [rule precedence](../../AGENTS.md#rule-precedence).
 
 ## Code implementation safeguards
 
@@ -187,13 +187,7 @@ Do not add behavior that the user or requirement did not request. If documentati
 
 ## Verification and review checklist
 
-After implementation, run the canonical automated gate (its check list is defined in `package.json`):
-
-```sh
-npm run verify
-```
-
-Verify behavior on each relevant platform. Then confirm:
+After implementation, run the automated gate ([AGENTS.md § Verification](../../AGENTS.md#verification)) and verify behavior on each relevant platform. Then confirm:
 
 - [ ] Each changed component, hook, and module has a clear reason to change.
 - [ ] Screen orchestration, presentation, state, external effects, and mapping are separated where their change reasons differ.

@@ -8,19 +8,19 @@ A change is verified on three surfaces, each answering a different question:
 2. **iOS Simulator and Android emulator** — the agent's on-device verification path: screens render, navigation and interaction flows work, the app talks to the backend. Boot them, drive them, and capture screenshots yourself using the procedures below (Expo Go on the iOS Simulator, a dev build on the Android emulator — [Expo Go limitations](#expo-go-limitations) explains the split). The web build (`expo start --web`) is not a reference runtime; do not use it as evidence.
 3. **Physical device, by the owner** — behavior a simulator cannot reproduce faithfully: real camera capture and the recording pipeline, the OS permission prompts as shipped, haptics, push-notification delivery, media-library writes, and network behavior from the device's own connection. When a change touches any of these, do not claim it verified. List the exact steps and expected results as a **separate manual-check section in your report** so the owner can run them on a real device, and say what you did verify on the simulator/emulator. If the owner has a device attached and asks you to drive it, [`android-device-verification.md`](android-device-verification.md) is the toolkit — confirm it with `adb devices` and target it with `-s <serial>` (or `ANDROID_SERIAL`); never assume it is the only device.
 
-The owner has no iOS device (as of 2026-07-27), so iOS hardware checks are not available; state explicitly when a change was not verified on iOS hardware.
+iOS hardware checks follow the fallback in [`AGENTS.md`](../../AGENTS.md#planned-documentation).
 
 **Metro belongs to whoever started it.** `expo run:android` and the dev client attach to any server already on port 8081, so a Metro process that dies quietly (a backgrounded process tied to a shell or a timeout) takes the device session with it. Reuse a Metro the owner already runs when one is up (`curl -s http://localhost:8081/status`); when you start one yourself, run it as a persistent process that outlives the shell that launched it, and never free port 8081 without asking.
 
 ## Automated checks
 
-Run the canonical automated gate before device or simulator verification:
+Run the automated gate ([AGENTS.md § Verification](../../AGENTS.md#verification)) before device or simulator verification:
 
 ```bash
 npm run verify
 ```
 
-The list of checks is defined once, in `package.json`'s `verify` script — CI runs the same command, so a change that passes locally passes CI's automated gate. The individual scripts for running one gate at a time (`npm run lint`, `npm run typecheck`, `npm test`, …) are listed in `package.json`'s `scripts`. Tests use the `jest-expo` preset and should live beside the module they verify so their FSD ownership remains explicit. For what to test and the per-module-kind authoring patterns, see [`writing-unit-tests.md`](writing-unit-tests.md).
+The individual scripts for running one gate at a time (`npm run lint`, `npm run typecheck`, `npm test`, …) are listed in `package.json`'s `scripts`. What to test and how to write it is in [`writing-unit-tests.md`](writing-unit-tests.md).
 
 Jest and React Native Testing Library validate JavaScript logic and rendered interaction contracts; they do not replace iOS and Android verification for camera, permissions, file-system, animation, or other native behavior.
 
