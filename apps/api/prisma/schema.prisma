@@ -143,6 +143,12 @@ model Video {
   renditionStatus String    @default("pending") @map("rendition_status") @db.VarChar(20)
   /// FFprobe 로 실측한 길이. 클라이언트가 보고한 durationSeconds 보다 정확하다.
   durationMs      Int?      @map("duration_ms")
+  /// 표시 기준 치수(회전 반영). 렌디션 워커가 배포본에서 잰다 — 못 쟀거나 렌디션이 없으면 null.
+  width           Int?
+  height          Int?
+  /// 앱이 붙인 이 스냅의 이름(로컬 스냅 id). 찍은 기기가 서버 목록에서 자기 스냅을 알아보는 데만
+  /// 쓴다. **유일하지 않다** — 기기마다 이름 규칙이 같아 계정 안에서도 겹칠 수 있다.
+  clientId        String?   @map("client_id") @db.VarChar(128)
   /// 왜 사라졌는가. 행은 툼스톤으로 남으므로(SNAP-12) 사용자는 무엇을 잃었는지 알 수 있다.
   removalReason   VideoRemovalReason? @map("removal_reason")
   /// 파일을 실제로 지운 시각. 만료 "예정"이 아니라 일어난 사실이다 — 만료 판정 자체는

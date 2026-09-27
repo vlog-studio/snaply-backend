@@ -176,6 +176,32 @@
             "format": "date-time",
             "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
           },
+          "width": {
+            "nullable": true,
+            "description": "표시 기준 가로(회전 반영). 서버가 배포본에서 잰 값이라 `playbackUrl` 의 파일과 맞는다. 렌디션이 없거나 재지 못했으면 `null`.",
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "height": {
+            "nullable": true,
+            "description": "표시 기준 세로(회전 반영). `width` 와 같은 규칙.",
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "clientId": {
+            "nullable": true,
+            "description": "등록할 때 앱이 보낸 스냅 이름(`POST /videos` 의 `clientId`). 찍은 기기가 목록에서 자기 스냅을 알아보는 데 쓴다. **유일하지 않다.** 보내지 않았으면 `null`.",
+            "type": "string"
+          },
+          "expiresAt": {
+            "nullable": true,
+            "description": "서버 보관이 끝나는 시각 — 이 시각 뒤 첫 정리 배치에서 파일이 지워진다(SNAP-9). 업로드 시각과 현재 정책에서 매번 유도한 값이라, 정책이 바뀌면 같은 영상의 값도 바뀐다. 업로드가 끝난 원본(`kind: source`, `status: ready`)에만 있고 나머지는 `null`.",
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time",
@@ -194,7 +220,51 @@
           "playbackUrl",
           "durationMs",
           "capturedAt",
+          "width",
+          "height",
+          "clientId",
+          "expiresAt",
           "createdAt"
+        ]
+      },
+      "VideoLookupItemInput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "live",
+              "removed"
+            ],
+            "description": "`live`=아직 있다(목록·상세에 나온다), `removed`=지워졌다(툼스톤만 남았다)."
+          },
+          "removalReason": {
+            "nullable": true,
+            "description": "`removed` 일 때 사라진 이유 — `user`=사용자가 지움, `expired`=보관 기간 만료. `live` 면 `null`.",
+            "type": "string",
+            "enum": [
+              "user",
+              "expired"
+            ]
+          },
+          "removedAt": {
+            "nullable": true,
+            "description": "`removed` 일 때 지워진 시각. `live` 면 `null`.",
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          }
+        },
+        "required": [
+          "id",
+          "state",
+          "removalReason",
+          "removedAt"
         ]
       },
       "VideoAnalysisInput": {
@@ -1192,6 +1262,32 @@
             "format": "date-time",
             "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
           },
+          "width": {
+            "nullable": true,
+            "description": "표시 기준 가로(회전 반영). 서버가 배포본에서 잰 값이라 `playbackUrl` 의 파일과 맞는다. 렌디션이 없거나 재지 못했으면 `null`.",
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "height": {
+            "nullable": true,
+            "description": "표시 기준 세로(회전 반영). `width` 와 같은 규칙.",
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "clientId": {
+            "nullable": true,
+            "description": "등록할 때 앱이 보낸 스냅 이름(`POST /videos` 의 `clientId`). 찍은 기기가 목록에서 자기 스냅을 알아보는 데 쓴다. **유일하지 않다.** 보내지 않았으면 `null`.",
+            "type": "string"
+          },
+          "expiresAt": {
+            "nullable": true,
+            "description": "서버 보관이 끝나는 시각 — 이 시각 뒤 첫 정리 배치에서 파일이 지워진다(SNAP-9). 업로드 시각과 현재 정책에서 매번 유도한 값이라, 정책이 바뀌면 같은 영상의 값도 바뀐다. 업로드가 끝난 원본(`kind: source`, `status: ready`)에만 있고 나머지는 `null`.",
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time",
@@ -1210,7 +1306,52 @@
           "playbackUrl",
           "durationMs",
           "capturedAt",
+          "width",
+          "height",
+          "clientId",
+          "expiresAt",
           "createdAt"
+        ],
+        "additionalProperties": false
+      },
+      "VideoLookupItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "live",
+              "removed"
+            ],
+            "description": "`live`=아직 있다(목록·상세에 나온다), `removed`=지워졌다(툼스톤만 남았다)."
+          },
+          "removalReason": {
+            "nullable": true,
+            "description": "`removed` 일 때 사라진 이유 — `user`=사용자가 지움, `expired`=보관 기간 만료. `live` 면 `null`.",
+            "type": "string",
+            "enum": [
+              "user",
+              "expired"
+            ]
+          },
+          "removedAt": {
+            "nullable": true,
+            "description": "`removed` 일 때 지워진 시각. `live` 면 `null`.",
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          }
+        },
+        "required": [
+          "id",
+          "state",
+          "removalReason",
+          "removedAt"
         ],
         "additionalProperties": false
       },
@@ -3145,6 +3286,13 @@
                     "format": "date-time",
                     "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
                     "example": "2026-09-09T04:15:30.000Z"
+                  },
+                  "clientId": {
+                    "description": "앱이 이 스냅에 붙인 이름(로컬 스냅 id). 선택값 — 목록의 `clientId` 로 그대로 돌아와, 등록 직후 앱이 기록을 잃어도 자기 스냅을 알아볼 수 있다. 서버는 해석하지 않고 유일성도 보장하지 않는다.",
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "example": "snaply-1727400000000.mp4"
                   }
                 },
                 "required": [
@@ -3283,7 +3431,7 @@
         "tags": [
           "videos"
         ],
-        "description": "내가 올린 영상을 **최신순**으로 조회한다. 삭제한 영상은 제외. 편집 결과물 영상도 같은 목록에 포함된다(`stylePreset`이 채워져 있고 `editedUrl`이 있는 항목).\n\n커서 방식이라 `nextCursor`가 `null`이 아니면 다음 페이지가 있다. 그 값을 `cursor`로 다시 넣어 호출한다.\n\n```json\n{ \"success\": true, \"data\": { \"items\": [ /* Video[] */ ], \"nextCursor\": \"uuid|null\" } }\n```",
+        "description": "내가 올린 영상을 **업로드 최신순**으로 조회한다(같은 시각이면 `id` 역순). 삭제·만료된 영상은 제외 — 왜 사라졌는지는 `POST /videos/lookup` 으로 묻는다. 편집 결과물 영상도 같은 목록에 포함된다(`stylePreset`이 채워져 있고 `editedUrl`이 있는 항목). 스냅만 보려면 `kind=source`.\n\n`status: pending` 항목은 업로드 URL 만 발급되고 아직 등록되지 않은 것이다. 다른 기기로 스냅을 가져올 때는 `ready` 만 쓴다.\n\n커서 방식이라 `nextCursor`가 `null`이 아니면 다음 페이지가 있다. 그 값을 `cursor`로 다시 넣어 호출한다.\n\n```json\n{ \"success\": true, \"data\": { \"items\": [ /* Video[] */ ], \"nextCursor\": \"uuid|null\" } }\n```",
         "parameters": [
           {
             "schema": {
@@ -3351,6 +3499,166 @@
                       "required": [
                         "items",
                         "nextCursor"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "purgeAfter": {
+                          "description": "ACCOUNT_PENDING_DELETION — 이 시각 이전에는 POST /auth/me/restore 로 복구 가능",
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/videos/lookup": {
+      "post": {
+        "summary": "영상 상태 조회 (지워진 이유 포함)",
+        "tags": [
+          "videos"
+        ],
+        "description": "영상 id 들이 **아직 있는지, 지워졌다면 왜인지**를 한 번에 묻는다. 목록과 상세는 지워진 영상을 숨기므로, 앱이 목록에서 사라진 스냅을 다른 기기에서 지운 것인지(`user`) 보관 기간이 끝난 것인지(`expired`) 구분할 때 쓴다.\n\n- 응답 순서는 요청 순서와 같지 않다. `id` 로 맞춘다.\n- **남의 id 와 없는 id 는 응답에서 빠진다** — 둘을 구분하지 않는다(존재 여부를 노출하지 않기 위함).\n- 한 번에 최대 100개. 더 많으면 나눠 부른다.\n\n```json\n{ \"success\": true, \"data\": { \"items\": [\n  { \"id\": \"uuid\", \"state\": \"live\", \"removalReason\": null, \"removedAt\": null },\n  { \"id\": \"uuid\", \"state\": \"removed\", \"removalReason\": \"expired\", \"removedAt\": \"2026-09-27T18:00:00.000Z\" }\n] } }\n```",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ids": {
+                    "minItems": 1,
+                    "maxItems": 100,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "description": "물어볼 영상 id. 최대 100개."
+                  }
+                },
+                "required": [
+                  "ids"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/VideoLookupItem"
+                          }
+                        }
+                      },
+                      "required": [
+                        "items"
                       ],
                       "additionalProperties": false
                     }

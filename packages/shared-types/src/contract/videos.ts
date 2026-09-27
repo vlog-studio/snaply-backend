@@ -2,10 +2,19 @@ import { z } from 'zod';
 
 import { AUTHENTICATED_ERROR_RESPONSES, apiErrorSchema, apiSuccess, cursorPaginated } from './common.js';
 import { defineRoute } from './define-route.js';
-import { stylePresetSchema, videoKindSchema, videoStatusSchema } from './vocab.js';
+import {
+  stylePresetSchema,
+  videoKindSchema,
+  videoRemovalReasonSchema,
+  videoStatusSchema,
+} from './vocab.js';
 
 export const VIDEO_LIST_DEFAULT_LIMIT = 20;
 export const VIDEO_LIST_MAX_LIMIT = 50;
+/** `POST /videos/lookup` 한 번에 물을 수 있는 id 수. */
+export const VIDEO_LOOKUP_MAX_IDS = 100;
+/** 앱이 붙이는 스냅 이름(`clientId`)의 최대 길이. */
+export const VIDEO_CLIENT_ID_MAX_LENGTH = 128;
 
 export const videoSchema = z
   .object({
@@ -32,6 +41,25 @@ export const videoSchema = z
       .nullable()
       .describe(
         '촬영 시각. 클라이언트가 보고한 값이며, 전달되지 않은(또는 전달 이전에 업로드된) 영상은 `null`이다. 시간 기준 정렬·묶음의 원천이고, 없으면 `createdAt`으로 대신한다.',
+      ),
+    width: z
+      .int()
+      .nullable()
+      .describe(
+        '표시 기준 가로(회전 반영). 서버가 배포본에서 잰 값이라 `playbackUrl` 의 파일과 맞는다. 렌디션이 없거나 재지 못했으면 `null`.',
+      ),
+    height: z.int().nullable().describe('표시 기준 세로(회전 반영). `width` 와 같은 규칙.'),
+    clientId: z
+      .string()
+      .nullable()
+      .describe(
+        '등록할 때 앱이 보낸 스냅 이름(`POST /videos` 의 `clientId`). 찍은 기기가 목록에서 자기 스냅을 알아보는 데 쓴다. **유일하지 않다.** 보내지 않았으면 `null`.',
+      ),
+    expiresAt: z.iso
+      .datetime()
+      .nullable()
+      .describe(
+        '서버 보관이 끝나는 시각 — 이 시각 뒤 첫 정리 배치에서 파일이 지워진다(SNAP-9). 업로드 시각과 현재 정책에서 매번 유도한 값이라, 정책이 바뀌면 같은 영상의 값도 바뀐다. 업로드가 끝난 원본(`kind: source`, `status: ready`)에만 있고 나머지는 `null`.',
       ),
     createdAt: z.iso.datetime(),
   })
@@ -86,8 +114,45 @@ export const createVideoBodySchema = z.object({
       '촬영 시각(ISO 8601). 선택값이지만 **가능하면 항상 보낸다** — 서버가 소급해 알아낼 방법이 없어, 빠뜨린 영상은 영구히 `null`로 남고 시간 기준 정렬·묶음에서 `createdAt`(업로드 시각)으로 대신하게 된다.',
     )
     .meta({ examples: ['2026-09-09T04:15:30.000Z'] }),
+  clientId: z
+    .string()
+    .min(1)
+    .max(VIDEO_CLIENT_ID_MAX_LENGTH)
+    .optional()
+    .describe(
+      '앱이 이 스냅에 붙인 이름(로컬 스냅 id). 선택값 — 목록의 `clientId` 로 그대로 돌아와, 등록 직후 앱이 기록을 잃어도 자기 스냅을 알아볼 수 있다. 서버는 해석하지 않고 유일성도 보장하지 않는다.',
+    )
+    .meta({ examples: ['snaply-1727400000000.mp4'] }),
 });
 export type CreateVideoBody = z.infer<typeof createVideoBodySchema>;
+
+export const lookupVideosBodySchema = z.object({
+  ids: z
+    .array(z.uuid())
+    .min(1)
+    .max(VIDEO_LOOKUP_MAX_IDS)
+    .describe(`물어볼 영상 id. 최대 ${VIDEO_LOOKUP_MAX_IDS}개.`),
+});
+export type LookupVideosBody = z.infer<typeof lookupVideosBodySchema>;
+
+export const VIDEO_LOOKUP_STATES = ['live', 'removed'] as const;
+
+export const videoLookupItemSchema = z
+  .object({
+    id: z.uuid(),
+    state: z
+      .enum(VIDEO_LOOKUP_STATES)
+      .describe('`live`=아직 있다(목록·상세에 나온다), `removed`=지워졌다(툼스톤만 남았다).'),
+    removalReason: videoRemovalReasonSchema
+      .nullable()
+      .describe('`removed` 일 때 사라진 이유 — `user`=사용자가 지움, `expired`=보관 기간 만료. `live` 면 `null`.'),
+    removedAt: z.iso.datetime().nullable().describe('`removed` 일 때 지워진 시각. `live` 면 `null`.'),
+  })
+  .meta({ id: 'VideoLookupItem' });
+export type VideoLookupItem = z.infer<typeof videoLookupItemSchema>;
+
+export const videoLookupSchema = z.object({ items: z.array(videoLookupItemSchema) });
+export type VideoLookup = z.infer<typeof videoLookupSchema>;
 
 export const listVideosQuerySchema = z.object({
   kind: videoKindSchema
@@ -145,6 +210,19 @@ export const listVideos = defineRoute({
     querystring: listVideosQuerySchema,
     response: {
       200: apiSuccess(videoPageSchema),
+      400: apiErrorSchema,
+      ...AUTHENTICATED_ERROR_RESPONSES,
+    },
+  },
+});
+
+export const lookupVideos = defineRoute({
+  method: 'POST',
+  path: '/videos/lookup',
+  schema: {
+    body: lookupVideosBodySchema,
+    response: {
+      200: apiSuccess(videoLookupSchema),
       400: apiErrorSchema,
       ...AUTHENTICATED_ERROR_RESPONSES,
     },

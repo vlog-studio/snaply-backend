@@ -24,6 +24,10 @@ const validVideo = {
   playbackUrl: null,
   durationMs: 3237,
   capturedAt: '2026-09-09T04:15:30.000Z',
+  width: 1080,
+  height: 1920,
+  clientId: null,
+  expiresAt: '2026-09-24T04:20:00.000Z',
   createdAt: '2026-09-09T04:20:00.000Z',
 };
 

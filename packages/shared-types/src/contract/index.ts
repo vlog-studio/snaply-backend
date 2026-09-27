@@ -54,7 +54,14 @@ import {
   uploadToSns,
 } from './sns.js';
 import { getVideoAnalysis, requestVideoAnalysis } from './video-analyses.js';
-import { createVideo, deleteVideo, getUploadUrl, getVideo, listVideos } from './videos.js';
+import {
+  createVideo,
+  deleteVideo,
+  getUploadUrl,
+  getVideo,
+  listVideos,
+  lookupVideos,
+} from './videos.js';
 
 /**
  * 모든 엔드포인트의 레지스트리. 앱의 `apiRequest` 는 이 객체의 타입에서 경로·메서드별
@@ -70,6 +77,7 @@ export const apiContract = {
   getUploadUrl,
   createVideo,
   listVideos,
+  lookupVideos,
   getVideo,
   deleteVideo,
   requestVideoAnalysis,

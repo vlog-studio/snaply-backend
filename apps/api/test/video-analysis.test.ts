@@ -335,10 +335,13 @@ describe('분석과 영상 생명주기', () => {
     expect(res.statusCode).toBe(200);
     expect(Object.keys(res.json().data).sort()).toEqual([
       'capturedAt',
+      'clientId',
       'createdAt',
       'durationMs',
       'durationSeconds',
       'editedUrl',
+      'expiresAt',
+      'height',
       'id',
       'kind',
       'originalUrls',
@@ -346,6 +349,7 @@ describe('분석과 영상 생명주기', () => {
       'status',
       'stylePreset',
       'thumbnailUrl',
+      'width',
     ]);
   });
 });
