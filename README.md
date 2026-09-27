@@ -1,4 +1,4 @@
-| API 계약 | [packages/shared-types/src/contract/](packages/shared-types/src/contract/) (Zod 스키마). Swagger `/docs`와 스냅샷 [apps/api/openapi.json](apps/api/openapi.json)은 여기서 생성 |# Snaply
+# Snaply
 
 20~30대를 위한 숏폼 브이로그 AI 자동 편집 앱 — 모바일·API·AI worker 통합 모노레포.
 
@@ -28,7 +28,7 @@ packages/
 | 저장소 최상위 원칙 | [docs/constitution.md](docs/constitution.md) | 모든 spec·plan·구현·문서에 우선. 개정 절차 포함 |
 | 제품 요구사항 (무엇을·왜) | [docs/specs/](docs/specs/README.md) | 요구 ID + 구현 상태 라벨. 동작 계약 변경은 spec 갱신이 먼저 |
 | DB 스키마 | `apps/api/prisma/schema.prisma` | 마이그레이션 `prisma/migrations/`, RLS `prisma/rls-policies.sql` |
-| API 계약 | [packages/shared-types/src/contract/](packages/shared-types/src/contract/) (Zod 스키마). Swagger `/docs`와 스냅샷 [apps/api/openapi.json](apps/api/openapi.json)은 여기서 생성 | [docs/api-spec.md](docs/api-spec.md)는 FE 전달용 요약 + WebSocket — **라우트를 바꾸면 같이 갱신** |
+| API 계약 | [packages/shared-types/src/contract/](packages/shared-types/src/contract/) (Zod 스키마). Swagger `/docs`와 스냅샷 [apps/api/openapi.json](apps/api/openapi.json)은 여기서 생성 | [docs/api-spec.md](docs/api-spec.md)는 계약만으로 알 수 없는 동작(호출 순서·멱등성·에러 의미·비동기 흐름) + WebSocket — **라우트를 바꾸면 같이 갱신** |
 | 로컬 셋업·명령·트러블슈팅 | [ONBOARDING.md](ONBOARDING.md) | |
 | 서버 환경변수 — 변수 목록 | `apps/api/src/env-spec.ts` | `.env.example`은 이 목록의 복사용 표현. 어긋나면 테스트가 실패 |
 | 모바일 공개 환경변수 | `apps/mobile/.env.example` | `EXPO_PUBLIC_*`만 허용. 서버 시크릿 금지 |
@@ -39,7 +39,7 @@ packages/
 | 다음에 결정·구현할 일 | [docs/backlog.md](docs/backlog.md) | 닫히지 않은 작업은 여기에만 둔다. `decisions/` 전체를 훑지 않는다 |
 | 완료된 구현·검증 내역 | [docs/progress.md](docs/progress.md) | 완료된 것만 |
 | 작업 분담·공유 파일 규칙 | [docs/team.md](docs/team.md) | |
-| 무비가 서버에 사는 방식(앱 캐시·아웃박스) | [docs/decisions/movie-client-cache.md](docs/decisions/movie-client-cache.md) | 앱 id·멱등 생성·읽기 병합. 미결 목록의 원천은 backlog |
+| 무비가 서버에 사는 방식(앱 캐시·아웃박스) | [apps/mobile/docs/features/movie.md](apps/mobile/docs/features/movie.md#movies-live-on-the-server) | 앱 id·멱등 생성·읽기 병합. 결정 배경·기각한 대안은 [docs/decisions/movie-client-cache.md](docs/decisions/movie-client-cache.md), 미결 목록은 backlog |
 | 정책·설계 결정 — 확정과 결정 대기 | [docs/decisions/README.md](docs/decisions/README.md) | 인덱스가 **결정 완료 / 결정 대기 / 대체됨**을 구분한다. 배경·논점·기각한 대안 포함 |
 | 착수 전 구현 계획 | [docs/plans/](docs/plans/) | |
 | 외부 연동 셋업 절차 | [docs/sns-setup.md](docs/sns-setup.md) | 인스타·틱톡 앱 등록 |
