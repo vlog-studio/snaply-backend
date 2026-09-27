@@ -16,7 +16,7 @@ Users open capture from the center button of the tab bar, land directly in the v
 The supported capture options are owned by `entities/capture-session`:
 
 - Durations: 3 or 5 seconds; an invalid or missing value normalizes to 3, which seeds the recorder's initial state
-- Mood (`hip` / `lovely` / `energy`) was **removed**: the look belongs to the finished movie, chosen on the movie screen with the whole thing in view, rather than to each fragment as it is shot (concept §8)
+- Mood (`hip` / `lovely` / `energy`) was **removed**: the look belongs to the finished movie, chosen on the movie screen with the whole thing in view, rather than to each fragment as it is shot ([product concept](../../../../docs/decisions/product-concept.md) §5)
 
 ## Capture options
 

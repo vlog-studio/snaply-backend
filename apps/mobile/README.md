@@ -62,7 +62,8 @@ src/
 - [`Android 실기기 무선 연동 가이드`](docs/guides/android-wireless-debugging.md): 실제 Android 기기의 Wi-Fi 디버깅 연결과 개발 빌드 실행 방법
 - [`Supabase 소셜 로그인 설정 가이드`](docs/guides/supabase-auth-setup.md): Google·Apple 로그인을 켜기 위한 `.env` 값, Supabase·Google·Apple 콘솔 설정, 개발 빌드 실행 절차
 - [`FCM 푸시 알림 설정 가이드`](docs/guides/fcm-push-setup.md): 네이티브 FCM 토큰용 Firebase 프로젝트·앱 등록, `google-services.json`/`GoogleService-Info.plist`/APNs 준비 절차
-- [`Snaply 스튜디오 — AI 숏폼 브이로그 기획`](docs/guides/ai-vlog-studio/concept.md): **왜 이 제품 방향인지에 대한 결정 기록.** 스냅↔무비 재정의, 4탭 정보 구조, 용어, 감수한 트레이드오프, 백엔드 계약 초안 (인터랙티브 목업 HTML 포함 — 목업은 옛 화면 구성입니다). **구현 기준이 아닙니다** — 지금 무엇이 어떻게 동작하는지는 항상 [`docs/features/`](docs/features)가 정답입니다
+
+제품 방향(스냅↔무비, 4탭, 이름)을 고른 이유는 모노레포의 결정 문서 [`docs/decisions/product-concept.md`](../../docs/decisions/product-concept.md)에 있습니다. 지금 무엇이 어떻게 동작하는지는 [`docs/features/`](docs/features)가 원천입니다.
 
 에이전트용 문서는 [`AGENTS.md`](AGENTS.md)에서 작업 유형별로 찾을 수 있습니다.
 

@@ -39,7 +39,7 @@ The location-alert, quiet-hours, movie-completion, capture-reminder, and interes
 
 On the device the movie-completion preference (`movieReady`) gates only the failure notice the app raises itself; the completion push is the server's and follows the server's `movieNotificationEnabled`, which this preference does not reach yet (above). `useMovieReadyAlerts` owns the rule that turning it on must first obtain the OS notification grant (`shared/lib/notifications`' `requestLocalNotificationPermission`) — a preference the device will never honor is not worth storing, and the request belongs to a control the user just touched rather than to a background timer. `src/_app/providers/movie-generation-bridge.tsx` reads the stored preference and passes it to `MovieGenerationGate`, the same app-layer composition `GeofenceGate` uses, because the two features must not import each other.
 
-The capture reminder stays on the screen as a 준비 중 placeholder rather than being removed because, once a scheduler exists, it is the app's only nudge to shoot now that automatic collection is gone (concept §7).
+The capture reminder stays on the screen as a 준비 중 placeholder rather than being removed because, once a scheduler exists, it is the app's only nudge to shoot now that automatic collection is gone ([product concept](../../../../docs/decisions/product-concept.md) §3).
 
 ## Known limitations and implementation requirements
 

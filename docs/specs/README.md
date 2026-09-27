@@ -47,7 +47,7 @@
 Snaply 는 20~30대를 위한 **숏폼 브이로그 AI 자동 편집 앱**이다. 사용자는 하루의 순간을
 **스냅**(0.5~5초의 짧은 클립)으로 모으고, 스냅 묶음을 골라 **무비**(AI 가 자동 편집한
 숏폼 영상)로 만들어 보관·공유한다. 제품 콘셉트의 배경은
-[apps/mobile/docs/guides/ai-vlog-studio/concept.md](../../apps/mobile/docs/guides/ai-vlog-studio/concept.md).
+[decisions/product-concept.md](../decisions/product-concept.md).
 
 ## 스펙 목록
 
