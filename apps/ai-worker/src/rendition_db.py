@@ -36,10 +36,15 @@ async def mark_processing(video_id: str) -> bool:
 
 
 async def save_rendition(
-    video_id: str, rendition_key: str, thumbnail_key: str | None, duration_ms: int | None
+    video_id: str,
+    rendition_key: str,
+    thumbnail_key: str | None,
+    duration_ms: int | None,
+    width: int | None = None,
+    height: int | None = None,
 ) -> bool:
     """
-    배포본을 반영한다. False 면 그 사이 영상이 삭제된 것 — 만들어 둔 객체는 정리 배치가 회수한다.
+    배포본을 반영한다. False 면 그 사이 영상이 삭제된 것 — 만들어 둔 객체는 호출한 쪽이 지운다.
 
     썸네일은 이미 있으면 덮지 않는다: 편집 결과물의 썸네일과 컬럼을 공유하므로, 뒤늦게 끝난
     ingest 가 렌더 썸네일을 덮어쓰면 완성본 표지가 원본 프레임으로 바뀐다.
@@ -50,6 +55,7 @@ async def save_rendition(
             "UPDATE videos "
             "   SET rendition_s3_key=$2, rendition_status='ready', "
             "       duration_ms=COALESCE($4, duration_ms), "
+            "       width=COALESCE($5, width), height=COALESCE($6, height), "
             "       thumbnail_s3_key=COALESCE(thumbnail_s3_key, $3), "
             "       captured_at=captured_at "
             " WHERE id=$1 AND deleted_at IS NULL RETURNING id",
@@ -57,6 +63,8 @@ async def save_rendition(
             rendition_key,
             thumbnail_key,
             duration_ms,
+            width,
+            height,
         )
     _ = now
     return row is not None
