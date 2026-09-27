@@ -61,5 +61,4 @@
 
 ## 남은 것
 
-- 구현과 실기기 검증: [backlog.md](../backlog.md) A-4 "3단계 — reconcile".
-- 휴지통: A-4 "스냅 휴지통". ①로 필요성이 커졌다.
+미결 작업(스냅 휴지통, iPhone 실기기 확인)은 [backlog.md](../backlog.md) A-4 에만 둔다.
