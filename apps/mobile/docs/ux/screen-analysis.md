@@ -17,7 +17,7 @@ Collect:
 - Its entry points: how the user got here, and what they were doing immediately before.
 - Platform differences (iOS/Android) and whether the screen is a tab root, a pushed screen, or a full-screen modal.
 
-Output: three to six factual lines. If a claim cannot be verified from code or docs, mark it `assumed` and continue; never present an assumption as an observation.
+Output: three to six factual lines. If a claim cannot be verified from code, docs, or a device, mark it `assumed` and continue; never present an assumption as an observation.
 
 ---
 

@@ -271,6 +271,7 @@ Index:
 - **Symmetric binary choices** of equal standing (`3초` / `5초`) — deliberate equal weight, and correct.
 - **Multi-select grids** where every cell is peer content.
 - **Empty states**, where an illustration may legitimately outweigh sparse content, provided the action stays the clearest control.
+- **One primary is not one button.** Keep as many secondary actions as the screen legitimately needs, visibly subordinate; a frequent one stays visible even at the cost of density, and a decline option is never removed to leave a single CTA — that produces a `Dead End`.
 
 ---
 
@@ -474,7 +475,7 @@ Index:
 
 `Derived Principle` — the counterweight to over-simplification · derives from P1, P4
 
-**Definition.** Screens whose purpose is scanning, comparing, or repeated expert use may be dense. Density is justified when it lowers the user's *total* effort — fewer transitions, less recall, more comparison in one view — and it must still obey hierarchy, grouping, and alignment. In a dense view, hierarchy is carried by grouping, ordering, and headers rather than by size contrast.
+**Definition.** Screens whose purpose is scanning, comparing, or repeated expert use may be dense. Density is justified when it lowers the user's *total* effort — fewer transitions, less recall, more comparison in one view — and it must still obey hierarchy, grouping, and alignment. In a dense view, hierarchy is carried by grouping, ordering, and headers rather than by size contrast. On a high-frequency surface, weigh by frequency: optimize for the shortest path for someone who already knows what they want — fewer transitions, more visible controls, stable positions. Learnability matters most on first use; efficiency matters more on the hundredth.
 
 **User Problem.** Over-simplified library and list screens force paging, scrolling, and memory work. A grid of six items per row is not "cluttered" if the user's task is finding one snap among two hundred.
 

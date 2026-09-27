@@ -51,7 +51,7 @@ Trade-off  <what got worse, for whom, and why the exchange is worth it>
 
 Rules for the report:
 
-- **No aesthetic justification.** "더 깔끔해요", "세련돼요", "요즘 스타일이에요" are not reasons. If the only reason is taste, do not make the change.
+- **No aesthetic justification.** "더 깔끔해요", "세련돼요", "요즘 스타일이에요" are not reasons. If the only reason is taste, do not make the change. Aesthetic preference is legitimate as the user's request, never as the agent's justification.
 - **No unattributed Toss claims.** Cite only what [`README.md`](README.md#verified-toss-principle-sources) verifies, with the right label.
 - **"Trade-off: none" must be justified**, and usually is wrong: nearly every improvement moves cost somewhere — to another screen, to an extra tap for a minority path, to more density, to a longer label.
 - **List removals explicitly.** Anything deleted, deferred, or moved is named with its new location or the reason it has none.
@@ -60,6 +60,7 @@ Rules for the report:
 
 ## Implementation rules
 
+- Stay inside the approved scope ([Escalation and confirmation](#escalation-and-confirmation)); findings beyond it are reported, not implemented.
 - Respect the architecture: FSD layers, slice public APIs, no cross-feature imports. A UX improvement that breaks the boundary rules is not shippable — restructure the proposal instead.
 - Reuse existing components and patterns from [`../conventions/cookbook.md`](../conventions/cookbook.md) before adding new ones. A new local component that duplicates a shared one creates an `Inconsistent Twin`.
 - Copy changes touch the string's single source; do not fork a string per screen.
@@ -74,7 +75,8 @@ Rules for the report:
 Ask the user before implementing when:
 
 - The scope is `flow` or `system` (screen sequence, navigation structure, shared components) — or `structure`, when the request was ambiguous (see the mode table above).
-- A capability would be removed, or moved somewhere harder to reach.
+- A capability would be removed, or moved somewhere harder to reach. UX work relocates, defers, and reframes; it does not decide product scope, so a removal is the user's call and is reported as a trade-off.
+- A principle argues against a settled decision — one recorded in the root `docs/specs/` or `docs/decisions/`, in a feature document, or in this directory. A settled decision is an input, not a finding: raise it once with the reasoning, let the user decide, then implement their call in full.
 - Two principles conflict and the resolution is a genuine product judgment (which user group to favor, which path is the majority).
 - The change depends on data the agent does not have (actual usage frequency, which of two intents dominates). State the assumption, offer the alternative, and let the user pick.
 - The screen is documented as `Prototype` and the "problem" may simply be unfinished work.

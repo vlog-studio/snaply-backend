@@ -193,7 +193,7 @@ How to use it: run the Detection Rules in [`principles.md`](principles.md) while
 - **Cause.** Element removal used as a proxy for cognitive relief.
 - **User cost.** Task failure for the affected users — the most expensive outcome in this catalog, since it removes value rather than noise.
 - **Principles.** `Density Where Density Pays`, `Preserve User Control and Exit`.
-- **Remediation.** Restore the capability; relocate or defer instead of removing. Any removal requires a stated reason plus evidence of low use, and must be listed as a trade-off in the change report.
+- **Remediation.** Restore the capability. Prefer, in order: default it → reorder it → subordinate it → defer it behind one interaction → move it to the surface that owns it → remove it. Removing an element needs a stated reason — no user decision depends on it, or evidence of negligible use; removing a capability also needs evidence of low use and the user's explicit approval ([`agent-protocol.md` → Escalation and confirmation](agent-protocol.md#escalation-and-confirmation)). Every removal is listed in the change report as a trade-off.
 
 ## Leaky Vocabulary
 
