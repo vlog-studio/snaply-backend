@@ -146,20 +146,15 @@ compose 가 읽으면 `LEGAL_CONTACT_EMAIL`·`SITE_VERIFICATION_META`·`STRIPE_P
 
 ## 함께 고친 결함
 
-- `CLOUDFRONT_DOMAIN` 이 빈 문자열이면 공개 URL 이 깨졌다. `config.ts` 가 `??` 를 써서
-  빈 문자열이 통과했고, `publicBaseUrl` 이 `''` 가 됐다. compose 가 `${CLOUDFRONT_DOMAIN:-}` 로
-  정확히 빈 문자열을 주입하고 있었으므로, 루트 `.env` 에 실제 값이 있어서 가려져 있던 버그다.
-  `|| undefined` 로 바꿔 같은 파일의 `S3_ENDPOINT` 처리와 맞췄다.
-- `.env.example` 의 `S3_ENDPOINT` 예시가 `http://localhost:9000` 이었다. snaply 는 포트 충돌을 피해
-  **9100** 을 쓴다 — 예시대로 복사하면 처음부터 붙지 않았다.
-- 코드가 읽지만 `.env.example` 에 없던 변수 12개를 채웠다 (`NODE_ENV`, `API_HOST`, `ENABLE_DOCS`,
-  `LOG_LEVEL`, `EDIT_QUEUE_NAME`, `SUPABASE_JWT_AUDIENCE`, `SENTRY_DEBUG`, `WHISPER_MODEL`,
-  `EDIT_TIMEOUT_SECONDS`, `BGM_DIR`, `TEST_EMAIL`, `TEST_PASSWORD`).
+이 정리와 함께 고친 결함(빈 `CLOUDFRONT_DOMAIN` 이 공개 URL 을 깨뜨리던 것, `.env.example` 의
+`S3_ENDPOINT` 예시 포트, `.env.example` 에 없던 변수 12개)은 [progress.md](../progress.md)
+2026-08-11 "환경변수 관리 정리"에 있다.
 
 ## 후속 연계
 
-이 결정은 배포 플랫폼을 고르지 않는다. Fly / Render / ECS 어느 쪽이든 위 구조는 유지하며,
-플랫폼 선택과 시크릿·Deploy 스텝 연결 작업은 [backlog.md](../backlog.md) B-1에서만 관리한다.
+이 결정은 배포 플랫폼을 고르지 않는다 — 어느 플랫폼이든 위 구조는 유지한다. 플랫폼은
+[on-prem-deployment.md](./on-prem-deployment.md)가 정했고(사내 서버, 아래 항목), 남은 서버 작업은
+[backlog.md](../backlog.md) B-1에서만 관리한다.
 
 - **사내 서버**([on-prem-deployment.md](./on-prem-deployment.md))에는 시크릿 저장소가 없어, 결정 2 의
   "플랫폼 주입"을 root 만 읽는 서버 파일 `/etc/snaply/snaply.env` 로 대신한다. compose 가 그 파일을
