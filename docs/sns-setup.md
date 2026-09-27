@@ -59,24 +59,10 @@ curl https://<A>.trycloudflare.com/health                       # {"status":"ok"
 curl https://<B>.trycloudflare.com/snaply-dev/<some-key>        # 200 (익명 읽기)
 ```
 
-> ⚠️ **trycloudflare 주소는 터널을 재시작하면 바뀐다.** 바뀌면 `.env` 와 각 플랫폼 콘솔의
-> 리디렉션 URI를 **양쪽 다** 다시 등록해야 한다. 실제로 세션이 끊길 때마다 겪게 된다.
-
-### 고정 주소로 바꾸기 (권장, 보유 도메인 필요)
-
-Cloudflare 에 등록된 도메인이 있으면 named tunnel 로 고정 서브도메인을 쓸 수 있다.
-한 번 등록하면 콘솔 재등록이 사라진다.
-
-```bash
-cloudflared tunnel login          # 1회, 브라우저 인증 (사람이 직접)
-./apps/api/scripts/dev-tunnel.sh <도메인>          # 터널 생성 + DNS 연결 + 설정 작성
-./apps/api/scripts/dev-tunnel.sh <도메인> --run    # 위 + 바로 실행
-```
-
-`api-dev.<도메인>` → API(:3000), `media-dev.<도메인>` → MinIO(:9100) 로 라우팅되며,
-스크립트가 `.env` 와 콘솔에 넣을 값을 그대로 출력한다.
-
-> ngrok 무료 플랜은 고정 도메인이 1개뿐이라, 다른 프로젝트가 이미 쓰고 있으면 공유가 어렵다.
+터널 주소가 바뀌면 위 세 값과 각 플랫폼 콘솔의 리디렉션 URI·URL prefix 검증을 **다시 등록**해야
+한다(임시 주소의 성질과 주의사항은 [local-tunnel.md](./local-tunnel.md) §4). 고정 주소는
+[local-tunnel.md](./local-tunnel.md) §6 의 `dev-tunnel.sh` 로 만든다 — SNS 용으로는 `api-dev.<도메인>`(API :3000)과
+`media-dev.<도메인>`(MinIO :9100) 두 호스트가 생기고, 스크립트가 `.env` 와 콘솔에 넣을 값을 출력한다.
 
 ---
 
@@ -148,83 +134,31 @@ Meta 가 등록 시 그 값을 담아 우리 서버로 GET 을 보내고, `hub.c
 
 구현은 `routes/sns-webhook.ts`. 릴스 게시 자체에는 웹훅이 필요 없고, 수신한 이벤트는 서명만 확인하고 무시한다.
 
-### 실측 결과 — 인스타그램 게시 파이프라인 통과 (2026-08-04)
+### 인스타 쪽 알아둘 점
+- 토큰: 단기(1시간) → **장기(60일)** 교환까지 코드가 처리한다. 단기 토큰 응답에는 `expires_in` 이 없어
+  만료 시각은 장기 교환이 채운다. 만료 7일 이내면 업로드 직전에 자동 갱신하고, 만료 시각을 모르면
+  (`null`) 업로드 때 한 번 갱신을 시도해 알아낸다. **이미 만료된 토큰은 갱신 불가** → 재연동 안내 에러가 나간다.
+- 장기 토큰 교환이나 프로필 조회가 실패해도 연동은 저장한다(토큰 자체는 유효하다). `account_type` 을
+  못 읽으면 개인 계정 차단을 건너뛰고 경고만 남긴다 — 그 경우 게시 단계에서 Meta 가 거부한다.
+- 게시는 컨테이너 생성 → `status_code=FINISHED` 폴링 → 게시 순서다. 처리에 수십 초(실측 약 50초)가
+  걸려 `POST /sns/instagram/upload` 응답도 그만큼 걸린다(최대 5분, `INSTAGRAM_POLL_TIMEOUT_MS`).
+- `user_id` 는 2^53 을 넘는 JSON 숫자로 온다. 코드는 토큰 응답에서 문자열로 추출하고, 게시는 ID 대신
+  `/me/media` 로 한다(회귀 테스트: `test/sns-realkey.test.ts` 의 "user_id 정밀도").
+- 영상 규격(길이·해상도·코덱)이 릴스 요건에 안 맞으면 컨테이너가 `ERROR` 로 떨어진다.
 
-계정을 **프로페셔널(BUSINESS)** 로 전환한 뒤 같은 토큰으로 전부 동작했다. 즉 원인은 계정 유형이었다.
+### 인스타 트러블슈팅
 
-```
-GET /v23.0/me → 200 {user_id:"17841439086162200", username:"gagejigi", account_type:"BUSINESS"}
-GET /access_token?grant_type=ig_exchange_token → 200 (장기 토큰 발급됨)
-POST /me/media (실제 영상) → 200 컨테이너 생성
-  폴링: IN_PROGRESS ×10 → FINISHED  (약 50초)
-```
+| 증상 | 원인 | 대응 |
+|---|---|---|
+| OAuth·토큰 교환은 통과하는데 `graph.instagram.com` 의 **모든** 엔드포인트가 `100 IGApiException: Unsupported request`(GET·POST 모두) | 연동한 계정이 프로페셔널(비즈니스/크리에이터)이 아니다. 다음 후보는 개발 모드에서 그 계정이 Instagram 테스터로 등록·수락되지 않은 경우 | 계정을 프로페셔널로 전환한다 — 전환 뒤 같은 토큰으로 전부 동작했다(2026-08-04) |
 
-**폴링이 필수임이 실증됐다.** 처리에 ~50초가 걸리므로, 컨테이너 생성 직후 `media_publish` 를
-호출하던 원래 코드는 사실상 항상 실패했다.
-
-#### 여기서 잡은 버그 — `user_id` 정밀도 손실 (게시를 깨뜨림)
-
-Instagram user_id 는 `27899354646370752` 처럼 **2^53 을 넘고 응답에서 JSON 숫자로** 온다.
-`JSON.parse` 하면 `27899354646370750` 으로 값이 바뀐다(부동소수점). 이 ID 로 게시를 시도하면:
-
-```
-POST /{27899354646370750}/media → 400 "Object with ID ... does not exist"   ← 정밀도 깨진 값
-POST /{27899354646370752}/media → 200                                        ← 정확한 값
-POST /me/media                  → 200
-```
-
-→ 두 가지로 대응했다:
-1. 토큰 응답을 **텍스트로 먼저 받아** 정규식으로 `user_id` 를 문자열 추출(정밀도 보존).
-2. 게시 경로를 **`/me/media`** 로 변경 — 토큰이 계정을 특정하므로 ID 불일치 위험이 아예 없다.
-
-회귀 테스트: `test/sns-realkey.test.ts` 의 "user_id 정밀도" 블록.
-
-#### 진단 스크립트
+진단 스크립트 — **실토큰으로만** 판별된다(가짜 토큰은 인증 `190` 이 먼저 걸려 구분이 안 된다):
 
 | 명령 | 용도 |
 |---|---|
 | `npm run ig:probe -w apps/api` | 저장된 실토큰으로 호스트·메서드·버전 10조합 시험 |
 | `npm run ig:publish-probe -w apps/api` | 어느 게시 경로(`/me` vs ID)가 유효한지 판별 |
 | `npm run ig:container-probe -w apps/api -- <video_url>` | 컨테이너 생성+처리 완료까지만 확인(**게시 안 함**) |
-
-> 가짜 토큰으로는 인증(190)이 먼저 걸려 라우팅 유효성을 판별할 수 없다. 반드시 실토큰으로 확인해야 한다.
-
-### 실측 진단 기록 — `IGApiException 100: Unsupported request`
-
-2026-08-04 실제 앱·실제 계정으로 OAuth 를 끝까지 돌렸을 때 관측한 내용. 같은 증상을 만나면 여기서부터 보면 된다.
-
-**성공한 단계**
-- authorize → 승인 → code 발급 → 콜백 도달 → `state` HMAC 검증 → `POST api.instagram.com/oauth/access_token`
-- 응답: `{ access_token, user_id, permissions }` — **`expires_in` 이 없다**
-- `permissions` = `["instagram_business_basic","instagram_business_content_publish"]` (정상 부여)
-
-**실패한 단계** — `graph.instagram.com` 의 **모든** 엔드포인트가 거부:
-
-| 요청 | 응답 |
-|---|---|
-| `GET /me`, `GET /v23.0/me`, `GET /{ig-user-id}` | `100 IGApiException: Unsupported request - method type: get` |
-| 같은 경로들 `POST` | `... method type: post` |
-| `GET/POST /access_token`, `/refresh_access_token`, `/debug_token` | 동일 |
-| `GET graph.facebook.com/v23.0/me` | `190 OAuthException: Cannot parse access token` |
-
-**해석**: 메서드 문제가 아니다(POST 도 거부). 경로 문제도 아니다(모든 경로 동일).
-토큰은 인스타 계열로 인식되지만(IGApiException) Business API 표면에서 **아무 동작도 허용되지 않는 상태**다.
-가짜 토큰으로는 인증(190)이 먼저 걸려 이 구분이 안 되므로, **실토큰으로만 판별된다** → `npm run ig:probe -w apps/api`
-
-**가장 유력한 원인**: 연동한 인스타 계정이 **프로페셔널(비즈니스/크리에이터)이 아님**.
-개인 계정도 OAuth 자체는 통과해 토큰을 받지만, Business API 는 전부 막힌다.
-그 다음 후보는 앱 개발 모드에서 해당 계정이 **Instagram 테스터로 등록/수락되지 않은 경우**.
-
-**코드 쪽 대응(이미 반영)**: 장기 토큰 교환과 프로필 조회가 실패해도 연동은 저장한다.
-토큰은 유효한데 부가 조회가 실패했다고 연동을 막으면 사용자가 아무것도 못 하기 때문이다.
-`account_type` 을 못 읽으면 PERSONAL 차단을 건너뛰고 경고를 남긴다(게시 단계에서 Meta 가 거부한다).
-
-### 인스타 쪽 알아둘 점
-- 토큰: 단기(1시간) → **장기(60일)** 교환까지 코드가 처리한다. 만료 7일 이내면 업로드 직전에 자동 갱신.
-  **이미 만료된 토큰은 갱신 불가** → 재연동 안내 에러가 나간다.
-- 게시는 컨테이너 생성 → `status_code=FINISHED` 폴링 → 게시 순서다.
-  그래서 `POST /sns/instagram/upload` 응답이 수십 초 걸릴 수 있다(최대 5분, `INSTAGRAM_POLL_TIMEOUT_MS`).
-- 영상 규격(길이·해상도·코덱)이 릴스 요건에 안 맞으면 컨테이너가 `ERROR` 로 떨어진다.
 
 ---
 
@@ -286,7 +220,7 @@ TIKTOK_SCOPES=user.info.basic,video.publish   # 기본값
 | Terms of Service URL | `https://<A>.trycloudflare.com/legal/terms` |
 | Privacy Policy URL | `https://<A>.trycloudflare.com/legal/privacy` |
 
-> 법률 문서는 **출시 전 초안**이다(페이지 상단에도 표기). 심사 제출·출시 전 정식 문서로 교체할 것.
+> 법률 문서는 **출시 전 초안**이다(페이지 상단에도 표기) — 정식화는 [backlog.md](./backlog.md) D-2.
 
 > ⚠️ **틱톡 크리덴셜은 사전 검증이 불가능하다.** 토큰 엔드포인트
 > (`/v2/oauth/token/`)는 `code` 를 먼저 검사해서, **존재하지 않는 client_key 로도**
@@ -310,89 +244,34 @@ TIKTOK_CLIENT_SECRET=...
 영상을 내주는 호스트(로컬은 MinIO 터널)의 prefix 를 API 호스트와 **별개로** 검증해야 한다.
 `trycloudflare.com` 같은 공유 도메인도 파일 서빙 방식으로 통과한다 — 아래 "URL prefix 소유권 검증".
 
----
+### URL prefix 소유권 검증
 
-### 틱톡 — API 수락 확인, 받은함 실물 미도착 (2026-08-10, 미해결)
-
-⚠️ 아래 지표는 **틱톡 API 가 업로드를 수락했다**는 뜻이다. 사용자 계정 받은함에는
-아무것도 도착하지 않았다. API 성공 응답을 실검증으로 오해하면 안 된다.
-
-```
-POST /sns/tiktok/upload → 200 (16.8초)
-  { status: "success", platformPostId: "v_inbox_url~v2.7672...", requiresUserAction: true }
-틱톡 상태 조회 → {"data":{"status":"SEND_TO_USER_INBOX"},"error":{"code":"ok"}}
-sns_uploads: status=success, uploaded_at 기록
-```
-
-`v_inbox_url~` 접두사가 받은함 전달을 뜻한다. 영상은 사용자의 TikTok 초안함에 있고,
-사용자가 앱에서 마무리하면 게시된다 — 그래서 `requiresUserAction: true` 를 실어 보낸다.
-
-**막혔던 관문 3개와 원인 (전부 콘솔 설정, 코드 문제 아님)**
-
-| 에러 | 원인 |
-|---|---|
-| `client_key` (1차) | **Login Kit 제품 미추가**. OAuth 는 Content Posting API 가 아니라 Login Kit 이 담당하고, 리디렉션 URI 도 Login Kit 설정에 등록한다 |
-| `client_key` (2차) | **Sandbox 는 자체 client_key/secret 을 가진다** (`sb` 접두사). Production 키로는 심사 전 authorize 가 불가능하다. 문서 미명시 |
-| `non_sandbox_target` | 로그인 계정이 Sandbox **Target users** 에 없음. 반영에 최대 1시간 |
-| `403 URL ownership` | **영상 URL 호스트**의 prefix 소유권 미검증. API 호스트와 **별개로** 검증해야 한다 |
-
-**URL prefix 소유권 검증 — 실측으로 확인한 것**
-- `trycloudflare.com` 같은 공유 도메인도 **파일 서빙 방식으로 검증된다** (DNS TXT 불필요).
+- `trycloudflare.com` 같은 공유 도메인도 **파일 서빙 방식으로 검증된다**(DNS TXT 불필요).
 - 검증 파일명은 generic 이 아니라 `tiktok<CODE>.txt`, 내용은 `tiktok-developers-site-verification=<CODE>`.
 - **서명은 property 별로 따로 발급된다.** `/legal/` 과 `/snaply-dev/` 가 서로 다른 코드를 받았다
-  (앱 단위 재사용을 먼저 시도해봤지만 통과하지 못했다).
-- 검증할 prefix 가 2개 필요하다:
-  · API 호스트 `.../legal/` — 약관·개인정보 URL (콘솔 저장용) → `routes/legal.ts` 가 서빙
-  · MinIO 호스트 `.../snaply-dev/` — 영상 URL (PULL_FROM_URL) → 버킷에 파일 업로드
-  운영에서 CloudFront 도메인 하나로 합쳐지면 검증도 한 번으로 줄어든다.
-  (재등록의 미결 상태·완료 조건은 [backlog D-3](./backlog.md)가 원천이다 — 이 절은 실측 기록.)
+  (앱 단위로 하나를 재사용하면 통과하지 못했다).
+- 검증할 prefix 가 2개다:
+  · API 호스트 `.../legal/` — 약관·개인정보 URL(콘솔 저장용) → `routes/legal.ts` 가 서빙(`SITE_VERIFICATION_*`)
+  · MinIO 호스트 `.../snaply-dev/` — 영상 URL(PULL_FROM_URL) → 버킷에 파일 업로드(익명 읽기는 §1 의 `dev:public-bucket`)
+- 재등록의 미결 상태·완료 조건은 [backlog.md](./backlog.md) D-3.
 
-### (참고) 이전 진행 기록 — authorize 에서 막혀 있던 시점
+### 틱톡 트러블슈팅
 
-**통과한 것**
-- 앱 등록, Login Kit + Content Posting API 제품 추가
-- 콘솔 저장 필수 항목: 서비스 URL / 이용약관 / 개인정보처리방침 (API 가 서빙 — `routes/legal.ts`)
-- **URL prefix 소유권 검증 통과** — `https://<터널>/legal/` 로 성공.
-  즉 **`trycloudflare.com` 같은 공유 도메인도 URL prefix 검증이 된다**(파일 서빙 방식).
-  검증 파일명은 generic 이 아니라 `tiktok<CODE>.txt` 형태이고, 내용은
-  `tiktok-developers-site-verification=<CODE>` 였다.
-- Sandbox 생성, 제품 추가, 리디렉션 URI 등록, Apply changes, Target users 추가
+authorize·업로드에서 만난 에러는 전부 콘솔 설정 문제였다(코드 문제 아님).
 
-**해결된 것 — `client_key` 에러의 원인**
+| 에러 | 원인 | 대응 |
+|---|---|---|
+| authorize 에서 `client_key` | **Login Kit 제품 미추가** — OAuth 는 Content Posting API 가 아니라 Login Kit 이 담당한다 | Login Kit 을 추가하고 리디렉션 URI 를 Login Kit 설정에 등록 |
+| Login Kit 을 넣어도 `client_key` | **Sandbox 는 자체 `client_key`/`secret`(`sb` 접두사)을 가진다.** Production 키로는 심사 전 authorize 가 안 된다(문서 미명시) | Manage apps → 앱 → 이름 옆 스위치를 **Sandbox** 로 → 그 상태의 Client key/secret 을 `.env` 에 |
+| `non_sandbox_target` | 로그인한 계정이 Sandbox **Target users** 에 없다 | Target users 에 실제로 로그인할 계정 추가 · 브라우저의 다른 TikTok 계정 로그아웃 · 반영에 최대 1시간 |
+| 업로드가 `403 URL ownership` | **영상 URL 호스트**의 prefix 소유권 미검증 — API 호스트와 **별개** | 위 "URL prefix 소유권 검증" |
 
-**Sandbox 는 자체 client_key/secret 을 가진다.** Production 키로는 authorize 가 계속 거부된다.
-Sandbox 키는 **`sb` 접두사**가 붙는다(예: `sbxxxxxxxxxxxxxxxx`). 문서에 명시돼 있지 않아
-콘솔에서 직접 확인해야 한다: Manage apps → 앱 → 이름 옆 스위치를 **Sandbox** 로 → 그 상태의 Client key.
+- 에러가 `client_key` → `non_sandbox_target` 으로 바뀌면 앞 단계(앱·제품·리디렉션 URI·URL 검증)는 통과한 것이다.
+- **API 성공은 받은함 도착을 뜻하지 않는다.** 받은함 모드 업로드는 `platformPostId` 가 `v_inbox_url~` 로
+  시작하고 상태 조회가 `SEND_TO_USER_INBOX`(`error.code=ok`)를 돌려주지만, 실제 도착은 틱톡 앱에서 따로
+  확인해야 한다 — 미도착 조사는 [backlog.md](./backlog.md) C-2.
 
-Sandbox 키로 바꾸자 에러가 `client_key` → **`non_sandbox_target`** 으로 바뀌었다.
-
-**막힌 것 (현재)**
-```
-authorize 요청 → "… non_sandbox_target"
-```
-로그인한 TikTok 계정이 그 Sandbox 의 **Target users** 에 없다는 뜻이다. 확인할 것:
-1. Sandbox settings → Target users 에 **실제로 로그인할 계정**이 있는지
-2. 브라우저에 **다른 TikTok 계정으로 로그인**돼 있지 않은지 (로그아웃 후 재시도)
-3. 반영 지연 — 문서상 추가 후 **최대 1시간**
-
-> 에러 문구가 `client_key` → `non_sandbox_target` 으로 바뀌는 것이 진척의 신호다.
-> 앞 단계(앱·제품·리디렉션 URI·URL 검증)는 모두 통과했다는 뜻이다.
-
-**진단 한계 (중요)**: 틱톡 크리덴셜은 **사전 검증이 불가능하다.**
-`/v2/oauth/token/` 은 `code` 를 먼저 검사해서 **존재하지 않는 client_key 로도**
-`invalid_grant: Authorization code is expired` 를 반환한다(실측). 따라서
-client_key 유효성은 **authorize 를 통과해봐야만** 알 수 있고, 실패 시 원인을 코드 쪽에서
-좁힐 수단이 없다.
-
-**재개 방법**: Sandbox 키를 `TIKTOK_CLIENT_KEY`/`TIKTOK_CLIENT_SECRET` 에 넣고
-Target users 에 로그인 계정을 추가한 뒤 → `GET /sns/tiktok/connect` 로 새 authorize URL 발급 → 승인.
-코드는 양쪽 스코프(`video.upload` 받은함 / `video.publish` 직접 게시)를 모두 지원하며
-테스트로 고정돼 있어, 크리덴셜만 맞으면 바로 진행된다.
-
-**게시 단계에 남은 관문**: `PULL_FROM_URL` 이 **영상 URL prefix** 소유권 검증을 요구한다.
-그건 API 호스트가 아니라 MinIO 호스트(`<터널>/snaply-dev/`)라 따로 통과해야 한다.
-위에서 확인한 대로 파일 서빙 방식이 통하므로, 검증 파일을 MinIO 버킷에 올리면 된다
-(버킷 익명 읽기는 `npm run dev:public-bucket` 으로 이미 열려 있다).
+---
 
 ## 4. 키를 넣은 뒤 검증 순서
 
