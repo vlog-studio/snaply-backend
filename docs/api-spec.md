@@ -18,7 +18,7 @@
 - **Base URL**: `{API_BASE_URL}` (개발: `http://localhost:3000`)
 - **인증**: 🔒 표시 엔드포인트는 `Authorization: Bearer {supabase_jwt}` 헤더 필수. 토큰은 Supabase Auth 로그인으로 발급.
 - **응답 형식(공통)**: 성공 `{ "success": true, "data": … }` / 실패 `{ "success": false, "error": { "code", "message", …부가 필드 } }`.
-  부가 필드는 상태 코드별로 계약(`common.ts`의 `*ErrorSchema`)에 선언된 것만 온다 — 예: `403 ACCOUNT_PENDING_DELETION` 의 `purgeAfter`, `402 INSUFFICIENT_CREDITS` 의 `required`·`balance`.
+  부가 필드는 **라우트·상태 코드별로** 계약(`common.ts`의 `*ErrorSchema`)에 선언된 것만 온다 — 선언되지 않은 키는 직렬화에서 지워진다. 예: `403 ACCOUNT_PENDING_DELETION` 의 `purgeAfter`, `POST /edit-jobs` 의 `402 INSUFFICIENT_CREDITS` 의 `required`·`balance`(`POST /movies/{id}/export` 의 402 는 아직 이 둘을 선언하지 않아 오지 않는다 — [backlog E-9](./backlog.md)).
 - **공통 에러 코드**: `UNAUTHORIZED`(401) · `FORBIDDEN`(403) · `ACCOUNT_PENDING_DELETION`(403, 삭제 대기 계정 — 복구는 `POST /auth/me/restore`) · `NOT_FOUND`(404) · `BAD_REQUEST`/`VALIDATION_ERROR`(400) · `RATE_LIMITED`(429) · `INTERNAL_SERVER_ERROR`(500).
   타 유저의 리소스를 **조회·삭제**하면 403 이 아니라 **404** 다(존재를 알리지 않는다). 편집 요청처럼 남의 영상을 **입력으로 넘긴** 경우만 403 이다.
 - **Rate limit**: 기본 IP당 60req/분. `POST /edit-jobs` 유저당 5req/분, `POST /notifications/geofence-enter`·`POST /movie-recommendations` 유저당 10req/분. 초과 시 `429 RATE_LIMITED`. 도메인 한도(`429 RECOMMENDATION_LIMIT`)는 다른 코드다 — 잠시 후 재시도로 풀리지 않는다.
@@ -180,8 +180,8 @@ FE 가 알아야 할 동작:
 배경은 [decisions/template-snap-recommendation.md](./decisions/template-snap-recommendation.md).
 
 **앱은 이 결과를 기다리지 않는다.** 로컬 매칭(촬영 시각·좌표)이 먼저 화면을 채우고, 도착한 추천은
-**사용자가 손대지 않은 슬롯에만** 얹힌다. **후보는 앱이 고른다** — 서버는 스냅이 언제 어디서
-찍혔는지 모른다. **크레딧을 차감하지 않는다** — 비용은 후보 수 상한(계약의
+**사용자가 손대지 않은 슬롯에만** 얹힌다. **후보는 앱이 고른다** — 서버는 촬영 시각(`capturedAt`)은
+알지만 촬영 위치를 모른다(SNAP-10·SNAP-11). **크레딧을 차감하지 않는다** — 비용은 후보 수 상한(계약의
 `MAX_RECOMMENDATION_CANDIDATES`)과 최근 24시간 추천 횟수 상한(20)으로 막는다.
 **`MOVIE_RECOMMENDATION_ENABLED=true` 일 때만 동작한다.** 꺼져 있으면 `503 RECOMMENDATION_DISABLED`.
 
@@ -189,7 +189,7 @@ FE 가 알아야 할 동작:
   - `candidates` 는 **촬영 시간 오름차순**이어야 한다(점수화의 시간 사전값).
   - **멱등하다.** 같은 (유저·템플릿·후보 집합)이 24시간 안에 다시 오면 기존 추천을 돌려준다. 순서만 다른 재요청도 같은 집합이다.
   - 소유·`kind=source`·`status=ready` 스냅만 후보(아니면 403, 어느 것이 문제인지는 알려주지 않는다).
-  - 에러: 후보 0개 400 · 후보 초과 **`400 TOO_MANY_CANDIDATES`**(`max` 동봉 — 앱은 상한을 하드코딩하지 않는다) · 없거나 내린 템플릿 404 · 24시간 한도 **`429 RECOMMENDATION_LIMIT`** · 분석 큐 접근 불가 503 · 기능 꺼짐 `503 RECOMMENDATION_DISABLED`.
+  - 에러: 후보 0개 400 · 후보 초과 **`400 TOO_MANY_CANDIDATES`**(`max` 동봉. 앱은 보내기 전에 상한 이내로 샘플링하므로 이 에러는 서버 상한이 앱이 아는 값보다 내려갔다는 뜻이다) · 없거나 내린 템플릿 404 · 24시간 한도 **`429 RECOMMENDATION_LIMIT`** · 분석 큐 접근 불가 503 · 기능 꺼짐 `503 RECOMMENDATION_DISABLED`.
 - `GET /movie-recommendations/{id}` 🔒
   - `processing` 동안 `slots` 는 **빈 배열**이다. 앱은 로컬 매칭을 그대로 두고 폴링한다.
   - **채점은 이 조회 시점에 일어난다.** 접수 후 일정 시간이 지나면 끝난 분석만으로 채점하고 닫는다 — 분석 워커가 죽어도 추천이 영원히 걸리지 않는다.
@@ -217,7 +217,7 @@ FE 가 알아야 할 동작:
 - `GET /sns/{platform}/callback` (인증 없음) — OAuth 콜백. **항상 302 딥링크**로 응답한다(실패해도 JSON 을 주지 않으므로 앱은 딥링크만 처리한다):
   `snaplyapp://sns/connected?platform=…`(성공) / `snaplyapp://sns/error?platform=…&reason=<사유>`(실패).
   스킴은 `APP_DEEPLINK_SCHEME`(기본 `snaplyapp://`)이며 앱(`apps/mobile/app.json`)의 `scheme` 과 같아야 한다.
-  `reason`: `invalid_state`(state 위조) | `account_type`(인스타 개인계정) | `missing_params` | `access_denied`(사용자 취소) | `exchange_failed`(토큰 교환 실패).
+  `reason`: 서버가 붙이는 값은 `invalid_state`(state 위조) · `account_type`(인스타 개인계정) · `missing_params` · `exchange_failed`(토큰 교환 실패)이고, 플랫폼이 돌려준 `error`(예: 사용자 취소 `access_denied`)는 **그대로** 실린다 — 앱은 모르는 값을 일반 실패로 다룬다.
 - `DELETE /sns/{platform}/disconnect` 🔒
 - `POST /sns/{platform}/upload` 🔒 — 편집 완료(`editedUrl` 존재) 영상만. 400 이 나는 경우: 미연동 / 편집 미완료 / **영상이 공개 URL 이 아님**(인스타·틱톡이 URL 을 직접 내려받으므로 `https` 공개 주소여야 한다 — 로컬 MinIO 는 호출 전에 차단) / **연동 만료**(`SNS 연동이 만료되었습니다. 계정을 다시 연동해 주세요.` → 재연동 플로우로 유도). 남의 영상은 404.
   - `status`: **인스타그램**은 컨테이너 처리 완료까지 서버가 대기하므로 응답이 수십 초(최대 5분) 걸릴 수 있고 완료되면 `success`. **틱톡**은 게시 완료까지 폴링(최대 2분)하며 그 안에 끝나면 `success`, 진행 중이면 `pending`(실패가 아니다 — "업로드 중" 으로 표시).

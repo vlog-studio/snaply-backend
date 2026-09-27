@@ -3,7 +3,7 @@
 **작성일**: 2026-09-05
 **상태**: 미결 — 결정 대기. 회의(2026-08-31)에서는 "미정"으로 남았다.
 **출처**: [meetings/2026-08-31-dev-sync.md](../meetings/2026-08-31-dev-sync.md) §2 · [backlog.md](../backlog.md) A-7 "번인 자막 전환 여부"
-**관련 문서**: [specs/movie.md](../specs/movie.md) MOV-9 · [api-spec.md](../api-spec.md) §AI 편집 · [plans/trend-editing-pipeline.md](../plans/trend-editing-pipeline.md)
+**관련 문서**: [specs/movie.md](../specs/movie.md) MOV-9 · 계약 [`contract/edit-jobs.ts`](../../packages/shared-types/src/contract/edit-jobs.ts) `subtitles` · [`contract/movies.ts`](../../packages/shared-types/src/contract/movies.ts) `captions` · [plans/trend-editing-pipeline.md](../plans/trend-editing-pipeline.md)
 
 ## 한 줄 요약
 
@@ -29,7 +29,7 @@
 
 | 영역 | 무엇이 바뀌나 |
 |---|---|
-| FE 계약 | [api-spec.md](../api-spec.md)가 "플레이어에서 켜야 보인다, SNS 업로드 시 유실될 수 있다"고 안내한다. 번인이면 이 문구가 반대로 바뀐다 |
+| FE 계약 | MOV-9 와 계약의 `subtitles` 필드 설명이 "플레이어에서 켜야 보인다, SNS 업로드 시 유실될 수 있다"고 안내한다. 번인이면 이 문구가 반대로 바뀐다 |
 | 앱 | 자막 토글의 설명 문구, 미리보기에서 자막이 보이는지 여부 |
 | 워커 | 번인은 libass 합성 단계 추가. 폰트 파일(TTF/OTF)을 워커 이미지에 넣어야 한다 |
 | editSpec v3 | 번인이어야 "자막 스타일" 층(위치·폰트·애니메이션)이 의미가 있다. 소프트면 그 층이 필요 없다 |
@@ -77,4 +77,4 @@ D 는 v3 파이프라인이 안정된 뒤 필요하면 추가한다.
 | 결정 | |
 | 결정일 / 결정자 | |
 | 기각한 선택지와 이유 | |
-| 함께 고칠 문서 | MOV-9 · api-spec.md 자막 안내 · apps/mobile/docs/features/movie.md · 워커 파이프라인 |
+| 함께 고칠 문서 | MOV-9 · 계약의 `subtitles`·`captions` 설명(`openapi.json` 재생성) · apps/mobile/docs/features/movie.md · 워커 파이프라인 |

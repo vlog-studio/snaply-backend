@@ -126,7 +126,7 @@
 |---|---|---|
 | (a) 템플릿 슬롯 채우기 | 이미 있는 기능 | 1·2단계만 |
 | (b) 새 무비에 반영 | 스타일 프리셋(`감성`/`여행`/`일상`) 추천, 못 쓰는 컷(`usableForEdit=false`) 제외 제안, AI 배치 개선 | 새 무비 경로는 지금 서버 추천을 부르지 않으므로 새 계약이 필요 — `packages/shared-types` Zod 계약 · `openapi.json` · [api-spec.md](../api-spec.md) |
-| (c) 스튜디오의 무비 초안 제안 | 최근 외출 하나로 무비 초안 자체를 제안 (A-6 후속 후보, [2026-08-31 회의](../meetings/2026-08-31-dev-sync.md) §5 "AI 추천 프로젝트") | 후보 선정은 앱이 한다 — 서버는 촬영 시각·위치를 모른다([template-snap-recommendation.md](../decisions/template-snap-recommendation.md) §6) |
+| (c) 스튜디오의 무비 초안 제안 | 최근 외출 하나로 무비 초안 자체를 제안 (A-6 후속 후보, [2026-08-31 회의](../meetings/2026-08-31-dev-sync.md) §5 "AI 추천 프로젝트") | 서버는 촬영 시각(`capturedAt`, SNAP-10)을 알아 시간 기준 묶음은 서버도 할 수 있다. 다만 현행 외출 규칙(시간 + 거리)은 좌표가 있는 앱만 계산한다 — 서버는 위치를 모른다([template-snap-recommendation.md](../decisions/template-snap-recommendation.md) §6) |
 
 **권장은 (b)의 스타일 추천이다.** 모델이 만든 문구를 사용자에게 보여주지 않는다는 원칙(ANA-2·REC-2)을
 지키면서 결과가 화면에 드러나고, 관심사 태그 5개 중 3개가 `STYLE_PRESETS` 와 이름이 같아

@@ -114,13 +114,13 @@ compose 는 `api` 를 `migrate` 완료에 걸어 두므로, 마이그레이션�
 
 ## 6. 후보 선정이 앱에 남는 이유
 
-서버는 스냅이 **언제 어디서** 찍혔는지 모른다. `POST /videos` 는 `{videoId, durationSeconds}`
-만 보내고 `videos` 에 촬영 시각도 좌표도 없다. 외출(시간·거리로 묶인 한 번의 나들이)을
-계산할 수 있는 쪽은 앱뿐이다.
+서버는 스냅이 **어디서** 찍혔는지 모른다. `POST /videos` 는 촬영 시각(`capturedAt`,
+[SNAP-10](../specs/snap-library.md))은 보내지만 좌표는 보내지 않고, `videos` 에 위치가 없다
+(SNAP-11 보류). 외출(시간·거리로 묶인 한 번의 나들이)을 계산할 수 있는 쪽은 앱뿐이다.
 
 따라서 앱이 외출을 고르고 그 `videoId` 배열을 **촬영 시간 오름차순으로** 보낸다. 이 순서가
-곧 점수화의 시간 사전값이다. 서버가 후보를 직접 고르려면 촬영 시각·좌표를 서버에 저장해야
-하고, 좌표 저장 여부는 [snap-source-of-truth.md](./snap-source-of-truth.md) 와 backlog A-4
+곧 점수화의 시간 사전값이다. 서버가 후보를 직접 고르려면 좌표를 서버에 저장해야 하고,
+좌표 저장 여부는 [snap-source-of-truth.md](./snap-source-of-truth.md) 와 backlog A-4
 에서 따로 다루는 문제다. 이 기능이 그 결정을 앞당겨 끌고 갈 이유가 없다.
 
 ---

@@ -1,10 +1,12 @@
 # 트렌드 숏폼 편집 파이프라인 구현 계획 — 타임라인 스펙 v3
 
-작성일 2026-08-19 · 상태: **제안 (착수 전)** — 현행 사실이 아니다.
-현행 파이프라인의 사실은 [archive/progress-phase-1-9.md](../archive/progress-phase-1-9.md) Phase 5, 현행 계약은
-[api-spec.md](../api-spec.md)에 있다. 미결 항목은 [backlog.md](../backlog.md) A-7 에만 둔다.
-
-관련: [decisions/storage-and-subscription-policy.md](../decisions/storage-and-subscription-policy.md) §3.2(레시피 재생성)
+**작성일**: 2026-08-19
+**상태**: 제안 — 일부 착수. v3 공유 어휘 사전 3종·HDR 톤매핑·산출물 계약 테스트(CI ffmpeg)는 구현됐고
+나머지는 착수 전이다. 현행 사실이 아니다.
+**원천**: 편집 파이프라인의 층별 설계·오픈소스 선정·라이선스 요건 제안. 미결 항목은 [backlog.md](../backlog.md) A-7 에만 둔다.
+**관련 문서**: 현행 파이프라인의 사실은 코드(`apps/ai-worker/src/pipeline/`)와 [specs/movie.md](../specs/movie.md)
+MOV-7~MOV-9, 현행 API 계약은 [`packages/shared-types/src/contract/`](../../packages/shared-types/src/contract/) ·
+[decisions/storage-and-subscription-policy.md](../decisions/storage-and-subscription-policy.md) §3.2(레시피 재생성)
 · [decisions/movie-model.md](../decisions/movie-model.md) · [decisions/credit-payment-model.md](../decisions/credit-payment-model.md)
 
 ---
@@ -62,15 +64,14 @@ v3 는 스냅 여부(`snapToBeat`)와 허용 오차를 클립 단위로 명시�
 셈이라, 파이프라인이 무거워지면 **개별 처리 시간보다 큐 대기가 먼저 문제가 된다.** 다만 적정
 동시성은 단계별 CPU·메모리 실측 뒤에 정한다 — 지금 숫자를 찍으면 근거가 없다.
 
-### 2.4 v3 를 어디에 붙일지가 아직 회의 안건이다 ⚠️
+### 2.4 v3 는 Movie export 에 붙는다
 
-`Movie` 엔티티([backlog.md](../backlog.md) A-1)가 없고, **기존 `POST /edit-jobs` 의 수명**이
-A-1의 미결 안건이다. Movie export 내부에서 재사용한 뒤 공개 API 폐기를 판단하는 안이 채택되면
-v3 의 부착 지점은
-`POST /edit-jobs` 가 아니라 Movie export 가 된다.
+`Movie` 엔티티는 있고, 기존 `POST /edit-jobs` 는 **한 버전 공존 후 폐기**로 결정됐다
+([decisions/movie-export-policy.md](../decisions/movie-export-policy.md) ⑤, [backlog.md](../backlog.md) A-1).
+따라서 v3 의 부착 지점은 `POST /edit-jobs` 가 아니라 Movie export(`POST /movies/{id}/export`)다 —
+폐기 전에 `POST /edit-jobs` 에도 붙이면 같은 스펙을 두 곳에 붙이게 된다.
 
-**타임라인 모델 자체(§3)는 부착 지점과 무관하므로 설계는 지금 진행할 수 있다.** 다만 요청
-스키마와 라우트는 §1-5 가 닫힌 뒤에 확정한다 — 먼저 굳히면 같은 스펙을 두 번 만든다.
+**타임라인 모델 자체(§3)는 부착 지점과 무관하므로 설계는 지금 진행할 수 있다.**
 
 ### 2.5 워터마크 결정이 레이어 설계의 입력이다
 
@@ -168,9 +169,10 @@ MediaPipe 도입 시 확인할 것: 워커 이미지는 이미 faster-whisper �
 **새 라이브러리는 0이고 문자열 생성 로직만 필요하다** — 필터그래프를 직접 조립하는 현행 스타일과
 결이 같다.
 
-**다만 소프트 → 번인은 사용자에게 보이는 변경이다.** [api-spec.md](../api-spec.md) 는
-"영상에 굽지 않으므로 플레이어에서 켜야 보인다"고 FE 에 고지해 두었다. 자막을 끌 수 없게 되고,
-`-c:v copy` 가 깨져 재인코딩이 한 번 는다. **착수 전에 결정 문서가 필요하다**(backlog A-7).
+**다만 소프트 → 번인은 사용자에게 보이는 변경이다.** 지금은 "영상에 굽지 않으므로 플레이어에서
+켜야 보인다"고 안내한다([specs/movie.md](../specs/movie.md) MOV-9, 계약의 `subtitles` 필드 설명).
+자막을 끌 수 없게 되고, `-c:v copy` 가 깨져 재인코딩이 한 번 는다. 선택지와 권장은
+[decisions/subtitle-rendering.md](../decisions/subtitle-rendering.md)(미결)이며 착수는 그 결정 뒤다.
 
 폰트가 준비물이다 — Pretendard 또는 Noto Sans KR(둘 다 OFL)을 이미지에 설치하고 fontconfig
 캐시를 만든다. 한글 글리프가 없으면 전부 두부(□)로 렌더링된다.
@@ -226,15 +228,14 @@ AGPL-3.0 이어서 배제다(§9). 자체 호스팅이 필요해지면 Florence-
 
 ## 6. 소스·출력 층
 
-### 6.1 실기기 영상이 들어올 때 ⚠️ 현재 비어 있다
+### 6.1 실기기 영상이 들어올 때 ⚠️ 일부가 비어 있다
 
-**트렌드 표현보다 앞선 문제다.** 아래 셋은 지금 파이프라인에 처리가 아예 없다.
+**트렌드 표현보다 앞선 문제다.** 아래 셋 중 HDR 톤매핑은 들어갔고, 나머지 둘은 처리나 검증이 없다.
 
-- **HDR 톤매핑** — `tonemap`·`zscale`·`bt2020` 이 코드 어디에도 없다. 아이폰이 기본으로
-  돌비비전 HDR 을 찍는데, BT.2020 PQ 소스를 `format=yuv420p` 로 그냥 떨구면 **허옇게 뜨거나
-  어둡게 죽는다.** [backlog.md](../backlog.md) F 에 "HDR 스트레스 케이스"가 실검증 항목으로 있으나
-  **검증 이전에 필터가 없다.** `zscale=t=linear…:tonemap=hable` 계열을 정규화 단계에 넣되,
-  SDR 소스에는 태우지 않도록 입력 색 특성으로 분기한다
+- **HDR 톤매핑** — 정규화 단계에 있다([`pipeline/hdr.py`](../../apps/ai-worker/src/pipeline/hdr.py)).
+  `zscale`+`tonemap` 이 있는 빌드(워커 이미지)는 톤매핑하고, 없는 빌드는 8bit 로 떨군다. 어느
+  경로든 출력 색 태그를 bt709 로 고치고, SDR 소스는 건드리지 않는다. 합성 HDR10 으로만
+  검증했고 돌비비전 실물은 미검증이다([backlog.md](../backlog.md) F)
 - **회전 메타데이터** — `autorotate`·`transpose` 언급이 없다. FFmpeg 가 입력 단계에서 display
   matrix 를 자동 적용하므로 정상 동작할 가능성이 크지만, `filter_complex` 를 직접 조립하는
   구조라 **검증된 적이 없다.** 세로로 찍은 영상이 눕는 것은 가장 눈에 띄는 버그다(§11)
@@ -382,8 +383,8 @@ CRF 품질에서 손해를 본다.
 
 ### 1단계 — 체감 효과 최대, 의존성 최소
 
-5. **HDR 톤매핑 · 회전 검증 · 클립별 레벨 정규화 · 컷 마이크로 페이드**(§6.1·§6.2) —
-   실기기 영상을 받는 순간 드러난다. **트렌드 표현보다 앞이다**
+5. **회전 검증 · 클립별 레벨 정규화 · 컷 마이크로 페이드**(§6.1·§6.2) —
+   실기기 영상을 받는 순간 드러난다. **트렌드 표현보다 앞이다** (HDR 톤매핑은 들어가 있다)
 6. `+faststart` · CRF · `loudnorm` · `sidechaincompress` — 반나절
 7. **ASS 애니메이션 자막 + 한글 폰트** — 새 라이브러리 0, 체감 효과 1위
 8. **VAD 기반 무음 자동 컷** — 이미 있는 whisper 로 가능. "AI 자동 편집"이 여기서 처음 사실이 된다
@@ -416,9 +417,10 @@ CRF 품질에서 손해를 본다.
   자막·스티커 위치 회귀를 잡는 유일한 방법이다. **첫 케이스는 회전이다**(§6.1) — 세로 소스가
   눕지 않는지. HDR 소스의 톤매핑 결과도 같은 방식으로 고정한다
 
-⚠️ 둘 다 **CI 에 ffmpeg 설치가 필요하다.** 현행 파이썬 테스트는 "ffmpeg·SDK 없이 돈다"가
-설계 원칙이라([progress.md](../progress.md)) CI 구조가 바뀐다. 기존 문자열 테스트는 그대로 두고
-새 계층을 분리해 붙인다.
+진짜 ffmpeg 을 돌리는 계층은 이미 있다 — [`tests/test_ffmpeg_contract.py`](../../apps/ai-worker/tests/test_ffmpeg_contract.py)
+가 편집 산출물(세로 규격·H.264/yuv420p·HDR 색 태그)과 배포 렌디션(faststart·실측 길이·회전)을
+검사하고, CI 는 `REQUIRE_FFMPEG=1` 로 건너뛰기를 막는다. 위 두 종류는 이 계층에 더한다.
+ffmpeg 이 없는 로컬에서는 이 계층만 건너뛰고 기존 문자열 테스트는 그대로 돈다.
 
 **자동 판정이 어려운 둘은 지표로 본다.**
 
@@ -431,7 +433,6 @@ CRF 품질에서 손해를 본다.
 
 ## 12. 이 계획에서 다루지 않는 것
 
-- `Movie` 엔티티 도입 — [backlog.md](../backlog.md) A-1. 부착 지점은 §2.4 의 안건이 정한다
 - 음원·스티커 에셋 조달 계약 자체 — 라이선스 **요건**만 정의한다(§7·§8.5·§9)
 - 스티커 팩의 아트 디렉션 — 유형과 운영 루프까지만 정의한다(§8.1·§8.6)
 - 앱 편집 UI — 서버가 v3 를 받을 수 있게 되는 것까지가 범위다
