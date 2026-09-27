@@ -68,9 +68,4 @@ Not "the screen is simple". Not "the screen looks calm". Simplicity is a means; 
 
 ## How the four interact
 
-- P1 and P4 can pull apart: reducing what is on screen (P4) can raise recall cost (P1). Resolve toward whichever leaves the user's *total* effort lower, counting what they must remember.
-- P2 and P4 collide constantly: making the next action obvious wants things visible; gradual reveal wants them hidden. The tie-breaker is the current step's goal — the action that serves *this* step is visible, the rest defers.
-- P3 outranks P1 when they conflict: a question the user cannot answer is worse than a question they must answer. Do not delete a hard question — restate it in the user's terms, or answer it for them with a reversible default.
-- P2 outranks P4 when a user could otherwise get stuck: an exit and a way forward are never progressive-disclosed. Toss publishes this as a hard rule for third-party apps — never leave the user without an exit option ([source](https://developers-apps-in-toss.toss.im/design/consumer-ux-guide)).
-
-Full conflict resolution: [`principle-priority.md`](principle-priority.md).
+The four pull against each other — fewer elements (P4) can raise recall (P1), and a visible next action (P2) works against gradual reveal (P4). Which one yields, and when, is decided in [`principle-priority.md`](principle-priority.md).

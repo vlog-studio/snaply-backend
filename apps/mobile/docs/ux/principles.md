@@ -51,6 +51,7 @@ Index:
 - **Hub screens** (a tab root, a settings list) whose one goal *is* "choose where to go". Their single message is the choice itself; they must still rank the options.
 - **Dashboards and libraries** whose goal is comparison or browsing. See `Density Where Density Pays`.
 - **Confirmation screens** that must show both the summary and the consequence — that is one message ("this is what will happen"), not two.
+- **Splitting is not the default.** Group questions that share one mental context and are answered from the same fact; split only when an answer changes what comes next, the input needs the full screen (keyboard, camera, map), or the steps belong to different mental contexts. Two to four related, cheap questions on one screen beat four screens — over-splitting is `Over-Split Flow`.
 
 ---
 
@@ -75,7 +76,7 @@ Index:
 - A rough read-aloud of the question and its options takes more than ~3 seconds to answer with confidence.
 
 **Exceptions.**
-- **Expert affordances** deliberately exposed for repeat users (a trim frame count, an explicit aspect ratio) where precision is the point — keep them, but out of the primary path.
+- **Expert affordances** deliberately exposed for repeat users (a trim frame count, an explicit aspect ratio) where precision is the point — keep them, one disclosure away from the primary path. Never remove the precise control to make the simple one look cleaner.
 - **Legally required disclosures and consent**, which must be stated exactly even when the wording is unfamiliar.
 - **Genuinely novel product concepts** with no user-side vocabulary yet; then teach the term once at the point of use, and keep the term stable everywhere afterwards.
 
@@ -101,7 +102,7 @@ Index:
 - A screen entered to perform an action opens in a state where that action is disabled, without stating in one glance what unblocks it.
 
 **Exceptions.**
-- **Value-first screens** where a preview must precede a costly step (see `Value Before Cost`) — the preview *is* the first thing, deliberately.
+- **Value-first screens** where a preview must precede a costly step (see `Value Before Cost`) and the user has not yet seen the payoff — the preview *is* the first thing, deliberately. In every repeat and routine case, lead with the action: the first run differs from the hundredth.
 - **Read-oriented screens** (a movie detail in watch mode, a result view) where consuming content is the action.
 - **Destructive or irreversible actions**, which must not be the easiest thing on the screen.
 
@@ -131,7 +132,7 @@ Index:
 - **Numbered or clearly linear steps** where `다음` is the honest description and the following screen was announced by the current one.
 - **Dismissals and pure acknowledgements**, which are outcome labels already — the allowed words are listed once, under Allowed generic labels in [`ux-writing.md` → CTA](ux-writing.md#cta).
 - **System dialogs** (OS permission prompts, share sheets) whose labels we do not control — then the *preceding* screen must supply the prediction.
-- **Very tight controls** (icon-only, a chip row) where a full outcome phrase does not fit: keep the short label and put the outcome in the accessibility label and the adjacent heading.
+- **Very tight controls** (icon-only, a chip row) where a full outcome phrase does not fit: shorten the outcome, never genericize it (`무비 만들기` beats `확인`); if nothing fits, keep the short label and put the outcome in the accessibility label and the adjacent heading.
 
 ---
 
@@ -156,9 +157,9 @@ Index:
 - The user cannot see what the default currently is before committing.
 
 **Exceptions.**
-- **Consequential, hard-to-reverse, or paid actions** — no pre-selection; make the user choose (do not pre-check "delete originals").
+- **Consequential, hard-to-reverse, or paid actions** — no pre-selection; make the user choose (do not pre-check "delete originals", a share, or a spend).
 - **Consent and permissions** — never pre-opted-in.
-- **Genuinely bimodal answers** with no majority and materially different results; then ask an `Easy to Answer` question instead of guessing.
+- **Genuinely bimodal answers** with no majority and materially different results — or any value that cannot be defaulted visibly, reversibly, and by inference; then ask an `Easy to Answer` question instead of guessing.
 
 ---
 
@@ -211,7 +212,7 @@ Index:
 - Conversely (violation the other way): current system state, an exit, an error, or a cost is only visible after an extra interaction.
 
 **Exceptions.**
-- **Frequently used controls** — disclosure is a tax paid every session; if usage is high, keep it visible even if it adds density.
+- **Frequently used controls** — disclosure is a tax paid every session; if usage is high, keep it visible even if it adds density. What may be deferred is what fewer than ~10% of sessions use.
 - **Comparison tasks** that need everything side by side.
 - **Anything safety- or money-related**, which is disclosed up front by default.
 - Do not exceed **one** disclosure level on a primary path; nested reveals destroy Discoverability.
@@ -236,7 +237,7 @@ Index:
 - A permission prompt, sign-in wall, or multi-field form appears before the user has seen any concrete output or benefit.
 - The first interaction on a screen is a request rather than a result.
 - A flow's benefit is stated only in prose, where a preview or sample is feasible.
-- A cost (time, price, permission, irreversibility) is revealed only after the user has invested effort. This is a violation in the *other* direction — costs must never be back-loaded as a surprise.
+- A cost (time, price, permission, irreversibility) is revealed only after the user has invested effort. This is a violation in the *other* direction — costs must never be back-loaded as a surprise: disclose them before the commit, next to the CTA that incurs them. Back-loading a cost is a dark pattern (`Hidden Cost`), not a funnel optimization.
 
 **Exceptions.**
 - **Technically gated capability** where nothing can be shown without the permission (a live camera preview needs the camera). Then justify at the point of need, in outcome terms, and keep a working path without it.
@@ -323,8 +324,8 @@ Index:
 - A new component duplicates an existing one in [`../conventions/cookbook.md`](../conventions/cookbook.md) rather than reusing it.
 
 **Exceptions.**
-- **Platform conventions win over internal consistency** (iOS vs. Android back, share, and picker behavior).
-- **A deliberate app-wide pattern migration** — then migrate all sites in a bounded plan and note the transitional state, rather than leaving a permanent split.
+- **Platform conventions win over internal consistency** (iOS vs. Android back, share, and picker behavior): users' expectations come from the OS before they come from our app, so internal consistency applies to what we invent, not to what the platform already defines.
+- **A deliberate app-wide pattern migration** — then migrate all sites in a bounded plan and note the transitional state, rather than leaving a permanent split. Until that plan exists, consistency wins: a better pattern applied to one screen is a net loss.
 - **Genuinely different semantics** deserve a different component; do not force one pattern onto a decision it fits poorly.
 
 ---
@@ -377,7 +378,7 @@ Index:
 - Removing the sentence would not change what a user can do.
 
 **Exceptions.**
-- **One-time education at the point of first use** for a genuinely novel mechanic — brief, dismissible, not repeated.
+- **One-time education at the point of first use** for a genuinely novel mechanic, once structure and labels have failed to make it inferable — one short hint, dismissible, not repeated; never a paragraph or a carousel, and never in place of accessibility labels.
 - **Legal, safety, and consent text**, which must be complete.
 - **Error and empty-with-a-cause states**, which need one sentence of cause plus the fix (see `Errors Are Design Failures First`).
 - **Accessibility**: never remove labels or hints in the name of this principle.
@@ -473,7 +474,7 @@ Index:
 
 `Derived Principle` — the counterweight to over-simplification · derives from P1, P4
 
-**Definition.** Screens whose purpose is scanning, comparing, or repeated expert use may be dense. Density is justified when it lowers the user's *total* effort — fewer transitions, less recall, more comparison in one view — and it must still obey hierarchy, grouping, and alignment.
+**Definition.** Screens whose purpose is scanning, comparing, or repeated expert use may be dense. Density is justified when it lowers the user's *total* effort — fewer transitions, less recall, more comparison in one view — and it must still obey hierarchy, grouping, and alignment. In a dense view, hierarchy is carried by grouping, ordering, and headers rather than by size contrast.
 
 **User Problem.** Over-simplified library and list screens force paging, scrolling, and memory work. A grid of six items per row is not "cluttered" if the user's task is finding one snap among two hundred.
 
@@ -490,7 +491,7 @@ Index:
 - Items are homogeneous, so one learned cell pattern applies to all of them.
 
 Density is a *problem* when any hold:
-- Items on screen belong to different goals or object types.
+- Items on screen belong to different goals or object types — split them into sections before reducing density.
 - No grouping or ordering rationale exists.
 - Interactive and non-interactive elements are visually indistinguishable.
 - The primary action competes with content for attention.

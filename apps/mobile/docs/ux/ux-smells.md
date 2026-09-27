@@ -185,7 +185,7 @@ How to use it: run the Detection Rules in [`principles.md`](principles.md) while
 - **Cause.** Mechanical application of `One Thing per Page`.
 - **User cost.** Transition and orientation cost per step; loss of the whole-decision view; higher perceived length even though each step is easy.
 - **Principles.** `One Thing per Page` (over-applied), `Reduce Decision Cost`.
-- **Remediation.** Group questions that share one mental context and are answered from the same fact. Split only when a question's answer changes what comes next, or when the input needs the full screen (keyboard, camera, map).
+- **Remediation.** Regroup by the splitting rule in [`One Thing per Page`](principles.md#1--one-thing-per-page)'s Exceptions: group what shares one mental context, and split only where an answer changes what comes next.
 
 ## Truncated Feature
 
