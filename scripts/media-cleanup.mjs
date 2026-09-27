@@ -2,8 +2,8 @@
 /**
  * 미디어 트랙 테스트 데이터 정리 (개발용).
  *
- * 공유 Supabase를 쓰기 때문에 통합 테스트 후 자기 데이터를 지워야 한다(docs/team.md §4).
- * (플랜별 편집 횟수 제한이 재도입되면 한도 초기화 용도로도 쓴다 — docs/plan-limits.md)
+ * 공유 Supabase를 쓰기 때문에 통합 테스트 후 자기 데이터를 지워야 한다(ONBOARDING.md §5 "테스트 데이터 정리").
+ * (플랜별 편집 횟수 제한이 재도입되면 한도 초기화 용도로도 쓴다 — docs/decisions/credit-payment-model.md "편집 횟수 무제한")
  *
  * 사용법:
  *   node scripts/media-cleanup.mjs                     # 대상만 보여주고 종료(기본: dry-run)

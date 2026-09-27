@@ -9,7 +9,7 @@
 변수 하나하나의 목록은 [`apps/api/src/env-spec.ts`](../../apps/api/src/env-spec.ts),
 사람이 복사해 쓰는 표현은 [`.env.example`](../../.env.example).
 
-관련: [ONBOARDING.md](../../ONBOARDING.md) §3-2 · [backlog.md](../backlog.md) B-1(배포 인프라)
+관련: [ONBOARDING.md](../../ONBOARDING.md) §3-3 · [backlog.md](../backlog.md) B-1(배포 인프라)
 
 ---
 
