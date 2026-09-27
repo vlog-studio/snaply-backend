@@ -15,7 +15,9 @@
    즉시 반영된다. 쓰기는 무비를 `pending`(`create`/`update`) 으로 표시하고, 동기화 워커
    (`features/compose-movie` 의 `MovieSyncGate`)가 **컷의 스냅이 모두 업로드된 뒤** 서버로 보낸다.
    읽기는 로그인 시와 포그라운드 복귀 시 `GET /movies` 전 페이지를 받아 병합한다 — pending 무비는
-   로컬을, 나머지는 서버를 취한다.
+   로컬을, 나머지는 서버를 취한다. 병합의 세부 규칙(이 기기만 아는 값의 보존, 서버에서 알게 된 작업을
+   따라가는 방식)은 앱 동작 문서 [features/movie.md §Movies live on the server](../../apps/mobile/docs/features/movie.md#movies-live-on-the-server)가
+   원천이다(구현 `entities/movie/lib/movie-sync.ts`).
 2. **무비 id 는 앱이 uuid 로 정하고 서버가 그대로 받는다.** `POST /movies` 의 `id`(선택). 같은 id
    재전송은 멱등(있는 것을 돌려준다), 다른 사용자의 id 와 겹치면 409.
 3. **`Movie.jobId` 를 응답에 노출한다.** 진행률·취소·실패 사유는 편집 작업 API 로 보는데, 앱이 `export`
@@ -47,12 +49,3 @@
 | (c) 서버 계약에 "업로드 대기 컷" 표현 추가 | 서버가 로컬 파일명을 알게 된다. 스냅 원천 전환(A-4)과 정면 충돌 |
 | 임시 id → 서버 id 교체 | 사용자가 이미 열어 둔 경로·알림의 `movieId`·렌더 캐시 키가 바뀐다. 매핑 테이블을 앱 전역에 두어야 한다 |
 | 서버 상태를 앱이 직접 갱신(PATCH status) | 워커가 무비를 모르는 현 구조에서 서버가 읽기 시 작업으로 상태를 따라잡는 편이 단순하고, 앱의 낡은 상태가 서버를 덮어쓰지 않는다 |
-
-## 읽기 병합 규칙 (`entities/movie/lib/movie-sync.ts`)
-
-- pending 무비는 로컬 그대로. 그 외는 서버 값을 취하되, **이 기기만 아는 것**(렌더 파일 주소·커버, 진행 중
-  작업의 진행률, 실패 문구, `bgm`)은 서버가 같은 결과물/작업을 가리키는 동안 유지한다.
-- 서버가 `generating` 이거나, 이 기기가 본 적 없는 결과물로 `ready`/`failed` 이면 **`adopted` 작업을 붙여
-  `generating` 으로 되돌리고** 기존 러너가 따라잡게 한다(결과물 조회·실패 문구 생성 경로를 재사용).
-  `adopted` 작업의 종료는 알리지 않는다. 이 기기가 이미 결론 낸 작업(`settledJobId`)은 다시 붙이지 않는다.
-- 서버에 없는 무비는 `create` 대기 중인 것만 남기고 버린다. 서버가 잃은 무비의 삭제 대기는 정리한다.
