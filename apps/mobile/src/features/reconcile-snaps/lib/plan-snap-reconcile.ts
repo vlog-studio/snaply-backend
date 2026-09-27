@@ -97,7 +97,9 @@ function uploadedEntry(remote: ServerSnap): SnapSyncEntry {
 }
 
 /**
- * Decides how this device's library meets the server's (docs/plans/snap-reconcile.md §4.1).
+ * Decides how this device's library meets the server's. Design:
+ * docs/decisions/snap-sync-across-devices.md §동기화 설계; behavior:
+ * apps/mobile/docs/features/snaps.md ("Snaps from other devices").
  *
  * Adding is the easy half: a finished upload this device has never heard of is
  * a snap shot somewhere else, and it joins the library under its server id,

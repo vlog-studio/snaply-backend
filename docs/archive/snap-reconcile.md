@@ -1,5 +1,15 @@
 # 스냅 reconcile — 다른 기기·재설치에서도 스냅이 보이게 하는 계획
 
+> **2026-09-27 보관.** 0~3단계 구현과 4단계 실기기 검증(Android)이 끝나 계획의 수명이 끝났다
+> ([progress.md](../progress.md)). iPhone 실기기 확인은 [backlog.md](../backlog.md) A-4 에 있다. 아래는 착수 전
+> 설계라 판단 근거로 인용하지 않는다.
+>
+> 현행 원천: 제품 결정 셋·기술 선택·안전 규칙 →
+> [decisions/snap-sync-across-devices.md](../decisions/snap-sync-across-devices.md)
+> §[동기화 설계](../decisions/snap-sync-across-devices.md#동기화-설계) · 앱 동작 →
+> [apps/mobile/docs/features/snaps.md](../../apps/mobile/docs/features/snaps.md) · 요구 →
+> [specs/snap-library.md](../specs/snap-library.md) SNAP-15·16 · 남은 작업 → [backlog.md](../backlog.md) A-4.
+
 **작성일**: 2026-09-27
 **상태**: 완료 — **0~3단계 구현과 4단계 실기기 검증이 2026-09-27 끝났다**([progress.md](../progress.md)). iPhone 실기기
 검증은 1차 운영 배포가 Android 만이라 iOS 출시 전으로 옮겼다

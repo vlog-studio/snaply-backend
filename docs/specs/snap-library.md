@@ -71,8 +71,7 @@
 
 ## 기기 간 동기화
 
-규칙: [decisions/snap-sync-across-devices.md](../decisions/snap-sync-across-devices.md) ·
-착수 계획: [plans/snap-reconcile.md](../plans/snap-reconcile.md)
+규칙과 설계: [decisions/snap-sync-across-devices.md](../decisions/snap-sync-across-devices.md)
 
 - **SNAP-15** `구현됨`(2026-09-27, Galaxy S22·Android 에뮬레이터·iOS 시뮬레이터에서 확인 — 실제 재설치·계정 전환 포함. iPhone 실기기는 iOS 출시 전) — 같은 계정의 스냅은 **기기와 재설치를 넘어 보인다.** 다른 기기에서
   찍어 서버에 올라간 스냅은 로그인한 기기의 라이브러리에 나타나고, 처음 재생할 때 받아 온다.

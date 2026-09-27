@@ -5,7 +5,7 @@
 **관련**: [snap-source-of-truth.md](./snap-source-of-truth.md) §3.2 ·
 [local-copy-after-upload.md](./local-copy-after-upload.md) · [snap-retention-period.md](./snap-retention-period.md) ·
 [movie-snap-expiry-exemption.md](./movie-snap-expiry-exemption.md) ·
-[specs/snap-library.md](../specs/snap-library.md) SNAP-12·15·16 · 착수 계획 [plans/snap-reconcile.md](../plans/snap-reconcile.md)
+[specs/snap-library.md](../specs/snap-library.md) SNAP-12·15·16 · 착수 계획(보관) [archive/snap-reconcile.md](../archive/snap-reconcile.md)
 
 ---
 
@@ -21,7 +21,7 @@
 
 앱이 서버의 스냅 목록을 읽어 로컬 라이브러리와 맞추는 작업(reconcile)을 시작하려면, 서버에서
 사라진 스냅을 기기에서 어떻게 처리할지가 정해져 있어야 한다. 이 셋이 병합 규칙의 행동을 바꾼다
-([계획](../plans/snap-reconcile.md) §4.1).
+([동기화 설계](#동기화-설계)).
 
 전제는 두 가지다. 서버 원천 전환이 끝나기 전까지는 **기기의 파일이 원천**이다(SNAP-14). 그리고 무비는
 **서버 사본으로** 만든다.
@@ -56,8 +56,40 @@
 | 항목 | 기록 |
 |---|---|
 | 결정 | ① A · ② A · ③ A |
-| 결정일 / 결정자 | 2026-09-27 / 제품 — [계획](../plans/snap-reconcile.md) §3.1 의 권장안 채택 |
+| 결정일 / 결정자 | 2026-09-27 / 제품 — 착수 계획([archive/snap-reconcile.md](../archive/snap-reconcile.md)) §3.1 의 권장안 채택 |
 | 함께 고친 문서 | [specs/snap-library.md](../specs/snap-library.md) SNAP-12 범위 조정, SNAP-15·16 신설 · 계획 §3.1 · [backlog.md](../backlog.md) A-4 |
+
+## 동기화 설계
+
+앱이 서버의 스냅 목록을 읽어 로컬 라이브러리와 맞추는(reconcile) 방식의 설계 선택이다. 스냅이 도착하고
+사라지고 "만료됨"이 되는 앱 동작은 [앱 기능 문서](../../apps/mobile/docs/features/snaps.md#snaps-from-other-devices)가
+원천이다.
+
+### 기술 선택
+
+| # | 선택 | 기각한 안과 이유 |
+|---|---|---|
+| T1 | **다른 기기에서 온 스냅의 로컬 id 는 서버 `videoId` 다.** 동기화 항목도 처음부터 `uploaded` 로 쓴다 | 새 UUID 발급 — id↔`videoId` 매핑이 하나 더 생긴다. 파일명 id 는 기기 밖으로 나가지 않고 기기 밖에서 온 스냅은 이미 UUID 라, [snap-source-of-truth.md](./snap-source-of-truth.md) §4 의 `snap.id` UUID 전환도 필요 없다 |
+| T2 | **제거 사유는 조회 API 로 묻는다.** 목록에서 사라진 id 만 `POST /videos/lookup` 에 보낸다 | 목록에 툼스톤 포함(`removedSince`) — 기기 시계와 서버 시계를 비교해야 하고, 첫 동기화 때 계정의 툼스톤을 전부 받는다 |
+| T3 | **치수는 렌디션 워커가 ffprobe 로 잰다**(회전 반영). 다른 기기가 받는 파일이 배포본이라 배포본에서 잰다 | 앱이 `POST /videos` 에 싣기 — 새 앱의 새 업로드만 채워지고, 측정 못 한 스탠드인을 거르는 규칙을 클라이언트마다 지켜야 한다 |
+| T4 | **다른 기기 스냅의 파일은 `Paths.cache` 에 렌디션으로 받는다.** 썸네일은 reconcile 때, 영상은 처음 재생·편집할 때 받는다 | 원본 다운로드 — iPhone HEVC/HDR 이 Android 에서 안 돌 수 있고 전송량이 약 2.5배다([snap-source-of-truth.md](./snap-source-of-truth.md) §6.3). `Paths.document` — 캐시인데 공간을 영구히 쓴다 |
+| T5 | **`POST /videos` 에 `clientId`(= 로컬 스냅 id)를 싣고 목록에 돌려준다.** 촬영한 기기가 자기 행을 알아본다. 식별용이라 유일 제약은 걸지 않는다 | 없이 가기 — 등록 성공 직후 스토어에 기록하기 전에 앱이 죽거나 동기화 스토어 파일을 잃으면(쓰기가 best-effort 다) 자기 스냅이 "다른 기기 스냅"으로 한 번 더 보인다 |
+
+### 안전 규칙
+
+- **목록에 없다는 이유만으로 지우지 않는다.** 지우는 것은 `lookup` 이 사유를 말한 경우뿐이다.
+- **한 단계라도 실패하면 아무것도 적용하지 않는다.** 네트워크 오류, 페이지 중간의 실패, 삭제 대기 계정의
+  403(`ACCOUNT_PENDING_DELETION`), 목(mock) 모드가 모두 여기에 해당하고, 다음 기회에 처음부터 다시 한다.
+- 파일을 지우지 못한 제거는 항목을 남겨 두고, 다음 패스가 다시 묻는다.
+- 다른 기기에서 지운 스냅은 이 기기의 **무비를 고치지 않는다.** 지운 기기가 이미 컷을 뺀 무비를 서버에
+  보냈으므로, 여기서 무비까지 고쳐 보내면 그 기기의 더 새 편집을 덮을 수 있다. 무비는 무비 동기화가 서버 것을 받아 온다.
+
+### 두지 않은 것
+
+- **"이 기기에서만 제거"** — 로컬이 원천인 동안, 촬영한 기기에서 제거하는 것은 원본을 지우는 것과 같다.
+  SNAP-14 전환 때 다시 본다.
+- **업로드 멱등(`clientId` 유일 제약·`upload-url` 행 재사용)** — 파일명 id 는 기기 사이에 겹칠 수 있어
+  유일 제약을 걸려면 UUID 가 먼저 필요하다. T5 의 `clientId` 는 식별용이라 겹쳐도 해가 없다.
 
 ## 남은 것
 

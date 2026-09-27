@@ -13,7 +13,9 @@ A-2(유료 플랜 한도), E-3(GC 배치)
 한도 값, §6.2에서 2GB를 기각했던 판단, §6.3의 원가 계산을 대체했다. 2026-09-09에는 용량 한도 자체가
 기간 기준(업로드 후 15일)으로 바뀌었다 — [snap-retention-period.md](./snap-retention-period.md). 그래서 §1·§6의
 용량 정책(한도 단위·산정 범위·초과 시 동작·§6.4 집행 설계)은 현행이 아니며, 용량 한도를 남길지는
-미결이다([backlog.md](../backlog.md) A-2).
+미결이다([backlog.md](../backlog.md) A-2). 2026-09-27 의 기기 간 동기화 설계는 §4 의 `snap.id` UUID 전환과
+§1 의 `clientId` 유일 제약을 쓰지 않는다 — 이유는 [snap-sync-across-devices.md](./snap-sync-across-devices.md)
+§[동기화 설계](./snap-sync-across-devices.md#동기화-설계).
 
 관련: [plan-limits.md](./plan-limits.md), [api-spec.md](../api-spec.md)
 
