@@ -91,7 +91,7 @@
       "Finishing it" 절을 추가하고 생성 경로·완료 알림·소유권·제한을 고쳤다. studio.md · snaps.md ·
       README · app-shell · me.md · location-and-push 도 같은 변경에서
 - [ ] ~~**e2e 실검증**~~ — **2026-09-11 완료**. `media:e2e` 가 앱과 같은 길을 간다
-      (`POST /movies` → `export` → 무비에서 결과물 찾기). 실제 아이폰 영상으로의 재검증은 남아 있다
+      (`POST /movies` → `export` → 무비에서 결과물 찾기). 실제 아이폰 영상으로는 2026-09-15 스트레스 검증(F)에서 돌았다
 - [ ] **`앱`** **서버 전환 실기기 검증** ⚠️ 2026-09-12 신규. 단위 테스트와 인메모리 목으로만 검증됐다.
       Android dev build 에서 실제 서버에 대해: ① 촬영 직후 담은 초안이 업로드가 끝난 뒤 서버에 생긴다
       ② 편집이 PATCH 된다 ③ 생성 → **완성 푸시가 한 번만** 오고 탭하면 그 무비가 열린다(cold start 포함)
@@ -122,11 +122,11 @@
       [decisions/movie-snap-expiry-exemption.md](decisions/movie-snap-expiry-exemption.md).
       요금제 설계(A-2)와 함께 보는 것이 자연스럽다 — 비용이 아니라 유료 전환 경계의 문제다
 
-무비 결과물의 정리도 이 항목에서 함께 구현한다: **끝내기 시 삭제**(MOV-17)와, 끝내지 않은
-결과물의 **30일 상한**(MOV-16). 프로젝트 자동 삭제는 **기능만 만들고 기본 꺼짐**으로 둔다.
-다시 만들기는 유료(MOV-19)라 무료 재생성 경로는 만들지 않는다 —
-[decisions/storage-and-subscription-policy.md](./decisions/storage-and-subscription-policy.md) §3 의
-무료 재생성은 대체됐다. S3 삭제 실패분은 E-3의 정리 배치 경로를 쓴다.
+- [ ] **`서버`** **프로젝트(무비) 자동 삭제 킬스위치** — 프로젝트는 지우지 않되 자동 삭제를
+      "기능만 만들고 기본 꺼짐"으로 두기로 했다([movie-cleanup-after-export.md](./decisions/movie-cleanup-after-export.md)
+      파생 결정 3). 결과물 정리(끝내기 시 삭제 MOV-17 · 30일 상한 MOV-16)는 구현됐지만 이 스위치는
+      코드에 없다. 언제 지울지는 결정에 없으므로 구현 전에 정한다.
+      **완료 조건**: 기본 꺼짐 설정과 삭제 경로가 테스트와 함께 들어간다
 
 같은 결정 §3.5의 "생성 완료 FCM 알림에 보관 기간 명시"의 선행 조건은 2026-09-11 에 풀렸다 —
 완료 알림이 서버 FCM 으로 옮겨져(`services/movie-ready-notice.service.ts`) 문구를 서버가 쥔다.
@@ -136,8 +136,8 @@
 ### A-2. 크레딧 결제 세부 정책 확정
 
 **결정·구현 완료분**: 과금 모델(구독 제거, export 1회 = 100크레딧 불변, 생성/보관 2축 분리),
-결제 채널(IAP + RevenueCat), 스토리지 정책(무비 30일 보관·무료 재생성, 스냅은 2026-09-09부터
-기간 기준 — 무료 15일)은 확정됐다.
+결제 채널(IAP + RevenueCat), 스토리지 정책(끝내지 않은 무비 결과물은 30일 상한 — 다시 만들기는
+새 생성이라 크레딧 100, 스냅은 기간 기준 — 무료 15일)은 확정됐다.
 현행 요구는 [specs/credits-and-payment.md](./specs/credits-and-payment.md)·
 [specs/snap-library.md](./specs/snap-library.md)·[specs/movie.md](./specs/movie.md)가,
 배경은 [decisions/](./decisions/)의 결제·스토리지 결정 3편이 담는다. 크레딧 원장·웹훅
@@ -181,8 +181,8 @@
 `GET /auth/me` 응답에서 `plan` 필드가 제거됐으므로 앱이 이 값을 읽고 있으면 함께 정리한다.
 
 **완료 조건**: 위 수량·가격 확정 → `credit-policy.ts` 값 교체 → 양 스토어에 동일 상품 ID로
-등록 + RevenueCat 프로젝트·웹훅 URL 연결 → 구독 entitlement 반영과 한도 집행(유예 → 읽기 전용
-전이 포함) → 결제·편집 e2e 실검증.
+등록 + RevenueCat 프로젝트·웹훅 URL 연결 → 구독을 팔기로 하면 entitlement 반영(용량 한도를 남기기로
+하면 그 집행 — 유예 → 읽기 전용 전이 포함) → 결제·편집 e2e 실검증.
 
 ### A-3. 스냅 내용 분석 — 구현 완료, 생산 활성화 대기
 
@@ -329,7 +329,7 @@
       정한다([meetings/2026-08-31-dev-sync.md](./meetings/2026-08-31-dev-sync.md) §5). A-3 의 실측 뒤에 정한다
 
 **후속 후보(아직 열지 않음)**: 스튜디오의 템플릿 카드를 서버가 사용자 라이브러리 기준으로
-정렬하는 안, `다른 조합`(같은 템플릿에 다른 외출 제안). 둘 다 앱 연동이 끝난 뒤에 판단한다.
+정렬하는 안, `다른 조합`(같은 템플릿에 다른 외출 제안).
 
 ---
 
@@ -346,14 +346,15 @@
 재생성 무효화)이 구현·검증됐다 — [progress.md](./progress.md). **아래 미결은 그대로다** — 사전은
 계약을 고정한 것이지 파이프라인을 구현한 것이 아니다.
 
-**막힌 이유**: 선행 결정 세 가지와 음원 조달이 모두 열려 있다.
+v3 는 **Movie export 에 붙인다** — `POST /edit-jobs` 는 한 버전 공존 후 폐기하기로 했으므로
+(A-1, [decisions/movie-export-policy.md](./decisions/movie-export-policy.md) ⑤) 두 곳에 붙이지 않는다.
 
-- **부착 지점 미정** — v3 를 `POST /edit-jobs` 에 붙일지 Movie export 에 붙일지는 A-1의
-  기존 직접 편집 API 공존·폐기 판단에 달려 있다. 타임라인 모델 설계는 진행할 수 있으나
-  **요청 스키마·라우트는 A-1 확정 이후**다
+**막힌 이유**: 선행 결정 둘(번인 자막·워터마크)과 음원·스티커 조달이 열려 있다.
+
 - **번인 자막 전환은 FE 계약 변경** — 단어 단위 애니메이션은 ASS/libass 로만 되고, 그러면
-  현행 mov_text 소프트 자막이 번인으로 바뀐다. [api-spec.md](./api-spec.md) 가 "플레이어에서
-  켜야 보인다"고 이미 고지했다. 새 라이브러리는 0이지만 **결정 문서가 선행**이다
+  현행 mov_text 소프트 자막이 번인으로 바뀐다. 현행 동작("플레이어에서 켜야 보인다")은 계약
+  `subtitles` 설명([`contract/edit-jobs.ts`](../packages/shared-types/src/contract/edit-jobs.ts))과
+  MOV-9 가 안내한다. 새 라이브러리는 0이지만 **결정 문서가 선행**이다
 - **워터마크 결정이 레이어 설계 입력** — A-2에서 넣기로 하면 v3 `layers` 가 표현해야 한다
 - **BGM 음원이 없다** — `assets/bgm/` 에 README 뿐이라 비트 싱크·덕킹·무드 매칭이 전부 검증
   불가다. 15~20트랙이면 착수 가능하며, **최종 사용자의 소셜 업로드 허용**과 Content ID 클레임
@@ -401,11 +402,11 @@
       이 조항이 확보되면 팩 상태를 셋(`experimental → active → deprecated`)으로 줄이고
       `retired` 를 법적 차단 전용으로 좁힌다(kickoff §1.2 C-2)
 
-**완료 조건**: 위 4건 확정 → `editSpec` v3 확정 → `bgm_tracks` + 오프라인 비트 그리드 →
+**완료 조건**: 위 선행 결정·조달 확정 → `editSpec` v3 확정 → `bgm_tracks` + 오프라인 비트 그리드 →
 1단계(출력 옵션 · ASS 자막 · VAD 무음 컷 · 비트 스냅) 구현 → 계약·골든 프레임 테스트 위에서
 e2e 실검증.
 
-**의존**: A-1(Movie와 직접 편집 API 수명) · A-2(해상도·워터마크) · E-5.
+**의존**: A-1(`POST /edit-jobs` 폐기) · A-2(해상도·워터마크) · E-5.
 
 ### A-8. 카카오 로그인 — 서비스 완성 후 인증 추가 계획
 
@@ -460,7 +461,7 @@ e2e 실검증.
 
 ## B. 개발 합의 필요 (A·B 트랙 공동 소유)
 
-### B-1. 배포 인프라 결정 ★
+### B-1. 배포 — 사내 서버 가동 ★
 
 **2026-09-15 방향 결정**: **사내 물리 서버**에 docker compose 로 올린다. 계획은
 [plans/on-prem-deploy.md](./plans/on-prem-deploy.md). 사내망 전용이라 **실사용자를 받을 수는 없고**
@@ -480,16 +481,6 @@ self-hosted runner 배포 잡(`.github/workflows/deploy.yml`), 배치 cron·DB �
 - [ ] **DB 백업의 외부 보관** — 지금 덤프는 같은 서버에 쌓인다. 서버가 통째로 죽으면 함께 사라진다
 - [ ] **실사용 서버** — 사내망 전용이라 이 서버로는 사용자를 받을 수 없다. 외부 접속이 되는
       곳이 생기면 고정 도메인(D-1)과 SNS·결제·광고 mock 해제만 추가하면 된다
-
-**막혀 있던 이유**(해소): 후보(Fly / Render / ECS 등)가 확정되지 않았다.
-`.github/workflows/deploy.yml` 은 `DEPLOY_ENABLED` 게이트로 준비돼 있고,
-워커 이미지는 검증 완료([progress.md](./progress.md) 실검증 라운드 2)라 결정만 되면 배포 가능하다.
-
-**결정 후 할 일**: [`apps/api/src/env-spec.ts`](../apps/api/src/env-spec.ts) 에서
-`origin !== 'local'` 인 항목을 그 플랫폼의 시크릿에 넣고 `deploy.yml` 의 Deploy 스텝을 연결한다.
-현재 deploy.yml 이 정의하는 시크릿은 마이그레이션용 `DATABASE_URL`/`DIRECT_URL` 2개뿐이다.
-`NODE_ENV=production` 주입을 빠뜨리지 말 것 — 빠뜨려도 배포는 성공한다
-([decisions/env-management.md](./decisions/env-management.md)).
 
 **API 만 띄우면 안 된다** (2026-09-14 추가). 상주 프로세스와 스케줄 배치가 따로 있고, 빠뜨려도
 **배포는 성공하며 아무 에러도 나지 않는다** — 대신 알림이 영영 안 가거나 파일이 무한히 쌓인다.
@@ -584,7 +575,7 @@ geofence 쿨다운 판정용 이력이 무한히 쌓인다. 쿨다운은 30분 �
 
 ## C. 외부 크리덴셜/승인 대기
 
-### C-1. 스토어 상품 등록(크레딧 팩 + 구독) → IAP 구매·웹훅 검증
+### C-1. 스토어 상품 등록(크레딧 팩, 구독은 A-2 뒤) → IAP 구매·웹훅 검증
 
 **막힌 이유**: 백엔드 구현은 끝났다(2026-08-14, [progress.md](./progress.md)). 남은 것은
 저장소 밖 설정이다 — 크레딧 묶음의 수량·가격(A-2)이 확정되지 않아 양 스토어에 consumable
@@ -600,11 +591,11 @@ RevenueCat 웹훅 URL은 `POST /billing/webhook/revenuecat`, Authorization 헤�
 RevenueCat 프로젝트·웹훅 URL 설정 → sandbox 구매 → 웹훅 수신 → 크레딧 지급 →
 같은 트랜잭션 웹훅 재전송 시 중복 지급 없음까지 한 번 통과하면 닫힌다.
 
-**구독 상품이 추가된다** (2026-08-14,
-[decisions/storage-and-subscription-policy.md](./decisions/storage-and-subscription-policy.md) §5).
-크레딧 팩(consumable)과 별도로 스토리지 구독을 **auto-renewable subscription**
-(Apple Subscription Group / Google base plan)으로 등록해야 하고, A-2의 용량 티어·가격
-확정이 선행된다. sandbox 검증에 갱신·해지·만료·결제실패 전이가 추가되며, 앱 쪽에는
+**구독 상품은 A-2 결정 뒤다.** 무엇을 팔지(용량인지 보관 기간인지)부터 미확정이다(A-2).
+팔기로 정해지면 크레딧 팩(consumable)과 별도로 **auto-renewable subscription**
+(Apple Subscription Group / Google base plan)으로 등록한다
+([decisions/storage-and-subscription-policy.md](./decisions/storage-and-subscription-policy.md) §5).
+그때 sandbox 검증에 갱신·해지·만료·결제실패 전이가 추가되며, 앱 쪽에는
 **"구매 복원(Restore Purchases)" 버튼**이 필수다(Apple App Review 3.1.2(a) — 누락 시 리젝).
 
 ### C-2. 틱톡 받은함 실물 미도착
@@ -642,7 +633,7 @@ TIKTOK_SCOPES=user.info.basic,video.publish
 ```
 엔드포인트는 코드가 자동 분기한다(`/inbox/video/init/` → `/video/init/`).
   `requiresUserAction` 이 응답에서 사라지므로 **모바일 안내 문구도 함께 정리**해야 한다
-([api-spec.md](./api-spec.md) SNS 업로드 절).
+([api-spec.md](./api-spec.md) SNS 연동 절).
 
 ### C-4. FCM 실기기 수신
 
@@ -829,21 +820,13 @@ cloudflared tunnel login                        # 브라우저 인증, 1회
 ai-worker 는 이미지가 커서 기동 대신 정적 검사만 한다 — 과거 두 결함(자산 누락·경로 어긋남)이
 모두 이 검사에 걸리므로 모델을 올리지 않고도 목적을 달성한다.
 
-### E-5. BGM 무작위 선택이 레시피 재생성 결정론을 깬다 ⚠️
+### E-5. BGM 무작위 선택이 같은 구성의 재현성을 깬다 ⚠️
 
-[decisions/storage-and-subscription-policy.md](./decisions/storage-and-subscription-policy.md) §3.2 는
-만료된 무비를 영구 보관된 `editSpec`+`renderSpec` 으로 **크레딧 없이 무료 재생성**한다고
-확정했다. 그런데 BGM 선택이 디렉터리 스캔 + `random.choice` 라
+BGM 선택이 디렉터리 스캔 + `random.choice` 라
 ([`apps/ai-worker/src/pipeline/music.py`](../apps/ai-worker/src/pipeline/music.py))
-**같은 레시피로 재생성해도 BGM 이 달라진다.** 사용자는 "복원"을 눌렀는데 다른 영상을 받는다.
-
-**2026-09-09 재판정 — 급박함은 줄었지만 사라지지는 않았다.** 무료 재생성(위 §3.2)이
-폐기되면서([movie-cleanup-after-export.md](./decisions/movie-cleanup-after-export.md))
-"복원을 눌렀는데 다른 영상" 이라는 시나리오는 없어졌다. 다시 만들기는 이제 **사용자가 편집한 뒤
-크레딧을 내고 하는 새 생성**이라, 결과가 달라지는 것이 배신은 아니다.
-
-그러나 결함 자체는 남는다: **같은 구성으로 다시 만들었는데 BGM 이 바뀌면** 사용자는 자기가
-바꾸지 않은 것이 바뀐 이유를 알 수 없다. MOV-14(같은 구성 → 같은 결과)도 여전히 그렇게 요구한다.
+**같은 구성으로 다시 만들어도 BGM 이 달라진다.** MOV-14 는 같은 구성이면 같은 결과를 요구한다.
+다시 만들기는 사용자가 편집한 뒤 크레딧을 내는 새 생성이라(MOV-19) 결과가 달라지는 것 자체가
+배신은 아니지만, 사용자는 자기가 바꾸지 않은 것이 바뀐 이유를 알 수 없다.
 A-7 의 비트 싱크가 들어오면 컷 지점까지 달라져 피해가 커진다.
 
 **완료 조건**: 선택된 트랙 ID·난수 시드를 `editSpec` 에 핀으로 남기고, 재생성이 같은 산출물을
@@ -916,9 +899,6 @@ GHCR 패키지를 공개로 돌릴지도 정한다 — 공개면 새 개발자�
       타임아웃 600초) 모두 정상. **HDR 에서 결함 하나를 찾아 고쳤다** — 픽셀은 SDR 로 내리고
       색 태그는 PQ/bt2020 으로 남겨, 플레이어가 톤매핑을 한 번 더 걸었다(progress.md 참고).
       **돌비비전 실물은 아직 미검증** — 합성 HDR10 으로만 확인했다. 실제 DV 영상이 생기면 재확인
-      **HDR 은 실검증 이전에 톤매핑 필터 자체가 없다** — 아이폰 기본 촬영이 돌비비전이라
-      들어오는 즉시 드러난다. [plans/trend-editing-pipeline.md](./plans/trend-editing-pipeline.md) §6.1
-- [ ] 배포 인프라 확정 후 `deploy.yml` 활성화 (B-1 선행)
 - [ ] 실BGM 기준 whisper 자막 인식 재확인 (현재는 dev BGM 기준으로만 확인)
 
 ---
