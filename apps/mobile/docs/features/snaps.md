@@ -107,7 +107,7 @@ Thumbnails are derived cover art, held by no model. Extraction and caching live 
 
 Every snap is uploaded to the backend automatically, so that the material is already there when a movie is sent to the server and run there (`POST /movies` names its cuts by `videoId`; `POST /movies/{id}/export` renders the server's copies) and the user never waits on a bulk upload at the moment they ask for a movie. The upload finishing is also what lets a movie holding that snap be sent at all — the movie sync (`features/compose-movie`'s `MovieSyncGate`) drains its outbox on every sync-entry change for exactly that reason ([The movie screen](movie.md#movies-live-on-the-server)).
 
-**The local file stays the source of truth.** A finished upload does not delete it. Making the device copy a cache is the agreed destination, but switching it on waits until the backend serves a playable rendition and the app reconciles against the server list — without those, deleting locally would leave a snap unplayable on other platforms and unrecoverable after a reinstall ([SNAP-14](../../../../docs/specs/snap-library.md), [decision](../../../../docs/decisions/local-copy-after-upload.md)).
+**The local file stays the source of truth.** A finished upload does not delete it. Making the device copy a cache is the agreed destination; when it may be switched on is set by [SNAP-14](../../../../docs/specs/snap-library.md) and its [decision](../../../../docs/decisions/local-copy-after-upload.md), not here.
 
 | Capability | Status | Notes |
 | --- | --- | --- |
@@ -135,7 +135,7 @@ The presign response shape is spec-confirmed (`{ videoId, uploadUrl, s3Key }`); 
 
 ## Snaps from other devices
 
-The account's snaps on the server and this device's library are kept in step (SNAP-15, SNAP-16): a snap shot on another device — or on this one before a reinstall — arrives, a snap deleted elsewhere goes, and a snap whose server copy expired is marked so. The rules are [decisions/snap-sync-across-devices.md](../../../../docs/decisions/snap-sync-across-devices.md); the design is [plans/snap-reconcile.md](../../../../docs/plans/snap-reconcile.md).
+The account's snaps on the server and this device's library are kept in step (SNAP-15, SNAP-16): a snap shot on another device — or on this one before a reinstall — arrives, a snap deleted elsewhere goes, and a snap whose server copy expired is marked so. The rules are [decisions/snap-sync-across-devices.md](../../../../docs/decisions/snap-sync-across-devices.md), and the design is its [동기화 설계](../../../../docs/decisions/snap-sync-across-devices.md#동기화-설계) section.
 
 | Capability | Status | Notes |
 | --- | --- | --- |
