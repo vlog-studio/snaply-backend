@@ -78,10 +78,9 @@ App Store Server Notifications V2 + Play RTDN(Pub/Sub)을 직접 받는 방식. 
 
 ## 이번 결정에서 확정하지 않은 것
 
-- 크레딧 묶음별 수량·가격·차감량 — [../backlog.md](../backlog.md) A-2에서 관리
-- 웹 결제 병행 채널 도입 여부와 시점
-- 구독제 재도입 여부 (재도입 시 같은 구조에서 auto-renewable IAP + RevenueCat
-  entitlement로 확장한다)
+팩 수량·가격은 [backlog.md](../backlog.md) A-2 에서만 관리한다. 웹 결제 병행은 결정 4 와 아래
+재검토 트리거를 따르고, 보관 구독을 팔게 되면(CRD-7) 같은 구조 — auto-renewable IAP + RevenueCat
+entitlement — 로 확장한다.
 
 ## 재검토 트리거
 

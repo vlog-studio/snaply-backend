@@ -4,9 +4,8 @@
 **상태**: 결정 — 정기 구독을 제품 모델에서 제거하고 무비 생성을 크레딧으로 과금한다.
 **원천**: 결제 방식이 다시 변경되기 전까지 수익 모델의 원천이다.
 **후속 작업의 원천**: [backlog.md](../backlog.md) A-2, C-1
-**후속 결정**: 결제 채널은 2026-08-13에 Stripe에서 Apple/Google IAP로 변경됐다 —
-[payment-channel-iap.md](payment-channel-iap.md). 아래 "구현 전환 원칙"의 Stripe 관련
-문장은 그 결정으로 무효다.
+**후속 결정**: 결제 채널은 2026-08-13에 Stripe에서 Apple/Google IAP로 확정됐다 —
+[payment-channel-iap.md](payment-channel-iap.md).
 아래 §"기각한 대안 — 월 정기 구독 유지"는 **생성 축(크레딧 지급형 구독)에 한해** 유효하다.
 보관 혜택(기간 연장 등)을 구독으로 팔지는 예정이나 미확정이고
 ([specs/credits-and-payment.md](../specs/credits-and-payment.md) CRD-7, [backlog.md](../backlog.md) A-2),
@@ -14,12 +13,10 @@
 §4.3에 있다. 아래 결정 4의 보관 한도는 현행 원천이
 [specs/snap-library.md](../specs/snap-library.md) SNAP-9(업로드 후 15일, 용량 한도 대체)다.
 
-**후속 확정 (2026-08-14)**: 아래 5번이 미루었던 항목 중 **기본 단위가 확정됐다 —
-Movie export 1회 = 100크레딧**. 100 단위는 광고 보상·가입 보너스·프로모션처럼 지급 사유가
-늘어날 때 정수 단위로 조절하기 위한 것이다. 같은 날 **유료 정기 구독을 두지 않는다**는 것도
-재확인됐고, 레거시 `subscriptions` 테이블은 이관 없이 제거됐다. 구현은
-[progress.md](../progress.md) 2026-08-14. 남은 값(팩별 수량·가격·가입 보너스)은
-[backlog.md](../backlog.md) A-2에서만 관리한다.
+**후속 확정 (2026-08-14)**: 아래 결정 5의 기본 단위 **Movie export 1회 = 100크레딧**이 확정됐다
+(단위의 이유는 [specs/credits-and-payment.md](../specs/credits-and-payment.md) CRD-1). 같은 날 **유료
+정기 구독을 두지 않는다**는 것도 재확인됐고, 레거시 `subscriptions` 테이블은 이관 없이 제거됐다
+([progress.md](../progress.md) 2026-08-14).
 
 ## 결정
 
@@ -29,8 +26,8 @@ Movie export 1회 = 100크레딧**. 100 단위는 광고 보상·가입 보너�
    `past_due` 처리는 현행 정책이 아니라 제거·대체할 레거시 구현이다.
 4. Free 원본 스냅 한도 정책은 결제 모델과 별도로 유지한다. *(결정 당시 5GB 용량 한도.
    현행 보관 정책은 [specs/snap-library.md](../specs/snap-library.md) SNAP-9)*
-5. export 1회는 100크레딧이며 예약·환급 규칙은 구현됐다. 팩 수량·가격·유효기간과 최초
-   지급량처럼 남은 값은 [backlog.md](../backlog.md) A-2에서만 관리한다.
+5. export 1회는 100크레딧이며 예약·환급 규칙은 구현됐다. 팩 수량·가격·유효기간·최초
+   지급량·고해상도 export 의 추가 차감처럼 남은 값은 [backlog.md](../backlog.md) A-2에서만 관리한다.
 
 ## 배경
 
@@ -58,25 +55,3 @@ Movie export 1회 = 100크레딧**. 100 단위는 광고 보상·가입 보너�
 **실패한 편집도 차감**했고(워커 실패 세 번이면 그 달 편집 불가), 해상도·워터마크 차등이 구현되지
 않아 유료와 무료의 차이가 횟수뿐이었다. 크레딧 예약과 실패·취소 시 전액 환급
 ([specs/movie.md](../specs/movie.md) MOV-10)이 이 문제를 대신 푼다.
-
-## 구현 전환 원칙
-
-- Stripe를 계속 사용하더라도 Checkout은 정기 구독이 아닌 일회성 크레딧 구매를 처리한다.
-- 결제 완료는 서명 검증된 웹훅으로 확정하고, 같은 이벤트가 재전송돼도 크레딧을 중복 지급하지 않는다.
-- 편집 요청은 크레딧을 예약하고 성공 시 확정 차감하며, 실패 시 환급하는 방식을 우선 검토한다.
-- 기존 구독 사용자 데이터가 실제로 존재하는지 확인한 뒤 `subscriptions` 제거 또는 데이터
-  이관 마이그레이션을 작성한다.
-- 코드·API·약관에서 구독, 플랜, Standard/Premium 표현을 함께 제거한다.
-
-## 이번 결정에서 확정하지 않은 것
-
-- 크레딧 묶음별 수량과 가격
-- 크레딧 유효기간
-- 가입·프로모션 무료 크레딧
-- Movie export 1회의 정확한 차감량
-- 고해상도 export의 추가 크레딧 여부
-- ~~유료 스토리지 상품 도입 여부~~ → 2026-08-14 도입 결정.
-  [storage-and-subscription-policy.md](storage-and-subscription-policy.md) §4. 용량 티어와
-  가격은 여전히 미결이며 [backlog.md](../backlog.md) A-2에서 관리한다.
-
-위 항목은 [backlog.md](../backlog.md) A-2에서만 미결 상태를 관리한다.
