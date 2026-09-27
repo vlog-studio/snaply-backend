@@ -2,7 +2,7 @@
 
 **작성일**: 2026-09-02
 **상태**: 현행 — 스냅 촬영·보관 요구사항의 원천
-**관련 문서**: [decisions/snap-source-of-truth.md](../decisions/snap-source-of-truth.md) · [decisions/storage-and-subscription-policy.md](../decisions/storage-and-subscription-policy.md) · [apps/mobile/docs/features/snaps.md](../../apps/mobile/docs/features/snaps.md) · 표기 규칙은 [README.md](README.md)
+**관련 문서**: [decisions/snap-source-of-truth.md](../decisions/snap-source-of-truth.md) · [decisions/snap-sync-across-devices.md](../decisions/snap-sync-across-devices.md) · [decisions/storage-and-subscription-policy.md](../decisions/storage-and-subscription-policy.md) · [apps/mobile/docs/features/snaps.md](../../apps/mobile/docs/features/snaps.md) · 표기 규칙은 [README.md](README.md)
 
 ## 스냅 만들기
 
@@ -50,6 +50,10 @@
   파일은 지우되 목록·무비에서는 "만료됨"으로 남아 촬영 시각·길이 같은 정보를 보여주고,
   **사용자가 직접 지운 것과 기간 만료로 사라진 것을 구분**해 안내한다. 무비가 참조하던 스냅이
   만료돼도 **무비 자체는 열려야 하며**, 해당 컷만 만료로 표시된다.
+  목록의 "만료됨"은 **만료 전에 그 스냅을 라이브러리에 갖고 있던 기기**에서만 남는다. 새 기기나
+  재설치한 앱은 이미 만료된 스냅을 목록에 되살리지 않는다. 무비 컷의 만료 표시는 기기와 상관없이
+  보인다(2026-09-27 결정). **촬영한 기기**에는 원본 파일이 남으므로(SNAP-14) 그 기기에서는 계속
+  재생되지만, 서버 사본이 없어 **무비에는 담을 수 없다.**
 - **SNAP-13** `서버 구현됨·앱 미구현` — 만료는 **예고 없이 일어나지 않는다.** 삭제 **3일 전과
   1일 전** 두 번 푸시로 알린다([expiry-notice-schedule.md](../decisions/expiry-notice-schedule.md)).
   알림에 의존하지 않도록 라이브러리 화면에서도 남은 기간을 볼 수 있어야 한다(앱).
@@ -60,3 +64,16 @@
   정렬에서 업로드 시각(`createdAt`)으로 대신한다 — 업로드 시각으로 채워 넣지 않는다.
 - **SNAP-11** `보류` — 촬영 위치의 서버 저장은 프라이버시·약관 검토가 끝나기 전에는 하지
   않는다. 현재 위치는 기기에만 남는다.
+
+## 기기 간 동기화
+
+규칙: [decisions/snap-sync-across-devices.md](../decisions/snap-sync-across-devices.md) ·
+착수 계획: [plans/snap-reconcile.md](../plans/snap-reconcile.md)
+
+- **SNAP-15** `결정·미구현` — 같은 계정의 스냅은 **기기와 재설치를 넘어 보인다.** 다른 기기에서
+  찍어 서버에 올라간 스냅은 로그인한 기기의 라이브러리에 나타나고, 처음 재생할 때 받아 온다.
+  그런 스냅이 쓰인 무비도 그 기기에서 재생된다. 촬영 위치는 따라오지 않고(SNAP-11), 이미 만료된
+  스냅은 나타나지 않는다(SNAP-12).
+- **SNAP-16** `결정·미구현` — 한 기기에서 지운 스냅은 **모든 기기에서 사라진다.** 다른 기기에
+  남아 있던 원본 파일도 지운다. 되돌릴 수 없으므로 삭제를 확인할 때 모든 기기에서 지워진다고
+  알린다. 서버에 연결하지 못한 동안에는 어떤 기기의 스냅도 지워지지 않는다.

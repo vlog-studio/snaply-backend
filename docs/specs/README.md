@@ -54,7 +54,7 @@ Snaply 는 20~30대를 위한 **숏폼 브이로그 AI 자동 편집 앱**이다
 | 스펙 | 범위 |
 |---|---|
 | [account.md](account.md) | 가입·로그인, 프로필, 계정 삭제와 복구 |
-| [snap-library.md](snap-library.md) | 스냅 촬영·추출, 라이브러리, 서버 보관과 한도 |
+| [snap-library.md](snap-library.md) | 스냅 촬영·추출, 라이브러리, 서버 보관과 한도, 기기 간 동기화 |
 | [movie.md](movie.md) | 무비 구성(초안 편집)과 AI 생성, 결과물 보관·공유 |
 | [template-and-recommendation.md](template-and-recommendation.md) | 템플릿으로 시작, 스냅 자동 추천, 스냅 내용 분석 |
 | [credits-and-payment.md](credits-and-payment.md) | 크레딧 과금, 인앱결제, 보상형 광고 |
