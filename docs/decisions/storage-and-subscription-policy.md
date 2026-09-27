@@ -1,16 +1,26 @@
 # 스토리지 한도 축소와 구독 상품 도입
 
 **작성일**: 2026-08-14
-**상태**: 결정 — Free 원본 스냅 한도를 2GB로 축소하고, 무비는 30일 보관 후 만료시키며,
-크레딧(생성)과 별개의 구독(보관) 축을 도입한다.
-**원천**: 스토리지 한도 값과 무비 보관 기간, 크레딧·구독의 경계 규칙의 원천이다.
-**대체 관계**: [snap-source-of-truth.md](./snap-source-of-truth.md) §6.1의 "Free 한도 5GB"와
-§6.2에서 2GB를 기각했던 판단, §6.3의 원가 계산을 대체한다. 같은 문서의 **산정 범위(원본 스냅만)와
-초과 시 동작(업로드 차단 + 로컬 보관)은 그대로 유지**한다. 원 문서는 상단 대체 배너 외에는 수정하지 않는다.
+**상태**: 과거 결정 — 일부 대체됨. 크레딧(생성)과 구독(보관)의 2축 분리와 그 경계 규칙은 유효하고,
+스냅 한도(2GB)와 무비 보관(30일 + 무료 재생성)은 2026-09-09 결정이 대체했다(아래 배너).
+**원천**: 2축 분리와 경계 규칙의 결정 근거. 현행 정책 값은 [specs/snap-library.md](../specs/snap-library.md) SNAP-9 ·
+[specs/movie.md](../specs/movie.md) MOV-16·19 · [specs/credits-and-payment.md](../specs/credits-and-payment.md) CRD-2·7 이 원천이다.
+**대체한 것**: [snap-source-of-truth.md](./snap-source-of-truth.md) §6.1의 "Free 한도 5GB"와
+§6.2에서 2GB를 기각했던 판단, §6.3의 원가 계산.
 **관련**: [credit-payment-model.md](./credit-payment-model.md)(과금 모델),
 [payment-channel-iap.md](./payment-channel-iap.md)(결제 채널),
 [movie-model.md](./movie-model.md)(`Movie` 엔티티)
 **후속 작업의 원천**: [backlog.md](../backlog.md) A-1·A-2
+
+> **2026-09-09 대체** — 아래 본문 중 다음은 현행이 아니다.
+> - **스냅**: §1 의 Free 원본 스냅 한도 2GB·산정 범위·초과 시 동작·한도 초과 시 무비 생성, §7 의 용량 환산 표기,
+>   §6 의 "한도를 보관 기간으로 전환"·"무료 유저의 원본을 30일 후 삭제" 기각 → 서버 보관은 업로드 후 15일 기간
+>   기준이다([snap-retention-period.md](./snap-retention-period.md)). 용량 한도를 남길지는 미결이다(A-2).
+> - **무비**: §1·§3 의 "생성 후 30일 보관 + 만료 무비 무료 재생성"과 §3.5 의 만료 D-3 알림 → 끝내면 결과물을
+>   지우고, 끝내지 않은 결과물만 30일 상한이며, 다시 만들기는 유료다([movie-cleanup-after-export.md](./movie-cleanup-after-export.md)).
+>   만료 안내 방식은 미결이다(MOV-16). §4.3 의 "무비 영구 보관" 혜택은 이 전제가 바뀐 뒤 다시 정해지지 않았다.
+> - **유효**: §2 의 스냅당 용량·원가 구성, §4 의 2축 분리·경계 규칙·구독 만료 후 처리(기간 기준에도 맞는지는
+>   A-2 에서 확인), §5 의 IAP 확인.
 
 ---
 

@@ -2,7 +2,7 @@
 
 **작성일**: 2026-09-02
 **상태**: 현행 — 무비 요구사항의 원천
-**관련 문서**: [decisions/movie-model.md](../decisions/movie-model.md) · [decisions/storage-and-subscription-policy.md](../decisions/storage-and-subscription-policy.md) §3 · [apps/mobile/docs/features/movie.md](../../apps/mobile/docs/features/movie.md) · 표기 규칙은 [README.md](README.md)
+**관련 문서**: [decisions/movie-model.md](../decisions/movie-model.md) · [decisions/movie-cleanup-after-export.md](../decisions/movie-cleanup-after-export.md) · [apps/mobile/docs/features/movie.md](../../apps/mobile/docs/features/movie.md) · 표기 규칙은 [README.md](README.md)
 
 ## 무비 모델
 
