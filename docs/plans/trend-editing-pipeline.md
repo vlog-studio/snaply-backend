@@ -125,9 +125,8 @@ librosa(numpy/scipy/numba, 수백 MB)가 들어오지 않고, 워커 콜드스�
 **"어디에"는 MediaPipe, "무엇을"은 LLM** 으로 역할을 쪼갠다. 매 프레임 LLM 을 부르면 비용과
 지연이 감당되지 않는다.
 
-MediaPipe 도입 시 확인할 것: 워커 이미지는 이미 faster-whisper 로 무겁다(compose 검증에서
-빌드를 생략한 전례가 있다 — [archive/progress-phase-1-9.md](../archive/progress-phase-1-9.md) Phase 9). ARM 휠 가용성과 증가분을
-측정한 뒤 넣는다.
+MediaPipe 도입 시 확인할 것: 워커 이미지는 이미 faster-whisper 로 무겁다. ARM 휠 가용성과 이미지
+증가분을 측정한 뒤 넣는다.
 
 ---
 
