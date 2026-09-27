@@ -44,7 +44,6 @@ cloudflared tunnel --url http://localhost:9100
 `apps/api/.env` 에 반영:
 
 ```bash
-API_BASE_URL=https://<A>.trycloudflare.com
 INSTAGRAM_REDIRECT_URI=https://<A>.trycloudflare.com/sns/instagram/callback
 TIKTOK_REDIRECT_URI=https://<A>.trycloudflare.com/sns/tiktok/callback
 
