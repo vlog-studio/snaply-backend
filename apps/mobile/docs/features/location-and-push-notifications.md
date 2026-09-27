@@ -66,4 +66,4 @@ The `GET /locations` response carries `id`, `name`, `lat`, `lng`, `radiusMeters`
 - Notification-tap routing is covered by unit tests on both channels but has not been exercised on a device yet; the cold-start path in particular (a tap on a quit app reaching the movie) needs a dev-build check on Android, where FCM and `expo-notifications` may both report the same tap.
 - Quiet hours are collected locally but not synced to the backend (`PATCH /auth/me` accepts them, but the client does not call it — backlog B-6); the server enforces its own copy when the arrival push is decided (see [Me tab](me.md)). Interests are not part of the decision at all.
 
-To close the partial status, verify end-to-end FCM display on a dev/release build, move `notification_enabled`/`quiet_start`/`quiet_end` to server-backed queries/mutations on `/auth/me`, and record the verified success and failure paths here.
+What closes the partial status is kept in the monorepo's [backlog](../../../../docs/backlog.md): C-4 (a recorded device delivery, geofence enter to display) and B-6 (the app writing its switches through `PATCH /auth/me`).
