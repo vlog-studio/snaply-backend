@@ -6,7 +6,7 @@
  * 아래 상수 배열이 JSON 과 어긋나면 `apps/api/test/anchor-vocabulary.test.ts` 가 잡는다 —
  * 타입은 컴파일 타임에만 있으므로 런타임 배열과 JSON 을 대조하는 것이 유일한 방법이다.
  *
- * 배치·로딩 규약은 `docs/plans/edit-spec-v3-kickoff.md` §3.
+ * 배치·로딩 규약은 `docs/decisions/edit-spec-v3.md` §7.
  */
 import vocabulary from './anchor-vocabulary.json' with { type: 'json' };
 
@@ -101,7 +101,7 @@ export interface AnchorSpec {
  * `resolved.xy` 는 정상적으로 음수이거나 1 을 넘을 수 있다(프레임 위에 붙은 얼굴의
  * `aboveHead` 등). 클램프도 범위 거부도 실패를 성공으로 위장하는 변환이고, 배치 가능 여부는
  * 세이프에어리어를 아는 배치 단계가 정한다. 근거와 실제 값은
- * `docs/plans/edit-spec-v3-kickoff.md` §1.1 과 워커의 파생 픽스처에 있다.
+ * `docs/decisions/edit-spec-v3.md` §1 과 워커의 파생 픽스처에 있다.
  */
 export function isValidAnchor(spec: AnchorSpec): boolean {
   const allowed = ANCHOR_REFS[spec.kind] as readonly string[] | undefined;

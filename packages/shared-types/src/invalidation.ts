@@ -11,7 +11,7 @@
  * 새로 추가했을 때 아무도 판단하지 않은 채 그 기본값으로 굳는다. `preserved` 를 기본값으로
  * 두면 새 레이어가 조용히 낡고, `invalidated` 를 두면 조용히 낭비된다 — 어느 쪽도 좋지 않다.
  *
- * 계획: `docs/plans/edit-spec-v3-kickoff.md` §5
+ * 결정: `docs/decisions/edit-spec-v3.md` §6
  */
 import vocabulary from './invalidation-vocabulary.json' with { type: 'json' };
 import { SEEDED_STAGES, type SeededStage } from './seed.js';
