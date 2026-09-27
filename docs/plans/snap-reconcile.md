@@ -1,7 +1,8 @@
 # 스냅 reconcile — 다른 기기·재설치에서도 스냅이 보이게 하는 계획
 
 **작성일**: 2026-09-27
-**상태**: 진행 중 — **0~3단계 2026-09-27 구현**([progress.md](../progress.md)), 4단계 실기기 검증이 남았다
+**상태**: 진행 중 — **0~3단계 2026-09-27 구현**, 4단계 실기기 검증은 같은 날 일부 통과([progress.md](../progress.md)) —
+실제 재설치·계정 전환·오프라인 복귀가 남았다
 ([backlog.md](../backlog.md) A-4). §3.1의 제품 결정 셋은 같은 날 권장안대로 결정됐다
 ([decisions/snap-sync-across-devices.md](../decisions/snap-sync-across-devices.md)). 구현이 이 계획과 다른 곳은
 §4.2 아래의 "구현하며 바뀐 것"에 적었다
