@@ -84,54 +84,27 @@ v3 는 스냅 여부(`snapToBeat`)와 허용 오차를 클립 단위로 명시�
 
 ## 3. editSpec v3 — 타임라인 모델
 
-```jsonc
-{
-  "version": 3,
-  "stylePreset": "감성",
-  "stickerPackVersion": 3,            // 팩 = 스타일 락 (§8.4). 재현의 핀이기도 하다
-  "seed": 1837462,                    // 모든 무작위 선택의 원천 (§2.1)
-  "audio": {
-    "trackId": "uuid",                // bgm_tracks 참조 — 핀
-    "beatGridVersion": 1,             // 그리드 재계산 시 과거 레시피 보호
-    "startOffsetMs": 0,
-    "duckingDb": -9
-  },
-  "timeline": {
-    "clips": [
-      { "videoId": "…", "startMs": 3500, "endMs": 8000,
-        "snapToBeat": false, "beatCount": null, "speed": 1.0 }
-    ],
-    "transitions": [
-      { "afterClip": 0, "type": "slideleft", "durationMs": 300 }
-    ],
-    "layers": [
-      { "type": "caption", "style": "pop", "trackIndex": 0 },
-      { "type": "sticker", "assetId": "doodle-arrow-01", "tMs": 4200, "durationMs": 1800,
-        "anchor":   { "kind": "face", "ref": "forehead" },
-        "fallback": { "kind": "freezone" },   // 둘 다 실패하면 드롭한다 (§5.2)
-        "scaleRef": "faceWidth", "motion": "pop-in" }
-    ]
-  }
-}
-```
+스펙의 확정 결정(시드·핀·레이어 구성·필드 이름)은 [decisions/edit-spec-v3.md](../decisions/edit-spec-v3.md)가
+원천이고, 스키마 본문은 아직 저장소에 없다([backlog.md](../backlog.md) A-7). 이 절은 타임라인 모델이
+지켜야 할 원칙만 둔다 — 비트 그리드 · 레이어 · 키프레임을 표현하고(§1), 비결정적 선택(트랙 · 비트 그리드
+버전 · 난수 시드)을 전부 스펙에 핀으로 박는다(§2.1).
 
 원칙 넷:
 
 - **레이어는 클립이 아니라 타임라인에 붙는다.** 스티커가 컷을 가로질러 살아남아야 한다.
 - **시각의 권위는 `(cutId, offsetInCutMs)` + `durationMs` 다.** 절대 ms 와 `atBeat` 는 파생값이다.
-  *(2026-08-20 수정. 원안은 "키프레임은 절대 시각(ms)"이었다 — 클립 **인덱스** 기준이면 컷 하나만
-  바뀌어도 전부 어긋난다는 문제의식은 맞지만, 절대 ms 도 컷이 삭제되면 같이 어긋난다. 안정된
-  `cutId` 를 기준으로 두면 두 문제가 함께 닫히고, 지속시간을 따로 두므로 스티커가 컷 경계를
-  넘어 살아남는 위 원칙도 그대로 지켜진다. 앵커 컷이 삭제될 때만 드롭된다.
-  근거: [edit-spec-v3-kickoff.md](./edit-spec-v3-kickoff.md) §1.1 B-7)*
+  클립 인덱스나 절대 ms 를 기준으로 두면 컷이 바뀌거나 지워질 때 전부 어긋난다. 안정된 `cutId` 를
+  기준으로 두고 지속시간을 따로 두므로 스티커가 컷 경계를 넘어 살아남고, 앵커 컷이 삭제될 때만
+  드롭된다([decisions/edit-spec-v3.md](../decisions/edit-spec-v3.md) §1 B-7).
 - **스티커 좌표는 픽셀이 아니라 앵커 의미로 저장한다** — `{ kind: "face", ref: "forehead" }` +
   폴백 + `scaleRef`. 해상도 독립이고, 재현 가능하며, **검출 실패 시의 행동이 스펙에 드러난다**(§5.2).
   자유 배치(`freezone`)에서만 정규화 좌표(0~1)를 쓴다.
 - **워커는 스펙을 신뢰하되 검증한다.** 현행 `parse_render_spec` 이 이미 그 태도다 —
   범위를 벗어난 값은 폴백이 아니라 거부한다.
 
-`beatCount` 는 `movie_template_slots` 와 자연스럽게 맞물린다 — 슬롯이 "몇 비트짜리 자리인가"를
-가지면 추천 결과를 그대로 타임라인으로 펼칠 수 있다. 다만 이는 A-6 앱 연동 이후의 후속이다.
+컷 길이를 비트 단위로 적는 `beatLength`([decisions/edit-spec-v3.md](../decisions/edit-spec-v3.md) §1 B-6)는
+`movie_template_slots` 와 자연스럽게 맞물린다 — 슬롯이 "몇 비트짜리 자리인가"를 가지면 추천 결과를
+그대로 타임라인으로 펼칠 수 있다. 다만 이는 A-6 앱 연동 이후의 후속이다.
 
 ---
 
@@ -307,10 +280,12 @@ AGPL-3.0 이어서 배제다(§9). 자체 호스팅이 필요해지면 Florence-
 ### 8.3 버전드 원격 매니페스트 — 이 절의 실질적 산출물
 
 유행은 도는 것이 확정이므로 **워커 이미지에 굽지 않는다.** S3+CDN 의 버전드 매니페스트로 두고
-레시피에 `stickerPackVersion` 을 남기면 3개월 전 초안도 재현된다 — §2.1 과 같은 이유다.
+레시피에 팩을 핀으로 남기면(재렌더는 스펙에 핀된 `packId`·`assetId` 만 해석한다) 3개월 전 초안도
+재현된다 — §2.1 과 같은 이유다.
 
 매니페스트 필드: 에셋 URL · 앵커 적합성(`face`/`object`/`freezone`) · 무드 태그 · 스케일 범위 ·
-기본 모션. **이 스키마를 뒤로 미룰수록 마이그레이션 비용이 커진다.**
+기본 모션. 필드와 상태에 대한 확정 결정은 [decisions/edit-spec-v3.md](../decisions/edit-spec-v3.md) §2.
+**이 스키마를 뒤로 미룰수록 마이그레이션 비용이 커진다.**
 
 ### 8.4 팩 = 스타일 락
 
@@ -370,8 +345,8 @@ CRF 품질에서 손해를 본다.
 ## 10. 구현 순서
 
 > 이 절은 **의존 순서 제안**이다 — 미결 항목의 상태·완료 조건의 원천은 [backlog.md](../backlog.md)
-> A-7이며, 여기 목록으로 상태를 관리하지 않는다. 0단계 1번의 기반 작업(어휘 사전·시드·무효화
-> 규칙 = [edit-spec-v3-kickoff.md](./edit-spec-v3-kickoff.md) 커밋 1~3)은 2026-08-20 완료됐다.
+> A-7이며, 여기 목록으로 상태를 관리하지 않는다. 0단계 1번의 기반(어휘 사전·시드·무효화 규칙)은
+> 구현돼 있고, 확정 결정은 [decisions/edit-spec-v3.md](../decisions/edit-spec-v3.md)에 있다.
 
 ### 0단계 — 선행 (병행 불가)
 
