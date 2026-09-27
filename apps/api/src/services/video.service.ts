@@ -4,12 +4,14 @@ import type {
   StylePreset,
   Video,
   VideoKind,
+  VideoLookup,
   VideoStatus,
 } from '@vlog-studio/shared-types';
 import { getPrisma } from '../db/client.js';
 import { AppError } from '../lib/errors.js';
 import { captureException } from '../lib/sentry.js';
 import { enqueueRendition } from '../queue/rendition-queue.js';
+import { snapExpiresAt } from './retention-policy.js';
 import {
   createDownloadUrl,
   createUploadUrl,
@@ -37,6 +39,9 @@ interface VideoRow {
   renditionS3Key: string | null;
   renditionStatus: string;
   durationMs: number | null;
+  width: number | null;
+  height: number | null;
+  clientId: string | null;
   createdAt: Date;
 }
 
@@ -66,6 +71,14 @@ async function toDto(row: VideoRow): Promise<Video> {
     // 어디서나 재생되는 배포본. 아직 없으면(생성 전·실패) null 이고, 그때 앱은 원본으로 돌아간다.
     playbackUrl: row.renditionS3Key ? await createDownloadUrl(row.renditionS3Key) : null,
     durationMs: row.durationMs,
+    width: row.width,
+    height: row.height,
+    clientId: row.clientId,
+    // 보관 기간은 업로드가 끝난 원본에만 걸린다. 결과물의 수명은 무비가 정한다(MOV-16).
+    expiresAt:
+      row.kind === 'source' && row.status === 'ready'
+        ? snapExpiresAt(row.createdAt).toISOString()
+        : null,
     createdAt: row.createdAt.toISOString(),
   };
 }
@@ -87,6 +100,9 @@ const SELECT = {
   renditionS3Key: true,
   renditionStatus: true,
   durationMs: true,
+  width: true,
+  height: true,
+  clientId: true,
   createdAt: true,
 } as const;
 
@@ -131,6 +147,8 @@ export async function confirmUpload(params: {
   durationSeconds?: number;
   /** 클라이언트가 보고한 촬영 시각(ISO). 생략하면 저장하지 않는다 — 서버가 소급할 수 없다. */
   capturedAt?: string;
+  /** 앱이 붙인 스냅 이름. 해석하지 않고 그대로 돌려준다. */
+  clientId?: string;
 }): Promise<Video> {
   const prisma = getPrisma();
   const video = await prisma.video.findFirst({
@@ -159,6 +177,7 @@ export async function confirmUpload(params: {
       originalS3Keys: [video.s3Key],
       ...(params.durationSeconds !== undefined ? { durationSeconds: params.durationSeconds } : {}),
       ...(params.capturedAt !== undefined ? { capturedAt: new Date(params.capturedAt) } : {}),
+      ...(params.clientId !== undefined ? { clientId: params.clientId } : {}),
     },
     select: SELECT,
   });
@@ -187,7 +206,9 @@ export async function listVideos(params: {
       deletedAt: null,
       ...(params.kind ? { kind: params.kind } : {}),
     },
-    orderBy: { createdAt: 'desc' },
+    // 같은 시각에 올라온 행이 있어도 페이지 경계가 흔들리지 않게 id 로 한 번 더 정렬한다 —
+    // 앱의 reconcile 은 전 페이지를 읽어 "목록에 없다"를 판단의 입력으로 쓴다.
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     take: params.limit + 1,
     ...(params.cursor ? { cursor: { id: params.cursor }, skip: 1 } : {}),
     select: SELECT,
@@ -210,6 +231,33 @@ export async function getVideo(params: { userId: string; videoId: string }): Pro
     throw AppError.notFound('영상을 찾을 수 없습니다.');
   }
   return await toDto(row);
+}
+
+/**
+ * 영상 id 들이 지금 어떤 상태인지 — 목록에서 사라진 스냅의 **이유**를 앱에 알려 준다.
+ *
+ * 목록과 상세는 지워진 행을 숨기므로, 앱은 "목록에 없다"만으로는 다른 기기에서 지운 것인지
+ * 기간이 끝난 것인지 알 수 없다. 둘은 기기에서 하는 일이 다르다(decisions/snap-sync-across-devices.md).
+ * 남의 id 와 없는 id 는 똑같이 응답에서 빠진다 — 존재 여부조차 알 수 없어야 한다(SNAP-8).
+ */
+export async function lookupVideos(params: { userId: string; ids: string[] }): Promise<VideoLookup> {
+  const rows = await getPrisma().video.findMany({
+    where: { userId: params.userId, id: { in: [...new Set(params.ids)] } },
+    select: { id: true, deletedAt: true, removalReason: true },
+  });
+  return {
+    items: rows.map((row) =>
+      row.deletedAt
+        ? {
+            id: row.id,
+            state: 'removed' as const,
+            // 사유 컬럼이 생기기 전에 지워진 행은 사용자가 지운 것이다(schema.prisma VideoRemovalReason).
+            removalReason: row.removalReason ?? 'user',
+            removedAt: row.deletedAt.toISOString(),
+          }
+        : { id: row.id, state: 'live' as const, removalReason: null, removedAt: null },
+    ),
+  };
 }
 
 /**

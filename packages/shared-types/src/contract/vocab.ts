@@ -14,6 +14,11 @@ export const VIDEO_KINDS = ['source', 'result'] as const;
 export const videoKindSchema = z.enum(VIDEO_KINDS);
 export type VideoKind = z.infer<typeof videoKindSchema>;
 
+/** 영상이 사라진 이유. 사용자에게 보일 문구가 다르다(SNAP-12) — 직접 지운 것과 기간 만료. */
+export const VIDEO_REMOVAL_REASONS = ['user', 'expired'] as const;
+export const videoRemovalReasonSchema = z.enum(VIDEO_REMOVAL_REASONS);
+export type VideoRemovalReason = z.infer<typeof videoRemovalReasonSchema>;
+
 export const EDIT_JOB_STATUSES = ['queued', 'processing', 'done', 'failed', 'canceled'] as const;
 export const editJobStatusSchema = z.enum(EDIT_JOB_STATUSES);
 export type EditJobStatus = z.infer<typeof editJobStatusSchema>;

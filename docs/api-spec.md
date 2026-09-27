@@ -46,8 +46,11 @@
 
 업로드는 2단계다. ① `GET /videos/upload-url` 🔒 로 presigned URL 과 `pending` 레코드를 받고 ② 그 URL 에 파일을 **PUT**(헤더 `Content-Type` 은 ①에서 보낸 `contentType` 과 동일해야 서명이 유효) ③ `POST /videos` 🔒 로 등록하면 `ready` 가 된다. 단일 클립 최대 500MB — 초과하면 ③에서 객체와 레코드를 지우고 400. S3 에 객체가 없어도 400.
 
-- `GET /videos` 🔒 — 최신순 커서 페이지네이션. `nextCursor` 가 `null` 이 아니면 다음 페이지가 있다. 삭제한 영상은 제외, 편집 결과물(`kind: result`)도 같은 목록에 온다.
-- `originalUrls`·`editedUrl`·`thumbnailUrl` 은 **presigned GET URL**(기본 1시간 유효). 만료되면 목록/상세를 다시 호출해 갱신한다.
+- `POST /videos` 본문의 `clientId`(선택) — 앱이 붙인 스냅 이름(로컬 스냅 id). 목록의 `clientId` 로 그대로 돌아와, 찍은 기기가 자기 스냅을 알아본다. 서버는 해석하지 않고 **유일성도 보장하지 않는다.**
+- `GET /videos` 🔒 — 업로드 최신순(같은 시각이면 `id` 역순) 커서 페이지네이션. `nextCursor` 가 `null` 이 아니면 다음 페이지가 있다. 삭제·만료된 영상은 제외, 편집 결과물(`kind: result`)도 같은 목록에 온다 — 스냅만 보려면 `kind=source`. `pending` 항목은 아직 등록되지 않은 것이다.
+- 목록·상세 항목의 동기화용 필드: `width`·`height`(표시 기준, 렌디션 워커가 배포본에서 잰 값 — 없으면 `null`), `clientId`, `expiresAt`(서버 보관이 끝나는 시각. 업로드가 끝난 원본에만 있고, 정책에서 매번 유도하므로 정책이 바뀌면 값도 바뀐다).
+- `POST /videos/lookup` 🔒 — `{ ids: uuid[] }`(최대 100개)가 아직 있는지(`live`), 지워졌다면 왜인지(`removed` + `removalReason: user | expired` + `removedAt`) 알려 준다. 목록에서 사라진 스냅의 이유를 앱이 구분할 때 쓴다. 남의 id 와 없는 id 는 똑같이 응답에서 빠진다.
+- `originalUrls`·`editedUrl`·`thumbnailUrl`·`playbackUrl` 은 **presigned GET URL**(기본 1시간 유효). 만료되면 목록/상세를 다시 호출해 갱신한다.
 - `status` 의미: `pending`(URL 만 발급) → `ready`(편집 가능) / 결과물은 `processing` → `done`(`editedUrl` 사용 가능) | `failed`.
 - `DELETE /videos/{id}` 🔒 — 그 영상이 소유한 S3 객체(원본·썸네일·렌디션, 결과물이면 편집본·썸네일) 실삭제 + 소프트 삭제. 되돌릴 수 없다. 결과물을 지워도 원본 스냅의 파일은 남는다.
 

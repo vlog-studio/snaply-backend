@@ -2,11 +2,13 @@ import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import {
   VIDEO_LIST_DEFAULT_LIMIT,
+  VIDEO_LOOKUP_MAX_IDS,
   createVideo,
   deleteVideo,
   getUploadUrl,
   getVideo,
   listVideos,
+  lookupVideos,
   ok,
 } from '@vlog-studio/shared-types';
 import {
@@ -15,6 +17,7 @@ import {
   listVideos as listVideosForUser,
   getVideo as getVideoForUser,
   deleteVideo as deleteVideoForUser,
+  lookupVideos as lookupVideosForUser,
 } from '../services/video.service.js';
 
 export async function videoRoutes(app: FastifyInstance): Promise<void> {
@@ -101,6 +104,7 @@ export async function videoRoutes(app: FastifyInstance): Promise<void> {
         videoId: request.body.videoId,
         durationSeconds: request.body.durationSeconds,
         capturedAt: request.body.capturedAt,
+        clientId: request.body.clientId,
       });
       reply.status(201);
       return ok(data);
@@ -117,7 +121,9 @@ export async function videoRoutes(app: FastifyInstance): Promise<void> {
         tags: ['videos'],
         summary: '내 영상 목록 (커서 페이지네이션)',
         description: [
-          '내가 올린 영상을 **최신순**으로 조회한다. 삭제한 영상은 제외. 편집 결과물 영상도 같은 목록에 포함된다(`stylePreset`이 채워져 있고 `editedUrl`이 있는 항목).',
+          '내가 올린 영상을 **업로드 최신순**으로 조회한다(같은 시각이면 `id` 역순). 삭제·만료된 영상은 제외 — 왜 사라졌는지는 `POST /videos/lookup` 으로 묻는다. 편집 결과물 영상도 같은 목록에 포함된다(`stylePreset`이 채워져 있고 `editedUrl`이 있는 항목). 스냅만 보려면 `kind=source`.',
+          '',
+          '`status: pending` 항목은 업로드 URL 만 발급되고 아직 등록되지 않은 것이다. 다른 기기로 스냅을 가져올 때는 `ready` 만 쓴다.',
           '',
           '커서 방식이라 `nextCursor`가 `null`이 아니면 다음 페이지가 있다. 그 값을 `cursor`로 다시 넣어 호출한다.',
           '',
@@ -134,6 +140,37 @@ export async function videoRoutes(app: FastifyInstance): Promise<void> {
         cursor: request.query.cursor,
         limit: request.query.limit ?? VIDEO_LIST_DEFAULT_LIMIT,
       });
+      return ok(data);
+    },
+  );
+
+  // POST /videos/lookup — 목록에서 사라진 영상의 이유
+  routes.post(
+    lookupVideos.fastifyPath,
+    {
+      preHandler: app.authenticate,
+      schema: {
+        ...lookupVideos.schema,
+        tags: ['videos'],
+        summary: '영상 상태 조회 (지워진 이유 포함)',
+        description: [
+          '영상 id 들이 **아직 있는지, 지워졌다면 왜인지**를 한 번에 묻는다. 목록과 상세는 지워진 영상을 숨기므로, 앱이 목록에서 사라진 스냅을 다른 기기에서 지운 것인지(`user`) 보관 기간이 끝난 것인지(`expired`) 구분할 때 쓴다.',
+          '',
+          '- 응답 순서는 요청 순서와 같지 않다. `id` 로 맞춘다.',
+          '- **남의 id 와 없는 id 는 응답에서 빠진다** — 둘을 구분하지 않는다(존재 여부를 노출하지 않기 위함).',
+          `- 한 번에 최대 ${VIDEO_LOOKUP_MAX_IDS}개. 더 많으면 나눠 부른다.`,
+          '',
+          '```json',
+          '{ "success": true, "data": { "items": [',
+          '  { "id": "uuid", "state": "live", "removalReason": null, "removedAt": null },',
+          '  { "id": "uuid", "state": "removed", "removalReason": "expired", "removedAt": "2026-09-27T18:00:00.000Z" }',
+          '] } }',
+          '```',
+        ].join('\n'),
+      },
+    },
+    async (request) => {
+      const data = await lookupVideosForUser({ userId: request.user.id, ids: request.body.ids });
       return ok(data);
     },
   );

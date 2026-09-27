@@ -67,3 +67,12 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 export function cutoffFor(days: number, now: Date = new Date()): Date {
   return new Date(now.getTime() - days * DAY_MS);
 }
+
+/**
+ * 스냅의 서버 보관이 끝나는 시각 — 이 시각 뒤 첫 정리 배치(`findExpiredSnaps`)가 파일을 지운다.
+ * 앱이 남은 기간을 그리는 데 쓴다(SNAP-13). 행에 저장하지 않고 매번 유도하며, 정리 배치의 기준과
+ * **같은 식**이어야 한다 — 다르면 앱이 "남았다"고 그린 스냅이 사라진다.
+ */
+export function snapExpiresAt(uploadedAt: Date): Date {
+  return new Date(uploadedAt.getTime() + (SNAP_RETENTION_DAYS + EXPIRY_TO_PURGE_DAYS) * DAY_MS);
+}
