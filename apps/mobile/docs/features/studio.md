@@ -58,28 +58,34 @@ What remains on the studio is the entry: a `스냅 골라 새 무비` block (the
 
 ## Data model
 
-`entities/movie` replaces the old roll/reel pair: a roll owned membership and a reel was the developed result, but a movie owns both, because the user edits and generates the same object.
+A movie owns both its membership (the cut list) and its result (the render), because the user edits and generates the same object.
 
 ```text
 Movie
 ├── id, title
 ├── status        draft | generating | ready | failed
 ├── createdAt, updatedAt
-├── snapRefs[]    { snapId, order, trim? }   — per-movie order and trim; the snap original is never mutated
+├── snapRefs[]    { snapId, order, trim?, videoId?, unavailable? } — per-movie order and trim, the cut's server
+│                 id, and the server's word that its snap is gone; the snap original is never mutated
 ├── style         emotional | travel | daily — the backend's three editing presets
-├── bgm, ratio    track id (stored but unused — the preset scores the run), '9:16'
+├── bgm, ratio    track id (on the device only, and unused — the preset scores the run), '9:16'
 ├── arranger?     user | ai — who owns the cut order (see the movie screen)
 ├── captions      sent with the movie; always false — subtitles are opt-in and no control offers them
-├── job?          { id, progress?, step?, startedAt } — the backend's jobId and its last report
-├── render?       { uri?, renderedAt, durationSec, style?, snapRefs? } — what the run produced, and what it was made from
-└── error?        why the last generation failed
+├── job?          { id, progress?, step?, startedAt, adopted? } — the backend's jobId, its last report, and
+│                 whether this device only learned of the run from a read-back
+├── render?       { uri?, videoId?, thumbnailUri?, renderedAt, durationSec, style?, snapRefs? } — the file,
+│                 the result id it is re-asked by, its local cover, and what it was made from
+├── finishedAt?   when the user finished it (정리하기) — the server deleted the file, so there is no render
+├── settledJobId? the run whose outcome this device last applied, so a read-back does not adopt it again
+├── error?        why the last generation failed, worded by the app
+└── errorDetail?  the server's own diagnostic for that failure — kept for debugging, never drawn
 ```
 
 `failed` is a first-class status rather than a flavor of draft: generation really does fail, and the user has to be able to tell "I have not run this yet" from "it broke". A failed movie keeps its cut list and settings so a retry starts from what the user already chose, and keeps its `error` so the board can say what went wrong; `MovieSummary` reports the error only while the movie is still failed, so a retried movie stops advertising a problem it is no longer in.
 
 A job lives on the movie rather than in memory so it outlives the screen that started it and the session it started in — the user is expected to leave while a movie generates. The `id` is the **backend's** `jobId`: it is the only handle on the run, so the progress socket and the status endpoint are both addressed by it, and a movie that lost it could never find out what happened. `progress` and `step` are optional because a job stored by an older build has neither; read progress through `movieJobRatio` rather than directly.
 
-The store exposes reads (`useMovies`, `useMovieById`, `getMovieById`, `useMoviesHydrated`, `useMoviesSynced`), the writes the movie screen needs (`useCreateMovie`, `useUpdateMovieCuts`, `useUpdateMovieStyle`, `useSetMovieArranger`, `useRenameMovie`, `useDeleteMovie`), the five generation-lifecycle actions (`useBeginMovieJob`, `useAdvanceMovieJob`, `useCompleteMovieJob`, `useFailMovieJob`, `useCancelMovieJob`), `useFinishMovie` for the user's own 정리하기 (recorded after the server has deleted the file — see [The movie screen](movie.md#finishing-it-정리하기)), `useRemoveSnapsEverywhere` for the delete cascade, and — for the sync worker only — the outbox reads and the read-back merge (`useMovieOutbox`, `getMovieOutbox`, `applyRemoteMovies`, `markMovieSent`, `markMovieGone`, `markMovieDeleteSent`). Every write except the job and sync actions marks the movie pending for the server ([The movie screen](movie.md#movies-live-on-the-server)). `useDeleteMovie` is called from two places: the delete confirmation of the movie tab's selection mode, and the movie screen's ⋯ sheet (watch mode).
+The store's Public API (`entities/movie/index.ts`) exposes the reads, the writes the movie screen needs, the five generation-lifecycle actions, the user's own 정리하기 (`useFinishMovie`, recorded after the server has deleted the file — see [The movie screen](movie.md#finishing-it-정리하기)), the delete cascade (`useRemoveSnapsEverywhere`), the render-cover write, and — for the sync worker only — the outbox reads and the read-back merge. Every write except the job, cover, finish, and sync actions marks the movie pending for the server ([The movie screen](movie.md#movies-live-on-the-server)). `useDeleteMovie` is called from two places: the delete confirmation of the movie tab's selection mode, and the movie screen's ⋯ sheet (watch mode).
 
 Two of these are deliberately identity-preserving: a write that changes nothing returns the state object unchanged. The generation runner writes what each poll and each socket frame reports, and a new `movies` array on every one of those would re-render every movie surface for a report that said nothing new. `advanceMovieJob` also refuses to move progress backwards — the socket sends a snapshot when it connects, so a reconnect mid-run would otherwise rewind the ring.
 
@@ -87,8 +93,8 @@ Two of these are deliberately identity-preserving: a write that changes nothing 
 
 - `src/pages/studio` owns the screen, the 새 무비 entry block (it reads the library through `widgets/snap-grid`'s `useSnapDays` and draws frames with `shared/ui/video-frame`), the template cards (`ui/template-panel.tsx`, drawing each offer's `slots`), and the navigation into snap selection, a template, and a movie.
 - `src/pages/movies` owns the movie tab's grid and its selection mode — the bottom bar (`ui/movie-selection-bar.tsx`) and the delete confirmation (`ui/movie-delete-confirm.tsx`) — page-local because the grid is the actions' only entry point. Share is not its own: the page goes through `features/share-movie`'s export decision.
-- `src/features/compose-movie` owns starting a movie from picked snaps (`startMovieFromSnaps`) or a template, committing cut lists and style settings, the arrangement rules, starting generation, and the app-wide generation runner (see [The movie screen](movie.md)).
-- `src/entities/movie` owns movies and their persisted store — since 2026-09-12 **the device's cache of the account's server movies plus an outbox** (see [The movie screen](movie.md#movies-live-on-the-server)) — written per signed-in user as `snaply.movies.<userId>` and bound to an account by `applyMovieScope` (see [Snap library](snaps.md#file-model-and-storage-boundary) for why the local library is scoped and what signing out does to it). It never imports `entities/snap`; `SnapRef` is matched structurally by `entities/snap`'s `SnapRefLike`, and the `videoId`↔`snapId` translation the sync needs is injected by `features/compose-movie`.
+- `src/features/compose-movie` starts a movie from picked snaps (`startMovieFromSnaps`) or a template and runs it; its ownership — the rules, the generation runner, the sync — is in [The movie screen](movie.md#ownership).
+- `src/entities/movie` owns the model above and its persisted store; the store's ownership — the server cache and outbox, the per-account file, the wire shape, the write actions — is in [The movie screen](movie.md#ownership).
 - `src/widgets/movie-shelf` owns the movie↔snap read model (`MovieSummary`: cut count, total played seconds, cover frames, the render's own cover image when it has one, date label, job progress, failure reason), the board selector (`useBoardMovies`), and the two ways a movie is drawn — `MovieRow` for the board and `MovieTile` for the grid, sharing one status badge and one failure notice. Only the tile prefers the render's cover image (`shared/ui/image-frame`): a board row is a work list, where the movie's own first cut says more about the work than finished cover art. It is a widget because both the studio and the movie tab need the same summary and the same vocabulary, and neither entity may own a cross-entity join. The failure notice is the one card part that acts rather than draws: it calls `compose-movie`'s `startGeneration` itself, so the retry cannot drift between the two surfaces.
 - `src/shared/ui/video-frame` draws a video's first frame from the shared thumbnail cache. Business-agnostic — it takes a URI, not a `Snap`.
 
