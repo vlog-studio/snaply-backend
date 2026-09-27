@@ -761,7 +761,7 @@ A-2의 마지막 미결 값이었다. 근거는
 ## 앵커 어휘 사전 + 워커 빌드 컨텍스트 루트 통일 (2026-08-20)
 
 editSpec v3 착수의 첫 단위. 계획과 결정 근거는
-[plans/edit-spec-v3-kickoff.md](./plans/edit-spec-v3-kickoff.md) §3.
+[archive/edit-spec-v3-kickoff.md](./archive/edit-spec-v3-kickoff.md) §3.
 
 **사전은 원본 하나** — `packages/shared-types/src/anchor-vocabulary.json`
 - `anchor` 어휘(kind 6 · kind별 ref · scaleRef)를 editSpec v3 와 에셋 매니페스트가 공유한다.
@@ -841,7 +841,7 @@ editSpec v3 착수의 첫 단위. 계획과 결정 근거는
 ## 스테이지별 시드 — 재현과 "다시 생성"의 분리 (2026-08-20)
 
 editSpec v3 착수의 두 번째 단위. 계획은
-[plans/edit-spec-v3-kickoff.md](./plans/edit-spec-v3-kickoff.md) §4.
+[archive/edit-spec-v3-kickoff.md](./archive/edit-spec-v3-kickoff.md) §4.
 
 **시드가 하나면 둘 중 하나가 깨진다**
 
@@ -900,7 +900,7 @@ editSpec v3 착수의 두 번째 단위. 계획은
 ## 재생성 무효화 규칙 — 표가 아니라 데이터로 (2026-08-20)
 
 editSpec v3 착수의 세 번째 단위이자 이 계획의 중심 산출물. 계획은
-[plans/edit-spec-v3-kickoff.md](./plans/edit-spec-v3-kickoff.md) §5.
+[archive/edit-spec-v3-kickoff.md](./archive/edit-spec-v3-kickoff.md) §5.
 
 **표를 문서에 두지 않았다**
 - 무효화 규칙은 구현이 참조하는 계약이다. 문서의 표는 구현과 갈라지고, **갈라진 것을 아무도
@@ -909,7 +909,7 @@ editSpec v3 착수의 세 번째 단위이자 이 계획의 중심 산출물. �
 - 레이어 상태는 셋(`invalidated` · `retimed` · `preserved`)이고, 액션마다 **모든 레이어**의 상태를
   적는다 — 사전에 없는 조합은 기본값이 아니라 예외다. 액션·레이어 목록과 셀 단위 판단(`note`)은
   사전이 원천이므로 여기에 표로 옮기지 않는다. 판단의 근거는
-  [kickoff §5](./plans/edit-spec-v3-kickoff.md)
+  [kickoff §5](./archive/edit-spec-v3-kickoff.md)
 
 **검증**
 - 워커: **118 테스트 통과**(신규 `test_invalidation.py` 21개). 액션 × 레이어 판단이 하나도 빠지지 않았는지,
@@ -1060,7 +1060,7 @@ Metro/Jest 해석 확인 필요), `openapi.json` 의 `*Input` 사본 스키마.
 ## 2026-09-09 — 촬영 시각 저장 · 무비 서버 엔티티 (Dev A)
 
 생애주기 결정 세 축이 닫히면서([backlog.md](./backlog.md) A-1) 막혀 있던 구현이 풀렸다.
-착수 계획은 [plans/lifecycle-alignment.md](./plans/lifecycle-alignment.md).
+착수 계획은 [archive/lifecycle-alignment.md](./archive/lifecycle-alignment.md).
 
 ### 1. `capturedAt` 서버 저장 (SNAP-10 `구현됨`)
 
@@ -1564,7 +1564,7 @@ Android 에뮬레이터에서 화면을 돌며 콘텐츠가 비어 보이는 화
 
 ### 스냅이 기기와 재설치를 넘어 보인다 — reconcile 1~3단계 (2026-09-27)
 
-[`plans/snap-reconcile.md`](./plans/snap-reconcile.md) 의 1~3단계와
+[`archive/snap-reconcile.md`](./archive/snap-reconcile.md) 의 1~3단계와
 [`decisions/snap-sync-across-devices.md`](./decisions/snap-sync-across-devices.md) 의 규칙(SNAP-15·16,
 SNAP-12 범위 조정)을 구현했다.
 

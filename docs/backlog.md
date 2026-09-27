@@ -46,7 +46,7 @@
 다시 열린다. 지금은 기기 파일이 남아 그 조합이 생기지 않는다.
 
 만료의 동작 구조(2단계 삭제 · 만료 스냅 식별 · 사전 알림)는
-[plans/lifecycle-alignment.md](./plans/lifecycle-alignment.md) §6 에서 설계를 마쳤다. 위치 정보 저장
+[snap-retention-period.md](./decisions/snap-retention-period.md#만료의-동작-구조)에 있다. 위치 정보 저장
 여부는 이 항목과 분리해 A-4에서만 관리한다.
 
 서버 API(2026-09-09)와 앱 전환(2026-09-12, [decisions/movie-client-cache.md](./decisions/movie-client-cache.md))은
@@ -206,7 +206,7 @@
       ([snap-source-of-truth.md](./decisions/snap-source-of-truth.md) §1) 스냅 삭제에는 구현되지 않았다.
       지금 서버는 삭제 즉시 파일을 지운다. reconcile 이 삭제를 모든 기기로 전파하므로
       ([snap-sync-across-devices.md](./decisions/snap-sync-across-devices.md) ①) 한 번의 실수 삭제가 모든
-      기기에서 되돌릴 수 없게 된다. reconcile 과는 따로 낸다(계획 §6)
+      기기에서 되돌릴 수 없게 된다
 - [ ] **전환을 켤 때 함께 볼 것**: 로컬이 캐시가 되는 순간 서버 만료(SNAP-9, 15일)가 곧 영상의
       소멸이 된다. 보관 기간·구독 연장과 **같은 자리에서** 판단한다
 
@@ -245,7 +245,7 @@
 스펙이 "0.48초에 컷, 이 좌표에 스티커 300ms pop-in"을 담지 못하면 전달할 방법이 없다.
 층별 설계·오픈소스 선정·라이선스 판정은
 [plans/trend-editing-pipeline.md](./plans/trend-editing-pipeline.md),
-스펙 v3 의 확정 사항과 착수 순서는 [plans/edit-spec-v3-kickoff.md](./plans/edit-spec-v3-kickoff.md).
+스펙 v3 의 확정 결정은 [decisions/edit-spec-v3.md](./decisions/edit-spec-v3.md).
 
 **진행 상황(2026-08-20)**: 스펙 v3 의 설계 결정이 확정됐고 공유 어휘 사전 3종(앵커 · 스테이지·시드 ·
 재생성 무효화)이 구현·검증됐다 — [progress.md](./progress.md). **아래 미결은 그대로다** — 사전은
@@ -279,7 +279,7 @@ v3 는 **Movie export 에 붙인다** — `POST /edit-jobs` 는 한 버전 공�
 - [ ] `bgm_tracks` 스키마 신설 — `schema.prisma` 는 공유 파일이라 [team.md](./team.md) §2·§3 적용
 - [ ] **스티커 팩 매니페스트 스키마** — 에셋 URL·앵커 적합성·무드 태그·스케일 범위·기본 모션.
       뒤로 미룰수록 마이그레이션 비용이 커진다(계획 §8.3).
-      **설계는 확정됐다**(kickoff §1.2 C·D) — 앵커 어휘는 이미 공유 사전에 있고, 남은 것은
+      **설계는 확정됐다**(edit-spec-v3 결정 C·D) — 앵커 어휘는 이미 공유 사전에 있고, 남은 것은
       매니페스트 본문을 저장소에 들이는 일이다. 폰트는 woff2 가 아니라 TTF/OTF 여야 한다
 - [ ] **디자이너 커미션 여부와 스타일 방향** — 권장 40~60종 / 3~4스타일. 유니코드 이모지를 쓰면
       플랫폼 기본 스티커와 구분되지 않아 제품의 이유가 사라진다
@@ -289,7 +289,7 @@ v3 는 **Movie export 에 붙인다** — `POST /edit-jobs` 는 한 버전 공�
       조달 경로와 등록 경로(시드 스크립트 → 관리자 페이지)의 선택지는
       [decisions/sticker-asset-sourcing.md](./decisions/sticker-asset-sourcing.md)(미결)
 - [ ] **세이프 에어리어 실측값** — 상단 약 10%·하단 약 20%·우측 버튼 레일은 추정치다.
-      실기기 캡처가 필요하다. 값은 스펙에 굽지 않고 **버전드 팩**으로 둔다(kickoff §1.1 B-3) —
+      실기기 캡처가 필요하다. 값은 스펙에 굽지 않고 **버전드 팩**으로 둔다(edit-spec-v3 결정 B-3) —
       스펙에 값으로 넣으면 플랫폼 UI 가 바뀌어도 이미 저장된 스펙을 못 고친다
 - [ ] **에셋 라이선스에 영구(perpetual) 조항을 필수로 걸 것인가** — 근거는 **다시 만들기가
       계속 가능하다**는 것이다([movie-cleanup-after-export.md](./decisions/movie-cleanup-after-export.md):
@@ -299,7 +299,7 @@ v3 는 **Movie export 에 붙인다** — `POST /edit-jobs` 는 한 버전 공�
       "신규 제작"인지**가 계약서마다 다를 수 있다. 법률 판단이 필요하고 스키마로는 풀리지 않는다.
       조달 단계에서 **"신규 배포 중단 / 기존 저작물 유지" 분리 조항**을 협상 항목으로 올린다.
       이 조항이 확보되면 팩 상태를 셋(`experimental → active → deprecated`)으로 줄이고
-      `retired` 를 법적 차단 전용으로 좁힌다(kickoff §1.2 C-2)
+      `retired` 를 법적 차단 전용으로 좁힌다(edit-spec-v3 결정 C-2)
 
 **완료 조건**: 위 선행 결정·조달 확정 → `editSpec` v3 확정 → `bgm_tracks` + 오프라인 비트 그리드 →
 1단계(출력 옵션 · ASS 자막 · VAD 무음 컷 · 비트 스냅) 구현 → 계약·골든 프레임 테스트 위에서
@@ -362,8 +362,8 @@ e2e 실검증.
 
 ### B-1. 배포 — 사내 서버 가동 ★
 
-**2026-09-15 방향 결정**: **사내 물리 서버**에 docker compose 로 올린다. 계획은
-[plans/on-prem-deploy.md](./plans/on-prem-deploy.md). 사내망 전용이라 **실사용자를 받을 수는 없고**
+**2026-09-15 방향 결정**: **사내 물리 서버**에 docker compose 로 올린다. 고른 이유는
+[decisions/on-prem-deployment.md](./decisions/on-prem-deployment.md), 절차는 [deployment.md](./deployment.md). 사내망 전용이라 **실사용자를 받을 수는 없고**
 팀 공용 통합 서버가 된다 — 외부에서 우리를 불러야 하는 SNS 게시·결제 웹훅·광고 검증은 mock 으로
 둔다. DB 는 같은 서버 컨테이너(Supabase 는 로그인 전용 유지). 실사용 서버는 그때 따로 만들며
 이미지·파이프라인은 그대로 재사용한다.
