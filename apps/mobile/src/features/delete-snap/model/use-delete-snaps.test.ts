@@ -2,20 +2,18 @@ import { act, renderHook } from '@testing-library/react-native';
 
 import { useDeleteSnaps, type DeletableSnap } from './use-delete-snaps';
 
-const mockDeleteLocalRecording = jest.fn();
+const mockDeleteSnapFile = jest.fn();
 const mockDeleteVideoThumbnail = jest.fn();
 const mockRemoveSnaps = jest.fn();
 const mockForgetSnapSync = jest.fn();
 const mockRemoveSnapsEverywhere = jest.fn();
 
 // Mock each dependency at its slice Public API so the test stays at the seam.
-jest.mock('@/shared/lib/recording-files', () => ({
-  deleteLocalRecording: (uri: string) => mockDeleteLocalRecording(uri),
-}));
 jest.mock('@/shared/lib/video-thumbnails', () => ({
   deleteVideoThumbnail: (uri: string) => mockDeleteVideoThumbnail(uri),
 }));
 jest.mock('@/entities/snap', () => ({
+  deleteSnapFile: (uri: string) => mockDeleteSnapFile(uri),
   useRemoveSnaps: () => mockRemoveSnaps,
   useForgetSnapSync: () => mockForgetSnapSync,
 }));
@@ -29,7 +27,7 @@ function makeRecording(id: string): DeletableSnap {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockDeleteLocalRecording.mockResolvedValue(undefined);
+  mockDeleteSnapFile.mockResolvedValue(undefined);
 });
 
 describe('useDeleteSnaps', () => {
@@ -41,7 +39,7 @@ describe('useDeleteSnaps', () => {
       await result.current.deleteSnaps([recording]);
     });
 
-    expect(mockDeleteLocalRecording).toHaveBeenCalledWith(recording.uri);
+    expect(mockDeleteSnapFile).toHaveBeenCalledWith(recording.uri);
     expect(mockDeleteVideoThumbnail).toHaveBeenCalledWith(recording.uri);
     expect(mockRemoveSnapsEverywhere).toHaveBeenCalledWith(['snaply-1.mp4']);
     expect(mockRemoveSnaps).toHaveBeenCalledWith(['snaply-1.mp4']);
@@ -76,7 +74,7 @@ describe('useDeleteSnaps', () => {
   it('keeps the metadata of a snap whose file could not be deleted', async () => {
     const kept = makeRecording('snaply-1.mp4');
     const deleted = makeRecording('snaply-2.mp4');
-    mockDeleteLocalRecording.mockImplementation((uri: string) =>
+    mockDeleteSnapFile.mockImplementation((uri: string) =>
       uri === kept.uri ? Promise.reject(new Error('locked')) : Promise.resolve(undefined),
     );
     const { result } = await renderHook(() => useDeleteSnaps());
@@ -93,7 +91,7 @@ describe('useDeleteSnaps', () => {
   });
 
   it('touches no store when every file deletion fails', async () => {
-    mockDeleteLocalRecording.mockRejectedValue(new Error('gone'));
+    mockDeleteSnapFile.mockRejectedValue(new Error('gone'));
     const { result } = await renderHook(() => useDeleteSnaps());
 
     await act(async () => {
@@ -134,12 +132,12 @@ describe('useDeleteSnaps', () => {
     });
 
     expect(deletedIds).toEqual([]);
-    expect(mockDeleteLocalRecording).not.toHaveBeenCalled();
+    expect(mockDeleteSnapFile).not.toHaveBeenCalled();
     expect(mockRemoveSnapsEverywhere).not.toHaveBeenCalled();
   });
 
   it('clears the deleting set and the error after a successful delete', async () => {
-    mockDeleteLocalRecording.mockRejectedValueOnce(new Error('locked'));
+    mockDeleteSnapFile.mockRejectedValueOnce(new Error('locked'));
     const { result } = await renderHook(() => useDeleteSnaps());
 
     await act(async () => {
@@ -156,7 +154,7 @@ describe('useDeleteSnaps', () => {
   });
 
   it('clears the error on request', async () => {
-    mockDeleteLocalRecording.mockRejectedValue(new Error('locked'));
+    mockDeleteSnapFile.mockRejectedValue(new Error('locked'));
     const { result } = await renderHook(() => useDeleteSnaps());
 
     await act(async () => {

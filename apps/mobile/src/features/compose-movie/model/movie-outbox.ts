@@ -27,7 +27,11 @@ export function snapResolvers(): { videoIdOf: VideoIdResolver; snapIdOf: SnapIdR
   const entries = getSnapSyncEntries();
   const snapByVideo = new Map<string, string>();
   for (const [snapId, entry] of Object.entries(entries)) {
-    if (entry.status === 'uploaded') snapByVideo.set(entry.videoId, snapId);
+    // An expired snap still names the cut it was: on the device that shot it
+    // the file is here, and the cut reads "만료" rather than "삭제됨".
+    if (entry.status === 'uploaded' || entry.status === 'expired') {
+      snapByVideo.set(entry.videoId, snapId);
+    }
   }
   return {
     videoIdOf: (snapId) => {

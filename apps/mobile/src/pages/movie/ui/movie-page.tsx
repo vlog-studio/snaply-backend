@@ -1,11 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { BackHandler, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { isAiArranged, movieStyleLabel, useDeleteMovie } from '@/entities/movie';
+import { useSnapFiles, type Snap } from '@/entities/snap';
 import { useComposeMovie, useRenderSource } from '@/features/compose-movie';
 import { FinishMovieConfirm } from '@/features/finish-movie';
 import { RenameMovieSheet } from '@/features/rename-movie';
@@ -21,6 +22,7 @@ import type { TimelinePlayhead } from '../model/timeline-layout';
 import { useMovieCuts } from '../model/use-movie-cuts';
 import { useWatchCuts } from '../model/watch-cuts';
 import { CancelRunControl } from './cancel-run-control';
+import { CutFilesStage } from './cut-files-stage';
 import { CutInspector } from './cut-inspector';
 import { CutPlayer, type CutPlayerHandle } from './cut-player';
 import { DetailSheet } from './detail-sheet';
@@ -99,6 +101,17 @@ export function MoviePage({ movieId }: MoviePageProps) {
   // 편집하기" in the ⋯ sheet) rather than being the screen's default face.
   // Cleared when a run starts, so the next result opens as a result again.
   const [editing, setEditing] = useState(false);
+  // The studio's stage previews the cuts, so their videos must be on this
+  // device — a snap from another device is fetched here. Only while the stage
+  // is the cut preview: watch mode plays the render, and a job shows its ring.
+  const previewing =
+    movie !== undefined && movie.status !== 'generating' && !(movie.status === 'ready' && !editing);
+  const previewSnaps = useMemo(
+    () => (previewing ? cuts.flatMap((cut): Snap[] => (cut.snap ? [cut.snap] : [])) : []),
+    [previewing, cuts],
+  );
+  const previewFiles = useSnapFiles(previewSnaps);
+  const previewReady = !previewFiles.fetching && !previewFiles.failed;
   // The back-out question for a finished movie's studio (`EditExitSheet`).
   const [exitAsking, setExitAsking] = useState(false);
   // 끝내기 asked from the watch stage's own prompt (the ⋯ sheet hosts its own
@@ -185,6 +198,7 @@ export function MoviePage({ movieId }: MoviePageProps) {
   }
 
   const playbackCuts = toPlaybackCuts(cuts);
+  const canPlay = playbackCuts.length > 0 && previewReady;
   const isGenerating = movie.status === 'generating';
   const viewing = movie.status === 'ready' && !editing;
   // Worded exactly as the 세부 sheet words it, since the chip is that row's
@@ -284,6 +298,8 @@ export function MoviePage({ movieId }: MoviePageProps) {
               <ScrollView contentContainerStyle={styles.progressScroll}>
                 <GenerationProgress movie={movie} />
               </ScrollView>
+            ) : playbackCuts.length > 0 && !previewReady ? (
+              <CutFilesStage files={previewFiles} />
             ) : playbackCuts.length > 0 ? (
               <View style={styles.playerBox}>
                 <CutPlayer
@@ -311,7 +327,9 @@ export function MoviePage({ movieId }: MoviePageProps) {
               <View style={[styles.empty, { borderColor: theme.border }]}>
                 <ThemedText type="heading">재생할 컷이 없어요</ThemedText>
                 <ThemedText themeColor="textSecondary" style={styles.centerText}>
-                  이 무비가 쓰던 스냅이 모두 삭제됐어요.
+                  {cuts.every((cut) => cut.unavailable)
+                    ? '이 무비가 쓰던 스냅의 보관 기간이 끝났어요.'
+                    : '이 무비가 쓰던 스냅이 모두 삭제됐어요.'}
                 </ThemedText>
               </View>
             )}
@@ -325,12 +343,12 @@ export function MoviePage({ movieId }: MoviePageProps) {
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={isPlaying ? '일시정지' : '재생'}
-                accessibilityState={{ disabled: playbackCuts.length === 0 }}
-                disabled={playbackCuts.length === 0}
+                accessibilityState={{ disabled: !canPlay }}
+                disabled={!canPlay}
                 onPress={() => playerRef.current?.togglePlayback()}
                 style={[
                   styles.transportTool,
-                  { borderColor: theme.border, opacity: playbackCuts.length === 0 ? 0.35 : 1 },
+                  { borderColor: theme.border, opacity: canPlay ? 1 : 0.35 },
                 ]}
               >
                 <Ionicons name={isPlaying ? 'pause' : 'play'} size={20} color={theme.text} />

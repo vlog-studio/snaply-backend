@@ -142,8 +142,10 @@ describe('useUploadWorker', () => {
     );
     // The measured 3.4s is rounded to the spec's integer seconds.
     // The capture time travels with the registration: the server cannot recover
-    // it afterwards, so a snap registered without it keeps `null` forever.
-    expect(mockRegisterVideo).toHaveBeenCalledWith('video-1', 3, 1_753_200_000_000);
+    // it afterwards, so a snap registered without it keeps `null` forever. So
+    // does the snap's own id, which lets this device recognise the row in the
+    // server's list after losing the record of this upload.
+    expect(mockRegisterVideo).toHaveBeenCalledWith('video-1', 3, 1_753_200_000_000, 'snap-1');
   });
 
   it('uploads the oldest snap first', async () => {

@@ -1,13 +1,15 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
-import { useVideoThumbnail } from './use-video-thumbnail';
-import { getVideoThumbnail } from './video-thumbnails';
+import { primeVideoThumbnail, useVideoThumbnail } from './use-video-thumbnail';
+import { getVideoThumbnail, saveVideoThumbnail } from './video-thumbnails';
 
 jest.mock('./video-thumbnails', () => ({
   getVideoThumbnail: jest.fn(),
+  saveVideoThumbnail: jest.fn(),
 }));
 
 const getVideoThumbnailMock = getVideoThumbnail as jest.MockedFunction<typeof getVideoThumbnail>;
+const saveVideoThumbnailMock = saveVideoThumbnail as jest.MockedFunction<typeof saveVideoThumbnail>;
 
 // The hook keeps a module-level index of resolved frames that deliberately
 // survives across mounts (that is the behavior under test), so every test uses
@@ -129,5 +131,22 @@ describe('useVideoThumbnail', () => {
       releaseSecond('file:///thumbs/e.jpg');
     });
     await waitFor(() => expect(result.current).toBe('file:///thumbs/e.jpg'));
+  });
+
+  it('waits for a primed remote frame instead of extracting from a file that is not there', async () => {
+    const uri = uniqueUri();
+    let finish: (value: string) => void = () => {};
+    saveVideoThumbnailMock.mockReturnValue(
+      new Promise<string>((resolve) => {
+        finish = resolve;
+      }),
+    );
+
+    void primeVideoThumbnail(uri, 'https://s3.test/thumb.jpg');
+    const { result } = await renderHook(() => useVideoThumbnail(uri));
+    await act(async () => finish('file:///thumbs/remote.jpg'));
+
+    await waitFor(() => expect(result.current).toBe('file:///thumbs/remote.jpg'));
+    expect(getVideoThumbnailMock).not.toHaveBeenCalled();
   });
 });

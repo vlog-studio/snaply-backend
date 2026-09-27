@@ -136,4 +136,17 @@ describe('useSnapPicking', () => {
 
     expect(result.current.notice).toBe(message);
   });
+
+  it('refuses a snap the target cannot take, whatever room is left', async () => {
+    const { result } = await renderPicking(
+      makeTarget({ refuseSnap: (snapId) => (snapId === 'expired' ? 'cannot take it' : undefined) }),
+    );
+
+    await act(async () => result.current.toggle('expired'));
+    await act(async () => result.current.toggle('fine'));
+
+    expect(result.current.picked).toEqual(['fine']);
+    await act(async () => result.current.toggle('expired'));
+    expect(result.current.notice).toBe('cannot take it');
+  });
 });

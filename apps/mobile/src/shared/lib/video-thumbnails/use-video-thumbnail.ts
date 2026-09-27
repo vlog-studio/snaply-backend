@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { getVideoThumbnail } from './video-thumbnails';
+import { getVideoThumbnail, saveVideoThumbnail } from './video-thumbnails';
 
 // In-memory index of frames this session has already resolved. The disk cache
 // makes re-resolving cheap but still asynchronous — a remounting consumer (the
@@ -29,6 +29,30 @@ function resolveThumbnail(uri: string, timeMs: number | undefined): Promise<stri
   const pending = pendingByKey.get(key);
   if (pending) return pending;
   const request = getVideoThumbnail(uri, timeMs === undefined ? undefined : { timeMs })
+    .then((thumbnailUri) => {
+      if (thumbnailUri !== undefined) resolvedByKey.set(key, thumbnailUri);
+      return thumbnailUri;
+    })
+    .finally(() => pendingByKey.delete(key));
+  pendingByKey.set(key, request);
+  return request;
+}
+
+/**
+ * Fills a video's first frame from a remote image — for a video whose file is
+ * not on the device yet (a snap shot on another device). Registered as the
+ * frame's in-flight request, so a consumer that asks meanwhile waits for this
+ * download instead of trying to extract from a file that is not there. Start it
+ * *before* the video is put on screen; a consumer whose own extraction already
+ * failed keeps its placeholder until it remounts.
+ */
+export function primeVideoThumbnail(uri: string, remoteUrl: string): Promise<string | undefined> {
+  const key = frameKey(uri, undefined);
+  const known = resolvedByKey.get(key);
+  if (known !== undefined) return Promise.resolve(known);
+  const pending = pendingByKey.get(key);
+  if (pending) return pending;
+  const request = saveVideoThumbnail(uri, remoteUrl)
     .then((thumbnailUri) => {
       if (thumbnailUri !== undefined) resolvedByKey.set(key, thumbnailUri);
       return thumbnailUri;

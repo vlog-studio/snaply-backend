@@ -42,7 +42,11 @@ export function SnapDeleteDialog({
         스냅 삭제
       </ThemedText>
       <ThemedText type="heading">스냅 {count}개를 삭제할까요?</ThemedText>
-      <ThemedText themeColor="textSecondary">스냅 파일까지 삭제되고, 되돌릴 수 없어요.</ThemedText>
+      {/* SNAP-16: a delete reaches every device the account is on, the
+          original another device still holds included. */}
+      <ThemedText themeColor="textSecondary">
+        모든 기기에서 파일까지 삭제되고, 되돌릴 수 없어요.
+      </ThemedText>
 
       {impact.length > 0 ? (
         <View style={[styles.impact, { borderColor: theme.border }]}>

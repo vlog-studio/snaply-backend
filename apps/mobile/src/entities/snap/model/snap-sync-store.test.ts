@@ -172,4 +172,52 @@ describe('snap sync store', () => {
       deleteAttempts: { 'video-4': 2 },
     });
   });
+
+  describe('applyServerState', () => {
+    it('sets and drops entries in one write, leaving no tombstone for a dropped upload', async () => {
+      useSnapSyncStore.setState({
+        entries: {
+          own: { status: 'uploaded', videoId: 'v-own' },
+          gone: { status: 'uploaded', videoId: 'v-gone' },
+        },
+      });
+
+      await act(async () =>
+        useSnapSyncStore.getState().applyServerState({
+          entries: { own: { status: 'uploaded', videoId: 'v-own', expiresAt: 42 } },
+          dropped: ['gone'],
+        }),
+      );
+
+      expect(useSnapSyncStore.getState().entries).toEqual({
+        own: { status: 'uploaded', videoId: 'v-own', expiresAt: 42 },
+      });
+      // The server already said the row is gone; owing it a DELETE would be wrong.
+      expect(useSnapSyncStore.getState().deleteTombstones).toEqual([]);
+    });
+
+    it('does not write when the server said nothing new', async () => {
+      useSnapSyncStore.setState({
+        entries: { own: { status: 'uploaded', videoId: 'v-own', expiresAt: 42 } },
+      });
+      const before = useSnapSyncStore.getState();
+
+      await act(async () =>
+        useSnapSyncStore.getState().applyServerState({
+          entries: { own: { status: 'uploaded', videoId: 'v-own', expiresAt: 42 } },
+          dropped: ['not-there'],
+        }),
+      );
+
+      expect(useSnapSyncStore.getState()).toBe(before);
+    });
+
+    it('retires an expired snap without owing the server a delete', async () => {
+      useSnapSyncStore.setState({ entries: { old: { status: 'expired', videoId: 'v-old' } } });
+
+      await act(async () => useSnapSyncStore.getState().forgetSnaps(['old']));
+
+      expect(useSnapSyncStore.getState().deleteTombstones).toEqual([]);
+    });
+  });
 });

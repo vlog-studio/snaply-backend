@@ -9,6 +9,13 @@ export async function getVideoThumbnail(
   return undefined;
 }
 
+export async function saveVideoThumbnail(
+  _uri: string,
+  _remoteUrl: string,
+): Promise<string | undefined> {
+  return undefined;
+}
+
 export function deleteVideoThumbnail(_uri: string): void {}
 
 export type { VideoThumbnailOptions };

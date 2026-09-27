@@ -203,9 +203,11 @@ export function TimelineCut({
   const reducedMotion = useReducedMotion();
   const snap = cut.snap;
   const missing = snap === undefined;
-  // The original is here but its server copy is gone (expired or deleted
-  // there): it still previews, but no run can be made from it (SNAP-12).
-  const expired = !missing && cut.unavailable;
+  // The server copy is gone (expired, or deleted there): no run can be made
+  // from it (SNAP-12). With the original here it still previews. Without it,
+  // it still reads as expired rather than deleted — a new device never brings
+  // an expired snap in, so there every expired cut has no original (2026-09-27).
+  const expired = cut.unavailable === true;
   const durationSec = snap?.durationSec ?? 0;
   /** The full snap's width — what the tiles fill and the trim drags along. */
   const reelWidth = snap ? durationSec * pxPerSec : width;
@@ -313,7 +315,7 @@ export function TimelineCut({
 
       <AnimatedPressable
         accessibilityRole="button"
-        accessibilityLabel={`컷 ${index + 1}${missing ? ' · 스냅 삭제됨' : expired ? ' · 보관 기간 끝남' : ''} · ${formatSeconds(shown.endSec - shown.startSec)}`}
+        accessibilityLabel={`컷 ${index + 1}${expired ? ' · 보관 기간 끝남' : missing ? ' · 스냅 삭제됨' : ''} · ${formatSeconds(shown.endSec - shown.startSec)}`}
         accessibilityHint={focused ? '다시 탭하면 선택을 해제해요' : undefined}
         accessibilityState={{ selected }}
         onPress={() => onSelect(index)}

@@ -26,6 +26,7 @@ describe('pickNextUpload', () => {
     ['uploading', { status: 'uploading' }],
     ['uploaded', { status: 'uploaded', videoId: 'video-1' }],
     ['exhausted failed', { status: 'failed', attempts: MaxAutoUploadAttempts }],
+    ['expired', { status: 'expired', videoId: 'video-1' }],
   ])('skips a snap whose entry is %s', (_label, entry) => {
     const snaps = [makeSnap('snap-1', 100)];
     expect(pickNextUpload(snaps, { 'snap-1': entry }, NoBlocked)).toBeUndefined();
@@ -49,5 +50,11 @@ describe('pickNextUpload', () => {
 
   it('returns undefined when everything is settled', () => {
     expect(pickNextUpload([], {}, NoBlocked)).toBeUndefined();
+  });
+
+  it('never uploads a snap brought in from the server', () => {
+    // Even with no entry at all: its file is only a copy of what the server has.
+    const snaps = [{ ...makeSnap('video-1', 100), origin: 'server' as const }];
+    expect(pickNextUpload(snaps, {}, NoBlocked)).toBeUndefined();
   });
 });

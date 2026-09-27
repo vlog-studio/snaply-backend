@@ -7,7 +7,7 @@ import { useTemplateOffers } from './use-template-offers';
 const mockSnaps = jest.fn<Snap[], []>();
 
 jest.mock('@/entities/snap', () => ({
-  useSnaps: () => mockSnaps(),
+  useSnapsForMovies: () => mockSnaps(),
 }));
 
 // The catalog is a server read now. What this hook owns is the *order* it puts

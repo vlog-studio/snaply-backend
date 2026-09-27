@@ -104,7 +104,11 @@ export function CutInspector({
             themeColor={missing ? 'danger' : 'textSecondary'}
             style={styles.readout}
           >
-            {missing ? '스냅이 삭제됐어요 · 빼 주세요' : `사용 ${formatSeconds(cut.usedSec)}`}
+            {missing
+              ? cut.unavailable
+                ? '보관 기간이 끝났어요 · 빼 주세요'
+                : '스냅이 삭제됐어요 · 빼 주세요'
+              : `사용 ${formatSeconds(cut.usedSec)}`}
           </ThemedText>
         </View>
         {/* The slot keeps its height when the action is absent, so the row —

@@ -48,9 +48,27 @@ export type SnapPlace = {
  * `entities/movie`), so the same snap can appear differently in two movies.
  */
 export type Snap = {
+  /**
+   * The recording's file name for a snap shot on this device; the server's
+   * video id for one that came from elsewhere (`origin: 'server'`). The two
+   * never collide — file names are `snaply-<ms>.<ext>`, video ids are UUIDs.
+   */
   id: string;
-  /** File URI of the source video, as returned by `recording-files`. */
+  /**
+   * File URI of the source video. For this device's own snaps, the recording as
+   * `recording-files` stored it. For a snap from another device, the path its
+   * copy is fetched to (`shared/lib/server-snap-files`) — which may not be
+   * there yet: that video is fetched when it is first played.
+   */
   uri: string;
+  /**
+   * Where the snap came from. Absent for a snap shot or extracted on this
+   * device, whose file is the original and the source of truth (SNAP-14).
+   * `server` for one shot on another device or before a reinstall and brought
+   * in from the server's list (SNAP-15): its file is only a cache of the
+   * server's playable copy, and it is never uploaded.
+   */
+  origin?: 'server';
   /**
    * How long the recorded file actually runs, in seconds.
    *

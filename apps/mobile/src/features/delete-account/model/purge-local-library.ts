@@ -1,6 +1,10 @@
 import { purgeMovieScope } from '@/entities/movie';
-import { purgeSnapScope, purgeSnapSyncScope, readScopedSnaps } from '@/entities/snap';
-import { deleteLocalRecording } from '@/shared/lib/recording-files';
+import {
+  deleteSnapFile,
+  purgeSnapScope,
+  purgeSnapSyncScope,
+  readScopedSnaps,
+} from '@/entities/snap';
 import { deleteVideoThumbnail } from '@/shared/lib/video-thumbnails';
 
 import { forgetDeletedAccount, readDeletedAccounts } from './deleted-account-ledger';
@@ -21,7 +25,7 @@ import { forgetDeletedAccount, readDeletedAccounts } from './deleted-account-led
 export async function purgeLocalLibrary(userId: string): Promise<void> {
   for (const snap of await readScopedSnaps(userId)) {
     try {
-      await deleteLocalRecording(snap.uri);
+      await deleteSnapFile(snap.uri);
     } catch {
       // A file already gone, or one the OS refuses, must not strand the rest of
       // the purge — the metadata that named it goes below either way.

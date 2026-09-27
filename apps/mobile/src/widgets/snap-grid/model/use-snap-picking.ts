@@ -14,6 +14,12 @@ export type SnapPickTarget = {
    * still take, and zero means there is no room at all.
    */
   describeRefusal: (room: number) => string;
+  /**
+   * Why this one snap cannot go into the target at all, or `undefined` when it
+   * can. Asked before the room is — a snap the target refuses is refused
+   * whatever room is left. Optional: most targets take any snap.
+   */
+  refuseSnap?: (snapId: string) => string | undefined;
 };
 
 export type SnapPicking = {
@@ -48,7 +54,7 @@ export type SnapPicking = {
  * adds nothing, so it can never be the pick that hits the cap.
  */
 export function useSnapPicking(target: SnapPickTarget): SnapPicking {
-  const { heldIds, heldCount, capacity, describeRefusal } = target;
+  const { heldIds, heldCount, capacity, describeRefusal, refuseSnap } = target;
   const [picked, setPicked] = useState<string[]>([]);
   const [notice, setNotice] = useState<string>();
 
@@ -61,6 +67,11 @@ export function useSnapPicking(target: SnapPickTarget): SnapPicking {
         setPicked(picked.filter((id) => id !== snapId));
         return;
       }
+      const refusal = refuseSnap?.(snapId);
+      if (refusal) {
+        setNotice(refusal);
+        return;
+      }
       const wouldTake = picked.filter((id) => !heldIds.has(id)).length;
       if (!heldIds.has(snapId) && wouldTake >= room) {
         setNotice(describeRefusal(room));
@@ -69,7 +80,7 @@ export function useSnapPicking(target: SnapPickTarget): SnapPicking {
       setNotice(undefined);
       setPicked([...picked, snapId]);
     },
-    [picked, heldIds, room, describeRefusal],
+    [picked, heldIds, room, describeRefusal, refuseSnap],
   );
 
   const drop = useCallback((snapIds: readonly string[]) => {

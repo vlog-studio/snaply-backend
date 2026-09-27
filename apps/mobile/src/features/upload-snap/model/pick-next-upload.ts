@@ -12,7 +12,9 @@ export const MaxAutoUploadAttempts = 5;
  * The next snap the worker should upload, oldest capture first — the queue is
  * derived from state, never stored. A snap qualifies when nothing has been
  * recorded about it (`pending`), or when it failed retryably and is not
- * currently held back by the worker's in-memory backoff (`blockedIds`).
+ * currently held back by the worker's in-memory backoff (`blockedIds`). A snap
+ * brought in from the server never qualifies, and neither does an expired one
+ * (its entry is neither absent nor failed).
  * Oldest-first because earlier snaps are likelier to be picked into a movie.
  */
 export function pickNextUpload(
@@ -23,6 +25,9 @@ export function pickNextUpload(
   let candidate: Snap | undefined;
   for (const snap of snaps) {
     if (blockedIds.has(snap.id)) continue;
+    // A snap from elsewhere is the server's already; its local file is only a
+    // copy of the server's, which must never come back as a second upload.
+    if (snap.origin === 'server') continue;
     const entry = entries[snap.id];
     if (entry !== undefined) {
       if (entry.status !== 'failed') continue;

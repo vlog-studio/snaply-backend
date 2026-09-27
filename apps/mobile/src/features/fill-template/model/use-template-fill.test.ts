@@ -10,7 +10,7 @@ import type { TemplateRecommendation } from './use-template-recommendation';
 const mockSnaps = jest.fn<Snap[], []>();
 
 jest.mock('@/entities/snap', () => ({
-  useSnaps: () => mockSnaps(),
+  useSnapsForMovies: () => mockSnaps(),
 }));
 
 // The server's half is stubbed: what this file is about is how an arriving

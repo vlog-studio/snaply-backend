@@ -8,6 +8,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { MovieSyncGate } from '@/features/compose-movie';
 import { DeletedLibraryPurgeGate } from '@/features/delete-account';
+import { SnapReconcileGate } from '@/features/reconcile-snaps';
 import { SnapUploadGate } from '@/features/upload-snap';
 import { Colors, useResolvedColorScheme } from '@/shared/ui/theme';
 
@@ -71,6 +72,12 @@ export function AppProviders({ children }: PropsWithChildren) {
             to keep going after the user leaves the screen, and to be picked back
             up on the next app start if they left before it finished. */}
         <MovieGenerationBridge />
+        {/* The account's snaps from elsewhere — another device, or this one
+            before a reinstall — come in from the server's list, and snaps
+            deleted elsewhere go. After the scope gate, since it writes the
+            stores the gate binds; before the movie sync, so a movie read back
+            finds the snaps its cuts name. */}
+        <SnapReconcileGate />
         {/* Movies live on the server (2026-09-12); this carries edits made
             anywhere in the app up to it and reads the account's movies back —
             on sign-in, and on every return to the foreground. After the scope

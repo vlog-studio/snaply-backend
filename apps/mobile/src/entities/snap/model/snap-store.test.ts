@@ -2,12 +2,15 @@ import { act, renderHook } from '@testing-library/react-native';
 
 import type { Snap } from './snap';
 import {
+  mergeServerSnaps,
   useAddSnap,
   useRecordSnapMeasurement,
   useRemoveSnaps,
   useSnaps,
+  useSnapsForMovies,
   useSnapStore,
 } from './snap-store';
+import { useSnapSyncStore } from './snap-sync-store';
 
 // Mock the persistence backend so no native file system is touched.
 jest.mock('@/shared/lib/local-store', () => ({
@@ -203,6 +206,80 @@ describe('snap store', () => {
       await act(async () => result.current('snap-gone', { durationSec: 2 }));
 
       expect(useSnapStore.getState().snaps).toBe(before);
+    });
+  });
+
+  describe('mergeServerSnaps', () => {
+    const fromServer = (overrides: Partial<Snap> = {}) =>
+      makeSnap({
+        id: 'v1',
+        uri: 'file:///cache/server-snaps/v1.mp4',
+        origin: 'server',
+        ...overrides,
+      });
+
+    it('adds the snaps it does not hold, in one write', async () => {
+      mergeServerSnaps([fromServer({ id: 'v1' }), fromServer({ id: 'v2' })]);
+
+      expect(
+        useSnapStore
+          .getState()
+          .snaps.map((snap) => snap.id)
+          .sort(),
+      ).toEqual(['v1', 'v2']);
+    });
+
+    it('never rewrites a snap shot on this device', async () => {
+      const own = makeSnap({ id: 'snap-1', durationSec: 3 });
+      useSnapStore.setState({ snaps: [own] });
+
+      mergeServerSnaps([makeSnap({ id: 'snap-1', durationSec: 9, durationMeasured: true })]);
+
+      expect(useSnapStore.getState().snaps[0]).toBe(own);
+    });
+
+    it('takes a length the server measured, but not a stand-in over a measured size', async () => {
+      useSnapStore.setState({
+        snaps: [
+          fromServer({
+            width: 720,
+            height: 1280,
+            orientation: 'portrait',
+            dimensionsMeasured: true,
+          }),
+        ],
+      });
+
+      mergeServerSnaps([
+        fromServer({ durationSec: 3.4, durationMeasured: true, width: 1080, height: 1920 }),
+      ]);
+
+      expect(useSnapStore.getState().snaps[0]).toMatchObject({
+        durationSec: 3.4,
+        width: 720,
+        height: 1280,
+      });
+    });
+
+    it('does not write when nothing changed', async () => {
+      useSnapStore.setState({ snaps: [fromServer({ durationMeasured: true })] });
+      const before = useSnapStore.getState().snaps;
+
+      mergeServerSnaps([fromServer({ durationMeasured: true })]);
+
+      expect(useSnapStore.getState().snaps).toBe(before);
+    });
+  });
+
+  describe('useSnapsForMovies', () => {
+    it('leaves out the snaps whose server copy expired', async () => {
+      useSnapStore.setState({ snaps: [makeSnap({ id: 'kept' }), makeSnap({ id: 'gone' })] });
+      useSnapSyncStore.setState({ entries: { gone: { status: 'expired', videoId: 'v-gone' } } });
+
+      const { result } = await renderHook(() => useSnapsForMovies());
+
+      expect(result.current.map((snap) => snap.id)).toEqual(['kept']);
+      await act(async () => useSnapSyncStore.setState({ entries: {} }));
     });
   });
 });
