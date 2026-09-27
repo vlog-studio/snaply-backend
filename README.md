@@ -10,8 +10,8 @@
 ```
 apps/
   mobile/       # Expo SDK 57 + React Native 모바일 앱
-  api/          # Fastify + TypeScript API 서버 (:3000)
-  ai-worker/    # Python 워커 2개 — edit-jobs·video-analysis 큐 구독 (HTTP 포트 없음)
+  api/          # Fastify + TypeScript API 서버 (:3000) + 알림 발송 워커
+  ai-worker/    # Python 워커 3개 — 편집·스냅 분석·배포 렌디션 (프로세스·큐는 ONBOARDING §2)
 packages/
   shared-types/ # API 계약(Zod 스키마)과 앱·API·워커가 공유하는 타입·어휘
 ```

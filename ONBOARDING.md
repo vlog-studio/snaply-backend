@@ -33,15 +33,23 @@ Android 실기기를 쓴다면 같은 Wi-Fi와 USB 또는 무선 디버깅 연�
 
 ```
 apps/mobile/          Expo SDK 57 + React Native 앱 (Expo Router)
-apps/api/             Fastify + TypeScript API 서버 (:3000)
+apps/api/             Fastify + TypeScript API 서버 (:3000) + 알림 발송 워커
 apps/ai-worker/       Python 워커 — BullMQ 큐 구독, FFmpeg/faster-whisper (HTTP 포트 없음)
-                      편집 워커(worker.py)와 스냅 분석 워커(analysis_worker.py) 두 프로세스
-packages/shared-types/ 앱·API가 공유하는 요청/응답 타입
+packages/shared-types/ API 계약(Zod 스키마)과 앱·API·워커가 공유하는 타입·어휘
 
 인프라: 로컬 PostgreSQL(DB, :5432) · Supabase(Auth) · MinIO(S3 호환, :9100) · Redis(:6379)
 ```
-> 워커는 `edit-jobs` Redis 큐를 구독하는 백그라운드 프로세스(`src/worker.py`)이고 HTTP 포트를 열지 않는다.
-> `src/main.py`의 FastAPI(:8000)는 Phase 1 뼈대의 잔재로, compose·npm 스크립트 어디에서도 실행하지 않는다.
+
+API 서버 밖에서 도는 상주 프로세스는 넷이다. 모두 Redis 큐를 구독하고 HTTP 포트를 열지 않는다.
+
+| 프로세스 | 큐 | 하는 일 |
+|---|---|---|
+| 편집 워커 `apps/ai-worker/src/worker.py` | `edit-jobs` | 무비 렌더(컷·스타일·BGM·자막) |
+| 스냅 분석 워커 `apps/ai-worker/src/analysis_worker.py` | `video-analysis` | 스냅 내용 분석(OpenAI) |
+| 배포 렌디션 워커 `apps/ai-worker/src/rendition_worker.py` | `renditions` | 업로드된 스냅의 H.264/SDR 재생용 사본 |
+| 알림 발송 워커 `apps/api/src/notification-worker.ts` | `notifications` | 편집 워커가 넣은 알림 요청을 FCM으로 발송 |
+
+> `apps/ai-worker/src/main.py`의 FastAPI(:8000)는 Phase 1 뼈대의 잔재로, compose·npm 스크립트 어디에서도 실행하지 않는다.
 개발/운영 전환은 endpoint/URL만 교체(코드 분기 없음): S3_ENDPOINT 비우면 실제 AWS S3, REDIS_URL만 바꾸면 Upstash.
 
 ---
@@ -201,22 +209,24 @@ API와 모바일을 함께 쓸 때는 PC와 실기기가 같은 네트워크에 
 `npm run ios -w snaply-app`을 사용한다. 구형 Xcode 제약과 상세 기기 절차는
 [`apps/mobile/docs/workflows/local-development-and-testing.md`](apps/mobile/docs/workflows/local-development-and-testing.md)를 본다.
 
-### 3-8. AI worker 실행 — 선택, 터미널 3
+### 3-8. 워커 실행 — 선택, 터미널 3~
 
-실제 편집 job까지 처리할 때만 설치하고 실행한다.
-
-```bash
-npm run worker:install
-npm run worker
-```
-
-스냅 내용 분석 worker는 별도 프로세스이며 `apps/api/.env`의 `OPENAI_API_KEY`가 필요하다.
+실제 편집·분석·재생용 변환·완성 알림까지 처리할 때만 띄운다(§2의 네 프로세스). Python 워커 셋은
+같은 venv를 쓴다.
 
 ```bash
-npm run worker:analysis
+npm run worker:install                     # 최초 1회 — apps/ai-worker/.venv
+npm run worker                             # 편집 워커
+npm run worker:rendition                   # 배포 렌디션 워커
+npm run worker:analysis                    # 스냅 분석 워커
+npm run worker:notifications -w apps/api   # 알림 발송 워커
 ```
 
-worker는 기본적으로 `apps/api/.env`를 읽는다. pgbouncer URL이 asyncpg와 충돌하는 특수한
+- 렌디션 워커가 없으면 업로드한 스냅이 다른 플랫폼에서 재생되지 않을 수 있다(편집은 원본으로 돈다).
+- 분석 워커는 `apps/api/.env`의 `OPENAI_API_KEY`가 없으면 기동 단계에서 종료된다.
+- 알림 워커는 `FIREBASE_SERVICE_ACCOUNT_KEY`가 없으면 FCM을 dry-run(로그만)으로 보낸다.
+
+워커는 기본적으로 `apps/api/.env`를 읽는다. pgbouncer URL이 asyncpg와 충돌하는 특수한
 경우에만 `apps/ai-worker/.env`에 `DATABASE_URL=<DIRECT_URL 값>` 한 줄을 두어 덮어쓴다.
 
 ### 3-9. 자동 검증
@@ -254,8 +264,8 @@ cd ../..
 | `npm run dev:api` | API 서버(watch) |
 | `npm run dev:mobile` | Android dev client용 Metro |
 | `npm run verify:mobile` | 모바일 포맷·린트·타입·API 타입·Jest 검증 |
-| `npm run worker` / `worker:install` | AI 편집 워커 (`edit-jobs` 큐) / venv 설치 |
-| `npm run worker:analysis` | 스냅 분석 워커 (`video-analysis` 큐, `OPENAI_API_KEY` 필요) |
+| `npm run worker` / `worker:rendition` / `worker:analysis` / `worker:install` | 편집 / 배포 렌디션 / 스냅 분석 워커 / venv 설치 (§3-8) |
+| `npm run worker:notifications -w apps/api` | 알림 발송 워커 (§3-8) |
 | `npm run build` / `typecheck` / `lint` | 전체 빌드/검사 |
 | `npm run db:generate` / `db:migrate` / `db:seed` / `db:studio` | Prisma 클라이언트 생성 / 마이그레이션 / 시드 / Studio |
 | `npm run media:e2e` / `media:cleanup` | 업로드→편집→결과 e2e / 테스트 데이터 정리 |
