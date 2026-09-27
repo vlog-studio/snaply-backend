@@ -7,6 +7,7 @@ import {
   cutoffFor,
 } from './retention-policy.js';
 import { deleteObject } from './storage.service.js';
+import { VIDEO_ASSET_SELECT, ownedObjectKeys, type VideoAssets } from './video-assets.js';
 
 /**
  * 보관 기간이 지난 것을 지우는 경로.
@@ -21,7 +22,7 @@ import { deleteObject } from './storage.service.js';
  *    현재 정책 값으로 매번 계산하므로, 기간이 바뀌거나 요금제가 사용자별로 다른 기간을
  *    팔기 시작해도 백필이 필요 없다(services/retention-policy.ts).
  *
- * ② **삭제는 에셋 단위다.** 원본·썸네일·편집본을 각각 지울 수 있게 두고, 지금 정책인
+ * ② **삭제는 에셋 단위다.** 원본·썸네일·편집본·렌디션을 각각 지울 수 있게 두고, 지금 정책인
  *    "전부 지움"을 그 위에 얹는다. 요금제가 "원본은 지우되 썸네일은 유지" 같은 조합을
  *    요구해도 삭제 코드를 다시 뜯지 않기 위해서다(docs/plans/lifecycle-alignment.md §6-1).
  */
@@ -37,29 +38,6 @@ export interface PurgeOutcome {
   failed: string[];
 }
 
-/** 한 영상이 들고 있는 S3 객체 전부. 에셋별로 나뉘어 있어야 정책이 바뀌어도 골라 지울 수 있다. */
-function assetKeysOf(video: {
-  s3Key: string | null;
-  originalS3Keys: string[];
-  editedS3Key: string | null;
-  thumbnailS3Key: string | null;
-}): string[] {
-  return [
-    video.s3Key,
-    ...video.originalS3Keys,
-    video.editedS3Key,
-    video.thumbnailS3Key,
-  ].filter((key): key is string => typeof key === 'string' && key.length > 0);
-}
-
-const VIDEO_ASSET_SELECT = {
-  id: true,
-  s3Key: true,
-  originalS3Keys: true,
-  editedS3Key: true,
-  thumbnailS3Key: true,
-} as const;
-
 /**
  * 영상 하나의 파일을 지우고 툼스톤으로 만든다.
  *
@@ -67,14 +45,8 @@ const VIDEO_ASSET_SELECT = {
  * 무비의 컷도 깨지지 않아야 한다. 그래서 지우는 것은 바이트뿐이고 메타데이터는 남는다.
  * URL 컬럼은 비운다 — 더 이상 가리킬 대상이 없는 주소를 남기면 앱이 404 를 재생하려 든다.
  */
-async function purgeVideoAssets(video: {
-  id: string;
-  s3Key: string | null;
-  originalS3Keys: string[];
-  editedS3Key: string | null;
-  thumbnailS3Key: string | null;
-}): Promise<void> {
-  for (const key of assetKeysOf(video)) {
+async function purgeVideoAssets(video: VideoAssets & { id: string }): Promise<void> {
+  for (const key of ownedObjectKeys(video)) {
     await deleteObject(key);
   }
   await getPrisma().video.update({
@@ -208,7 +180,9 @@ export async function findOrphanedObjects(): Promise<ExpiryCandidate[]> {
         { s3Key: { not: null } },
         { editedS3Key: { not: null } },
         { thumbnailS3Key: { not: null } },
-        { NOT: { originalS3Keys: { isEmpty: true } } },
+        { renditionS3Key: { not: null } },
+        // 결과물의 원본 키는 빌려 온 것이라 남은 객체가 아니다(video-assets.ts).
+        { kind: 'source', NOT: { originalS3Keys: { isEmpty: true } } },
       ],
     },
     select: { id: true, deletedAt: true },
@@ -229,7 +203,7 @@ export async function purgeOrphanedObjects(): Promise<PurgeOutcome> {
         select: VIDEO_ASSET_SELECT,
       });
       if (!video) continue;
-      for (const key of assetKeysOf(video)) {
+      for (const key of ownedObjectKeys(video)) {
         await deleteObject(key);
       }
       // 키를 비워야 다음 실행에서 다시 걸리지 않는다. 삭제 사유는 원래 값을 유지한다.
@@ -241,6 +215,7 @@ export async function purgeOrphanedObjects(): Promise<PurgeOutcome> {
           originalS3Keys: [],
           editedS3Key: null,
           thumbnailS3Key: null,
+          renditionS3Key: null,
           originalUrls: [],
           editedUrl: null,
           thumbnailUrl: null,
