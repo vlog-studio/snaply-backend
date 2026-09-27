@@ -16,8 +16,8 @@
 1. 크레딧 팩 판매는 앱 내 인앱결제(IAP)로만 한다 — iOS는 StoreKit 2 consumable,
    Android는 Play Billing consumable. 같은 상품을 양 스토어에 동일하게 등록한다.
 2. 두 스토어의 영수증 검증·이벤트 통지는 RevenueCat을 경유해 단일 웹훅으로 받는다.
-3. Stripe는 결제 채널에서 제거한다. [credit-payment-model.md](credit-payment-model.md)의
-   "Stripe를 계속 사용하더라도 Checkout은 일회성 크레딧 구매를 처리한다"는 전환 원칙은
+3. Stripe는 결제 채널에서 제거한다. [credit-payment-model.md](credit-payment-model.md)가 결정 당시
+   두었던 "Stripe를 계속 사용하더라도 Checkout은 일회성 크레딧 구매를 처리한다"는 전환 원칙은
    이 결정으로 무효가 된다.
 4. 국내 PG(토스페이먼츠 등)·MoR(Paddle, Polar 등)·웹 결제는 v1에서 도입하지 않는다.
    웹 서비스가 생기면 병행 채널로 재검토한다.
