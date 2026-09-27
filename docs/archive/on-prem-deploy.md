@@ -1,5 +1,11 @@
 # 사내 서버 배포 계획
 
+> **보관 (2026-09-27)** — 2026-09-15 에 착수해 저장소 쪽 구현이 끝난 계획의 원문이다. 착수 뒤로는
+> 절차·시크릿·배치를 [deployment.md](../deployment.md)가, 이 구성을 고른 이유와 기각한 대안을
+> [decisions/on-prem-deployment.md](../decisions/on-prem-deployment.md)가 원천으로 갖는다.
+> 아래 본문(§4 의 "이번에 만드는 부분", §5 의 준비 목록 등)은 착수 시점 기준이라 현행과 다르다 —
+> 판단 근거로 쓰지 말 것. 남은 서버 작업은 [backlog.md](../backlog.md) B-1.
+
 **작성일**: 2026-09-15
 **상태**: 착수함(2026-09-15). **절차·시크릿·배치의 현행 원천은 [deployment.md](../deployment.md)** 이며,
 이 문서는 *왜 이 구성인지*(사내망 제약, DB 위치, self-hosted runner)를 남긴다

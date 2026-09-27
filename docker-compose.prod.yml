@@ -15,7 +15,7 @@
 # 있으면 같은 망의 누구나 영상을 가져갈 수 있다. 값이 없으면 기동을 거부한다(`:?`).
 #
 # 사내망 전용 서버라 **바깥에서 우리를 불러야 하는 기능은 동작하지 않는다** — SNS 게시·결제
-# 웹훅·광고 보상 검증. 그래서 mock 을 켠 채로 둔다(docs/plans/on-prem-deploy.md §7).
+# 웹훅·광고 보상 검증. 그래서 mock 을 켠 채로 둔다(docs/deployment.md §0).
 
 x-db-env: &db-env
   DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/snaply

@@ -2,7 +2,7 @@
 
 **작성일**: 2026-09-15
 **상태**: 현행 — 배포 절차·시크릿·배치의 원천. 서버 구성이 바뀌면 이 문서를 고친다
-**관련**: [plans/on-prem-deploy.md](./plans/on-prem-deploy.md)(왜 이 구성인지) ·
+**관련**: [decisions/on-prem-deployment.md](./decisions/on-prem-deployment.md)(왜 이 구성인지) ·
 [decisions/env-management.md](./decisions/env-management.md) · [backlog.md](./backlog.md) B-1
 
 ---
