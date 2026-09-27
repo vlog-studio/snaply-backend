@@ -147,7 +147,7 @@ Granting via `adb shell pm grant "$PKG" android.permission.CAMERA` works, but it
 Know these before promising a verification result:
 
 - **No root.** `run-as` covers this app's debug build only. Other apps' data is unreachable, and Samsung Secure Folder profiles reject shell access outright (`SecurityException: Shell does not have permission to access user 150`).
-- **Camera input cannot be injected.** Recording a real clip requires the owner to hold the device. The agent can verify everything downstream of capture — stored clip, thumbnail, roll state, UI — but not the capture gesture itself.
+- **Camera input cannot be injected.** Recording a real clip requires the owner to hold the device. The agent can verify everything downstream of capture — stored clip, thumbnail, library state, UI — but not the capture gesture itself.
 - **FCM push display is unverified.** Geofence gating and local-notification setup are confirmed on device; no geofence-enter-to-displayed-notification run has been recorded yet (status: [`location-and-push-notifications.md`](../features/location-and-push-notifications.md)).
 - **Release-variant behavior differs.** These tools assume the debug dev build. `run-as` and `ReactNativeJS` logging are unavailable on the release APK from `npm run android:device:release`.
 - **A JS-only loop.** Native module changes, config-plugin changes, and `app.json` branding changes need a rebuild (`npm run android:device`), not Fast Refresh — see [`app-branding-and-native-config.md`](app-branding-and-native-config.md).
