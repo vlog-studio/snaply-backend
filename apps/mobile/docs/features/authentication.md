@@ -58,6 +58,15 @@ let the handler tell confirmation from recovery without relying on the auth even
 precedence over the authenticated group, so a recovery deep link — which signs
 the user in — cannot reach the app until the new password is set.
 
+`src/_app/routes/root-layout.tsx` composes the groups with `Stack.Protected`, and
+**declaration order there is also fallback priority**: guarded groups first,
+most-specific state first — pending-deletion (`isAuthenticated && isPendingDeletion
+&& !isRecovering`), then recovery, then authenticated (which excludes both states),
+then signed-out — and the two unguarded `auth/*` landings last, so they never
+become the fallback while still always resolving for an email link. That order is
+why a recovery link cannot reach the app until the new password is set, and why an
+account inside its deletion grace period only ever sees the restore screen.
+
 ## Ownership and state
 
 | Concern | Owner |

@@ -26,7 +26,7 @@ Root stack
 ├── /auth/callback     Sign-up confirmation + OAuth deep-link landing (unguarded)
 ├── /auth/reset        Password-recovery deep-link landing (unguarded)
 │
-├── (pending-deletion guard: isAuthenticated && isPendingDeletion && !isRecovering — declared first: declaration order is fallback priority)
+├── (pending-deletion guard — declared first)
 │   └── /account-restore   Grace-period block: restore the account or sign out
 │
 ├── (recovery guard: isRecovering)
@@ -63,7 +63,7 @@ The tab bar hosts four tabs with a floating ember capture button centered over t
 
 There is no separate capture-setup screen: `/capture` opens straight into the viewfinder and the clip length is tuned inline while it is idle.
 
-Access control: `src/_app/routes/root-layout.tsx` composes the five groups above with `Stack.Protected`. **Declaration order in that file is also fallback priority** (guarded groups first, most-specific state first — pending-deletion, then recovery, then authenticated, then signed-out) and the two unguarded `auth/*` deep-link landings are declared **last** so they never become the fallback, while still always resolving for an email link. The pending-deletion guard is `isAuthenticated && isPendingDeletion && !isRecovering` and the authenticated guard excludes both states, so a recovery link cannot reach the app until the new password is set and an account inside its deletion grace period only ever sees the restore screen. The map above groups routes conceptually and is not the declaration order. See [Authentication](authentication.md) for the deep-link and restore flows.
+Access control: `src/_app/routes/root-layout.tsx` composes the groups above with `Stack.Protected`. The map groups routes conceptually; the declaration order is also the fallback priority, and the guards and why they are ordered that way are in [Authentication](authentication.md#route-flow), with the deep-link and restore flows.
 
 Headless behavior: `src/_app/providers` mounts the app's headless nodes — the account-scope binding that decides whose data every other node sees, the gates that hand a notification preference to the feature acting on it, the notification-tap router, the snap reconcile, movie sync, and upload workers, the deleted-library purge, and two one-per-start repairs — and `src/_app/routes/register-background-tasks.ts` defines the background geofence task at startup. None has a route; the full list, the order they mount in, and why are kept in [Application shell and navigation](app-shell-and-navigation.md#composition-and-ownership).
 
