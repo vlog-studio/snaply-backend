@@ -2,7 +2,8 @@
 
 개발자 2명이 통합 모노레포를 기능 도메인 단위로 나누어 구현·검증하기 위한 가이드다.
 **소유권과 협업 규칙의 원천 문서다.** 진행 기록은 [progress.md](./progress.md), 미결 작업은
-[backlog.md](./backlog.md), API 명세는 [api-spec.md](./api-spec.md)를 본다.
+[backlog.md](./backlog.md), API 계약은 [packages/shared-types/src/contract/](../packages/shared-types/src/contract/)
+(계약만으로 알 수 없는 동작은 [api-spec.md](./api-spec.md))를 본다.
 
 > 분담 축은 **기능 도메인(수직)** 이다. 모바일·API·워커를 별도 팀처럼 나누지 않고, 한 기능의
 > 사용자 흐름과 서버 처리까지 같은 트랙이 책임진다. 실제 담당자가 바뀌어도 아래 경계와 공유

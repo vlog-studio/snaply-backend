@@ -3,7 +3,8 @@
 실제 업로드를 로컬에서 검증하기 위한 준비 절차. 코드는 이미 실키를 받을 준비가 끝나 있고,
 `INSTAGRAM_APP_ID` / `TIKTOK_CLIENT_KEY` 가 채워지면 자동으로 mock → 실호출로 전환된다.
 
-> 진행 기록은 [progress.md](./progress.md), API 계약은 [api-spec.md](./api-spec.md) 참고.
+> 진행 기록은 [progress.md](./progress.md), API 계약은
+> [contract/sns.ts](../packages/shared-types/src/contract/sns.ts)(동작 안내는 [api-spec.md](./api-spec.md) §SNS 연동) 참고.
 
 ---
 

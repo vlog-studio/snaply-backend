@@ -6,7 +6,8 @@
 
 문서 지도는 [README.md](./README.md), 작업 분담은 [docs/team.md](./docs/team.md),
 미결 작업은 [docs/backlog.md](./docs/backlog.md), 진행 기록은 [docs/progress.md](./docs/progress.md),
-API 명세는 [docs/api-spec.md](./docs/api-spec.md).
+API 계약은 [packages/shared-types/src/contract/](./packages/shared-types/src/contract/)(Swagger `/docs`),
+계약만으로 알 수 없는 동작은 [docs/api-spec.md](./docs/api-spec.md).
 
 ---
 
