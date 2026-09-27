@@ -263,7 +263,7 @@ cd ../..
 | `npm run stack:up` / `stack:migrate` | API만 기동 / migration 수동 재실행 |
 | `npm run dev:api` | API 서버(watch) |
 | `npm run dev:mobile` | Android dev client용 Metro |
-| `npm run verify:mobile` | 모바일 포맷·린트·타입·API 타입·Jest 검증 |
+| `npm run verify:mobile` | 모바일 자동 검증 게이트 — 검사 목록은 `apps/mobile/package.json`의 `verify` |
 | `npm run worker` / `worker:rendition` / `worker:analysis` / `worker:install` | 편집 / 배포 렌디션 / 스냅 분석 워커 / venv 설치 (§3-8) |
 | `npm run worker:notifications -w apps/api` | 알림 발송 워커 (§3-8) |
 | `npm run build` / `typecheck` / `lint` | 전체 빌드/검사 |
@@ -301,8 +301,9 @@ npm run stack:down
   보간 값도 같은 파일에서 읽는다. 휴대폰 테스트 시 이 값을 `http://<PC의 LAN IP>:9200`으로 둔다.
 - API만 필요하면 `npm run stack:up`을 사용한다. 이 경우에도 필요한 인프라와 migration은 자동으로
   따라오지만 AI 워커는 기동하지 않는다.
-- 확인은 `/health` 만 보지 말 것 — `SUPABASE_URL` 이 비면 `/health` 는 200 인데 인증은 전부 실패한다.
-  인증이 필요한 엔드포인트를 하나 찔러 봐야 한다.
+- 확인은 `/health` 만 보지 말 것 — `SUPABASE_URL` 이 비면 API 가 기동을 거부하지만, 값이 틀리면
+  (다른 프로젝트·닿지 않는 주소) `/health` 는 200 인데 인증은 전부 실패한다. 인증이 필요한
+  엔드포인트를 하나 찔러 봐야 한다.
 
 ### 인증 없이 로컬에서 API 찔러보기
 
@@ -324,7 +325,7 @@ curl -H "Authorization: Bearer <출력된 토큰>" http://localhost:3000/auth/me
 - **휴대폰에서 MinIO 접근 실패**: `S3_PUBLIC_ENDPOINT`를 `http://<PC의 LAN IP>:9100`으로 설정하고 OS/WSL 방화벽에서 MinIO API 포트를 허용한다. 관리 콘솔 포트(9101)는 필요한 관리자 대역에만 연다.
 - **휴대폰에서 API 연결 실패**: `apps/mobile/.env`의 `EXPO_PUBLIC_API_BASE_URL`에 `localhost`가 아니라 개발 PC의 LAN IP를 쓰고, API가 `0.0.0.0`에 bind됐는지와 방화벽의 3000 포트를 확인한다.
 - **Android Expo Go 부팅 실패**: 정상적인 제한이다. `expo-notifications`가 포함돼 있으므로 `npm run android:device -w snaply-app`으로 dev build를 설치한다.
-- **`db: not_configured`**: `DATABASE_URL` 미설정. `apps/api/.env`에 로컬 PostgreSQL 값(`postgresql://postgres:postgres@localhost:5432/snaply`)이 있는지 확인.
+- **API가 `환경 변수 DATABASE_URL가 설정되지 않았습니다`로 뜨지 않음**: `apps/api/.env`에 로컬 PostgreSQL 값(`postgresql://postgres:postgres@localhost:5432/snaply`)이 있는지 확인. 값은 있는데 붙지 못하면 서버는 뜨고 `/health`의 `db`가 `error`다.
 - **워커 DB 연결 실패**: `DATABASE_URL`에 pgbouncer 파라미터가 있으면 asyncpg가 실패 → DIRECT_URL(5432) 사용.
 - **Supabase 무료 프로젝트 일시정지**: 1주일 미사용 시 자동 정지. 대시보드에서 재개.
 - **테스트 데이터 정리**: 공유 Supabase를 쓸 땐 통합 테스트 후 자기 데이터 정리(닉네임/이메일 접두사로 구분).

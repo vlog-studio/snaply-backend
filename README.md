@@ -103,7 +103,7 @@ AI 편집 워커는 `npm run worker:install` 후 `npm run worker`.
 | `npm run stack:up` / `stack:migrate` | API만 기동 / migration 수동 재실행 |
 | `npm run dev:api` | API 서버(watch) |
 | `npm run dev:mobile` | Android dev client용 Expo Metro |
-| `npm run verify:mobile` | 모바일 포맷·린트·타입·API 타입·Jest 검증 |
+| `npm run verify:mobile` | 모바일 자동 검증 게이트 — 검사 목록은 `apps/mobile/package.json`의 `verify` |
 | `npm run worker` / `worker:analysis` / `worker:rendition` / `worker:install` | AI 편집 워커 / 스냅 분석 워커 / 배포 렌디션 워커 / venv 설치 |
 | `npm run analysis:run` | 분석 워커 단발 실행(디버그) |
 | `npm run build` / `typecheck` / `lint` | 전체 빌드·검사 |
