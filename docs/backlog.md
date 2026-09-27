@@ -8,6 +8,8 @@
 > 진행 기록([progress.md](./progress.md))은 **완료된 것**만 담는다.
 >
 > 각 항목은 `왜 막혀 있는지` + `무엇이 있으면 닫히는지(완료 조건)` 형식이다.
+> 닫힌 항목은 본문을 지우고 문서 끝 [닫은 항목](#닫은-항목)에 한 줄만 남긴다. 번호는 재사용하지 않으며,
+> 빠진 번호는 거기에 있다.
 
 ---
 
@@ -15,7 +17,6 @@
 
 가장 앞단의 병목. 아래가 정해지지 않으면 구현을 시작할 수 없다.
 회의에서 정해야 하는 결정 요청 문서의 목록은 [decisions/README.md](./decisions/README.md) §결정 대기.
-(번호는 재사용하지 않는다 — **A-5는 결번**이며, 누락된 문서가 아니다.)
 
 ### A-1. 영상 묶음(프로젝트) 구조 ★
 
@@ -41,75 +42,28 @@
 [local-copy-after-upload.md](./decisions/local-copy-after-upload.md) ·
 [movie-cleanup-after-export.md](./decisions/movie-cleanup-after-export.md).
 
-⚠️ **구현 시 주의 둘**
-- 로컬 삭제 전환을 켜는 시점에 **15일 만료와 겹쳐 영상이 완전히 사라지는 조합**이 다시 열린다.
-  지금은 기기 파일이 남아 그 조합이 생기지 않는다.
-- 시스템 공유 시트는 저장 여부를 알려주지 않으므로 **다운로드 경로의 "끝내기"는 사용자의 명시적
-  행동이어야 한다**(MOV-18). 시트를 연 것만으로 지우면 취소한 사용자의 파일이 사라진다.
+⚠️ **구현 시 주의**: 로컬 삭제 전환을 켜는 시점에 **15일 만료와 겹쳐 영상이 완전히 사라지는 조합**이
+다시 열린다. 지금은 기기 파일이 남아 그 조합이 생기지 않는다.
 
 만료의 동작 구조(2단계 삭제 · 만료 스냅 식별 · 사전 알림)는
-[plans/lifecycle-alignment.md](./plans/lifecycle-alignment.md) §6 에서 설계를 마쳤다.
-`capturedAt` 수집은 결정 완료이며 스냅 서버 원천화 1단계에서 구현한다. 위치 정보 저장
+[plans/lifecycle-alignment.md](./plans/lifecycle-alignment.md) §6 에서 설계를 마쳤다. 위치 정보 저장
 여부는 이 항목과 분리해 A-4에서만 관리한다.
 
-**완료 조건**: ~~남은 세부 정책 확정~~ → ~~`Movie` 스키마~~ → ~~CRUD → export~~ (2026-09-09 완료,
-[progress.md](./progress.md)) → **앱 전환** → e2e 실검증.
-착수 계획과 순서는 [plans/lifecycle-alignment.md](./plans/lifecycle-alignment.md) §5-A.
+서버 API(2026-09-09)와 앱 전환(2026-09-12, [decisions/movie-client-cache.md](./decisions/movie-client-cache.md))은
+끝났다 — 닫힌 항목은 [닫은 항목](#닫은-항목). 남은 것:
 
-서버 API 는 2026-09-09 에 끝났고 **앱 전환은 2026-09-12 에 구현됐다**
-([decisions/movie-client-cache.md](./decisions/movie-client-cache.md) · 인수인계와 착수 계획은
-[archive/](./archive/README.md)). 아래는 그 결과다 — 닫힌 것은 취소선, 남은 것은 체크박스.
-
-- [x] ~~**`앱`** **무비 서버 전환**~~ — **2026-09-12 완료.** `entities/movie` 스토어는 서버 무비의 캐시 +
-      아웃박스가 됐고(훅 계약 유지, 34개 소비자 무변경), 생성은 `POST /movies/{id}/export` 로 간다.
-      무비 id 는 앱이 정한 uuid 를 서버가 받는다(`POST /movies` `id`, 멱등). 서버 계약 변경:
-      `Movie.jobId` 노출 · `PATCH` `clips: []` 허용 · 취소된 작업은 `draft` 로 보정. 기존 로컬 무비는
-      이관하지 않았다(스토어 v1 마이그레이션이 비운다). **실기기 미검증** — 아래 "서버 전환 실기기 검증"
-- [x] ~~**`앱`** **끝내기 버튼**~~ — **2026-09-12 완료.** `features/finish-movie`: ⋯ 시트의 끝내기 행과, 공유
-      시트가 올라온 뒤 감상 화면에 뜨는 안내 → "저장했나요?" 확인 시트 → `POST /movies/{id}/finish`.
-      시트를 연 것만으로는 부르지 않는다(MOV-18). 스토어 액션 `finishMovieJob` 은 `completeMovieJob` 로
-      바꿔 사용자의 끝내기(`useFinishMovie`)와 이름을 분리했다
-- [x] ~~**`앱`** **만료 표시 — 스냅 목록**~~ — **2026-09-27 완료**(A-4 3단계와 같은 변경,
-      [progress.md](./progress.md)). 스냅 칸에 "만료됨", 마지막 3일은 "N일 남음"(SNAP-13 — 그 전의 남은 기간은
-      화면에 없다), 만료 스냅은 무비에 담을 수 없다. 원본이 없는 만료 컷도 "만료"로 읽는다. 실기기 미검증은
-      A-4 의 실기기 검증 항목이 맡는다
-- [x] ~~**`앱`** **로컬 완료 알림 제거**~~ — **2026-09-12 완료.** export 전환과 같은 변경에서
-      `announce-job-end.ts` 의 성공 알림을 뺐다. 실패 알림은 서버가 보내지 않으므로 로컬로 남기고, 서버에서
-      읽어 온(`adopted`) 작업의 실패는 알리지 않는다. 스위치와 서버 판정의 정합은 **B-6**
-- [x] ~~**`앱`** **푸시 탭 라우팅**~~ — **2026-09-12 완료**([progress.md](./progress.md)).
-      `_app/providers/notification-tap-router.tsx` 가 FCM(`onNotificationOpenedApp`·`getInitialNotification`)과
-      로컬 알림 응답 두 채널을 듣고 `kind` 별 목적지(`movie_ready`·`movie_failed` → 무비, `snap_expiry` →
-      라이브러리)로 보낸다. cold start 는 네비게이터·로그인 준비 뒤 도달. **실기기 미검증** — Android 에서
-      FCM 과 expo-notifications 가 같은 탭을 둘 다 보고하는지(중복 억제 창 2초)를 확인해야 닫힌다
-- [x] ~~**`앱`** **모바일 기능 문서 갱신**~~ — **2026-09-12 완료.** movie.md 에 "Movies live on the server" ·
-      "Finishing it" 절을 추가하고 생성 경로·완료 알림·소유권·제한을 고쳤다. studio.md · snaps.md ·
-      README · app-shell · me.md · location-and-push 도 같은 변경에서
-- [ ] ~~**e2e 실검증**~~ — **2026-09-11 완료**. `media:e2e` 가 앱과 같은 길을 간다
-      (`POST /movies` → `export` → 무비에서 결과물 찾기). 실제 아이폰 영상으로는 2026-09-15 스트레스 검증(F)에서 돌았다
 - [ ] **`앱`** **서버 전환 실기기 검증** — 단위 테스트와 인메모리 목으로만 검증됐다.
       Android dev build 에서 실제 서버에 대해: ① 촬영 직후 담은 초안이 업로드가 끝난 뒤 서버에 생긴다
-      ② 편집이 PATCH 된다 ③ 생성 → **완성 푸시가 한 번만** 오고 탭하면 그 무비가 열린다(cold start 포함)
-      ④ 끝내기 → 결과물이 사라지고 초안으로 돌아온다 ⑤ ~~앱 삭제·재설치 → 로그인 → 무비 목록이 돌아온다~~ —
-      **2026-09-27 통과**: Galaxy S22 에서 재설치 뒤 무비 2개가 돌아왔다(오너 확인). 스냅 reconcile 이 같은 때 들어와
-      컷의 스냅도 함께 돌아온다(A-4) ⑥ 계정 전환 → 다른 계정 무비가 보이지 않는다.
+      ② 편집이 PATCH 된다 ③ 생성 → **완성 푸시가 한 번만** 오고 탭하면 그 무비가 열린다(cold start 포함 —
+      Android 에서 FCM 과 expo-notifications 가 같은 탭을 둘 다 보고하는지, 중복 억제 창 2초)
+      ④ 끝내기 → 결과물이 사라지고 초안으로 돌아온다 ⑤ 앱 삭제·재설치 → 로그인 → 무비 목록이 돌아온다 —
+      **2026-09-27 통과**(Galaxy S22, [progress.md](./progress.md) 2026-09-27) ⑥ 계정 전환 → 다른 계정 무비가 보이지 않는다.
       **완료 조건**: 여섯 가지가 통과하면 MOV-2·17·18·19·NTF-6 의 "실기기 미검증" 표기를 지운다
 
 - [ ] **`서버`** **`POST /edit-jobs` 폐기** — 결정 ⑤ 는 "한 버전 공존 후 폐기"다. 앱이 Movie export 로
       옮긴 릴리스의 **다음 릴리스**에서 제거한다. 시점을 항목으로 남기지 않으면 영구 공존이
       되어 editSpec v3 를 두 곳에 붙이게 된다(A-7 부착 지점)
 
-**스냅 15일 만료 구현**(SNAP-9·12·13) — 결정은 끝났고 값도 정해졌다(전원 15일 가정).
-구현 설계는 [plans/lifecycle-alignment.md](./plans/lifecycle-alignment.md) §5-C·§6:
-
-- [ ] ~~**만료 배치**~~ — **2026-09-09 완료**(`media:purge-expired`). 만료 시각을 행에 굳히지 않고 **업로드 시각 + 정책 값으로 유도**한다.
-      나중에 구독이 기간을 팔면 사용자마다 만료가 달라지는데, 유도 방식이어야 그것이 표현된다.
-      실행 방식은 계정 purge 배치(스케줄 + dry-run 기본)를 따른다
-- [ ] ~~**툼스톤과 만료 상태**~~ — **2026-09-09 완료**. 파일(원본·썸네일)은 지우고 행은 남겨 "만료됨"으로 보이게 하고,
-      `사용자 삭제`와 `기간 만료`를 구분한다(SNAP-12). 삭제는 **에셋 단위**로 나눠 두고,
-      **만료 → 실삭제 2단계**로 만들되 지금은 간격 0(나중에 복구를 팔면 이 값만 늘린다)
-- [ ] ~~**무비 완료 알림의 FCM 전환**~~ — **2026-09-11 완료**. 편집 워커가 큐에 넣고 Node 쪽
-      알림 워커가 발송한다([decisions/movie-ready-notification.md](decisions/movie-ready-notification.md)).
-      앱의 로컬 알림을 걷어내는 것은 위 `앱` 항목 "로컬 완료 알림 제거와 설정 정합" 이다
 - [ ] **무비가 참조 중인 스냅의 만료 예외 여부**(정책) — **2026-09-15 잠정 결정: 예외를 두지
       않는다**(현행 유지, 코드 변경 없음). **다음 회의 안건**이며, 다시 볼 때는 선택지 C(무비를
       편집하면 기간이 갱신)에서 시작하는 것이 빠르다. 검토한 선택지 넷과 기각 사유는
@@ -146,13 +100,6 @@
 - 프로모션·운영 보상 지급 기준
 - 고해상도 export의 추가 차감 여부 (현재 전 export 동일 100)
 
-**광고 보상 — 미결 값 없음(2026-08-18 전부 확정, A-2에서 닫힘)**: 정책 값과 불변 관계는
-[specs/credits-and-payment.md](./specs/credits-and-payment.md) ADR-1·ADR-6, 검증 규칙과 배경은
-[decisions/ad-reward-credits.md](./decisions/ad-reward-credits.md) §7. 실제 지급은 C-6(AdMob
-콘솔 설정)에만 막혀 있다. 다시 열릴 조건은 **파일럿 실측**뿐이며, 광고 순매출이 보상 원가를
-밑돌면 한도가 아니라 **보상량을 먼저 내린다**(한도 인하는 되돌릴 수 없는 혜택 축소).
-출처별 버킷·차감 우선순위는 v1 범위 밖 — 필요해지면 별도 결정 문서로 다룬다.
-
 **결정할 것 — 구독(보관 축)**: 용량 티어와 가격 · 연 구독 여부 · 구독 혜택에 워터마크
 제거·고해상도 export를 포함할지 · 무비 만료 알림 발송 시점.
 
@@ -163,9 +110,9 @@
   **정해지기 전까지 스냅 만료 구현은 전원 15일을 가정한다**
 - **용량 한도(2GB)를 존치할지** — 기간 만료가 누적을 대신 막아 평균 사용자는 닿지 않는다.
   권장은 폐기하고 남용 방지 상한만 별도로 두는 것(결정 문서 §후속 판단). SNAP-9 가 미결로 표시 중
-- ~~**만료 예고의 최소 리드타임**~~ — **2026-09-09 결정**: D-3 · D-1 두 번, KST 오전 10시 발송
-  ([decisions/expiry-notice-schedule.md](decisions/expiry-notice-schedule.md))
-  (SNAP-13). 사용자 구독 만료의 경우와 우리가 정책을 바꾸는 경우를 각각 정한다
+- [ ] **구독 만료·보관 정책 변경 때의 사전 고지** — 스냅 만료 예고(D-3 · D-1, KST 10시)는 정해졌지만
+  ([decisions/expiry-notice-schedule.md](decisions/expiry-notice-schedule.md)), 사용자 구독이 끝날 때와
+  우리가 보관 정책을 바꿀 때 언제 알릴지는 정해지지 않았다
 경계 규칙상 **구독에 크레딧을 얹는 안은 검토 대상이 아니다**
 ([decisions/storage-and-subscription-policy.md](./decisions/storage-and-subscription-policy.md) §4.3).
 
@@ -180,10 +127,8 @@
 
 ### A-3. 스냅 내용 분석 — 구현 완료, 생산 활성화 대기
 
-**2026-08-19 구현 완료**: 스키마·API·분석 워커·docker 배선이 들어갔다. 검증 내역은
-[progress.md](./progress.md), 방향과 계획 대비 차이는
-[decisions/snap-content-analysis.md](./decisions/snap-content-analysis.md) (§9).
-착수 전 계획 문서는 [archive/](./archive/video-analysis-implementation-plan.md)로 옮겼다.
+스키마·API·분석 워커·docker 배선은 2026-08-19 에 들어갔다([progress.md](./progress.md) 2026-08-19,
+계획 대비 차이는 [decisions/snap-content-analysis.md](./decisions/snap-content-analysis.md) §9).
 
 분석은 `POST /videos/:videoId/analysis` 로만 시작된다 — **업로드 시 자동 분석은 없다.**
 
@@ -197,22 +142,16 @@
 
 **막힌 이유**: 생산 스냅에 켤 수 없다. 아래 항목이 남았다.
 
-- [ ] **약관·개인정보처리방침 — 초안 완료, 법무 검토 대기** (2026-08-19). 분석 고지·수탁자·
-      국외 이전 절을 `routes/legal.ts` 초안에 넣었고 테스트가 전송 범위(프레임 4장·오디오
-      미전송·영상 삭제 시 동시 파기)를 문구에 고정한다. **남은 것은 아래 넷이며 전부
-      `routes/legal.ts` 상단 주석에도 적혀 있다.**
+- [ ] **약관·개인정보처리방침 — 초안 완료, 법무 검토 대기**. 분석 고지·수탁자·국외 이전 절을
+      `routes/legal.ts` 초안에 넣었다([progress.md](./progress.md) 2026-08-19). 남은 것
+      (`routes/legal.ts` 상단 주석에도 적혀 있다):
   - 사업자·모델 확정 (지금 문서는 OpenAI 전제, `OPENAI_VISION_MODEL` 은 잠정값)
-  - ~~보유 기간·학습 이용 여부~~ **2026-08-19 확인 완료** — 공개 문서 기준 학습 미이용,
-    남용 모니터링 로그 최대 30일. Responses API 의 `store` 기본값이 true 라 30일 보관 축이
-    하나 더 생기는 것을 발견해 워커에서 껐다. **남은 일은 계약 문구 대조와 DPA 체결**이며,
-    ZDR 승인을 받으면 보관 기간을 "없음" 으로 바꿀 수 있다
-  - ~~국외 이전 표의 나머지 수탁자 리전~~ **2026-08-19 확인** — Firebase(리전 지정 불가)·
-    RevenueCat(미국)·Sentry(미국, 우리 DSN 이 `ingest.us.sentry.io`)를 표에 채웠다.
-    **남은 것 둘**: ① AWS 는 `AWS_REGION=ap-northeast-2`(서울) 기준으로 "국외 이전 아님"이라고
-    적었지만 운영 배포가 없어(B-1) 아직 의도값이다 — 배포 시 실제 리전과 CloudFront 사용 여부
-    (엣지는 전 세계)를 확인해 확정할 것. ② Meta·TikTok 은 확인해 표에 내렸고(2026-08-19),
-    Apple·Google 은 **우리가 직접 보내지 않아** 표가 아니라 문장으로 관계만 적었다 — 이 취급이
-    맞는지는 법무 확인 대상. Sentry 보관 기간도 요금제(무료 30일 / 유료 90일) 확정 시 좁힌다
+  - [ ] **계약 문구 대조와 DPA 체결** — 보유 기간·학습 이용은 공개 문서로만 확인했다. ZDR 승인을
+    받으면 보관 기간을 "없음" 으로 바꿀 수 있다
+  - [ ] **AWS 리전 확정** — `AWS_REGION=ap-northeast-2`(서울) 기준으로 "국외 이전 아님"이라고 적었지만
+    운영 배포 전이라 의도값이다. 배포 시 실제 리전과 CloudFront 사용 여부(엣지는 전 세계)로 확정한다
+  - [ ] **Apple·Google 취급의 법무 확인** — 우리가 직접 보내지 않아 표가 아니라 문장으로 관계만 적었다
+  - [ ] **Sentry 보관 기간** — 요금제(무료 30일 / 유료 90일)가 정해지면 좁힌다
 - [ ] **광고(AdMob)가 법률 문서에 아예 없다** (2026-08-19 발견). 앱은
       `react-native-google-mobile-ads` 로 보상형 광고를 띄우는데 수집 항목·위탁·국외 이전
       어디에도 광고가 없다. 광고 SDK 는 광고 식별자와 기기 정보를 Google 로 보내므로 세 곳
@@ -248,54 +187,26 @@
 
 - [ ] 위치(`place`) 정보의 서버 저장 여부 — 프라이버시/약관 검토 선행
 - [ ] 비로그인 사용자의 스냅 지위 (현행: 업로드 워커가 로그인 시에만 동작)
-- [x] 앱이 이미 보유한 `capturedAt`을 `POST /videos`와 DB에 전달·저장 — **2026-09-09 완료**
-      (계약·마이그레이션·업로드 워커를 한 변경에서 갱신. 기존 행은 `createdAt` 폴백,
-      백필하지 않는다. SNAP-10 `구현됨`)
-- [x] 삭제 유예 기간 값 — **30일 확정**, 계정 삭제에 먼저 적용
-      ([decisions/account-deletion.md](./decisions/account-deletion.md))
 - [ ] egress 비용 실측 후 렌디션 기본 다운로드 정책 재평가
-- [x] ~~**`앱`** 선행 과제: 촬영 스냅 해상도 하드코딩(1080×1920) 해소~~ — **2026-09-12 완료**
-      ([progress.md](./progress.md)). 촬영 스냅도 파일에서 회전 반영 치수를 읽고(`shared/lib/video-metadata`,
-      네이티브 `VideoTrim.probe`), 못 읽은 스냅만 스탠드인을 **`dimensionsMeasured` 없이** 갖는다.
-      기존 라이브러리는 시작 시 백필(`SnapMetadataBackfill`)이 고친다. **서버 계약에는 아직 치수가 없다** —
-      `POST /videos` 에 `width`·`height` 를 싣는 것은 reconcile(3단계) 설계 때 함께 정하며, 그때
-      플래그 없는 스탠드인은 보내지 않는다
 
-**2026-09-09**: 로컬 파일을 언제 지울지는 결정됐다 — 최종 목표는 "로컬은 캐시"이되 **켜는 것은
-아래 두 단계가 실기기에서 검증된 뒤**로 연기한다(SNAP-14,
-[local-copy-after-upload.md](./decisions/local-copy-after-upload.md)). 그때까지 기기 파일이 원천이다.
-전환의 선행 작업이자 이 항목의 실질적 남은 일:
+로컬 파일은 최종적으로 캐시가 되지만 **켜는 것은 렌디션·동기화가 실기기에서 검증된 뒤로 연기**했다
+(SNAP-14, [local-copy-after-upload.md](./decisions/local-copy-after-upload.md)) — 그때까지 기기 파일이 원천이다.
+선행이던 렌디션(2단계)과 reconcile(3단계)은 Android 실기기 검증까지 끝났다([닫은 항목](#닫은-항목)). 남은 것:
 
-- [x] **2단계 — ingest 렌디션**: **2026-09-09 완료.** 업로드 확정 시 워커가 H.264/SDR 배포본 +
-      썸네일을 만들고 `playbackUrl`·`durationMs` 로 노출한다(`npm run worker:rendition`).
-      **3단계의 선행 조건이 풀렸다**
-- [x] ~~**`서버`·`앱`** **3단계 — reconcile**~~ — **2026-09-27 완료**(구현·Android 실기기 검증). 계획 [plans/snap-reconcile.md](./plans/snap-reconcile.md) 의
-      **0~3단계는 2026-09-27 구현 완료**([progress.md](./progress.md)) — E-8, 서버 계약(목록의 치수·`expiresAt`·
-      `clientId`, `POST /videos/lookup`, 렌디션 워커 치수), 앱 `features/reconcile-snaps`(더하기·제거 전파·만료
-      표시). Android 에뮬레이터 + 로컬 서버에서 "다른 기기 스냅" 도착·재생 시 받기·서버 삭제 전파·만료·무비 거절을
-      확인했다. **4단계 실기기 검증 — 2026-09-27 통과**([progress.md](./progress.md)): Galaxy S22 Ultra ·
-      Android 에뮬레이터 · iPhone 17 시뮬레이터를 같은 계정으로 붙여 ① 한 기기 촬영 → 다른 두 기기 도착과 **받은
-      사본의 화면**(휴대폰·iOS 정상), ③ 휴대폰 삭제 → 촬영한 기기의 원본까지 삭제, ④ 실제 정리 배치로 만료 →
-      두 기기 "만료됨"·촬영한 기기는 파일 유지와 재생을 확인했다. ② **실제 재설치**(휴대폰에서 앱 삭제 → 설치 →
-      로그인)에서 기기에서 사라진 자기 스냅 3개를 포함해 서버의 스냅 5개와 무비 2개가 모두 돌아왔다(무비는 오너
-      확인). ⑤ **계정 전환**에서 다른 계정의 스냅이 보이지 않는 것을, ⑥ **오프라인 복귀**에서 아무것도 지워지지 않는
-      것을 오너가 확인했다. iPhone 실기기 항목은 아래 "iOS 출시 전" 으로 옮겼다 — **1차 운영 배포 대상은 Android 만**
-      이다(2026-09-27 오너). ⚠️ 에뮬레이터는 받은 사본의 화면 확인에 쓸 수 없다 — Android 35 arm64 에뮬레이터의
-      디코더가 H.264 Main/High 프로필을 검은 화면으로 그린다(Baseline 만 정상)
+- [ ] **`앱`** **촬영 스냅 치수 실측의 실기기 확인** — 촬영 스냅이 파일에서 회전 반영 치수를 읽게 한
+      변경(2026-09-12)은 단위 테스트와 `swiftc -parse` 로만 확인했다. Android dev build 에서 세로·가로 촬영
+      각각 저장된 `width`·`height`·`orientation` 과 기존 스냅의 백필(`SnapMetadataBackfill`)을 확인하면 닫힌다
+
 - [ ] **iOS 출시 전 — iPhone 에서 찍은 스냅이 Android 에서 재생되는지** — 1차 운영 배포는 Android 만이라 지금은
       대상이 아니다(2026-09-27 오너). 아이폰 원본은 HEVC/HDR 이라 다른 기기는 렌디션(H.264/SDR)으로 재생하는데, 그
       변환은 워커 계약 테스트(합성 HDR10)로만 확인됐다 — 2026-09-15 스트레스 검증의 아이폰 영상은 H.264 였고,
       **실제 아이폰 HEVC·돌비비전 원본으로 돌린 적이 없다**(아래 F 의 돌비비전 항목과 같은 공백). iPhone 실기기가
       생기면 iPhone 촬영 → Android 도착·재생, 그리고 그 반대를 확인한다. iOS 시뮬레이터에서 받은 사본의 재생은 확인했다
-- [x] ~~**reconcile 착수 전 제품 결정 셋**~~ — **2026-09-27 권장안대로 결정**
-      ([decisions/snap-sync-across-devices.md](./decisions/snap-sync-across-devices.md)). ① 다른 기기에서 지운
-      스냅은 로컬 원본까지 지운다 ② 촬영한 기기의 만료 스냅은 파일을 두고 "만료됨", 무비에는 못 담는다
-      ③ 새 기기·재설치는 만료분을 되살리지 않는다. 스펙은 같은 변경에서 고쳤다 — SNAP-12 범위 조정,
-      SNAP-15·16 신설
 - [ ] **스냅 휴지통(삭제 유예)** — soft delete + 유예 후 실삭제는 결정돼 있지만
       ([snap-source-of-truth.md](./decisions/snap-source-of-truth.md) §1) 스냅 삭제에는 구현되지 않았다.
-      지금 서버는 삭제 즉시 파일을 지운다. reconcile 이 삭제를 모든 기기로 전파하면(위 ①) 한 번의 실수
-      삭제가 모든 기기에서 되돌릴 수 없게 되므로 필요성이 커진다. reconcile 과는 따로 낸다(계획 §6)
+      지금 서버는 삭제 즉시 파일을 지운다. reconcile 이 삭제를 모든 기기로 전파하므로
+      ([snap-sync-across-devices.md](./decisions/snap-sync-across-devices.md) ①) 한 번의 실수 삭제가 모든
+      기기에서 되돌릴 수 없게 된다. reconcile 과는 따로 낸다(계획 §6)
 - [ ] **전환을 켤 때 함께 볼 것**: 로컬이 캐시가 되는 순간 서버 만료(SNAP-9, 15일)가 곧 영상의
       소멸이 된다. 보관 기간·구독 연장과 **같은 자리에서** 판단한다
 
@@ -366,10 +277,6 @@ v3 는 **Movie export 에 붙인다** — `POST /edit-jobs` 는 한 버전 공�
       저작권 귀속 등 **법적 정책을 먼저 확인한 뒤 결정**한다 — 위 라이선스 조건은 AI 음원에도 그대로 적용된다.
       경로별 선택지·검토 항목 6개는 [decisions/bgm-sourcing.md](./decisions/bgm-sourcing.md)(미결)
 - [ ] `bgm_tracks` 스키마 신설 — `schema.prisma` 는 공유 파일이라 [team.md](./team.md) §2·§3 적용
-- [x] ~~골든 프레임·ffprobe 계약 테스트를 위한 **CI 의 ffmpeg 설치**~~ — **2026-09-15 완료.**
-      `tests/test_ffmpeg_contract.py` 가 진짜 ffmpeg 을 돌려 산출물을 검사한다(세로 1080x1920 ·
-      H.264/yuv420p · faststart · 실측 길이 · 세로 상한 · 무음 원본). "ffmpeg 없이 돈다" 는
-      관행은 유지한다 — 없으면 건너뛰되 `REQUIRE_FFMPEG=1`(CI 가 준다) 이면 **실패**한다
 - [ ] **스티커 팩 매니페스트 스키마** — 에셋 URL·앵커 적합성·무드 태그·스케일 범위·기본 모션.
       뒤로 미룰수록 마이그레이션 비용이 커진다(계획 §8.3).
       **설계는 확정됐다**(kickoff §1.2 C·D) — 앵커 어휘는 이미 공유 사전에 있고, 남은 것은
@@ -526,25 +433,12 @@ geofence 쿨다운 판정용 이력이 무한히 쌓인다. 쿨다운은 30분 �
 
 **결정할 것**: 보관 기간(감사 목적이 있는지), 정리 방식(주기적 삭제 / 파티셔닝).
 
-### B-5. API 계약을 스키마 우선으로 — Zod 계약 패키지 ★
+### B-5. API 계약 스키마 우선 — 남은 다듬기
 
-**결정됨** (2026-09-05): 계약의 원천을 `packages/shared-types`의 Zod 스키마 하나로 통일하고
-백엔드 검증·직렬화·OpenAPI와 모바일 타입·런타임 검증을 그 스키마에서 유도한다. 배경(여섯 겹
-사본)과 기각한 대안은 [decisions/api-contract-schema-first.md](./decisions/api-contract-schema-first.md).
+계약 원천 통일(1~5단계)은 끝났다([닫은 항목](#닫은-항목)) — 결정과 기각한 대안은
+[decisions/api-contract-schema-first.md](./decisions/api-contract-schema-first.md). 모바일 `shared/api`와
+`packages/shared-types`는 [team.md](./team.md) §2의 공유 surface라 변경에 양 트랙 합의가 필요하다.
 
-**왜 열려 있는지**: 단계가 다섯이고 각 단계가 독립 머지되어야 한다. 모바일 `shared/api`와
-`packages/shared-types`는 [team.md](./team.md) §2의 공유 surface라 4단계는 양 트랙 합의가 필요하다.
-
-- [x] 1. Fastify 5 + 플러그인 메이저 업 (`@fastify/rate-limit`·`swagger`·`swagger-ui`·`websocket`·`fastify-plugin`) — 2026-09-05
-- [x] 2. `schemas/responses.ts`·라우트 요청 인터페이스 → `packages/shared-types` Zod 스키마 (컴파일러가 Zod 전용이라 한 변경에서 전부) — 2026-09-05
-- [x] 3. OpenAPI 스냅샷 테스트 — `test/openapi-snapshot.test.ts`가 생성 스펙과 커밋된 `apps/api/openapi.json` 일치를 검사. 모바일 `api:pull` 제거, `api:gen`은 이 파일을 읽는다 — 2026-09-05
-- [x] 4. 모바일: `apiRequest`·`apiPath`가 `apiContract` 타입(타입 전용 import)에서 경로·메서드·query·body·응답 타입을 유도. `openapi-typescript`·`schema.d.ts`·`api:gen`/`api:check` 제거, `verify`가 `contract:build`를 먼저 실행 — 2026-09-05
-- [x] 5. `api-spec.md`를 "FE 가 다뤄야 할 동작 + WebSocket" 으로 축소, 필드 형태는 계약 파일·Swagger 로 위임 — 2026-09-05
-
-**완료 조건(충족)**: 엔드포인트 계약을 손으로 적는 곳이 `packages/shared-types` 하나이고, 모바일
-`verify`(typecheck)와 백엔드 테스트(`openapi-snapshot`)가 서버 실행 없이 그 계약과의 일치를 검사한다.
-
-**남은 후속** (계약 원천 통일 뒤의 다듬기):
 - [ ] 엔티티 경계의 Zod 를 계약 스키마의 **파생**(`videoSchema.pick(...)` 등)으로 바꾸기. 계약 패키지가
   앱 **런타임** 번들에 들어가므로 Metro 가 `dist`(또는 `react-native` export 조건으로 `src`)를 해석하는지,
   Jest 가 워크스페이스 심링크 밖 ESM 을 변환하는지 한 엔티티로 먼저 확인한다. 지금은 타입만 쓰고
@@ -552,12 +446,10 @@ geofence 쿨다운 판정용 이력이 무한히 쌓인다. 쿨다운은 30분 �
 - [ ] `openapi.json`의 `*Input` 사본 스키마 — type provider 가 입력/출력 레지스트리를 둘 다 내는 동작.
   무해하지만 Swagger 가독성을 위해 upstream 옵션이 생기면 끈다
 
-### B-6. ~~알림 설정의 서버 반영~~ — 2026-09-15 완료(서버)
+### B-6. 앱의 알림 설정을 서버에 쓰기
 
-`PATCH /auth/me` 가 `notificationEnabled` · `locationNotificationEnabled` ·
-`movieNotificationEnabled` · `quietStart` · `quietEnd` 를 받는다. 종류별로 나눈 이유와
-**만료 예고에만 종류별 스위치를 두지 않은 이유**는
-[decisions/notification-preferences.md](./decisions/notification-preferences.md).
+서버는 종류별 알림 설정을 받는다(`PATCH /auth/me`, 종류별로 나눈 이유는
+[decisions/notification-preferences.md](./decisions/notification-preferences.md)). 닫힌 서버 쪽은 [닫은 항목](#닫은-항목).
 
 - [ ] **`앱`** 설정 화면의 스위치를 `PATCH /auth/me` 로 쓰기. 지금은 기기 저장만이라 서버
       발송에 닿지 않는다. **조용한 시간도 서버로 보내야 실제로 억제된다** — 현재 앱의 조용한
@@ -770,48 +662,6 @@ cloudflared tunnel login                        # 브라우저 인증, 1회
 
 ## E. 코드 결함 / 판단 필요
 
-### E-1. ~~인스타 연동 토큰의 만료 시각이 `null` 이다~~ — 2026-09-15 코드 쪽 완료
-
-**남은 운영 조치**(인스타 재연동)는 G 섹션으로 옮겼다.
-
-코드 쪽은 "만료 시각을 모를 때 어떻게 다룰지" 가 판단 대기였고, **가짜 만료값을 넣지 않기로**
-했다 — 멀쩡한 토큰에 "재연동 필요" 가 뜨는 쪽이 더 나쁘다. 대신 셋을 한다.
-
-- **업로드 때 갱신을 한 번 시도해 진짜 만료 시각을 알아낸다.** 성공하면 데이터가 실제로
-  고쳐지고, 실패하면 오늘과 똑같이 현재 토큰으로 진행한다(되던 게시가 깨지지 않는다)
-- **게시가 실패하면 재연동을 안내한다.** 단정하지 않고 원인(플랫폼 응답)은 남긴 채 덧붙인다
-- **`GET /sns/connections` 가 `tokenExpiresAt` 을 싣는다.** `null` 은 "만료되지 않는다" 가
-  아니라 **"모른다"** 이며, 앱은 그 경우와 이미 지난 경우에 재연동을 안내할 수 있다
-
-### E-2. ~~`S3_PUBLIC_ENDPOINT` 미설정 시 기동 경고 로그~~ — 2026-09-11 완료
-
-`snsUploadReadiness()` 가 기동 시 판정해 불가하면 이유와 함께 경고 한 줄을 남긴다.
-**미설정만 보지 않는다** — `S3_PUBLIC_ENDPOINT=http://localhost:9200` 처럼 값이 있어도
-플랫폼이 도달하지 못하면 결과가 같으므로, 업로드 때와 같은 기준(사설/로컬 주소·https)으로
-판정한다. 전부 mock 이면 경고하지 않는다(실업로드를 하지 않는다).
-미설정 동작은 기존대로 "SNS 업로드 비활성 + 400" 이다.
-
-### E-3. ~~S3 삭제 실패분 정리 배치~~ — 2026-09-09 완료
-
-만료 정리 배치(`media:purge-expired`)의 세 번째 경로로 들어갔다 —
-`deleted_at` 은 있는데 `purged_at` 이 없고 키가 남은 행을 찾아 객체를 회수한다
-(`findOrphanedObjects`/`purgeOrphanedObjects`). 계정 purge 는 유저 prefix 전체를 지우므로
-**영상 단건** 회수는 이 경로가 맡는다.
-
-### E-4. ~~빌드한 이미지가 실제로 뜨는지 아무도 확인하지 않는다~~ — 2026-09-11 완료
-
-`deploy.yml` 이 **빌드 → 스모크 → 푸시** 순서가 됐다. 검사한 그 이미지에 태그만 붙여 올리므로
-검사 대상과 배포 대상이 갈라지지 않는다. 검사 내용은 [`scripts/smoke-images.sh`](../scripts/smoke-images.sh):
-
-- **API** — 이미지를 실제로 띄워 `/health` 가 `db=connected` 를 돌려주는지. `status:ok` 만 보면
-  마이그레이션이 실패해도 통과한다(뜨지만 아무 요청도 처리하지 못하는 상태)
-- **워커** — BGM 자산·ffmpeg/ffprobe·워커 3종 임포트. 경로는 `config.BGM_DIR` 에서 읽는다 —
-  스크립트에 다시 적으면 config 와 어긋나도 통과하고, 실제로 그렇게 숨었던 결함이다
-
-로컬에서도 같은 명령으로 돈다: `npm run smoke:images`.
-ai-worker 는 이미지가 커서 기동 대신 정적 검사만 한다 — 과거 두 결함(자산 누락·경로 어긋남)이
-모두 이 검사에 걸리므로 모델을 올리지 않고도 목적을 달성한다.
-
 ### E-5. BGM 무작위 선택이 같은 구성의 재현성을 깬다 ⚠️
 
 BGM 선택이 디렉터리 스캔 + `random.choice` 라
@@ -857,40 +707,13 @@ GHCR 패키지를 공개로 돌릴지도 정한다 — 공개면 새 개발자�
 **완료 조건**: 대체 여부 결정 → 바꾼다면 compose 3곳 + 문서 갱신 + `npm test -w apps/api`
 (통합 테스트가 MinIO 를 쓴다) 통과. 두기로 하면 이 항목을 "소스 빌드 미러 유지"로 좁혀 닫는다.
 
-### E-8. ~~영상 삭제·정리가 남의 파일을 지우고 제 파일은 남긴다~~ — 2026-09-27 완료
-
-**2026-09-27 재현하고 고쳤다**([progress.md](./progress.md)): 아래 두 결함 모두 실제 MinIO 객체로 쓴 통합
-테스트 5건이 수정 전 코드에서 실패했다. 영상을 지우는 모든 경로가 `services/video-assets.ts` 의 "그 행이
-소유한 객체"만 지운다. 개발 DB 의 업로드 완료 스냅은 원본을 잃지 않았다(HEAD 확인). 아래는 당시 기록이다.
-
-스냅 reconcile 계획을 세우며 코드를 읽다 찾았다. reconcile 은 서버 사본을
-복구 원천으로 믿기 시작하므로 그 전에 닫는다([계획](./plans/snap-reconcile.md) §5.1).
-
-1. **결과물 행이 원본 스냅의 파일을 지운다.**
-   - 무비 생성 시 결과물 `Video`(`kind: result`)는 원본 스냅의 `originalS3Keys` 를 복사해 갖는다
-     (`edit-job.service.ts` `createEditJob`).
-   - 생성을 취소하거나 결과물에 `DELETE /videos/{id}` 를 하면, 그 행은 `deletedAt` 은 있고 `purgedAt` 은
-     없는 상태가 된다.
-   - 그러면 `media:purge-expired` ③ 남은 객체 정리(`purgeOrphanedObjects`)가 그 키, 즉 **원본 스냅의
-     파일**을 지운다. 원본 행은 `ready` 로 남아 목록에 뜨고, 다시 만들기는 워커의 다운로드에서 실패한다.
-2. **렌디션이 지워지지 않는다.** 사용자 삭제(`deleteVideo`)도 만료·정리 배치(`assetKeysOf`)도
-   `renditionS3Key` 를 지우지 않는다. 지운 스냅이나 만료된 스냅의 재생 가능한 H.264 사본이 계정 purge 전까지
-   남는다 — "원본·썸네일·렌디션을 지운다"([lifecycle-alignment.md](./plans/lifecycle-alignment.md) §6-1)와
-   어긋난다.
-
-**완료 조건**: 행마다 자기가 가진 객체만 지운다. 결과물은 `editedS3Key`·`thumbnailS3Key` 만, 스냅은
-원본·썸네일·렌디션을 지운다. 통합 테스트 둘로 고정한다 — 취소 후 정리 배치를 돌려도 원본 스냅 키가 남고,
-삭제·만료 뒤에는 렌디션 키가 지워진다. 이미 파일을 잃은 원본 행을 찾는 방법을 함께 남긴다.
-
 ---
 
 ## F. 남은 실검증
 
-- [x] ~~HDR·장시간(수분)·10클립 상한 등 스트레스 케이스 (A 트랙)~~ — **2026-09-15 완료.**
-      실제 아이폰 영상(1080x1920 H.264 60fps)으로 검증했다. 10클립 43초·장시간 182초(96초 소요,
-      타임아웃 600초) 모두 정상. **HDR 에서 결함 하나를 찾아 고쳤다** — 픽셀은 SDR 로 내리고
-      색 태그는 PQ/bt2020 으로 남겨, 플레이어가 톤매핑을 한 번 더 걸었다(progress.md 참고).
-      **돌비비전 실물은 아직 미검증** — 합성 HDR10 으로만 확인했다. 실제 DV 영상이 생기면 재확인
+- [ ] **돌비비전 실물 원본으로 HDR 경로 확인** — 스트레스 검증(2026-09-15)의 HDR 수정은 합성 HDR10 으로만
+      확인했다. 실제 DV 원본이 생기면 편집 결과물과 렌디션 모두 다시 확인한다(아이폰 원본은 A-4 "iOS 출시 전"과
+      같은 공백)
 - [ ] 실BGM 기준 whisper 자막 인식 재확인 (현재는 dev BGM 기준으로만 확인)
 
 ---
@@ -907,13 +730,39 @@ GHCR 패키지를 공개로 돌릴지도 정한다 — 공개면 새 개발자�
       **틱톡 받은함 초안 3건은 지우지 않는다** — C-2("API 는 ok 인데 알림 미도착")의 유일한 증거물이라
       C-2 가 닫힌 뒤에 정리한다.
 
-### 닫은 항목 (다시 올리지 않기 위한 기록)
+---
 
-- **Firebase 서비스 계정 키** — 2026-08-11 로테이션 완료(새 키 발급 → `.env` 교체 → 기존 키 삭제).
-  키가 저장소에 들어온 적은 없다 — 이력 전체를 훑어도 private key 재료가 걸리는 곳은
-  [apps/api/test/fcm.test.ts](../apps/api/test/fcm.test.ts) 의 `fake` 픽스처뿐이고, `.env` 는 추적된 적이 없다.
-  레포 루트의 `snaply-66f8c-firebase-adminsdk-*.json` 도 이미 없으며 `.gitignore` 에
-  `*firebase-adminsdk*.json` 패턴이 있다.
-- **틱톡 Sandbox `client_key` 이력 노출** — 제거하지 않기로 판정했다. 준공개 식별자이고
-  짝이 되는 secret 은 이력에 없어 위험이 낮은 데 비해 history rewrite 비용이 크다.
-  근거와 판정이 달라지는 조건은 [sns-setup.md](./sns-setup.md) §3.
+## 닫은 항목
+
+닫힌 항목의 한 줄 색인이다 — 같은 일을 다시 올리지 않기 위해 둔다. 구현·검증 내역은
+[progress.md](./progress.md)의 같은 날짜 항목이 원천이다.
+
+- **A-1** 무비 서버 엔티티 · CRUD · export — 2026-09-09 → progress 2026-09-09 "촬영 시각 저장 · 무비 서버 엔티티"
+- **A-1** 스냅 15일 · 결과물 30일 만료 정리 배치(툼스톤, 만료 → 실삭제 2단계) — 2026-09-09 → progress 2026-09-09 "보관 기간 만료 정리 배치"
+- **A-1** 무비 완성 알림의 FCM 전환 — 2026-09-11 → progress 2026-09-11 "무비 완성 알림의 서버 전환"
+- **A-1** e2e 를 앱과 같은 무비 경로로 — 2026-09-11 → progress 2026-09-11 "이미지 스모크 검사 · e2e 무비 경로 전환"(실제 아이폰 영상은 2026-09-15 "스트레스 실검증")
+- **A-1** 앱의 무비 서버 전환 · 끝내기 버튼 · 로컬 완료 알림 제거 · 모바일 기능 문서 — 2026-09-12 → progress 2026-09-12 "무비 서버 전환 · 끝내기 · 완료 알림 정리"
+- **A-1** 푸시 탭 라우팅 — 2026-09-12 → progress 2026-09-12 "알림 탭 라우팅"(실기기 확인은 A-1 "서버 전환 실기기 검증" ③)
+- **A-1** 스냅 목록의 만료 표시 — 2026-09-27 → progress 2026-09-27 "스냅이 기기와 재설치를 넘어 보인다"
+- **A-2** 광고 보상 정책 값(20크레딧 · 일일 5회 · 쿨다운 300초 · 세션 TTL 300초) — 2026-08-18 → progress 2026-08-18 · [ad-reward-credits.md](./decisions/ad-reward-credits.md) §7
+- **A-2** 스냅 만료 예고 리드타임(D-3 · D-1, KST 10시) — 2026-09-09 → [expiry-notice-schedule.md](./decisions/expiry-notice-schedule.md) · progress 2026-09-09 "SNS 게시 자동 끝내기 · 만료 예고 알림"
+- **A-3** 분석 고지의 보유 기간 · 학습 이용 확인과 국외 이전 표의 수탁자 — 2026-08-19 → progress 2026-08-19 "약관·개인정보처리방침의 분석 고지 초안"
+- **A-4** `capturedAt` 전달 · 저장(SNAP-10) — 2026-09-09 → progress 2026-09-09 "촬영 시각 저장 · 무비 서버 엔티티"
+- **A-4** 삭제 유예 기간 30일(계정 삭제에 먼저 적용) — 2026-08-12 → [account-deletion.md](./decisions/account-deletion.md) · progress 2026-08-12 "계정 삭제 기능"
+- **A-4** 2단계 ingest 렌디션 — 2026-09-09 → progress 2026-09-09 "배포 렌디션 워커"
+- **A-4** 촬영 스냅 해상도 하드코딩 해소(앱) — 2026-09-12 → progress 2026-09-12 "촬영 스냅 해상도 하드코딩 해소"(실기기 확인은 A-4 에 남음)
+- **A-4** reconcile 착수 전 제품 결정 셋 — 2026-09-27 → [snap-sync-across-devices.md](./decisions/snap-sync-across-devices.md)
+- **A-4** 3단계 reconcile(구현 · Android 실기기 검증) — 2026-09-27 → progress 2026-09-27 "스냅이 기기와 재설치를 넘어 보인다" · "스냅 reconcile 실기기 검증"
+- **A-5** FE-BE 연동 범위 · 일정 확정 — 2026-09-02, 같은 개발자가 FE·BE 를 함께 맡게 되어 따로 둘 이유가 없어졌다
+- **A-7** CI 의 ffmpeg 설치(골든 프레임 · ffprobe 계약 테스트) — 2026-09-15 → progress 2026-09-15 "산출물 계약 테스트와 CI 의 ffmpeg"
+- **B-5** API 계약 스키마 우선 1~5단계 — 2026-09-05 → progress 2026-09-05 · [api-contract-schema-first.md](./decisions/api-contract-schema-first.md)(남은 다듬기는 B-5)
+- **B-6** 알림 설정의 서버 반영(서버) — 2026-09-15 → progress 2026-09-15 "알림 설정이 서버에 닿는다"(앱은 B-6 에 남음)
+- **E-1** 만료 시각을 모르는 인스타 토큰의 코드 대응 — 2026-09-15 → progress 2026-09-15 "만료 시각을 모르는 SNS 연동"(재연동은 G)
+- **E-2** `S3_PUBLIC_ENDPOINT` 기동 경고 — 2026-09-11 → progress 2026-09-11 "이미지 스모크 검사 · e2e 무비 경로 전환"
+- **E-3** S3 삭제 실패분 정리 배치 — 2026-09-09 → progress 2026-09-09 "보관 기간 만료 정리 배치" ③
+- **E-4** 빌드한 이미지의 스모크 검사(빌드 → 스모크 → 푸시) — 2026-09-11 → progress 2026-09-11 "이미지 스모크 검사 · e2e 무비 경로 전환"
+- **E-6** 낡은 Prisma 클라이언트 프리체크 — 2026-09-09 → progress 2026-09-09 "촬영 시각 저장 · 무비 서버 엔티티" ②
+- **E-8** 영상 삭제·정리가 자기 소유 객체만 지운다 — 2026-09-27 → progress 2026-09-27 "영상 삭제가 자기가 소유한 객체만 지운다"
+- **F** HDR · 장시간 · 10클립 스트레스 실검증 — 2026-09-15 → progress 2026-09-15 "스트레스 실검증과 HDR 색 태그 결함"(돌비비전 실물은 F 에 남음)
+- **G** Firebase 서비스 계정 키 로테이션(루트 키 파일 없음 확인 포함) — 2026-08-11 → progress 2026-08-11 "Firebase 서비스 계정 키 로테이션"
+- **G** 틱톡 Sandbox `client_key` 이력 노출 — 2026-08-11 제거하지 않기로 판정 → [sns-setup.md](./sns-setup.md) §3 "Sandbox client_key 의 이력 노출"
