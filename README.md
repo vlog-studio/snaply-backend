@@ -48,24 +48,7 @@ packages/
 | 지난 기록 | [docs/archive/](docs/archive/) | **현행 사실과 다를 수 있음 — 판단 근거로 쓰지 말 것** |
 
 문서를 새로 만들거나 옮길 때의 위치·이름 규칙은 [docs/doc-conventions.md](docs/doc-conventions.md)에 있다.
-요약: `docs/` 직하는 계속 갱신되는 문서, 한 시점에 굳는 문서는 `decisions/`·`plans/`·`meetings/`,
-수명이 끝나면 `archive/`. 파일명은 kebab-case 소문자(루트 진입점 4개와 `README.md`만 예외).
-
-### 결정 문서
-
-| 문서 | 내용 |
-|---|---|
-| [decisions/snap-source-of-truth.md](docs/decisions/snap-source-of-truth.md) | 스냅 원천을 서버로 전환 + 스토리지 용량 정책 결정. 한도 값은 아래 문서가 대체 |
-| [decisions/storage-and-subscription-policy.md](docs/decisions/storage-and-subscription-policy.md) | Free 한도 2GB 축소 + 무비 30일 보관 + 크레딧·구독 2축 분리 |
-| [decisions/env-management.md](docs/decisions/env-management.md) | 환경변수 — 파일은 로컬만, 운영은 주입. 목록의 단일 원천 |
-| [decisions/plan-limits.md](docs/decisions/plan-limits.md) | 구독 폐기 전 플랜 차등 집행을 보류했던 과거 결정과 근거 |
-| [decisions/credit-payment-model.md](docs/decisions/credit-payment-model.md) | 정기 구독 제거 + 무비 생성 크레딧 결제 전환 결정 (단위: export 1회 = 100크레딧) |
-| [decisions/payment-channel-iap.md](docs/decisions/payment-channel-iap.md) | 결제 채널을 Apple/Google IAP + RevenueCat으로 확정, Stripe 제거 |
-| [decisions/movie-model.md](docs/decisions/movie-model.md) | 영상 묶음 구조 3안 비교와 `Movie` 엔티티 채택 결정 |
-| [decisions/snap-content-analysis.md](docs/decisions/snap-content-analysis.md) | 스냅 내용 분석의 소비자·분석 시점(추천 요청 시점)·스파이크 착수 범위 결정 |
-| [decisions/template-snap-recommendation.md](docs/decisions/template-snap-recommendation.md) | 템플릿 기반 스냅 자동 추천 — 2단계 실행 구조, 카탈로그를 서버가 소유, 추천 1회는 무료 |
-| [decisions/ad-reward-credits.md](docs/decisions/ad-reward-credits.md) | 보상형 광고 크레딧 — 지급 경로(AdMob SSV)·검증 규칙·정책 값(§7) 확정 |
-| [decisions/account-deletion.md](docs/decisions/account-deletion.md) | 계정 삭제 — 30일 유예·복구·purge 정책 |
+결정 문서의 목록과 상태는 위 표의 [docs/decisions/README.md](docs/decisions/README.md) 인덱스가 원천이다.
 
 작업을 고를 때는 [docs/backlog.md](docs/backlog.md)에서 시작한다. 결정 문서는 선택한 항목의
 배경과 제약을 확인할 때만 따라간다. 구현을 마치면 백로그에서 닫고
