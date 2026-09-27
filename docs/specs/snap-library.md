@@ -74,7 +74,7 @@
 규칙: [decisions/snap-sync-across-devices.md](../decisions/snap-sync-across-devices.md) ·
 착수 계획: [plans/snap-reconcile.md](../plans/snap-reconcile.md)
 
-- **SNAP-15** `구현됨`(2026-09-27, Galaxy S22·Android 에뮬레이터·iOS 시뮬레이터에서 확인 — 실제 재설치·계정 전환은 미검증) — 같은 계정의 스냅은 **기기와 재설치를 넘어 보인다.** 다른 기기에서
+- **SNAP-15** `구현됨`(2026-09-27, Galaxy S22·Android 에뮬레이터·iOS 시뮬레이터에서 확인 — 실제 재설치·계정 전환 포함) — 같은 계정의 스냅은 **기기와 재설치를 넘어 보인다.** 다른 기기에서
   찍어 서버에 올라간 스냅은 로그인한 기기의 라이브러리에 나타나고, 처음 재생할 때 받아 온다.
   그런 스냅이 쓰인 무비도 그 기기에서 재생된다. 촬영 위치는 따라오지 않고(SNAP-11), 이미 만료된
   스냅은 나타나지 않는다(SNAP-12).
