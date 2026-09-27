@@ -53,7 +53,7 @@
 1. [Apple Developer → Certificates, Identifiers & Profiles → Keys](https://developer.apple.com/account/resources/authkeys/list)에서 **APNs 인증 키(.p8)** 를 생성하고 Key ID를 기록합니다(팀 ID도 필요).
 2. Firebase → **프로젝트 설정 → Cloud Messaging → Apple 앱 구성**에 `.p8` 키, Key ID, 팀 ID를 업로드합니다.
 
-> iOS는 이 앱 기준 **로컬 네이티브 빌드가 불가**하고 실기기 공기계도 아직 없어, 실제 수신 검증은 **EAS Build + 실제 iOS 기기**에서 진행합니다. (검증 환경 제약은 [`../workflows/local-development-and-testing.md`](../workflows/local-development-and-testing.md) 참고)
+> iOS 실제 수신은 실제 iOS 기기에서만 확인할 수 있는데, 지금은 검증용 iOS 기기가 없습니다. 네이티브 iOS 빌드는 Swift 6.2를 지원하는 Xcode가 있는 장비에서는 로컬로(`npm run ios`), 구형 Xcode(16.4) 장비에서는 **EAS Build**로 만듭니다 — 조건은 [`../workflows/local-development-and-testing.md`](../workflows/local-development-and-testing.md#environment-and-legacy-macos-limitation).
 
 ---
 

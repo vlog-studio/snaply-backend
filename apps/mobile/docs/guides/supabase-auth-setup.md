@@ -93,13 +93,13 @@ Google은 두 곳을 오갑니다. **Google Cloud Console에서 값을 발급**�
 
 **실제 소셜 로그인은 Expo Go에서 동작하지 않습니다.** 커스텀 딥링크 scheme과 브라우저 인증 세션(네이티브 모듈)이 필요하므로 **개발 빌드(dev client)** 로 실행해야 합니다.
 
-- **Android (이 Mac에서 로컬 가능):**
+- **Android:**
 
   ```bash
   npm run android          # 에뮬레이터. 실기기는 npm run android:device
   ```
 
-- **iOS:** 이 저장소 기준 macOS/Xcode 제약으로 로컬 네이티브 빌드가 어렵습니다. **EAS Build**로 개발 빌드를 만들어 시뮬레이터/기기에 설치하세요. (Expo Go로는 로그인 검증 불가.)
+- **iOS:** Swift 6.2를 지원하는 Xcode가 있으면 `npm run ios`로 로컬 개발 빌드를 만들고, 구형 Xcode(16.4) 장비에서는 **EAS Build**로 개발 빌드를 만들어 시뮬레이터/기기에 설치합니다 — 조건은 [`../workflows/local-development-and-testing.md`](../workflows/local-development-and-testing.md#environment-and-legacy-macos-limitation). (Expo Go로는 로그인 검증 불가.)
 
 ## 6. 동작 확인
 

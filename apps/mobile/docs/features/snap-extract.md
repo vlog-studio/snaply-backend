@@ -20,7 +20,7 @@ Users can bring a video they already have — the phone's gallery — into Snapl
 
 ## Status summary
 
-`Partial` — the flow is implemented end-to-end (picker → window → native trim → snap → background upload). Automated tests cover window math, duration fallback, sequential thumbnail extraction, playback boundaries, extraction re-entry and failure handling, native-adapter contracts, and the hand-off into the real snap store. The page-level gesture composition and the **new native module** still require device verification: Android on-device verification is pending, and iOS has not been built at all (the development Mac's Xcode cannot build SDK 57 natively). Web is excluded by design — videos never persist there.
+`Partial` — the flow is implemented end-to-end (picker → window → native trim → snap → background upload). Automated tests cover window math, duration fallback, sequential thumbnail extraction, playback boundaries, extraction re-entry and failure handling, native-adapter contracts, and the hand-off into the real snap store. The page-level gesture composition and the **native module** still require device verification: Android on-device verification is pending, and no iOS build has been made yet (a native iOS build needs an Xcode with Swift 6.2, or EAS Build — see [Local development and testing](../workflows/local-development-and-testing.md#environment-and-legacy-macos-limitation)). Web is excluded by design — videos never persist there.
 
 ## Behavior
 
@@ -55,7 +55,7 @@ Users can bring a video they already have — the phone's gallery — into Snapl
 
 ## Known limitations
 
-- Not yet verified on hardware; iOS additionally has never been compiled (Xcode constraint). The trim's real duration, passthrough behavior per codec, and long-video strip performance are all device questions.
+- Not yet verified on hardware, and iOS has never been compiled. The trim's real duration, passthrough behavior per codec, and long-video strip performance are all device questions.
 - Extraction length is capped at 5 seconds by product rule; a source shorter than 0.5 seconds is extracted whole (the floor governs cutting a moment down, not refusing one).
 - The picker's cache copy of the source is left to the OS to clean; extracting from a very large video temporarily doubles its cache footprint (copy + cuts).
 - The strip does not auto-scroll while the window's body is dragged against the viewport edge; scroll first, then drag.
