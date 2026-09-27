@@ -64,18 +64,11 @@ apiRequest (typed by the contract)  →  entities/<e>/api: Zod parse + map  → 
        [shared/api]                            [entities]                    [ui / model]
 ```
 
-- **`shared/api`** encapsulates transport: base URL, the `Authorization` header, the response envelope, HTTP status handling, and transport-error normalization into `ApiError`. It exposes `apiRequest`/`apiPath`, not DTOs.
-- **`entities/<entity>/api`** calls the client, validates the response with Zod where validation is warranted, and maps the DTO to the domain model. Keep query keys and query functions together in a `queryOptions` factory (`<entity>.queries.ts`) as shown in [`state-and-data.md`](../frameworks/state-and-data.md).
-- **`features/<action>`** owns mutations, including cache invalidation and optimistic updates. Place a mutation by the user action, not next to the read queries.
-- **`pages/<page>/api`** holds a composite endpoint or a mutation meaningful to only one screen.
+Where each step lives — queries, mutations, and their invalidation — follows [`state-and-data.md`](../frameworks/state-and-data.md#tanstack-query); the file-by-file skeleton is [cookbook §2](../conventions/cookbook.md#2-layered-data-flow-transport--dto--fetch--query-factory--consumer).
 
 Contract types are referenced **only** inside `shared/api` and at the input boundary of each slice's `api` segment. Do not let a contract type escape into `ui` or `model` — those see domain models only.
 
 Which slices own an `api` segment today is recorded in the [FSD ownership map](../features/README.md#current-fsd-ownership-map).
-
-## QueryClient and provider
-
-`src/_app/providers` owns the first `QueryClient`, the `QueryClientProvider`, and global retry/cache policy. Do not create a `QueryClient` singleton inside a feature or page.
 
 ## Authentication and error ownership
 

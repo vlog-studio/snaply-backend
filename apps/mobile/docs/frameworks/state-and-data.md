@@ -25,9 +25,7 @@ This project's standard tools are TanStack Query v5, Zustand, React Hook Form, Z
 - If a request retrieves one business entity, put it in `entities/<entity>/api`.
 - If it is a composite endpoint meaningful to only one screen, it may live in `pages/<page>/api`.
 - If no business entity exists yet and only an external API controller boundary is needed, put it in `shared/api/<controller>`.
-- Keep query keys and query functions together in a `queryOptions`-based factory rather than scattering them. The skeleton is [cookbook §4 (query key + options factory)](../conventions/cookbook.md#4-query-key--options-factory).
-
-Reuse query keys through the factory for invalidation. Do not repeat raw key arrays in UI code.
+- Keep query keys and query functions together in a `queryOptions`-based factory rather than scattering them. The skeleton and its rules are [cookbook §4 (query key + options factory)](../conventions/cookbook.md#4-query-key--options-factory).
 
 ### Mutation placement
 
@@ -54,7 +52,7 @@ Do not use Zustand as the default for all global state.
 5. If multiple pages share business state, identify the appropriate entity or feature owner.
 6. Consider `_app/store` only for app-wide technical state.
 
-A store should expose domain actions rather than a bag of values and setters. Components should subscribe through focused selectors instead of subscribing to the entire store.
+How a store exposes itself — domain actions and focused selector hooks, never the whole store — is the [cookbook §7](../conventions/cookbook.md#7-zustand-slice-single-writer--focused-selector-hooks) pattern.
 
 ## React Hook Form and Zod
 

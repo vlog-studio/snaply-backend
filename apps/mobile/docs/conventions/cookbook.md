@@ -156,8 +156,8 @@ const { data, isPending, error } = useQuery(locationQueries.nearby(origin));
 - Keep these responsibilities in separate files. Do not fetch-and-map inside a
   component, and do not let the transport client import a domain type.
 - The consumer receives the mapped **domain** type and passes the query `signal`
-  through the factory (§4). `QueryClient` is owned by `_app/providers`; never construct
-  one in a feature/page.
+  through the factory (§4); it uses the app's one `QueryClient`
+  ([state and data](../frameworks/state-and-data.md#queryclient)).
 - Place the query in `entities/<entity>/api` for a single entity, or `pages/<page>/api`
   for a screen-only composite (see [state and data](../frameworks/state-and-data.md#query-and-key-placement)).
 
@@ -204,13 +204,12 @@ export function mapLocation(dto: LocationDto): Location {
 - The mapper is the only place the wire shape exists. DTO field names must not appear
   anywhere else in the app.
 - Do not export the DTO type from the slice Public API — it is an internal wire detail.
-- Declare only the fields the app maps. Zod strips the rest, so a response field the app
-  ignores (`distanceMeters` here) costs nothing and does not belong in the schema.
-- Narrow a field to an enum only when the backend contract guarantees the set. A
-  server-side free-text field validated as a union fails the **whole** response the first
-  time an unseen value appears — and a caller that swallows the error (the geofence setup
-  does) turns that into a silent outage. Test the mapper: it is a pure function on a
-  contract that drifts.
+- Declare only the fields the app maps, and keep a field the server may extend wider
+  than an enum ([Zod validation policy](../workflows/api-contract-integration.md#zod-validation-policy)). Zod strips
+  undeclared fields, so a response field the app ignores (`distanceMeters` here) costs
+  nothing; a free-text field validated as a union fails the **whole** response, and a
+  caller that swallows the error (the geofence setup does) turns that into a silent
+  outage. Test the mapper: it is a pure function on a contract that drifts.
 
 ---
 
@@ -350,10 +349,8 @@ try {
 ```
 
 **Rules**
-- Transport/protocol error normalization lives only in `shared/api`.
-- Business errors (missing entity, mapping) belong to the entity/page `api`; action
-  failure and retry belong to the feature; screen-wide error UI belongs to the page
-  (see [state and data](../frameworks/state-and-data.md#error-and-loading-states)).
+- Transport/protocol error normalization lives only in `shared/api`; every other error
+  is placed by layer as [state and data](../frameworks/state-and-data.md#error-and-loading-states) lists it.
 
 ---
 
@@ -989,8 +986,8 @@ const submit = handleSubmit((values) => signIn(values.email, values.password));
 - `handleSubmit` returns a promise-returning function: call it as
   `onPress={() => void submit()}` rather than passing it directly, so the press event
   is not mistaken for a form event.
-- Read `isPending` from the action hook, not `formState.isSubmitting` — one source of
-  truth for a request in flight.
+- Read `isPending` from the action hook, not `formState.isSubmitting`
+  ([state and data](../frameworks/state-and-data.md#react-hook-form-and-zod)).
 - Do not forward `field.ref`. It serves focus management no screen here uses, and
   reading it during render trips the `react-hooks/refs` lint rule.
 
