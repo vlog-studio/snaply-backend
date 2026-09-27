@@ -4,7 +4,7 @@
 **상태**: 미결 — 결정 대기
 **출처**: [meetings/2026-08-31-dev-sync.md](../meetings/2026-08-31-dev-sync.md) §3 "스티커, 에셋확보(관리자페이지 도입 필요함)"
 **관련 문서**: [backlog.md](../backlog.md) A-7(스티커 팩 매니페스트 · 디자이너 커미션 · 관리자 페이지) · [edit-spec-v3.md](edit-spec-v3.md) §2 ·
-[plans/2026-08-31-dev-sync-follow-up.md](../plans/2026-08-31-dev-sync-follow-up.md) T6
+착수 순서는 [README.md](README.md) §결정 대기
 
 ## 한 줄 요약
 

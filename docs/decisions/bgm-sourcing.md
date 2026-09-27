@@ -4,7 +4,7 @@
 **상태**: 미결 — 결정 대기. 회의(2026-08-31)는 "AI 생성 음원의 법적 정책을 먼저 확인한 뒤 결정"으로 남겼다.
 **출처**: [meetings/2026-08-31-dev-sync.md](../meetings/2026-08-31-dev-sync.md) §2
 **관련 문서**: [backlog.md](../backlog.md) A-7 "BGM 조달 경로와 예산" · E-5 · [specs/movie.md](../specs/movie.md) MOV-7 · MOV-14 ·
-[storage-and-subscription-policy.md](storage-and-subscription-policy.md) §3 · [plans/2026-08-31-dev-sync-follow-up.md](../plans/2026-08-31-dev-sync-follow-up.md) T4
+[movie-cleanup-after-export.md](movie-cleanup-after-export.md) · 착수 순서는 [README.md](README.md) §결정 대기
 
 ## 한 줄 요약
 

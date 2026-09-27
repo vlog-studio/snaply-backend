@@ -4,7 +4,7 @@
 **상태**: 미결 — 결정 대기. 고정 도메인 작업(D-1)은 어느 답이든 필요하므로 도메인 작업을 막지 않는다.
 **출처**: [meetings/2026-08-31-dev-sync.md](../meetings/2026-08-31-dev-sync.md) §1 "Web hook 연동하려면 도메인 필요함"
 **관련 문서**: [sns-setup.md](../sns-setup.md) §웹훅 · [specs/sns-sharing.md](../specs/sns-sharing.md) SNS-5~7 · [backlog.md](../backlog.md) D-1 · B-1 · C-1 · C-6 ·
-[plans/2026-08-31-dev-sync-follow-up.md](../plans/2026-08-31-dev-sync-follow-up.md) T1
+착수 순서는 [README.md](README.md) §결정 대기
 
 ## 한 줄 요약
 
