@@ -4,7 +4,7 @@
 
 This directory is the product-level source of truth for behavior that is currently represented in the Snaply application. It complements the architecture guides: architecture documents define how code should be organized, while these documents record what users can currently do, which code owns that behavior, and which experiences are still prototypes.
 
-The inventory was reconciled with the integrated monorepo on 2026-09-02. Why the product is shaped this way — the snap → movie model, the four tabs, slot templates — is recorded in the monorepo's [decisions/product-concept.md](../../../../docs/decisions/product-concept.md), which is a decision record and not a description of the build.
+Why the product is shaped this way — the snap → movie model, the four tabs, slot templates — is recorded in the monorepo's [decisions/product-concept.md](../../../../docs/decisions/product-concept.md), which is a decision record and not a description of the build.
 
 ## Implementation status vocabulary
 

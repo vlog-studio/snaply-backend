@@ -106,7 +106,7 @@ A row the user moves out of the position its score was computed for **loses its 
 ## Ownership
 
 - `src/entities/movie-template` owns the template model, the read of the server catalog (`api/`), and the shipped fallback (`lib/movie-template-catalog.ts`). It reaches `entities/movie` for `MovieStyle` through `entities/movie/@x/movie-template.ts` — a type-only cross-reference, which is the one case the [boundary rules](../conventions/module-boundaries.md#entity-cross-reference-exception-x) allow it. The wire preset → `MovieStyle` decode lives in its `api` segment; the reverse lives in `features/compose-movie/api`, each in the segment that crosses that boundary.
-- `src/features/fill-template` owns stage 1 (`lib/match-template.ts`), the recommendation request and poll (`api/`, `model/use-template-recommendation.ts`), the merged slot state (`model/use-template-fill.ts`), and the studio's readiness read-out (`model/use-template-offers.ts`). `describeSession` and the `TemplateFill.summary` it feeds have **no renderer** since the `AI가 고른 이유` panel was removed; both are still unit-tested and are kept for whatever surface takes the reason line next. Do not treat them as live behavior.
+- `src/features/fill-template` owns stage 1 (`lib/match-template.ts`), the recommendation request and poll (`api/`, `model/use-template-recommendation.ts`), the merged slot state (`model/use-template-fill.ts`), and the studio's readiness read-out (`model/use-template-offers.ts`). `describeSession` and the `TemplateFill.summary` it feeds have **no renderer** (the reason panel is gone — see [What the NN% means](#what-the-nn-means-and-how-the-screen-says-so)); both are still unit-tested and kept for whatever surface takes the reason line next. Do not treat them as live behavior.
 - `src/pages/movie-template` owns the screen, the slot row, the column heading, and the camera round trip.
 - `src/pages/studio/ui/template-panel.tsx` owns the cards on the studio.
 - `src/features/compose-movie` owns `startMovieFromTemplate` and every rule about the movie it creates.
@@ -114,7 +114,7 @@ A row the user moves out of the position its score was computed for **loses its 
 
 ## Catalog policy
 
-The catalog moved to the backend on 2026-08-19 and the shipped constant became the fallback. It was a local constant on purpose before that — a catalog somebody has to keep running is a standing cost — and what changed the balance is that a slot now has **matching rules**. Those rules and the slot they belong to have to move together; a slot defined in the app with its rules on the server is a pair that drifts, and only one half of it gets fixed.
+The catalog lives on the backend, with the shipped constant as the fallback. A catalog somebody has to keep running is a standing cost, which a build constant avoids; what outweighs it is that a slot has **matching rules**. The rules and the slot they belong to have to move together — a slot defined in the app with its rules on the server is a pair that drifts, and only one half of it gets fixed.
 
 Rows are seeded by a migration rather than by a seed script, so a fresh environment cannot come up with an empty catalog and quietly fall back. Copy changes ship as migrations, which also means user-visible words do not change without a review.
 

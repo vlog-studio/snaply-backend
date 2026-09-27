@@ -49,8 +49,8 @@ Users can bring a video they already have — the phone's gallery — into Snapl
 - `src/pages/snap-extract` owns the screen: the strip layout math (`model/extract-strip-layout.ts`), source-duration reading, window-loop playback, sequential strip thumbnails, and the window/strip/page UI.
 - `src/features/extract-snap` owns the extraction action (`useExtractSnap`), the window limits (`MinExtractSec`, `MaxExtractSec`, `ExtractStepSec`), and extracted-snap metadata construction.
 - `src/shared/lib/video-trim` adapts the native module (web stub throws); `src/shared/lib/video-picker` adapts the system picker (web stub returns nothing).
-- `src/shared/lib/trim-geometry` is the px↔sec drag arithmetic, **promoted out of `pages/movie/model`** when this screen became its second consumer; the movie timeline imports it from shared now.
-- `src/shared/lib/video-thumbnails` gained the explicit-offset frame (`getVideoThumbnail(uri, { timeMs })`, offset-keyed cache) this strip needs.
+- `src/shared/lib/trim-geometry` is the px↔sec drag arithmetic this screen and the movie timeline share.
+- `src/shared/lib/video-thumbnails` supplies the explicit-offset frame (`getVideoThumbnail(uri, { timeMs })`, offset-keyed cache) this strip needs.
 - `src/app/extract.tsx` is the route adapter (`/extract?source&duration`), keying the page by `source` so a changed source is a fresh mount; the route presents as a `fullScreenModal` beside `/capture` in the root stack.
 
 ## Known limitations
