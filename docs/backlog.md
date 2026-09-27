@@ -20,34 +20,15 @@
 
 ### A-1. 영상 묶음(프로젝트) 구조 ★
 
-**결정됨**: 영상은 평면으로 보관하고, 편집할 클립을 참조하는 엔티티는 **`Movie`** 로 둔다.
-3안 비교와 채택 근거는 [decisions/movie-model.md](./decisions/movie-model.md).
-
-**①~⑤ 세부 규칙은 2026-09-09 결정 완료** —
-[decisions/movie-export-policy.md](./decisions/movie-export-policy.md):
-① 순서는 **촬영 시각 순이 기본, 사용자가 옮기면 고정**(`arranger`) ② 재내보내기는 **교체**
-(무비당 살아 있는 결과물 1개) ③ 무비를 지워도 **스냅은 남는다** ④ 자동 그룹핑은 **앱 표시만**
-(서버 제안은 A-6 후속) ⑤ `POST /edit-jobs` 는 **한 버전 공존 후 폐기**.
-
-⑥ **영상·프로젝트·결과물 생애주기 재정의**(2026-08-31 개발자 회의 제안 —
-[meetings/2026-08-31-dev-sync.md](./meetings/2026-08-31-dev-sync.md) §4) — **2026-09-09 세 축 모두 결정 완료.**
-
-| 축 | 결정 | 요구 |
-|---|---|---|
-| 스냅 보관 | 서버 원본은 업로드 후 **15일** 만료. 구독 연장은 미확정이라 구현은 전원 15일 가정(A-2) | SNAP-9·12·13 |
-| 로컬 파일 | 최종적으로 캐시가 되지만 **삭제를 켜는 것은 렌디션·동기화 검증 뒤로 연기**. 그때까지 기기 파일이 원천 | SNAP-14 |
-| 내보내기 후 | **끝내면 결과물 파일만 삭제, 프로젝트는 보존.** 다시 보기 없음, 다시 만들기는 유료(크레딧 100) | MOV-16~19 |
-
-근거: [snap-retention-period.md](./decisions/snap-retention-period.md) ·
+**결정됨**: 영상은 평면으로 보관하고, 편집할 클립을 참조하는 엔티티는 **`Movie`** 다
+([decisions/movie-model.md](./decisions/movie-model.md)). 세부 규칙 ①~⑤는
+[movie-export-policy.md](./decisions/movie-export-policy.md), 생애주기 세 축(스냅 보관 · 로컬 파일 · 내보내기 후)은
+[snap-retention-period.md](./decisions/snap-retention-period.md) ·
 [local-copy-after-upload.md](./decisions/local-copy-after-upload.md) ·
-[movie-cleanup-after-export.md](./decisions/movie-cleanup-after-export.md).
-
-⚠️ **구현 시 주의**: 로컬 삭제 전환을 켜는 시점에 **15일 만료와 겹쳐 영상이 완전히 사라지는 조합**이
-다시 열린다. 지금은 기기 파일이 남아 그 조합이 생기지 않는다.
-
-만료의 동작 구조(2단계 삭제 · 만료 스냅 식별 · 사전 알림)는
-[snap-retention-period.md](./decisions/snap-retention-period.md#만료의-동작-구조)에 있다. 위치 정보 저장
-여부는 이 항목과 분리해 A-4에서만 관리한다.
+[movie-cleanup-after-export.md](./decisions/movie-cleanup-after-export.md)가 원천이고, 요구는 SNAP-9·12·13·14 ·
+MOV-16~19 다. 만료의 동작 구조(2단계 삭제 · 만료 스냅 식별 · 사전 알림)는
+[snap-retention-period.md](./decisions/snap-retention-period.md#만료의-동작-구조). 위치 정보 저장 여부는 A-4 에서만
+관리하고, 로컬 삭제 전환과 15일 만료가 겹치는 문제는 A-4 "전환을 켤 때 함께 볼 것"이 맡는다.
 
 서버 API(2026-09-09)와 앱 전환(2026-09-12, [decisions/movie-client-cache.md](./decisions/movie-client-cache.md))은
 끝났다 — 닫힌 항목은 [닫은 항목](#닫은-항목). 남은 것:
@@ -76,22 +57,18 @@
       코드에 없다. 언제 지울지는 결정에 없으므로 구현 전에 정한다.
       **완료 조건**: 기본 꺼짐 설정과 삭제 경로가 테스트와 함께 들어간다
 
-같은 결정 §3.5의 "생성 완료 FCM 알림에 보관 기간 명시"의 선행 조건은 2026-09-11 에 풀렸다 —
-완료 알림이 서버 FCM 으로 옮겨져(`services/movie-ready-notice.service.ts`) 문구를 서버가 쥔다.
-남은 것은 그 본문에 결과물 30일 상한(MOV-16)을 적을지의 판단이며, 끝내기(MOV-17)가 붙은 뒤
-사용자가 실제로 결과물을 얼마나 방치하는지 보고 정한다.
+- [ ] **결과물 만료 안내** — 끝내지 않은 결과물의 30일 상한(MOV-16)을 어떤 알림으로 줄지 정해지지 않았다:
+      완성 알림 본문에 보관 기간을 적을지와 만료 전 알림을 언제 보낼지
+      ([storage-and-subscription-policy.md](./decisions/storage-and-subscription-policy.md) §3.5 는 본문 명시와
+      D-3 알림을 적었다). 완성 알림은 서버 FCM 이라(`services/movie-ready-notice.service.ts`) 문구를 서버가
+      쥔다. 끝내기(MOV-17)가 붙은 뒤 사용자가 실제로 결과물을 얼마나 방치하는지 보고 정한다
 
 ### A-2. 크레딧 결제 세부 정책 확정
 
-**결정·구현 완료분**: 과금 모델(구독 제거, export 1회 = 100크레딧 불변, 생성/보관 2축 분리),
-결제 채널(IAP + RevenueCat), 스토리지 정책(끝내지 않은 무비 결과물은 30일 상한 — 다시 만들기는
-새 생성이라 크레딧 100, 스냅은 기간 기준 — 무료 15일)은 확정됐다.
-현행 요구는 [specs/credits-and-payment.md](./specs/credits-and-payment.md)·
-[specs/snap-library.md](./specs/snap-library.md)·[specs/movie.md](./specs/movie.md)가,
-배경은 [decisions/](./decisions/)의 결제·스토리지 결정 3편이 담는다. 크레딧 원장·웹훅
-멱등 지급·export 예약/환급 등 백엔드 구현도 끝났다([progress.md](./progress.md) 2026-08-14).
-아래 미결 항목은 **코드가 아니라 값**이며,
-`apps/api/src/services/billing/credit-policy.ts` 의 숫자만 교체하면 닫힌다.
+과금 모델·결제 채널·보관 정책은 확정됐고 백엔드 구현도 끝났다([progress.md](./progress.md) 2026-08-14) —
+현행 요구는 [specs/credits-and-payment.md](./specs/credits-and-payment.md)·[snap-library.md](./specs/snap-library.md)·
+[movie.md](./specs/movie.md), 배경은 [decisions/](./decisions/README.md)의 결제·스토리지 결정이 담는다.
+크레딧 쪽 미결은 **코드가 아니라 값**이며 `apps/api/src/services/billing/credit-policy.ts` 의 숫자만 교체하면 닫힌다.
 
 **결정할 것 — 크레딧(생성 축)**:
 - 크레딧 팩별 **수량과 가격** (현재 500 / 1,200 / 3,000 은 잠정값이며 스토어 미등록)
@@ -101,7 +78,7 @@
 - 고해상도 export의 추가 차감 여부 (현재 전 export 동일 100)
 
 **결정할 것 — 구독(보관 축)**: 용량 티어와 가격 · 연 구독 여부 · 구독 혜택에 워터마크
-제거·고해상도 export를 포함할지 · 무비 만료 알림 발송 시점.
+제거·고해상도 export를 포함할지 (결과물 만료 안내는 A-1).
 
 2026-09-09 에 스냅 보관이 **기간 기준(업로드 후 15일)** 으로 바뀌면서
 ([snap-retention-period.md](./decisions/snap-retention-period.md)) 이 축에 세 가지가 더해졌다:
@@ -113,13 +90,13 @@
 - [ ] **구독 만료·보관 정책 변경 때의 사전 고지** — 스냅 만료 예고(D-3 · D-1, KST 10시)는 정해졌지만
   ([decisions/expiry-notice-schedule.md](decisions/expiry-notice-schedule.md)), 사용자 구독이 끝날 때와
   우리가 보관 정책을 바꿀 때 언제 알릴지는 정해지지 않았다
+
 경계 규칙상 **구독에 크레딧을 얹는 안은 검토 대상이 아니다**
 ([decisions/storage-and-subscription-policy.md](./decisions/storage-and-subscription-policy.md) §4.3).
 
-**앱에 전달할 것** (계약은 확정됐다): 잔액 조회 `GET /billing/credits`, 1회 차감량 100,
-잔액 부족 시 `402 INSUFFICIENT_CREDITS` (+`required`·`balance`). RevenueCat SDK의
-`app_user_id`를 **Snaply `User.id`로 고정**해야 웹훅이 지급 대상을 찾는다.
-`GET /auth/me` 응답에서 `plan` 필드가 제거됐으므로 앱이 이 값을 읽고 있으면 함께 정리한다.
+**앱에 전달할 것**: 잔액·차감·402 의 형태는 계약([`contract/billing.ts`](../packages/shared-types/src/contract/billing.ts) ·
+[`contract/movies.ts`](../packages/shared-types/src/contract/movies.ts))이 원천이다 — 무비 생성의 402 가 부족분
+숫자를 싣지 못하는 결함은 E-9.
 
 **완료 조건**: 위 수량·가격 확정 → `credit-policy.ts` 값 교체 → 양 스토어에 동일 상품 ID로
 등록 + RevenueCat 프로젝트·웹훅 URL 연결 → 구독을 팔기로 하면 entitlement 반영(용량 한도를 남기기로
@@ -142,27 +119,8 @@
 
 **막힌 이유**: 생산 스냅에 켤 수 없다. 아래 항목이 남았다.
 
-- [ ] **약관·개인정보처리방침 — 초안 완료, 법무 검토 대기**. 분석 고지·수탁자·국외 이전 절을
-      `routes/legal.ts` 초안에 넣었다([progress.md](./progress.md) 2026-08-19). 남은 것
-      (`routes/legal.ts` 상단 주석에도 적혀 있다):
-  - 사업자·모델 확정 (지금 문서는 OpenAI 전제, `OPENAI_VISION_MODEL` 은 잠정값)
-  - [ ] **계약 문구 대조와 DPA 체결** — 보유 기간·학습 이용은 공개 문서로만 확인했다. ZDR 승인을
-    받으면 보관 기간을 "없음" 으로 바꿀 수 있다
-  - [ ] **AWS 리전 확정** — `AWS_REGION=ap-northeast-2`(서울) 기준으로 "국외 이전 아님"이라고 적었지만
-    운영 배포 전이라 의도값이다. 배포 시 실제 리전과 CloudFront 사용 여부(엣지는 전 세계)로 확정한다
-  - [ ] **Apple·Google 취급의 법무 확인** — 우리가 직접 보내지 않아 표가 아니라 문장으로 관계만 적었다
-  - [ ] **Sentry 보관 기간** — 요금제(무료 30일 / 유료 90일)가 정해지면 좁힌다
-- [ ] **광고(AdMob)가 법률 문서에 아예 없다** (2026-08-19 발견). 앱은
-      `react-native-google-mobile-ads` 로 보상형 광고를 띄우는데 수집 항목·위탁·국외 이전
-      어디에도 광고가 없다. 광고 SDK 는 광고 식별자와 기기 정보를 Google 로 보내므로 세 곳
-      모두에 들어가야 하고, **Play 데이터 안전성 신고와도 맞물린다.** 어떤 식별자가 실제로
-      나가는지는 맞춤 광고 설정과 동의(UMP) 처리 방식에 달렸으므로, 그 정책을 먼저 정하고 쓴다.
-      이번 추천 기능과 무관하게 **출시 전 필수**다
-  - **법무 판단: 별도 동의가 필요한가.** "필요" 로 나오면 옵트인 UI 와 미동의 폴백이 새 작업이다
-      (결정 문서 §6 의 기각이 다시 열린다)
-
-  아직 출시 전이므로 **약관 "개정" 절차(사전 공지·재동의)는 필요 없다.** 출시 전 정식 문서화에
-  합치면 된다 — 페이지 상단의 "출시 전 초안" 배너가 그 작업의 표시다.
+- [ ] **약관·개인정보처리방침의 분석 고지 확정** — 초안은 `routes/legal.ts` 에 있다. 법무 검토와 남은 확정
+      항목(DPA · AWS 리전 · Apple·Google 취급 · Sentry 보관 기간 · 별도 동의 필요 여부)은 D-2 가 원천이다
 - [ ] **운영 모델 고정** — `OPENAI_VISION_MODEL` 기본값 `gpt-5.6-luna` 는 잠정값이다.
       실제 스냅으로 모델을 비교해 고정한다
 - [ ] **품질·단가 기준선** — 요약 사실성·핵심 사물/행동 포함률·환각 비율·`usableForEdit`
@@ -222,16 +180,14 @@
 
 **남은 것**
 - [ ] **활성화**: `MOVIE_RECOMMENDATION_ENABLED` 는 **기본 꺼짐**이다. 켜는 조건은 A-3 과 같다 —
-      법무 검토를 마친 약관·방침(초안은 2026-08-19 작성 완료)과 운영 모델 고정. 켜지 않으면
+      법무 검토를 마친 약관·방침(D-2)과 운영 모델 고정(A-3). 켜지 않으면
       추천 경로에서 분석이 돌지 않는다
-- [ ] **상한 값 재조정**: 후보 12개·24시간 20회는 잠정값이다(결정 문서 §4). A-3 의 단가 실측이
-      나오면 `services/recommendation/recommendation-policy.ts` 의 숫자만 바꾼다
-- [ ] **추천이 쓰이는 곳 결정** (2026-09-27, [계획](./plans/snap-analysis-recommendation-rollout.md) §4.3) —
-      지금은 템플릿 슬롯에만 쓰인다. (a) 템플릿 슬롯만 유지 · (b) 새 무비에 스타일 프리셋 추천·못 쓰는 컷
-      제외 제안·AI 배치 개선 · (c) 스튜디오에서 최근 외출로 무비 초안 제안 중에서 고른다. **권장은 (b)의
-      스타일 추천**(모델 문구를 노출하지 않으면서 결과가 보이고, 관심사 A-9 와 이어진다). (c)가
-      2026-08-31 개발자 회의의 "AI 추천 프로젝트"다 — 이 항목의 확장인지 별개 기능인지는 여기서 함께
-      정한다([meetings/2026-08-31-dev-sync.md](./meetings/2026-08-31-dev-sync.md) §5). A-3 의 실측 뒤에 정한다
+- [ ] **상한 값 재조정**: 추천 상한(REC-3, [specs/template-and-recommendation.md](./specs/template-and-recommendation.md))은
+      잠정값이다. A-3 의 단가 실측이 나오면 `services/recommendation/recommendation-policy.ts` 의 숫자만 바꾼다
+- [ ] **추천이 쓰이는 곳 결정** — 지금은 템플릿 슬롯에만 쓰인다. 선택지와 권장은
+      [plans/snap-analysis-recommendation-rollout.md](./plans/snap-analysis-recommendation-rollout.md) §4.3.
+      2026-08-31 개발자 회의의 "AI 추천 프로젝트"([meetings/2026-08-31-dev-sync.md](./meetings/2026-08-31-dev-sync.md) §5)가
+      이 항목의 확장인지 별개 기능인지도 여기서 함께 정한다. A-3 의 실측 뒤에 정한다
 
 **후속 후보(아직 열지 않음)**: 스튜디오의 템플릿 카드를 서버가 사용자 라이브러리 기준으로
 정렬하는 안, `다른 조합`(같은 템플릿에 다른 외출 제안).
@@ -262,32 +218,21 @@ v3 는 **Movie export 에 붙인다** — `POST /edit-jobs` 는 한 버전 공�
   MOV-9 가 안내한다. 새 라이브러리는 0이지만 **결정 문서가 선행**이다
 - **워터마크 결정이 레이어 설계 입력** — A-2에서 넣기로 하면 v3 `layers` 가 표현해야 한다
 - **BGM 음원이 없다** — `assets/bgm/` 에 README 뿐이라 비트 싱크·덕킹·무드 매칭이 전부 검증
-  불가다. 15~20트랙이면 착수 가능하며, **최종 사용자의 소셜 업로드 허용**과 Content ID 클레임
-  면제 조항이 있는 상업 라이선스여야 한다(없으면 사용자 영상이 무음 처리되고 CS 로 돌아온다).
-  확보는 F 의 "실BGM 기준 whisper 자막 인식 재확인"의 선행이기도 하다 — 그 검증 항목은 F 에 그대로 둔다
-- **스티커 에셋도 같은 함정이다** — 배치 코드가 완벽해도 아트가 없으면 검증할 게 없다. 스톡
-  라이선스 다수가 "최종 사용자가 파생물을 만드는 앱에 포함"을 금지해 이 제품 형태에 정확히 걸린다
+  불가다. 확보는 F 의 "실BGM 기준 whisper 자막 인식 재확인"의 선행이기도 하다
+- **스티커 에셋도 없다** — 배치 코드가 있어도 아트가 없으면 검증할 게 없다
 
 **결정할 것**
 
-- [ ] 번인 자막 전환 여부 (소프트 자막 폐기 = 사용자에게 보이는 변경, 재인코딩 1회 증가) —
-      선택지·결과는 [decisions/subtitle-rendering.md](./decisions/subtitle-rendering.md)(미결)
-- [ ] BGM 조달 경로와 예산 — Uppbeat / Epidemic Sound / Artlist 등, 위 라이선스 조항 확인 포함.
-      **AI 생성 음원**도 후보다(2026-08-31 개발자 회의 제안). 생성 음원의 상업 이용·소셜 업로드 허용·
-      저작권 귀속 등 **법적 정책을 먼저 확인한 뒤 결정**한다 — 위 라이선스 조건은 AI 음원에도 그대로 적용된다.
-      경로별 선택지·검토 항목 6개는 [decisions/bgm-sourcing.md](./decisions/bgm-sourcing.md)(미결)
+- [ ] 번인 자막으로 전환할 것인가 — [decisions/subtitle-rendering.md](./decisions/subtitle-rendering.md)(미결)
+- [ ] BGM 을 어디서 확보할 것인가(AI 생성 음원 포함)와 예산 — [decisions/bgm-sourcing.md](./decisions/bgm-sourcing.md)(미결)
 - [ ] `bgm_tracks` 스키마 신설 — `schema.prisma` 는 공유 파일이라 [team.md](./team.md) §2·§3 적용
 - [ ] **스티커 팩 매니페스트 스키마** — 에셋 URL·앵커 적합성·무드 태그·스케일 범위·기본 모션.
-      뒤로 미룰수록 마이그레이션 비용이 커진다(계획 §8.3).
+      뒤로 미룰수록 마이그레이션 비용이 커진다(trend-editing-pipeline §8.3).
       **설계는 확정됐다**(edit-spec-v3 결정 C·D) — 앵커 어휘는 이미 공유 사전에 있고, 남은 것은
       매니페스트 본문을 저장소에 들이는 일이다. 폰트는 woff2 가 아니라 TTF/OTF 여야 한다
-- [ ] **디자이너 커미션 여부와 스타일 방향** — 권장 40~60종 / 3~4스타일. 유니코드 이모지를 쓰면
-      플랫폼 기본 스티커와 구분되지 않아 제품의 이유가 사라진다
-- [ ] **관리자 페이지(에셋 관리) 도입 여부** — 2026-08-31 개발자 회의에서 스티커·에셋 확보의 전제로
-      제기됐다([meetings/2026-08-31-dev-sync.md](./meetings/2026-08-31-dev-sync.md) §3). 관리자 인증·권한
-      모델이 아직 없으므로 착수 전에 결정 문서(범위 · 인증 방식 · 팩 매니페스트 등록 UI 인지 파일 업로드만인지)가 선행이다.
-      조달 경로와 등록 경로(시드 스크립트 → 관리자 페이지)의 선택지는
-      [decisions/sticker-asset-sourcing.md](./decisions/sticker-asset-sourcing.md)(미결)
+- [ ] 스티커를 어디서 확보할 것인가(디자이너 커미션 여부와 스타일 방향) —
+      [decisions/sticker-asset-sourcing.md](./decisions/sticker-asset-sourcing.md) 결정 1(미결)
+- [ ] 스티커를 어떤 경로로 등록·관리할 것인가(관리자 페이지 도입 여부) — 같은 문서 결정 2(미결)
 - [ ] **세이프 에어리어 실측값** — 상단 약 10%·하단 약 20%·우측 버튼 레일은 추정치다.
       실기기 캡처가 필요하다. 값은 스펙에 굽지 않고 **버전드 팩**으로 둔다(edit-spec-v3 결정 B-3) —
       스펙에 값으로 넣으면 플랫폼 UI 가 바뀌어도 이미 저장된 스펙을 못 고친다
@@ -336,24 +281,17 @@ e2e 실검증.
 
 ### A-9. 관심사의 쓰임새 — 앱은 `준비 중`
 
-**왜 막혀 있는지**: 관심사를 읽는 곳이 없다. 앱은 고른 값을 기기에만 저장하고 `PATCH /auth/me` 로
-보내지 않았으며, 서버의 위치 알림 판단(`location.service.ts`)은 알림 스위치·조용한 시간·쿨다운만
-본다. 골라도 결과가 달라지지 않는 컨트롤이었으므로, 촬영 리마인더(2026-09-24)와 같은 기준으로 앱의
-편집 화면을 걷고 나 탭에 `준비 중` 으로 둔다(2026-09-26 오너 결정). 기기의 기존 선택값은 지우지 않았다.
-
-**2026-09-27**: 스냅 분석 추천 계획의 4단계로 묶였다
-([plans/snap-analysis-recommendation-rollout.md](./plans/snap-analysis-recommendation-rollout.md) §4.4).
-추천이 어디에 쓰일지(A-6 "추천이 쓰이는 곳 결정")가 정해진 뒤에 아래 첫 항목을 정한다.
+**왜 막혀 있는지**: 관심사를 읽는 곳이 없어, 앱은 고르는 화면을 걷고 나 탭에 `준비 중` 으로 두었다
+([progress.md](./progress.md) 2026-09-26). 무엇에 쓸지는 스냅 분석 추천 계획의 4단계에서 정한다
+([plans/snap-analysis-recommendation-rollout.md](./plans/snap-analysis-recommendation-rollout.md) §4.4 — 출처와
+소비처의 선택지). 추천이 어디에 쓰일지(A-6 "추천이 쓰이는 곳 결정")가 정해진 뒤에 아래 첫 항목을 정한다.
 
 **완료 조건** (스펙 ACC-5):
 
-- [ ] 관심사가 무엇을 바꾸는지 정한다 — 예: 위치 알림 장소 고르기(원래 의도), 또는 앱 안에서 템플릿
-      순서나 새 무비의 기본 스타일(태그 5개 중 `감성`·`여행`·`일상` 은 스타일 이름과 같다).
-      **관심사의 출처도 함께 정한다** — 사용자가 고르는 태그인가, 분석된 `topics` 를 모아 추정하는가
-      (추정이면 분석 결과를 사용자에게 보여주지 않는다는 ANA-2 와 맞는 표현이 필요하다)
+- [ ] 관심사가 무엇을 바꾸는지와 관심사의 출처를 정한다 — 계획 §4.4 의 선택지에 더해, 원래 의도는
+      위치 알림 장소 고르기였다
 - [ ] 그 소비처를 구현하고, 앱이 선택을 `PATCH /auth/me` 의 `interests` 로 보낸다
-- [ ] 나 탭의 `준비 중` 을 걷고 편집 화면을 되살린다(되살릴 `pages/me/ui/me-interests-page.tsx` 는
-      커밋 `c2e4077` 직전 이력에 있다)
+- [ ] 나 탭의 `준비 중` 을 걷고 편집 화면을 되살린다(되살릴 화면은 계획 §4.4)
 - [ ] 닉네임·아바타 수정 화면 — 서버는 받지만 앱에 화면이 없다(같은 ACC-5)
 
 ---
@@ -363,14 +301,12 @@ e2e 실검증.
 ### B-1. 배포 — 사내 서버 가동 ★
 
 **2026-09-15 방향 결정**: **사내 물리 서버**에 docker compose 로 올린다. 고른 이유는
-[decisions/on-prem-deployment.md](./decisions/on-prem-deployment.md), 절차는 [deployment.md](./deployment.md). 사내망 전용이라 **실사용자를 받을 수는 없고**
-팀 공용 통합 서버가 된다 — 외부에서 우리를 불러야 하는 SNS 게시·결제 웹훅·광고 검증은 mock 으로
-둔다. DB 는 같은 서버 컨테이너(Supabase 는 로그인 전용 유지). 실사용 서버는 그때 따로 만들며
-이미지·파이프라인은 그대로 재사용한다.
+[decisions/on-prem-deployment.md](./decisions/on-prem-deployment.md), 절차·시크릿·배치는
+[deployment.md](./deployment.md). 사내망 전용이라 실사용자는 받을 수 없고 팀 공용 통합 서버가 된다 —
+외부에서 우리를 불러야 하는 SNS 게시·결제 웹훅·광고 검증은 mock 이다(deployment.md §0).
 
-**2026-09-15 저장소 쪽 준비 완료** — 운영 compose 오버레이(`docker-compose.prod.yml`),
-self-hosted runner 배포 잡(`.github/workflows/deploy.yml`), 배치 cron·DB 백업(`deploy/`),
-절차 문서([deployment.md](./deployment.md)). **남은 것은 서버에서 하는 일**이다:
+저장소 쪽 준비(운영 compose 오버레이 · self-hosted runner 배포 잡 · 배치 cron · DB 백업)는 끝났다.
+**남은 것은 서버에서 하는 일**이다(단계는 deployment.md §1):
 
 - [ ] **`서버작업`** Docker 설치 · `snaply` 계정 · 저장소 체크아웃(`/opt/snaply`)
 - [ ] **`서버작업`** 시크릿 파일 `/etc/snaply/snaply.env` 작성 (개발 기본 자격증명 금지)
@@ -381,25 +317,10 @@ self-hosted runner 배포 잡(`.github/workflows/deploy.yml`), 배치 cron·DB �
 - [ ] **실사용 서버** — 사내망 전용이라 이 서버로는 사용자를 받을 수 없다. 외부 접속이 되는
       곳이 생기면 고정 도메인(D-1)과 SNS·결제·광고 mock 해제만 추가하면 된다
 
-**API 만 띄우면 안 된다** (2026-09-14 추가). 상주 프로세스와 스케줄 배치가 따로 있고, 빠뜨려도
-**배포는 성공하며 아무 에러도 나지 않는다** — 대신 알림이 영영 안 가거나 파일이 무한히 쌓인다.
-특히 만료 예고 배치는 "유예 없이 바로 삭제" 결정의 근거라, 삭제 배치만 돌고 예고 배치가 빠지면
-**사용자가 예고 없이 영상을 잃는다.**
-
-| 무엇 | 실행 | 주기 |
-|---|---|---|
-| API 서버 | `node dist/index.js` | 상주 |
-| 편집·분석·렌디션 워커 | `python worker.py` / `analysis_worker.py` / `rendition_worker.py` | 상주 |
-| **알림 발송 워커** | `node dist/notification-worker.js` | 상주 |
-| **만료 예고 알림** | `npm run media:notify-expiring -w apps/api -- --yes` | 매일 **KST 10시** |
-| 만료 정리(스냅·결과물·남은 객체) | `npm run media:purge-expired -w apps/api -- --yes` | 매일 1회(새벽) |
-| 계정 실삭제 | `npm run accounts:purge -w apps/api -- --yes` | 매일 1회 |
-| pending 영상 회수 | `npm run videos:purge-pending -w apps/api -- --yes` | 매일 1회 |
-
-예고와 정리를 **같은 시각에 묶지 말 것** — 조용한 시간대(기본 22-08시)에 예고를 보내면
-발송되지 않고 버려진다([decisions/expiry-notice-schedule.md](./decisions/expiry-notice-schedule.md)).
-또한 만료 예고 배치는 FCM 서비스 계정이 없으면 **시작하지 않고 멈춘다**(dry-run 을 발송으로
-기록하지 않기 위해서다) — `FIREBASE_SERVICE_ACCOUNT_KEY` 주입이 이 배치의 전제다.
+**API 만 띄우면 안 된다** — 상주 프로세스와 스케줄 배치를 하나라도 빠뜨리면 배포는 성공하고 에러도 없이
+알림이 영영 안 가거나 파일이 무한히 쌓인다. 특히 만료 예고가 빠진 채 정리만 돌면 사용자가 예고 없이
+영상을 잃는다. 배치 시각과 "예고와 정리를 같은 시각에 묶지 않는다"는 규칙은 [deployment.md](./deployment.md) §3,
+만료 예고가 FCM 서비스 계정 없이는 시작하지 않는 것은 §5 가 원천이다.
 
 **연결된 병목**: **고정 도메인**(D-1)이 SNS 콜백·결제(RevenueCat) 웹훅·Meta 검수의 전제 —
 B 트랙 잔여 검증이 전부 여기서 막힌다.
@@ -420,6 +341,9 @@ B 트랙 잔여 검증이 전부 여기서 막힌다.
 ([decisions/payment-channel-iap.md](./decisions/payment-channel-iap.md)). 결제 외 용도로
 `request.user`에 email을 싣는 것이 필요한지는 별도 판단이다. `plugins/auth.ts`는
 **공동 소유**라 변경 시 합의가 필요하다.
+
+**완료 조건**: email 이 필요한 기능이 생기면 공동 소유 합의 후 추가하고 닫는다. 그런 기능이 없다고
+판단되면 추가 없이 닫는다.
 
 ### B-4. `notification_logs` 보관 정책
 
@@ -469,7 +393,8 @@ geofence 쿨다운 판정용 이력이 무한히 쌓인다. 쿨다운은 30분 �
 [`credit-policy.ts`](../apps/api/src/services/billing/credit-policy.ts)의 `CREDIT_PACKS.productId`와
 **글자 그대로 일치**해야 한다. 어긋나면 웹훅이 지급량을 못 찾아 500으로 떨어진다(재시도로 복구는 된다).
 RevenueCat 웹훅 URL은 `POST /billing/webhook/revenuecat`, Authorization 헤더 값은
-`REVENUECAT_WEBHOOK_AUTH_TOKEN`과 같아야 한다.
+`REVENUECAT_WEBHOOK_AUTH_TOKEN`과 같아야 한다. 앱의 RevenueCat SDK 는 `app_user_id` 를
+**Snaply `User.id` 로 고정**해야 웹훅이 지급 대상을 찾는다(앱에는 아직 SDK 가 없다).
 
 **완료 조건**: A-2에서 크레딧 묶음 확정 → `credit-policy.ts` 값 교체 → 양 스토어 consumable 상품 등록 →
 RevenueCat 프로젝트·웹훅 URL 설정 → sandbox 구매 → 웹훅 수신 → 크레딧 지급 →
@@ -499,7 +424,8 @@ RevenueCat 프로젝트·웹훅 URL 설정 → sandbox 구매 → 웹훅 수신 
    (초안/Drafts 가 아니다 — 알림을 탭해야 편집 화면으로 들어간다)
 
 계정이 확정되면 "계정 불일치"인지 "Sandbox 가 실제 전달을 하지 않음"인지 갈린다.
-상세 기록은 [sns-setup.md](./sns-setup.md).
+조사 기록은 [archive/progress-integrations-2026-08.md](./archive/progress-integrations-2026-08.md)의
+"틱톡 — API 는 성공, 실물 미확인 (2026-08-10)" 절, 콘솔 쪽 대처는 [sns-setup.md](./sns-setup.md) §3 "틱톡 트러블슈팅".
 
 **완료 조건**: 받은함 알림 도착 확인. 또는 Sandbox 제약임이 확인되면 심사 통과 후 재검증.
 2026-08-31 개발자 회의에서 테스트 계정으로 "영상 업로드 정상 동작"이 보고됐으나 받은함 실물 도착까지
@@ -577,7 +503,7 @@ quiet hours 판정 → 기기 푸시 수신을 한 번 통과하고, 실패 시 
 로컬 `apps/api/.env` 에 키가 없어서, 분석·추천 경로를 실제 모델로 끝까지 돌린 적이 한 번도 없다.
 이 키가 [스냅 분석 추천 계획](./plans/snap-analysis-recommendation-rollout.md)의 1단계(A-3 "실제 모델로
 끝까지 한 번 돌리기")를 막고 있다. **개인 키가 아니라 회사 키**여야 한다 — 팀 스냅 프레임이 외부로
-나가고, 비용·데이터 보관 조건이 회사 계정 기준이어야 A-3 의 법무 검토(DPA·보관 기간)와 맞는다.
+나가고, 비용·데이터 보관 조건이 회사 계정 기준이어야 D-2 의 법무 검토(DPA·보관 기간)와 맞는다.
 
 **받을 때 확인할 것**
 - 회사 조직 안의 프로젝트 키로 받는다. 개발용과 운영용을 분리하면 운영 배포(B-1) 때 개발 키를
@@ -587,7 +513,7 @@ quiet hours 판정 → 기기 푸시 수신을 한 번 통과하고, 실패 시 
 - 프로젝트 사용 한도(예산 상한)를 걸 수 있는가 — 실측 중 비용이 새지 않게 한다
 - rate limit 등급 — `VIDEO_ANALYSIS_CONCURRENCY`(기본 3)를 얼마나 올릴 수 있는지의 상한이다
 - 데이터 보관: 워커는 `store: false` 로 보낸다. 남는 것은 남용 모니터링 로그 보관(공개 문서 기준 최대
-  30일)이며, ZDR 승인 가능 여부는 A-3 법무 항목의 입력이다
+  30일)이며, ZDR 승인 가능 여부는 D-2 법무 항목의 입력이다
 - 키는 커밋하지 않는다. 로컬은 `apps/api/.env`, 사내 서버는 `/etc/snaply/snaply.env`(B-1)에 둔다
 
 **완료 조건**: 키를 `apps/api/.env` 에 넣고 `docker compose up -d analysis-worker` 가
@@ -605,12 +531,7 @@ quiet hours 판정 → 기기 푸시 수신을 한 번 통과하고, 실패 시 
 URL prefix 소유권 검증을 다시 등록해야 한다.**
 
 `snaply.com` / `snaply.co` 는 제3자 소유이고 Cloudflare 가 아니라 named tunnel 을 쓸 수 없다
-(NS: linode.com). 스크립트는 준비돼 있다:
-
-```bash
-cloudflared tunnel login                        # 브라우저 인증, 1회
-./apps/api/scripts/dev-tunnel.sh <도메인>        # 터널·DNS·설정 자동
-```
+(NS: linode.com). 보유 도메인이 생기면 쓸 절차: [local-tunnel.md](./local-tunnel.md) §6.
 
 **2026-08-31 개발자 회의**: SNS 웹훅 연동에 HTTPS 도메인이 필요해 **사내 AWS 등록 현황을 파악한 뒤
 도메인을 추가**하기로 했다([meetings/2026-08-31-dev-sync.md](./meetings/2026-08-31-dev-sync.md) §1).
@@ -625,28 +546,37 @@ cloudflared tunnel login                        # 브라우저 인증, 1회
 ### D-2. 법률 문서 정식화
 
 `routes/legal.ts` 의 약관·개인정보처리방침은 **코드 기준으로 실제 수집 항목을 정확히 기술했지만
-법률 검토를 받지 않은 초안**이다(페이지 상단에도 표기). 앱 심사 제출·서비스 출시 전
-정식 문서로 교체해야 한다.
+법률 검토를 받지 않은 출시 전 초안**이다(페이지 상단에도 표기). 아직 출시 전이므로 약관 "개정" 절차
+(사전 공지·재동의)는 필요 없다 — 정식 문서화에 합친다. 남은 것(`routes/legal.ts` 상단 주석에도 적혀 있다):
 
-`LEGAL_CONTACT_EMAIL` 이 미설정이면 `support@snaply.app` 로 표시된다 — 실제 주소로 교체 필요.
+- [ ] **분석 고지** — 스냅 분석(A-3)을 생산 스냅에 켜기 전에 확정한다
+  - 사업자·모델 확정 (지금 문서는 OpenAI 전제, `OPENAI_VISION_MODEL` 은 잠정값 — A-3 "운영 모델 고정")
+  - [ ] **계약 문구 대조와 DPA 체결** — 보유 기간·학습 이용은 공개 문서로만 확인했다. ZDR 승인을
+    받으면 보관 기간을 "없음" 으로 바꿀 수 있다
+  - [ ] **AWS 리전 확정** — `AWS_REGION=ap-northeast-2`(서울) 기준으로 "국외 이전 아님"이라고 적었지만
+    운영 배포 전이라 의도값이다. 배포 시 실제 리전과 CloudFront 사용 여부(엣지는 전 세계)로 확정한다
+  - [ ] **Apple·Google 취급의 법무 확인** — 우리가 직접 보내지 않아 표가 아니라 문장으로 관계만 적었다
+  - [ ] **Sentry 보관 기간** — 요금제(무료 30일 / 유료 90일)가 정해지면 좁힌다
+  - [ ] **별도 동의가 필요한가**(법무 판단) — "필요"로 나오면 옵트인 UI 와 미동의 폴백이 새 작업이다
+    ([snap-content-analysis.md](./decisions/snap-content-analysis.md) §6 의 기각이 다시 열린다)
+- [ ] **광고(AdMob)가 법률 문서에 없다** — 앱은 `react-native-google-mobile-ads` 로 보상형 광고를 띄우는데
+      수집 항목·위탁·국외 이전 어디에도 광고가 없다. 광고 SDK 는 광고 식별자와 기기 정보를 Google 로 보내므로
+      세 곳 모두에 들어가야 한다. 어떤 식별자가 실제로 나가는지는 맞춤 광고 설정과 동의(UMP) 처리 방식에
+      달렸으므로 그 정책을 먼저 정하고 쓴다. 스토어 신고(App Store 개인정보·Play 데이터 안전성)는 C-6
+- [ ] `LEGAL_CONTACT_EMAIL` 이 미설정이면 `support@snaply.app` 로 표시된다 — 실제 주소로 교체
+
+**완료 조건**: 법무 검토를 거친 정식 문서로 교체하고 페이지 상단의 "출시 전 초안" 배너를 걷는다.
 
 ### D-3. URL prefix 소유권 검증 재등록
 
-틱톡은 검증할 prefix 가 **호스트별로 따로** 필요하고 **서명도 property 별로 따로** 발급된다:
+운영 도메인(D-1)이 정해지면 틱톡 URL prefix 소유권 검증을 그 호스트로 다시 등록한다. 검증할 prefix 두 곳
+(API 호스트 `/legal/` · 미디어 호스트 `/snaply-dev/`)과 서빙 방식·서명 발급 단위의 실측은
+[sns-setup.md](./sns-setup.md) §3 "URL prefix 소유권 검증". 운영에서 CloudFront 도메인 하나로 합쳐지면
+검증도 한 번으로 줄어든다. 운영에서도 **검증 파일 경로만은 익명 읽기**여야 한다 — 개발용
+`npm run dev:public-bucket` 은 로컬 MinIO 전용이라(`S3_ENDPOINT` 없으면 실행 거부) 운영에서는 쓰지 않는다.
 
-| prefix | 용도 | 서빙 방법 |
-|---|---|---|
-| `<API 호스트>/legal/` | 약관·개인정보 URL (콘솔 저장) | `routes/legal.ts` (`SITE_VERIFICATION_*`) |
-| `<미디어 호스트>/snaply-dev/` | 영상 URL (PULL_FROM_URL) | 버킷에 검증 파일 업로드 |
-
-운영에서 CloudFront 도메인 하나로 합쳐지면 검증도 한 번으로 줄어든다.
-`trycloudflare.com` 같은 공유 도메인도 파일 서빙 방식으로 검증된다는 것은 실측 확인했다.
-
-### D-4. 개발 버킷 익명 읽기 정책
-
-`npm run dev:public-bucket` 은 로컬 MinIO 전용이다(`S3_ENDPOINT` 없으면 실행 거부).
-운영에서는 CloudFront 가 공개 서빙하므로 이 스크립트를 쓰지 않는다.
-단, 틱톡 **검증 파일**은 익명 읽기가 필요하므로 운영에서도 그 경로만은 공개여야 한다.
+**완료 조건**: 운영 도메인에서 필요한 prefix 가 검증되고, 그 도메인의 영상 URL 로 PULL_FROM_URL 업로드가
+`403 URL ownership` 없이 통과한다.
 
 ### D-5. 만료된 광고 보상 세션 정리 배치
 
@@ -676,21 +606,12 @@ A-7 의 비트 싱크가 들어오면 컷 지점까지 달라져 피해가 커�
 
 ### E-7. MinIO 커뮤니티 이미지의 수명 — 로컬·CI·사내 서버 스토리지 대체 검토 ⚠️
 
-MinIO 가 **2026-09-11 에 Docker Hub 의 `minio/minio`·`minio/mc` 를 삭제했다.** 2025-10 무료 이미지
-배포 중단, 2026-02 OSS 저장소 아카이브에 이은 마지막 단계이며, 커뮤니티 에디션은 유료 AIStor 로
-대체되는 중이다. `npm run infra:up` 이 pull 거부로 깨져 compose 3곳(dev · 풀스택 · CI)을
-`quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z` 로 옮기고 **태그를 고정**했다(2026-09-23).
-이 태그는 amd64·arm64 둘 다 있다 — `.hotfix.*` 태그들은 amd64 만 있어 Apple Silicon 에서
-pull 이 실패하므로 태그를 올릴 때 매니페스트를 확인한다.
-
-**2026-09-25 quay.io 도 막혔다**(익명 pull 401). 위에서 걱정한 대로 CI · Deploy 가 같은 날 깨졌다.
-같은 릴리스를 **아카이브된 소스에서 빌드해 우리 GHCR 로 올리는 것**으로 옮겼다 —
-[`deploy/minio/Dockerfile`](../deploy/minio/Dockerfile)(태그 커밋 SHA 고정, 버전 문자열·커밋이
-업스트림 이미지와 같다), [`minio-image.yml`](../.github/workflows/minio-image.yml)(main 에서
-amd64·arm64 로 `ghcr.io/vlog-studio/snaply-backend/minio:RELEASE.2025-09-07T16-13-09Z` push).
-패키지는 비공개라 로그인 없이 받을 수 없으므로 [`scripts/ensure-minio-image.sh`](../scripts/ensure-minio-image.sh)
-가 받지 못하면 같은 Dockerfile 로 로컬 빌드한다(CI · Deploy 스모크 · `infra:up` · `stack` 이 부른다).
-이제 외부 배포처가 사라져도 깨지지 않는다 — 남는 의존은 GitHub 의 소스 아카이브와 Go 모듈뿐이다.
+MinIO 커뮤니티 에디션은 이미지 배포를 멈췄고(Docker Hub 이미지 삭제, quay.io 익명 pull 차단) 유료 AIStor 로
+대체되는 중이다. 지금은 같은 릴리스(`RELEASE.2025-09-07T16-13-09Z`)를 아카이브된 소스에서 빌드한 GHCR 미러를
+쓴다 — [`deploy/minio/Dockerfile`](../deploy/minio/Dockerfile) · [`minio-image.yml`](../.github/workflows/minio-image.yml) ·
+받지 못하면 로컬 빌드하는 [`scripts/ensure-minio-image.sh`](../scripts/ensure-minio-image.sh)
+([progress.md](./progress.md) 2026-09-25). 태그를 올릴 때는 amd64·arm64 매니페스트를 둘 다 확인한다
+(`.hotfix.*` 태그는 amd64 만 있어 Apple Silicon 에서 pull 이 실패한다).
 
 **왜 열려 있는지**: 미러는 공급 문제만 푼다.
 
@@ -769,6 +690,7 @@ GHCR 패키지를 공개로 돌릴지도 정한다 — 공개면 새 개발자�
 - **A-7** CI 의 ffmpeg 설치(골든 프레임 · ffprobe 계약 테스트) — 2026-09-15 → progress 2026-09-15 "산출물 계약 테스트와 CI 의 ffmpeg"
 - **B-5** API 계약 스키마 우선 1~5단계 — 2026-09-05 → progress 2026-09-05 · [api-contract-schema-first.md](./decisions/api-contract-schema-first.md)(남은 다듬기는 B-5)
 - **B-6** 알림 설정의 서버 반영(서버) — 2026-09-15 → progress 2026-09-15 "알림 설정이 서버에 닿는다"(앱은 B-6 에 남음)
+- **D-4** 개발 버킷 익명 읽기 정책 — D-3 에 합쳤다(운영의 검증 파일 경로 익명 읽기)
 - **E-1** 만료 시각을 모르는 인스타 토큰의 코드 대응 — 2026-09-15 → progress 2026-09-15 "만료 시각을 모르는 SNS 연동"(재연동은 G)
 - **E-2** `S3_PUBLIC_ENDPOINT` 기동 경고 — 2026-09-11 → progress 2026-09-11 "이미지 스모크 검사 · e2e 무비 경로 전환"
 - **E-3** S3 삭제 실패분 정리 배치 — 2026-09-09 → progress 2026-09-09 "보관 기간 만료 정리 배치" ③
