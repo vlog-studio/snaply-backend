@@ -4,6 +4,7 @@
 **상태**: 결정 — 선택지 **B**. 로컬을 캐시로 내리는 것이 목표이되, 실제로 삭제를 켜는 시점은
 **서버 원천 전환 2단계(렌디션)·3단계(앱 동기화)가 실기기에서 검증된 뒤**로 미룬다.
 그때까지 앱의 로컬 파일이 계속 원천이다.
+§결정 기록 앞의 요약·설명·선택지·권장은 결정 요청(2026-09-05) 당시의 기록이며, 확정 내용은 §결정 기록이다.
 **출처**: [meetings/2026-08-31-dev-sync.md](../meetings/2026-08-31-dev-sync.md) §4 "서버 업로드 성공하면 로컬은 삭제"
 **관련 문서**: [snap-source-of-truth.md](snap-source-of-truth.md) §1·§5 · [specs/snap-library.md](../specs/snap-library.md) SNAP-6~8 ·
 [apps/mobile/docs/features/snaps.md](../../apps/mobile/docs/features/snaps.md) §Backend upload sync · [backlog.md](../backlog.md) A-1 ⑥ · A-4

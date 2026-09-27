@@ -6,6 +6,7 @@
 편집 화면에서 다시 고쳐 다시 생성할 수 있다(새 생성이므로 크레딧 100 을 다시 낸다).
 선택지 A 를 **결과물 축에만** 적용한 형태다 — 화면 비교는
 [movie-cleanup-ux-comparison.md](movie-cleanup-ux-comparison.md).
+§결정 기록 앞의 요약·설명·선택지·권장은 결정 요청(2026-09-05) 당시의 기록이며, 확정 내용은 §결정 기록이다.
 **출처**: [meetings/2026-08-31-dev-sync.md](../meetings/2026-08-31-dev-sync.md) §4 "내보내기(완성하면 프로젝트 삭제!)", "vlog … 진행하면 삭제!"
 **관련 문서**: [specs/movie.md](../specs/movie.md) MOV-4 · MOV-14 · MOV-16 · [storage-and-subscription-policy.md](storage-and-subscription-policy.md) §3 ·
 [movie-model.md](movie-model.md) · [backlog.md](../backlog.md) A-1 ⑥ · A-7(에셋 영구 라이선스)
