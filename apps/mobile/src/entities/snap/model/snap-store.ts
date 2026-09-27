@@ -24,8 +24,10 @@ const SnapStoreName = 'snaply.snaps';
  * signed-in user's own store file, and nothing is read until it does. A library
  * is what its owner captured, not what the device holds.
  *
- * Once snaps move to a backend, this becomes a server-backed query/mutation and
- * the local persistence is dropped.
+ * The server holds the account's snaps as well, and snaps from other devices
+ * arrive through `features/reconcile-snaps`; this store stays, headed for being
+ * a cache of the server's copy rather than dropped (root
+ * docs/decisions/local-copy-after-upload.md).
  *
  * Snaps are immutable originals: callers add and remove whole snaps; movie edits
  * (trim/order) live on the movie's references, never here. `addSnap` takes a

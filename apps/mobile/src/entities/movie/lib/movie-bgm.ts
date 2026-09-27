@@ -9,8 +9,8 @@ export type MovieBgmOption = {
  * The background tracks a movie can be scored with.
  *
  * **Nothing shows these to the user, and nothing sends one to a run
- * (2026-08-13).** `POST /edit-jobs` takes no track id — the pipeline picks the
- * music from the style preset — so the picker that used to stand in the 세부
+ * (2026-08-13).** A run (`POST /movies/{id}/export`) carries no track id — the
+ * pipeline picks the music from the style preset — so the picker that stood in the 세부
  * sheet was choosing something the finished movie then contradicted. The
  * catalog stays because `Movie.bgm` is still stored and templates still name a
  * track: this is the seam a real `GET /bgms` lands on, not a live setting.

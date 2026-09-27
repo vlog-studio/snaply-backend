@@ -205,10 +205,11 @@ export type Movie = {
   /**
    * Track identifier from the BGM catalog. Stored and defaulted, but **read by
    * nothing** since 2026-08-13: the pipeline scores a run from the style preset
-   * and `POST /edit-jobs` takes no track id, so no screen offers or names one.
+   * and a run (`POST /movies/{id}/export`) carries no track id, so no screen
+   * offers or names one.
    */
   bgm: string;
-  /** Whether generation should burn in automatic subtitles. */
+  /** Whether a run adds automatic subtitles (MOV-9: opt-in; a soft track, not burned in). */
   captions: boolean;
   /** Only 9:16 for now; stored so a movie keeps its ratio when others arrive. */
   ratio: '9:16';
@@ -243,7 +244,7 @@ export type Movie = {
    * copy** — the backend is explicit that `errorMessage` is for diagnosis and
    * the app words `error` from the failure's classification code instead
    * (2026-08-13). Kept because "서버 오류" alone is nothing to report a bug
-   * with; shown only as a demoted detail line under the worded reason.
+   * with; never drawn — the screen shows only the worded reason.
    */
   errorDetail?: string;
 };
