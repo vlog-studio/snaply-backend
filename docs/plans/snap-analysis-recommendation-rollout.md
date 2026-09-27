@@ -53,11 +53,11 @@
 2. **로컬 `apps/api/.env` 에 `OPENAI_API_KEY` 가 없다.** 키가 없으면 분석 워커는 기동 단계에서
    스스로 종료된다(의도된 동작).
 3. **실제 모델 응답으로 끝까지 돌린 적이 없다**([progress.md](../progress.md) 2026-08-19). 통합 테스트는
-   분석 결과 행을 직접 만들어 채점 경로만 검증했다. 운영 모델 `gpt-5.6-luna` 도 잠정값이다.
+   분석 결과 행을 직접 만들어 채점 경로만 검증했다. 운영 모델(`OPENAI_VISION_MODEL` 기본값)도 잠정값이다.
 4. **템플릿 경로에만 붙어 있다.** 새 무비(스냅 골라 만들기)의 "AI 배치"는 촬영 시각 정렬이 전부이고
    분석 결과를 읽지 않는다([movie.md](../../apps/mobile/docs/features/movie.md) `arranger`).
-5. **첫 추천이 느리다.** 분석은 추천 요청 시점에만 돌기 때문에 후보 최대 12개를 동시성 3으로 분석할
-   때까지 기다린다. 마감 시한은 3분(`SCORING_DEADLINE_MS`)이다.
+5. **첫 추천이 느리다.** 분석은 추천 요청 시점에만 돌기 때문에 후보(최대 `MAX_RECOMMENDATION_CANDIDATES`)를
+   `VIDEO_ANALYSIS_CONCURRENCY` 동시성으로 분석할 때까지 기다린다. 마감 시한은 `SCORING_DEADLINE_MS` 다.
 
 ---
 
@@ -139,8 +139,7 @@
   분석 결과를 사용자에게 노출하지 않는다는 원칙([snap-content-analysis.md](../decisions/snap-content-analysis.md) §2)과
   충돌하지 않는 표현이 필요하다.
 - **소비처**: 템플릿 카드 순서, 새 무비 기본 스타일의 사전값(3단계 (b)).
-- **앱**: 선택을 `PATCH /auth/me` 의 `interests` 로 동기화하고, 나 탭의 `준비 중` 을 걷고 편집 화면을
-  되살린다. 되살릴 화면(`pages/me/ui/me-interests-page.tsx`)은 커밋 `c2e4077` 직전 이력에 있다.
+- **앱**: 동기화·`준비 중` 걷기·편집 화면 복구의 구현 항목은 [backlog.md](../backlog.md) A-9 에만 둔다.
 
 ### 4.5 5단계 — 운영에서 켠다
 
