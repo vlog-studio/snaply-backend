@@ -707,6 +707,18 @@ GHCR 패키지를 공개로 돌릴지도 정한다 — 공개면 새 개발자�
 **완료 조건**: 대체 여부 결정 → 바꾼다면 compose 3곳 + 문서 갱신 + `npm test -w apps/api`
 (통합 테스트가 MinIO 를 쓴다) 통과. 두기로 하면 이 항목을 "소스 빌드 미러 유지"로 좁혀 닫는다.
 
+### E-9. 무비 생성의 402 가 부족분 숫자를 싣지 못한다
+
+무비 생성 `POST /movies/{id}/export` 의 402 응답 스키마가 `apiErrorSchema` 라
+(`packages/shared-types/src/contract/movies.ts:241`) `INSUFFICIENT_CREDITS` 의 `required`·`balance` 가
+응답에서 빠진다. 두 필드는 `POST /edit-jobs` 의 `paymentRequiredErrorSchema`(`contract/edit-jobs.ts:151`)에만
+선언돼 있고, 선언되지 않은 키는 응답 직렬화에서 지워진다(`contract/common.ts` 의 `apiErrorWith` 주석).
+서버는 값을 싣는다(`apps/api/src/services/credit.service.ts:105`). 그래서 앱은 부족분 숫자 없이 일반
+문구만 보인다 — `features/compose-movie/lib/read-credit-shortfall.ts` 는 두 필드가 없으면 숫자를 그리지 않는다.
+
+**완료 조건**: export 의 402 를 `paymentRequiredErrorSchema` 로 선언 · `apps/api/test/movies.test.ts` 에 402
+`required`·`balance` 단언 추가 · `npm run openapi:write -w apps/api` 로 스냅샷 재생성 · `npm test -w apps/api` 통과.
+
 ---
 
 ## F. 남은 실검증
