@@ -28,11 +28,12 @@ undo than the duplication was.
   A change to one is a bug in the other.
 - **They already drifted.** Two spellings of the same status, two paddings for the same
   component. The drift is the proof, and it is the most persuasive kind of finding.
-- **One copy has a fix the other lacks.** A guard, a cleanup, a race fix. Here duplication is
-  the smaller half of the finding — lead with the behavioral difference. Diff them properly
+- **One copy has a fix the other lacks** — typically a call site that reimplements a shared
+  helper inline. A guard, a cleanup, a race fix. Here duplication is the smaller half of the
+  finding — lead with the behavioral difference. Diff them properly
   before writing it up; "these differ subtly" without saying how is not actionable.
-- **A comment admits it.** "Same shape as X", "mirrors Y", "kept in sync with Z". Someone
-  noticed and deferred. Quote the comment — it is the justification, pre-written.
+- **A comment admits it.** "Same shape as X", "mirrors Y", "kept in sync with Z", "copied
+  from". Someone noticed and deferred. Quote the comment — it is the justification, pre-written.
 
 ### Leave it alone when
 
@@ -113,7 +114,9 @@ Ranked by yield per minute spent:
    real integration. Cross-check against the doc that owns the integration — the owning doc is
    usually right and the referring doc is usually stale.
 5. **Prose describing a removed flow.** The most expensive to find and usually caught via the
-   date check: a doc that stopped changing several feature commits ago.
+   date check — `git log -1 --format='%ad %s' --date=short -- <doc>` against the commits that
+   changed the code it describes: a doc that stopped changing several feature commits ago is
+   stale by default.
 
 When a doc is stale, prefer correcting it over deleting it. Deletion loses the record of intent;
 a corrected doc keeps it. Exception: a document describing a completed migration can be retired
