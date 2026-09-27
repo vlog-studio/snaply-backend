@@ -38,6 +38,7 @@
 | [api-contract-schema-first.md](api-contract-schema-first.md) | API 계약 원천을 `packages/shared-types` Zod 스키마로 통일 | 완료 |
 | [snap-content-analysis.md](snap-content-analysis.md) | 스냅 내용 분석(vision) 도입 | 완료, 생산 활성화 대기(A-3) |
 | [template-snap-recommendation.md](template-snap-recommendation.md) | 템플릿 기반 스냅 자동 추천 | 완료, 생산 활성화 대기(A-6) |
+| [edit-spec-v3.md](edit-spec-v3.md) | editSpec v3·에셋 매니페스트·어휘 사전의 설계 규칙(시드·핀·무효화·큐 분리·사전 로딩) | 어휘 사전 3종 구현. 스키마 본문과 남은 개정은 A-7 |
 | [ad-reward-credits.md](ad-reward-credits.md) | 보상형 광고 크레딧 지급 규칙 | 완료, 기본 꺼짐(C-6) |
 | [snap-retention-period.md](snap-retention-period.md) | 스냅 서버 보관은 기간 기준 — 업로드 후 15일 만료 (구독 혜택으로 연장할지는 미확정, A-2) | 완료(서버 2026-09-09 · 앱 만료 표시 2026-09-27). 용량 한도 존치는 A-2 |
 | [expiry-notice-schedule.md](expiry-notice-schedule.md) | 스냅 만료 예고는 삭제 전 두 번, 정리 배치와 분리된 낮 시간 배치가 보낸다 | 완료(서버 2026-09-09). 앱의 남은 기간 표시는 SNAP-13 |
@@ -51,7 +52,8 @@
 | [payment-channel-iap.md](payment-channel-iap.md) | 결제 채널 IAP + RevenueCat, Stripe 제거 | 완료, 스토어 등록 대기(C-1) |
 | [credit-payment-model.md](credit-payment-model.md) | 구독 제거, 무비 생성 = 크레딧 100 | 완료 |
 | [movie-model.md](movie-model.md) | 영상 묶음은 평면 `Video`를 참조하는 `Movie` 엔티티 | 완료(서버 2026-09-09 · 앱 전환 2026-09-12). 세부 규칙은 movie-export-policy |
-| [env-management.md](env-management.md) | 로컬은 `apps/api/.env`, 운영은 플랫폼 시크릿 주입 | 완료 |
+| [on-prem-deployment.md](on-prem-deployment.md) | 팀 공용 통합 서버를 사내 물리 서버 한 대에 compose 로 올린다 — DB 는 서버 컨테이너(Supabase 는 Auth 전용), 배포는 self-hosted runner | 저장소 쪽 완료(2026-09-15). 서버 작업은 B-1 |
+| [env-management.md](env-management.md) | 로컬은 `apps/api/.env`, 운영은 서버 측 주입(플랫폼 시크릿 — 사내 서버는 root 전용 파일) | 완료 |
 
 ## 과거 결정 — 일부 또는 전부 대체됨
 
@@ -60,4 +62,5 @@
 | [account-deletion.md](account-deletion.md) | 과거 결정 — 결제 모델 전환으로 일부 대체. 삭제 유예 30일은 유효 |
 | [storage-and-subscription-policy.md](storage-and-subscription-policy.md) | 과거 결정 — 일부 대체. Free 2GB 한도는 snap-retention-period 가, 무비 30일 보관 + 무료 재생성은 movie-cleanup-after-export 가 대체. 크레딧/구독 2축과 경계 규칙은 유효 |
 | [snap-source-of-truth.md](snap-source-of-truth.md) | 과거 결정 — 일부 대체. 스냅 원천을 서버로 옮기는 방향은 유효(SNAP-14, 렌디션·reconcile·Movie 는 구현, 로컬 캐시 전환·휴지통·위치는 A-4). §6 용량 정책(Free 5GB)은 snap-retention-period 가 대체 |
-| [plan-limits.md](plan-limits.md) | 대체됨 — 플랜 차등·정기 구독 제거 |
+
+보관된 결정(예: 플랜 차등 보류 `plan-limits`)은 [archive/README.md](../archive/README.md)에 있다.
