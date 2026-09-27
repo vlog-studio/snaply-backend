@@ -77,7 +77,7 @@ See [`../features/location-and-push-notifications.md`](../features/location-and-
 ## 7 — Notification permission
 
 - **Knows.** What we will send and roughly when — tied to something they just did.
-- **First.** The pending outcome: a generation running, a place saved.
+- **First.** The pending outcome: a generation running.
 - **Default.** Ask after the first action whose completion the user would want to hear about; never on launch.
 - **CTA.** `다 만들어지면 알려주기` / `괜찮아요`.
 - **Disclosure.** Category-level preferences live in `나`, not in the prompt. One ask; if declined, offer it again only at a materially different moment (and at most rarely).
@@ -143,7 +143,7 @@ Background work must never steal focus, block a CTA, or interrupt the current sc
 ## 14 — Success
 
 - **Knows.** That it worked, what now exists, and what they can do next.
-- **First.** The result itself. Show the movie, the snap, the saved place — the artifact is the confirmation.
+- **First.** The result itself. Show the movie or the snap — the artifact is the confirmation.
 - **Default.** Land the user on the result; do not require a dismissal step to see it.
 - **CTA.** The most likely next action (`공유하기`, `무비 보기`), plus a quiet way back to where they were.
 - **Disclosure.** No celebration screen that must be dismissed before the result is reachable. A toast is enough for small successes; silence is enough when the state change is visible.
