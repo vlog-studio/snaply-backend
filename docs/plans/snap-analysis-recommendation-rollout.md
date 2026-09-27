@@ -78,8 +78,9 @@
   `MOVIE_RECOMMENDATION_ENABLED=true` 로 켠다. `docker compose up -d analysis-worker` 가
   `video-analysis 워커 시작` 로그를 남기는지 확인한다.
 - **입력**: 팀원 폰으로 찍은 스냅 30~100편. 카테고리(음식·셀카·반려동물·빠른 움직임·야간·역광·흔들림·
-  초점 불량·유사 프레임·중간 장면 전환)를 의도적으로 채운다([snap-content-analysis.md](../decisions/snap-content-analysis.md) §5.1).
-  팀 촬영분만 쓰므로 생산 활성화의 법무 선행 조건(§4.5)과 무관하게 진행할 수 있다.
+  초점 불량·유사 프레임·중간 장면 전환)를 의도적으로 채운다(평가셋 결정은 [snap-content-analysis.md](../decisions/snap-content-analysis.md) §1).
+  팀 촬영분만 쓰므로 생산 활성화의 법무 선행 조건(§4.5)과 무관하게 진행할 수 있다. 원본 영상·추출 프레임·
+  모델 원문 응답은 저장소에 커밋하지 않는다(같은 결정 §5).
 - **자동 측정**: `video_analyses` 집계로 처리시간·토큰·실패율·모델별 비교를 낸다([snap-content-analysis.md](../decisions/snap-content-analysis.md) §9.3).
 
   ```sql
