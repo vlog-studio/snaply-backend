@@ -78,7 +78,7 @@
 > 아래 월 3편 제한은 당시 구현·검증 기록이다. 2026-08-05 로직에서 제거됐으며,
 > 현재 결제 정책은 [decisions/credit-payment-model.md](../decisions/credit-payment-model.md),
 > 미결 상태는 [backlog.md](../backlog.md) A-2를 따른다
-> ([decisions/plan-limits.md](../decisions/plan-limits.md)는 대체된 과거 결정이다).
+> ([decisions/plan-limits.md](plan-limits.md)는 대체된 과거 결정이다).
 
 **목표**: 편집 요청을 큐에 넣고 Python 워커가 처리하는 비동기 파이프라인.
 

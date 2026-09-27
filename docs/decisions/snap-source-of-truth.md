@@ -17,7 +17,7 @@ A-2(유료 플랜 한도), E-3(GC 배치)
 §1 의 `clientId` 유일 제약을 쓰지 않는다 — 이유는 [snap-sync-across-devices.md](./snap-sync-across-devices.md)
 §[동기화 설계](./snap-sync-across-devices.md#동기화-설계).
 
-관련: [plan-limits.md](./plan-limits.md), [api-spec.md](../api-spec.md)
+관련: [plan-limits.md](../archive/plan-limits.md), [api-spec.md](../api-spec.md)
 
 ---
 
@@ -35,7 +35,7 @@ A-2(유료 플랜 한도), E-3(GC 배치)
 | 한도 초과 시 | **신규 업로드 차단 + 로컬 보관** ("백업 안 됨" 상태 명시, 해제 시 자동 재개) |
 
 무비(편집 결과물) 생성은 스토리지 한도와 별개로 **크레딧 기반 결제**로 과금할 예정(미구현,
-기획 중). 따라서 [plan-limits.md](./plan-limits.md) §2의 "월 3편" 모델은 크레딧 기획이
+기획 중). 따라서 [plan-limits.md](../archive/plan-limits.md) §2의 "월 3편" 모델은 크레딧 기획이
 확정되면 대체될 수 있다.
 
 ## 2. 배경 — 왜 서버 원천인가

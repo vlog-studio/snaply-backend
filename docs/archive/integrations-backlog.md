@@ -14,7 +14,7 @@
 
 ### A-1. 플랜별 제한 (Dev A 유예 결정)
 
-[plan-limits.md](../decisions/plan-limits.md) 에 배경과 재도입 시 결정사항이 정리돼 있다. 기획 확정이 선행.
+[plan-limits.md](plan-limits.md) 에 배경과 재도입 시 결정사항이 정리돼 있다. 기획 확정이 선행.
 
 | 제한 | 현재 | 재도입 시 손댈 곳 |
 |---|---|---|
