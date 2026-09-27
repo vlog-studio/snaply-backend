@@ -37,7 +37,7 @@
   동기화가 실기기에서 검증돼야 하고, 그 시점에 서버 보관 기간(SNAP-9)과 함께 재검토한다.
   **조건 충족 전까지 기기의 파일이 원천이며 업로드가 끝나도 지우지 않는다** —
   [decisions/local-copy-after-upload.md](../decisions/local-copy-after-upload.md)(2026-09-09 결정).
-- **SNAP-9** `결정·미구현` — 서버 원본 보관은 **기간 기준**이다: 서버에 올라온 지 **15일**이
+- **SNAP-9** `구현됨` — 서버 원본 보관은 **기간 기준**이다: 서버에 올라온 지 **15일**이
   지나면 만료된다. 만료 기준 시각은 촬영 시각이 아니라 **업로드 시각**이다.
   종전의 2GB 용량 한도를 대체한다 —
   [decisions/snap-retention-period.md](../decisions/snap-retention-period.md)(2026-09-09 결정).
