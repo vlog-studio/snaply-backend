@@ -470,6 +470,7 @@ stripe trigger customer.subscription.created --api-key $STRIPE_SECRET_KEY
 - `users.deleted_at` 신설(마이그레이션 `20260812000000_add_user_deleted_at`) + 조회 인덱스
 - `DELETE /auth/me` — Stripe 즉시 해지(실패 시 삭제 중단), SNS 연동·FCM 토큰 삭제,
   진행 중 편집 작업 실패 처리 + 큐 제거(최선 노력), soft delete. `purgeAfter` 반환
+  → 대체: 2026-08-14 "크레딧 결제 구현 + Stripe·구독 제거" — Stripe 해지 단계는 없어졌다
 - 삭제 대기 계정의 인증 요청은 `403 ACCOUNT_PENDING_DELETION` (`plugins/auth.ts`)
 - `POST /auth/me/restore` — 유예 내 복구 (`authenticateAllowDeleted` 경유)
 - purge 배치 `npm run accounts:purge -w apps/api` (dry-run 기본, `--yes` 실삭제):
@@ -685,6 +686,7 @@ AdMob SSV 콜백이고, 앱은 세션을 열고 상태를 조회할 뿐이다. �
 **정책값**: `AD_REWARD_ENABLED` 기본 **false**(킬 스위치). 보상 20 / 일일 3 / 쿨다운 300초 /
 세션 TTL 900초는 잠정값이며 env 로 덮어쓴다. 일일 한도 기준 시각은 **KST 자정으로 확정**했다
 (UTC 자정은 한국 사용자에게 오전 9시, 롤링 24시간은 앱이 한 문장으로 설명할 수 없다).
+→ 대체: 2026-08-18 광고 보상 세 항목 — 세션 TTL 300초·일일 5회로 확정
 
 **신규 환경변수**: `AD_REWARD_ENABLED` · `AD_REWARD_CREDITS` · `AD_REWARD_DAILY_LIMIT` ·
 `AD_REWARD_COOLDOWN_SECONDS` · `AD_REWARD_SESSION_TTL_SECONDS` · `ADMOB_SSV_ALLOWED_AD_UNITS` ·
@@ -1399,6 +1401,8 @@ Metro/Jest 해석 확인 필요), `openapi.json` 의 `*Input` 사본 스키마.
 - **HDR 은 `zscale` 톤매핑 대신 `format=yuv420p` 강제 변환**으로 떨어뜨린다. zscale 이 없는
   ffmpeg 빌드가 흔해서다. HDR 원본이 다소 어두워질 수 있지만 재생되지 않는 것보다 낫다 —
   정밀 톤매핑은 A-7 렌더 파이프라인의 몫
+  → 대체: 2026-09-15 "스트레스 실검증과 HDR 색 태그 결함" — `zscale` 이 있으면 톤매핑하고,
+  어느 경로든 색 태그를 bt709 로 적는다
 - 기존 스냅은 마이그레이션에서 `skipped` 로 표시했다. 소급 변환하지 않으며, `pending` 으로
   두면 있지도 않은 밀린 작업처럼 보인다
 
@@ -1585,7 +1589,7 @@ uuid 3건, 컴포즈·러너 갱신). API 394건. **실기기 미검증** — �
 
 ## 2026-09-15 — 알림 설정이 서버에 닿는다 (Dev A)
 
-**사용자가 끈 알림을 서버가 계속 보내고 있었다**(backlog B-6 닫힘). 서버 발송 세 종류가
+**사용자가 끈 알림을 서버가 계속 보내고 있었다**(backlog B-6 의 서버 쪽을 닫았다 — 앱 쪽은 남음). 서버 발송 세 종류가
 `notificationEnabled` 하나로만 판정되는데 `PATCH /auth/me` 가 그 필드를 받지 않았고, 앱 화면의
 스위치는 기기에만 저장됐다. 결정 문서들이 "알림을 끈 사용자에게는 보내지 않는다" 고 적어둔 것이
 실제로는 성립하지 않고 있었다.
