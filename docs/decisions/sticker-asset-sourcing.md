@@ -28,7 +28,7 @@
 | 서버 스키마 | 팩·스티커 테이블(매니페스트 저장)과 상태(`experimental → active → deprecated`) |
 | 워커 | 렌더 시 스티커 파일을 내려받아 합성. 파일 저장 위치(S3 버킷)와 접근 방식 |
 | 인증·권한 | 관리자 페이지를 만들면 관리자 판별(예: Supabase 커스텀 클레임), `/admin/*` 라우트 가드, 감사 로그가 필요하다 |
-| 만료 무비 재생성 | 결과물을 다시 만들 때 스티커가 더 이상 배포 불가면 재생성이 깨진다. [movie-cleanup-after-export.md](movie-cleanup-after-export.md)에서 재생성을 유지하면 영구 사용권 조항이 필요하다 |
+| 만료 무비 재생성 | 결과물을 다시 만들 때 스티커가 더 이상 배포 불가면 재생성이 깨진다. 끝낸 무비도 다시 만들 수 있으므로(MOV-19, [movie-cleanup-after-export.md](movie-cleanup-after-export.md)) 에셋 계약에 영구 사용권(기존 저작물 유지) 조항을 요구할지가 열려 있다([backlog.md](../backlog.md) A-7) |
 
 ---
 

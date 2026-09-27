@@ -5,9 +5,9 @@
 나머지는 착수 전이다. 현행 사실이 아니다.
 **원천**: 편집 파이프라인의 층별 설계·오픈소스 선정·라이선스 요건 제안. 미결 항목은 [backlog.md](../backlog.md) A-7 에만 둔다.
 **관련 문서**: 현행 파이프라인의 사실은 코드(`apps/ai-worker/src/pipeline/`)와 [specs/movie.md](../specs/movie.md)
-MOV-7~MOV-9, 현행 API 계약은 [`packages/shared-types/src/contract/`](../../packages/shared-types/src/contract/) ·
-[decisions/storage-and-subscription-policy.md](../decisions/storage-and-subscription-policy.md) §3.2(레시피 재생성)
-· [decisions/movie-model.md](../decisions/movie-model.md) · [decisions/credit-payment-model.md](../decisions/credit-payment-model.md)
+MOV-7~MOV-9·MOV-14(같은 구성 → 같은 결과)·MOV-19(다시 만들기), 현행 API 계약은
+[`packages/shared-types/src/contract/`](../../packages/shared-types/src/contract/) ·
+[decisions/movie-model.md](../decisions/movie-model.md) · [decisions/credit-payment-model.md](../decisions/credit-payment-model.md)
 
 ---
 
@@ -36,12 +36,12 @@ MOV-7~MOV-9, 현행 API 계약은 [`packages/shared-types/src/contract/`](../../
 
 ### 2.1 레시피 재생성 결정론 ★ 지금 깨져 있다
 
-[storage-and-subscription-policy.md](../decisions/storage-and-subscription-policy.md) §3.2 는
-만료된 무비를 영구 보관된 `editSpec`+`renderSpec` 으로 **크레딧 없이 무료 재생성**한다고 확정했다.
-그런데 현행 BGM 선택은 디렉터리 스캔 + `random.choice` 다
-([`pipeline/music.py`](../../apps/ai-worker/src/pipeline/music.py)). 즉 **지금도 재생성하면
-BGM 이 바뀐다.** 비트 싱크를 넣으면 컷 지점까지 바뀐다 — 사용자는 "복원"을 눌렀는데 다른
-영상을 받는다.
+[specs/movie.md](../specs/movie.md) MOV-14 는 생성에 쓰인 구성(`editSpec`+`renderSpec`)을 다시
+실행하면 같은 결과가 나오기를 요구한다 — 끝낸 무비를 다시 만드는 것(MOV-19, 크레딧을 내는 새
+생성)도 그 구성에서 출발한다. 그런데 현행 BGM 선택은 디렉터리 스캔 + `random.choice` 다
+([`pipeline/music.py`](../../apps/ai-worker/src/pipeline/music.py)). 즉 **지금도 같은 구성으로
+다시 만들면 BGM 이 바뀐다**([backlog.md](../backlog.md) E-5). 비트 싱크를 넣으면 컷 지점까지
+바뀐다 — 사용자는 자기가 바꾸지 않은 것이 왜 바뀌었는지 알 수 없다.
 
 **v3 는 비결정적 선택을 전부 스펙에 핀으로 박는다**: 선택된 트랙 ID, 비트 그리드 버전,
 난수 시드. 이것이 v3 의 존재 이유 중 하나이며, 표현력 확장보다 우선순위가 높다.
