@@ -69,7 +69,7 @@ Movie
 ├── style         emotional | travel | daily — the backend's three editing presets
 ├── bgm, ratio    track id (stored but unused — the preset scores the run), '9:16'
 ├── arranger?     user | ai — who owns the cut order (see the movie screen)
-├── captions      stored but unused — the backend subtitles every run and offers no switch
+├── captions      sent with the movie; always false — subtitles are opt-in and no control offers them
 ├── job?          { id, progress?, step?, startedAt } — the backend's jobId and its last report
 ├── render?       { uri?, renderedAt, durationSec, style?, snapRefs? } — what the run produced, and what it was made from
 └── error?        why the last generation failed
