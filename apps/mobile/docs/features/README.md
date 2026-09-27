@@ -132,11 +132,12 @@ Feature documentation must change in the same work item as the behavior it descr
 For every user-visible addition, change, removal, or prototype-to-functional transition:
 
 1. Read this index and every affected feature document before editing code.
-2. Update the relevant document's behavior, route flow, ownership, platform support, persistence, status, and limitations.
-3. Add a new document when the behavior does not belong to an existing feature, then add it to the feature index and application map.
-4. Update cross-feature flows in every affected document. For example, changing how a captured snap enters the library affects both `capture-flow.md` and `snaps.md`.
-5. Describe only behavior evidenced by the implementation. Clearly label static fixtures, simulated progress, placeholder controls, and unsupported platforms.
-6. Include documentation review in the completion checklist even when no text change is ultimately necessary; record why the existing document remains accurate in the task or review notes.
+2. When the change alters the behavior contract — user-visible behavior or a policy value — update the matching requirement in the monorepo root [`docs/specs/`](../../../../docs/specs/README.md) first, in the same change (constitution art. 1 and 3). Feature documents record what the app *does*; the specs own what it *must do*.
+3. Update the relevant document's behavior, route flow, ownership, platform support, persistence, status, and limitations.
+4. Add a new document when the behavior does not belong to an existing feature, then add it to the feature index and application map; a new route also goes in the [route map](app-shell-and-navigation.md#route-map).
+5. Update cross-feature flows in every affected document. For example, changing how a captured snap enters the library affects both `capture-flow.md` and `snaps.md`.
+6. Describe only behavior evidenced by the implementation. Clearly label static fixtures, simulated progress, placeholder controls, and unsupported platforms.
+7. Include documentation review in the completion checklist even when no text change is ultimately necessary; record why the existing document remains accurate in the task or review notes.
 
 Architectural rules remain owned by `docs/architecture`, `docs/conventions`, and `docs/frameworks`. If a feature change also changes an architectural standard, update both the feature document and the relevant architecture guide.
 

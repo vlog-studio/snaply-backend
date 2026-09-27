@@ -75,9 +75,7 @@ If documentation and implementation diverge, do not spread an undocumented excep
 
 ## Feature documentation maintenance
 
-Treat feature documentation as part of the feature implementation, not as optional follow-up work. Whenever a change adds, modifies, removes, or completes user-visible behavior, update the affected document under `docs/features` in the same change. Keep its routes, behavior, ownership map, platform support, persistence, implementation status, and known limitations consistent with the code. Add a new feature document and link it from `docs/features/README.md` when no existing document owns the behavior.
-
-When the change alters the **behavior contract** — user-visible behavior or a policy value — also update the matching requirement in the monorepo root [`docs/specs/`](../../docs/specs/README.md), in the same change and before (or alongside) the implementation (constitution art. 1 and 3). Feature documents record what the app *does*; the specs own what it *must do*.
+Feature documentation is part of the feature implementation, not optional follow-up work. A change that adds, modifies, removes, or completes user-visible behavior updates the affected document under `docs/features` in the same change, and a change to the **behavior contract** — user-visible behavior or a policy value — first updates the matching requirement in the monorepo root [`docs/specs/`](../../docs/specs/README.md) (constitution art. 1 and 3). The steps are the [maintenance contract](docs/features/README.md#documentation-maintenance-contract) in `docs/features/README.md`.
 
 ## External sources of truth
 
