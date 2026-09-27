@@ -5,7 +5,8 @@
 사본**을 하나 만들어 둔다. 원본은 지우지 않는다 — 편집은 계속 원본을 쓴다.
 
 `durationMs` 도 여기서 실측한다. 클라이언트가 보고한 길이는 캡처 옵션에서 온 값이라 실제
-파일과 어긋날 수 있다.
+파일과 어긋날 수 있다. 치수는 **배포본에서** 잰다 — 다른 기기가 받아 재생하는 파일이 이것이고,
+ffmpeg 이 변환하면서 회전을 픽셀에 적용하므로 세로 영상이 세로 치수로 나온다.
 """
 
 import json
@@ -32,6 +33,9 @@ class RenditionOutcome:
     video_path: str
     thumbnail_path: str | None
     duration_ms: int | None
+    #: 표시 기준 치수(회전 반영). 읽지 못하면 None — 앱은 받은 파일을 직접 잰다.
+    width: int | None = None
+    height: int | None = None
 
 
 def _run(cmd: list[str]) -> None:
@@ -53,6 +57,32 @@ def probe_duration_ms(path: str) -> int | None:
         seconds = float(json.loads(out.stdout)["format"]["duration"])
         return int(round(seconds * 1000))
     except Exception:  # noqa: BLE001 — 길이는 있으면 좋은 값이지 필수가 아니다
+        return None
+
+
+def probe_dimensions(path: str) -> tuple[int, int] | None:
+    """
+    표시 기준 치수(가로, 세로). 읽을 수 없으면 None.
+
+    배포본은 ffmpeg 이 회전을 픽셀에 적용해 회전 메타데이터가 없다. 그래도 회전 정보가 남아
+    있으면(±90°) 가로세로를 바꾼다 — 인코딩 치수를 그대로 쓰면 세로 영상이 가로로 기록된다.
+    """
+    try:
+        out = subprocess.run(
+            ["ffprobe", "-v", "error", "-select_streams", "v:0",
+             "-show_entries", "stream=width,height:stream_side_data=rotation", "-of", "json", path],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        stream = json.loads(out.stdout)["streams"][0]
+        width, height = int(stream["width"]), int(stream["height"])
+        rotation = next(
+            (int(side["rotation"]) for side in stream.get("side_data_list", []) if "rotation" in side),
+            0,
+        )
+        return (height, width) if abs(rotation) % 180 == 90 else (width, height)
+    except Exception:  # noqa: BLE001 — 치수는 있으면 좋은 값이지 필수가 아니다
         return None
 
 
@@ -111,5 +141,12 @@ def build(source_path: str, work_dir: str) -> RenditionOutcome:
         logger.warning("썸네일 생성 실패 — 배포본만 저장한다")
         thumbnail_path = None
 
-    logger.info("렌디션 생성 완료 duration_ms={} thumbnail={}", duration_ms, thumbnail_path is not None)
-    return RenditionOutcome(video_path, thumbnail_path, duration_ms)
+    dimensions = probe_dimensions(video_path)
+    logger.info(
+        "렌디션 생성 완료 duration_ms={} dimensions={} thumbnail={}",
+        duration_ms,
+        dimensions,
+        thumbnail_path is not None,
+    )
+    width, height = dimensions if dimensions else (None, None)
+    return RenditionOutcome(video_path, thumbnail_path, duration_ms, width, height)

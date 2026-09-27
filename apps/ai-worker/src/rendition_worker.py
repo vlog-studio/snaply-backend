@@ -83,7 +83,12 @@ async def _run(video_id: str, user_id: str, s3_key: str, work_dir: str) -> None:
         await asyncio.to_thread(storage.upload, outcome.thumbnail_path, thumbnail_key, "image/jpeg")
 
     saved = await rendition_db.save_rendition(
-        video_id, rendition_key, thumbnail_key, outcome.duration_ms
+        video_id,
+        rendition_key,
+        thumbnail_key,
+        outcome.duration_ms,
+        outcome.width,
+        outcome.height,
     )
     if not saved:
         # 변환 중 영상이 삭제됐다. 키가 행에 기록되지 않았으므로 정리 배치도 이 객체를 모른다 —
@@ -91,7 +96,9 @@ async def _run(video_id: str, user_id: str, s3_key: str, work_dir: str) -> None:
         await _discard([rendition_key, thumbnail_key])
         raise RenditionSkipped(f"반영 대상이 없습니다: {video_id}")
 
-    logger.info("렌디션 완료 video_id={} key={}", video_id, rendition_key)
+    logger.info(
+        "렌디션 완료 video_id={} key={} {}x{}", video_id, rendition_key, outcome.width, outcome.height
+    )
 
 
 async def process_rendition_job(job, _job_token) -> dict:

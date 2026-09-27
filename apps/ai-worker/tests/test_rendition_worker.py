@@ -37,7 +37,7 @@ class RunTest(unittest.IsolatedAsyncioTestCase):
         mock.patch.object(
             rendition_worker,
             "build",
-            return_value=RenditionOutcome("/tmp/out.mp4", "/tmp/thumb.jpg", 3000),
+            return_value=RenditionOutcome("/tmp/out.mp4", "/tmp/thumb.jpg", 3000, 720, 1280),
         ).start()
         self.addCleanup(mock.patch.stopall)
 
@@ -58,12 +58,14 @@ class RunTest(unittest.IsolatedAsyncioTestCase):
             ),
         )
 
-    async def test_saved_rendition_is_kept(self) -> None:
+    async def test_saved_rendition_is_kept_with_its_dimensions(self) -> None:
         self.db.save_rendition = mock.AsyncMock(return_value=True)
 
         await rendition_worker._run(VIDEO_ID, USER_ID, "uploads/x/source.mov", "/tmp")
 
         self.storage.delete.assert_not_called()
+        args = self.db.save_rendition.call_args.args
+        self.assertEqual(args[-2:], (720, 1280))
 
     async def test_cleanup_failure_still_skips_the_job(self) -> None:
         # 정리 실패로 작업을 재시도하면 같은 변환을 다시 돌리게 된다 — 건너뜀은 그대로다.

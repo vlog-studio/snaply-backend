@@ -148,6 +148,27 @@ class RenditionContract(unittest.TestCase):
             tall_out = rendition.build(tall, work).video_path
             self.assertLessEqual(probe(tall_out)["video"]["height"], 1920)
 
+    def test_dimensions_follow_display_orientation(self) -> None:
+        """
+        세로로 찍은 아이폰 영상은 **가로로 인코딩되고 회전 메타데이터**를 단다. 인코딩 치수를
+        그대로 기록하면 다른 기기가 그 스냅을 가로로 안다 — 표시 기준 치수여야 한다.
+        """
+        with tempfile.TemporaryDirectory() as work:
+            landscape = os.path.join(work, "encoded-landscape.mp4")
+            make_clip(landscape, width=1280, height=720)
+            rotated = os.path.join(work, "rotated.mp4")
+            subprocess.run(
+                ["ffmpeg", "-y", "-display_rotation", "90", "-i", landscape, "-c", "copy", rotated],
+                capture_output=True,
+                check=True,
+            )
+
+            outcome = rendition.build(rotated, work)
+
+            self.assertEqual((outcome.width, outcome.height), (720, 1280))
+            info = probe(outcome.video_path)["video"]
+            self.assertEqual((info["width"], info["height"]), (outcome.width, outcome.height))
+
     def test_silent_source_still_produces_a_rendition(self) -> None:
         """오디오가 없는 원본도 있다(무음 촬영). 그때 변환이 실패하면 안 된다."""
         with tempfile.TemporaryDirectory() as work:
