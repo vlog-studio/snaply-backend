@@ -82,7 +82,7 @@ The list of checks it runs is defined once, in `package.json`'s `verify` script;
 For route changes, also verify that:
 
 - App startup and deep links open the correct page.
-- The UI renders on each affected platform among iOS, Android, and web.
+- The UI renders on each affected platform, on the surfaces in [`local-development-and-testing.md`](local-development-and-testing.md#verification-surfaces-read-first).
 - Route files contain no business logic or reusable components.
 - Platform-specific files preserve the same export contract.
 
