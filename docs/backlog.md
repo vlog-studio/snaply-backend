@@ -236,11 +236,11 @@ v3 는 **Movie export 에 붙인다** — `POST /edit-jobs` 는 한 버전 공�
 - [ ] `bgm_tracks` 스키마 신설 — `schema.prisma` 는 공유 파일이라 [team.md](./team.md) §2·§3 적용
 - [ ] **스티커 팩 매니페스트 스키마** — 에셋 URL·앵커 적합성·무드 태그·스케일 범위·기본 모션.
       뒤로 미룰수록 마이그레이션 비용이 커진다(trend-editing-pipeline §8.3).
-      **설계는 확정됐다**(edit-spec-v3 결정 C·D) — 앵커 어휘는 이미 공유 사전에 있고, 남은 것은
-      매니페스트 본문을 저장소에 들이는 일이다. 폰트는 woff2 가 아니라 TTF/OTF 여야 한다
+      **설계는 확정됐다**([edit-spec-v3.md](./decisions/edit-spec-v3.md) §2 C·D, 폰트 형식은 C-1) — 앵커 어휘는
+      이미 공유 사전에 있고, 남은 것은 매니페스트 본문을 저장소에 들이는 일이다(아래 초안 개정 항목)
 - [ ] **editSpec v3·에셋 매니페스트 초안의 남은 개정** — 확정 결정([decisions/edit-spec-v3.md](./decisions/edit-spec-v3.md))을
-      두 스키마 초안에 반영하는 일이 남았다: ① editSpec 초안에 결정 A·B 의 잔여와 `fallback` 예시의
-      `prefer` → `ref` ② 매니페스트 초안에 결정 C·D 전부 — anchor 어휘를 별도 절로 떼고 `defaultAnchor` 를
+      두 스키마 초안에 반영하는 일이 남았다: ① editSpec 초안에 §1 A·B 의 잔여와 `fallback` 예시의
+      `prefer` → `ref` ② 매니페스트 초안에 §2 C·D 전부 — anchor 어휘를 별도 절로 떼고 `defaultAnchor` 를
       지우며(`anchorAffinity[0]` 이 기본값) 남은 `prefer` 를 `ref` 로 ③ 두 초안의 "모든 좌표는 0~1" 문장이
       좌표계 진술이지 범위 보장이 아님을 밝히고, 초안의 JSON Schema 예시와 v3 스펙 검증(`parseEditSpec` 확장)
       모두 `resolved.xy` 에 범위 제약을 두지 않는다고 적는다. 사전은 이미 `ref` 를 쓰므로 지금 두 초안과
@@ -250,9 +250,8 @@ v3 는 **Movie export 에 붙인다** — `POST /edit-jobs` 는 한 버전 공�
 - [ ] 스티커를 어디서 확보할 것인가(디자이너 커미션 여부와 스타일 방향) —
       [decisions/sticker-asset-sourcing.md](./decisions/sticker-asset-sourcing.md) 결정 1(미결)
 - [ ] 스티커를 어떤 경로로 등록·관리할 것인가(관리자 페이지 도입 여부) — 같은 문서 결정 2(미결)
-- [ ] **세이프 에어리어 실측값** — 상단 약 10%·하단 약 20%·우측 버튼 레일은 추정치다.
-      실기기 캡처가 필요하다. 값은 스펙에 굽지 않고 **버전드 팩**으로 둔다(edit-spec-v3 결정 B-3) —
-      스펙에 값으로 넣으면 플랫폼 UI 가 바뀌어도 이미 저장된 스펙을 못 고친다
+- [ ] **세이프 에어리어 실측값** — 상단 약 10%·하단 약 20%·우측 버튼 레일은 추정치라 실기기 캡처가
+      필요하다. 값은 스펙이 아니라 버전드 팩에 둔다([edit-spec-v3.md](./decisions/edit-spec-v3.md) §1 B-3)
 - [ ] **에셋 라이선스에 영구(perpetual) 조항을 필수로 걸 것인가** — 근거는 **다시 만들기가
       계속 가능하다**는 것이다([movie-cleanup-after-export.md](./decisions/movie-cleanup-after-export.md):
       프로젝트는 보존되고 유료로 다시 생성한다). 라이선스가 만료돼 에셋 서빙을 멈추면 사용자는 예전
@@ -261,9 +260,10 @@ v3 는 **Movie export 에 붙인다** — `POST /edit-jobs` 는 한 버전 공�
       "신규 제작"인지**가 계약서마다 다를 수 있다. 법률 판단이 필요하고 스키마로는 풀리지 않는다.
       조달 단계에서 **"신규 배포 중단 / 기존 저작물 유지" 분리 조항**을 협상 항목으로 올린다.
       이 조항이 확보되면 팩 상태를 셋(`experimental → active → deprecated`)으로 줄이고
-      `retired` 를 법적 차단 전용으로 좁힌다(edit-spec-v3 결정 C-2)
+      `retired` 를 법적 차단 전용으로 좁힌다([edit-spec-v3.md](./decisions/edit-spec-v3.md) §2 C-2)
 
-**완료 조건**: 위 선행 결정·조달 확정 → `editSpec` v3 확정 → `bgm_tracks` + 오프라인 비트 그리드 →
+**완료 조건**: 위 선행 결정·조달 확정 → `editSpec` v3 확정(계약 `editSpecSchema` 와 `openapi.json` 을 같은
+변경에서 갱신) → `bgm_tracks` + 오프라인 비트 그리드 →
 1단계(출력 옵션 · ASS 자막 · VAD 무음 컷 · 비트 스냅) 구현 → 계약·골든 프레임 테스트 위에서
 e2e 실검증.
 
@@ -429,7 +429,7 @@ RevenueCat 웹훅 URL은 `POST /billing/webhook/revenuecat`, Authorization 헤�
 RevenueCat 프로젝트·웹훅 URL 설정 → sandbox 구매 → 웹훅 수신 → 크레딧 지급 →
 같은 트랜잭션 웹훅 재전송 시 중복 지급 없음까지 한 번 통과하면 닫힌다.
 
-**구독 상품은 A-2 결정 뒤다.** 무엇을 팔지(용량인지 보관 기간인지)부터 미확정이다(A-2).
+**구독 상품은 A-2 결정 뒤다.** 무엇을 팔지(용량인지 보관 기간인지)부터 미확정이다(A-2, CRD-7).
 팔기로 정해지면 크레딧 팩(consumable)과 별도로 **auto-renewable subscription**
 (Apple Subscription Group / Google base plan)으로 등록한다
 ([decisions/storage-and-subscription-policy.md](./decisions/storage-and-subscription-policy.md) §5).
