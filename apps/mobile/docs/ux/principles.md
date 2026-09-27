@@ -38,7 +38,7 @@ Index:
 
 **Bad Pattern.** A tray screen that simultaneously promotes templates, shows the current tray, lists work in progress, lists finished movies, and pushes a capture prompt — all at equal weight, so nothing states what to do now.
 
-**Better Pattern.** The screen leads with the state of the one goal ("담긴 스냅 6") and its single advancing action ("이 스냅으로 새 무비"). Other capabilities remain on the screen as clearly lower-weight sections, in a fixed order, below the primary block.
+**Better Pattern.** The studio leads with its one advancing action — the `스냅 골라 새 무비` block, which carries the state it acts on (the library's `2개 · 0:06` and its newest frames). Other capabilities remain on the screen as clearly lower-weight sections, in a fixed order, below it: templates, then the movie board ([Studio](../features/studio.md#user-goal)).
 
 **Why.** Reduces Cognitive Load at entry and lets Information Hierarchy carry the meaning. When one goal owns the top of the screen, Predictability improves for every subsequent step because the user has a frame to interpret it in.
 
@@ -117,7 +117,7 @@ Index:
 
 **Bad Pattern.** A sheet titled `위치 권한` with buttons `취소` / `확인`. Confirm what?
 
-**Better Pattern.** `이 장소 근처에 오면 알려드릴까요?` with `알림 받기` / `안 받기`.
+**Better Pattern.** `주변 장소 알림을 받을까요?` with `알림 받기` / `안 받기` — the location-alert question in the [Me tab](../features/me.md#current-behavior).
 
 **Why.** Predictability and Error Prevention. The label carries the meaning, so the surrounding copy can shrink — which serves `Show State, Not Instructions` too.
 
@@ -339,7 +339,7 @@ Index:
 
 **Bad Pattern.** `업로드 큐 처리 중 (2/6)`, `generation job failed: 422`, `Geofence 등록됨`.
 
-**Better Pattern.** `스냅 2개 올렸어요 · 6개 중`, `무비를 만들지 못했어요. 다시 시도해 주세요.`, `이 장소 근처에 오면 알려드려요`.
+**Better Pattern.** `스냅 2개 올렸어요 · 6개 중`, `무비를 만들지 못했어요. 다시 시도해 주세요.`, `찍기 좋은 장소에 도착하면 알려드려요`.
 
 **Why.** Answerability (P3) and trust. It also forces clearer thinking: copy that cannot be written in user terms usually signals a model the user should never have been exposed to.
 
@@ -364,9 +364,9 @@ Index:
 
 **User Problem.** Explanatory paragraphs are skipped, go stale, translate badly, and occupy the space where state belongs. A screen that must explain itself usually has a structure problem the copy is patching.
 
-**Bad Pattern.** An empty tray with three lines describing what a tray is and how to fill one.
+**Bad Pattern.** An empty snap library with three lines describing what a snap is and how to make one.
 
-**Better Pattern.** `담긴 스냅 0`, with the action that fills it as the clearest control on the screen.
+**Better Pattern.** The header read-out `0개 · 0:00`, with the `가져오기` cell — the action that fills the library — standing alone in the grid ([Snap library](../features/snaps.md#browsing-and-playback)).
 
 **Why.** Cuts reading cost, keeps Information Hierarchy for state, and prevents copy from becoming a substitute for design. Aligns with Toss's writing principles `weed cutting`, `remove empty sentences`, and `focus on the key message` ([source](https://toss.tech/article/8-writing-principles-of-toss)).
 
@@ -394,7 +394,7 @@ Index:
 
 **Bad Pattern.** Tapping a snap opens a full-screen editor with unsaved changes and no exit affordance; back on a modal discards work with no notice; a sheet appears on entry before the user has done anything.
 
-**Better Pattern.** The CTA names the destination's outcome; a modal exits with ✕ to a stated place; leaving with unsaved changes asks one clear question with outcome-named buttons (see the studio exit sheet pattern in [`../features/studio.md`](../features/studio.md)).
+**Better Pattern.** The CTA names the destination's outcome; a modal exits with ✕ to a stated place; leaving with unsaved changes asks one clear question with outcome-named buttons (see the movie screen's exit question, `EditExitSheet`, in [`../features/movie.md`](../features/movie.md#user-goal)).
 
 **Why.** Predictability and User Control. Also cheap to get right: it is mostly labeling and honoring platform gestures.
 

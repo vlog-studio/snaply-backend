@@ -57,7 +57,7 @@ Project addition (`Derived Principle`): **no explanatory UI copy.** Screens do n
 
 | Bad | Better | What changed |
 | --- | --- | --- |
-| 어떤 알림 전략을 사용하시겠어요? | 이 장소 근처에 오면 알려드릴까요? | System concept → the user's own situation |
+| 어떤 알림 전략을 사용하시겠어요? | 주변 장소 알림을 받을까요? | System concept → the user's own situation |
 | 생성 모드를 선택하세요 | 무비를 몇 초로 만들까요? | Pipeline choice → a length the user wants |
 | 동기화 방식을 고르세요 | 와이파이에서만 올릴까요? | Internal mechanism → a condition the user knows |
 | 정렬 기준을 설정하세요 | 최신순으로 볼까요? | Configuration → an outcome |
@@ -77,7 +77,7 @@ Project addition (`Derived Principle`): **no explanatory UI copy.** Screens do n
 | --- | --- |
 | AI 모델이 스냅을 분석해 자동으로 편집 구간을 결정합니다 | 찍은 스냅으로 짧은 영상을 만들어요 |
 | 백그라운드 업로드 큐가 처리 중입니다 | 스냅 2개 올리는 중 |
-| Geofence가 등록되었습니다 | 이 장소 근처에 오면 알려드려요 |
+| Geofence가 등록되었습니다 | 찍기 좋은 장소에 도착하면 알려드려요 |
 
 **Length.** One line. If two lines are needed, the structure is probably wrong — check whether a label, a count, or an ordering change removes the need for the sentence.
 
@@ -126,10 +126,10 @@ One short line of state, plus the action that fills it. Nothing else.
 
 | Surface | Copy |
 | --- | --- |
-| No snaps yet | `아직 스냅이 없어요` + `첫 스냅 찍기` |
-| No filter results | `조건에 맞는 스냅이 없어요` + `필터 지우기` |
-| No movies | `아직 무비가 없어요` + `이 스냅으로 새 무비` |
-| Load failed | `불러오지 못했어요` + `다시 시도` |
+| No snaps yet (Snap tab) | The header read-out `0개 · 0:00`, with the `가져오기` cell standing alone as the action ([Snap library](../features/snaps.md#browsing-and-playback)) |
+| No movies (Movie tab) | `아직 만든 무비가 없어요` + `스냅 골라 새 무비` ([Studio and movies](../features/studio.md#the-board)) |
+| Load failed | `스냅을 불러오지 못했어요` + `다시 시도` |
+| No filter results | `조건에 맞는 스냅이 없어요` + `필터 지우기` — the shape to use; no surface filters today |
 
 Distinguish the three kinds — nothing yet, nothing matched, failed to load. One shared "empty" string for all three is a bug.
 

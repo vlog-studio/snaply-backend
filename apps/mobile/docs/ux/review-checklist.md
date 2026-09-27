@@ -12,7 +12,7 @@ Use it as: copy the relevant section into the PR, mark each item, and for every 
 - [ ] **The primary action is identifiable within a glance.** Pass: a reader unfamiliar with the app points at the same control you would. Fail → `Competing CTA` / `Hidden Primary`.
 - [ ] **The primary action is in the first viewport or pinned.** Pass: reachable with no scrolling. Fail → `Hidden Primary`.
 - [ ] **Exactly one element claims primary visual weight.** Pass: the grayscale test shows one entry point. Fail → `Flat Hierarchy` / `Competing CTA`.
-- [ ] **If the primary action is disabled on entry, the reason is visible.** Pass: a state read-out (e.g. `담긴 스냅 0`) explains it without copy. Fail → `Orphan State`.
+- [ ] **If the primary action is disabled on entry, the reason is visible.** Pass: a state read-out explains it without copy (e.g. the selection bar's `0개 선택` beside a disabled `이 스냅으로 새 무비`). Fail → `Orphan State`.
 
 ## B. Predictability
 
