@@ -138,7 +138,7 @@ For a value that no other layer exposes, add a temporary `console.log`, let Fast
 adb -s "$DEVICE" shell dumpsys package "$PKG" | grep -E "granted=(true|false)"
 ```
 
-Runtime permission state materially changes app behavior, so check it before concluding that a permission-dependent feature is broken. As of 2026-07-27 on the owner's device: `ACCESS_FINE_LOCATION` granted; `CAMERA`, `RECORD_AUDIO`, and `POST_NOTIFICATIONS` **not** granted.
+Runtime permission state materially changes app behavior, so check it before concluding that a permission-dependent feature is broken.
 
 Granting via `adb shell pm grant "$PKG" android.permission.CAMERA` works, but it modifies the owner's device state — ask first, and prefer exercising the app's own permission prompt when the prompt itself is part of what is being verified.
 
@@ -148,13 +148,10 @@ Know these before promising a verification result:
 
 - **No root.** `run-as` covers this app's debug build only. Other apps' data is unreachable, and Samsung Secure Folder profiles reject shell access outright (`SecurityException: Shell does not have permission to access user 150`).
 - **Camera input cannot be injected.** Recording a real clip requires the owner to hold the device. The agent can verify everything downstream of capture — stored clip, thumbnail, roll state, UI — but not the capture gesture itself.
-- **Metro is owner-run.** Do not start it in the background and do not kill port 8081. See the verification policy.
-- **FCM push display is unverified.** Geofence gating and local-notification setup are confirmed on device; end-to-end push display stays deferred until a backend notification API exists.
+- **FCM push display is unverified.** Geofence gating and local-notification setup are confirmed on device; no geofence-enter-to-displayed-notification run has been recorded yet (status: [`location-and-push-notifications.md`](../features/location-and-push-notifications.md)).
 - **Release-variant behavior differs.** These tools assume the debug dev build. `run-as` and `ReactNativeJS` logging are unavailable on the release APK from `npm run android:device:release`.
 - **A JS-only loop.** Native module changes, config-plugin changes, and `app.json` branding changes need a rebuild (`npm run android:device`), not Fast Refresh — see [`app-branding-and-native-config.md`](app-branding-and-native-config.md).
 
-## Pending: iOS physical-device verification
+## iOS physical devices
 
-**Not written — the owner has no iOS device as of 2026-07-27.** Write the counterpart document when one becomes available; do not infer an iOS device procedure from this document in the meantime.
-
-Until then, iOS verification falls back to the simulator paths in [`local-development-and-testing.md`](local-development-and-testing.md) (Expo Go, or EAS Build when native modules are involved, with idb for touch automation), subject to the local-Xcode limitation described there. When reporting results, state explicitly that a change was verified on Android only.
+This toolkit is Android-only. Its iOS counterpart is not written yet; until it is, follow the fallback in [`AGENTS.md`](../../AGENTS.md#planned-documentation).
