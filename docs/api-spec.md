@@ -22,6 +22,7 @@
 - **공통 에러 코드**: `UNAUTHORIZED`(401) · `FORBIDDEN`(403) · `ACCOUNT_PENDING_DELETION`(403, 삭제 대기 계정 — 복구는 `POST /auth/me/restore`) · `NOT_FOUND`(404) · `BAD_REQUEST`/`VALIDATION_ERROR`(400) · `RATE_LIMITED`(429) · `INTERNAL_SERVER_ERROR`(500).
   타 유저의 리소스를 **조회·삭제**하면 403 이 아니라 **404** 다(존재를 알리지 않는다). 편집 요청처럼 남의 영상을 **입력으로 넘긴** 경우만 403 이다.
 - **Rate limit**: 기본 IP당 60req/분. `POST /edit-jobs` 유저당 5req/분, `POST /notifications/geofence-enter`·`POST /movie-recommendations` 유저당 10req/분. 초과 시 `429 RATE_LIMITED`. 도메인 한도(`429 RECOMMENDATION_LIMIT`)는 다른 코드다 — 잠시 후 재시도로 풀리지 않는다.
+  `POST /edit-jobs` 의 유저당 제한은 요청당 비용이 큰 작업의 큐 폭탄을 막는 보호 장치이며, 크레딧·결제와 무관하게 모두에게 같다.
 - **알 수 없는 enum 값**: 서버가 값을 늘릴 수 있는 곳(편집 상태·에러 코드·템플릿 스타일 등)에서 앱은 모르는 값을 **버리지 말고 보수적으로 해석**한다(모르는 실패 코드는 `INTERNAL`처럼, 모르는 템플릿 스타일은 건너뛰기).
 
 ---
@@ -44,7 +45,7 @@
 
 ## 영상 (`contract/videos.ts`)
 
-업로드는 2단계다. ① `GET /videos/upload-url` 🔒 로 presigned URL 과 `pending` 레코드를 받고 ② 그 URL 에 파일을 **PUT**(헤더 `Content-Type` 은 ①에서 보낸 `contentType` 과 동일해야 서명이 유효) ③ `POST /videos` 🔒 로 등록하면 `ready` 가 된다. 단일 클립 최대 500MB — 초과하면 ③에서 객체와 레코드를 지우고 400. S3 에 객체가 없어도 400.
+업로드는 2단계다. ① `GET /videos/upload-url` 🔒 로 presigned URL 과 `pending` 레코드를 받고 ② 그 URL 에 파일을 **PUT**(헤더 `Content-Type` 은 ①에서 보낸 `contentType` 과 동일해야 서명이 유효) ③ `POST /videos` 🔒 로 등록하면 `ready` 가 된다. 단일 클립 최대 500MB — 초과하면 ③에서 객체와 레코드를 지우고 400(presigned PUT 은 발급할 때 크기를 제한할 수 없어 등록 단계에서 검사한다). S3 에 객체가 없어도 400.
 
 - `POST /videos` 본문의 `clientId`(선택) — 앱이 붙인 스냅 이름(로컬 스냅 id). 목록의 `clientId` 로 그대로 돌아와, 찍은 기기가 자기 스냅을 알아본다. 서버는 해석하지 않고 **유일성도 보장하지 않는다.**
 - `GET /videos` 🔒 — 업로드 최신순(같은 시각이면 `id` 역순) 커서 페이지네이션. `nextCursor` 가 `null` 이 아니면 다음 페이지가 있다. 삭제·만료된 영상은 제외, 편집 결과물(`kind: result`)도 같은 목록에 온다 — 스냅만 보려면 `kind=source`. `pending` 항목은 아직 등록되지 않은 것이다.
@@ -80,11 +81,11 @@
 ## AI 편집 (`contract/edit-jobs.ts`)
 
 - `POST /edit-jobs` 🔒 (5req/분) — **비동기**. `202` + `jobId`. `npm run worker` 가 떠 있지 않으면 `queued` 에 머문다.
-  - `clips`(권장) 또는 `videoIds`(구버전, 전체 영상) 중 **하나만**. `clips` 는 최종 합성 순서이며 같은 영상을 다른 구간으로 반복 사용할 수 있다. `startMs` 생략은 0, `endMs` 생략은 영상 끝까지. 지정 구간은 최소 100ms.
+  - `clips`(권장) 또는 `videoIds`(구버전, 전체 영상) 중 **하나만**. `clips` 는 최종 합성 순서이며 같은 영상을 다른 구간으로 반복 사용할 수 있다. 클립 수 상한(계약)은 클립 수만큼 정규화 인코딩·전환 필터가 늘어나는 워커 점유 시간의 상한이다. `startMs` 생략은 0, `endMs` 생략은 영상 끝까지. 지정 구간은 최소 100ms.
   - 소유·`source`·`ready` 영상만 허용(아니면 403). `outputProfile`·`fitMode` 는 생략하면 서버 기본값(계약의 `.default()`) — 앱은 세로 숏폼만 만들므로 명시해서 보낸다.
   - **크레딧 100 을 예약(차감)한다.** 잔액이 모자라면 `402 INSUFFICIENT_CREDITS` 이며 작업이 만들어지지 않는다(예약과 생성이 한 트랜잭션). 에러의 `required`·`balance` 로 부족분을 그린다. 작업이 **실패하거나 취소되면 전액 자동 환급**, 자동 재시도로 추가 차감 없음. 해상도·워터마크 차등은 없다.
 - `GET /edit-jobs/{id}` 🔒 — 폴링용. `videoId` 는 **결과물** 영상 id 다(원본이 아니다). 완료 후 `GET /videos/{videoId}` 로 `editedUrl` 을 얻는다.
-  - `errorMessage` 는 서버 진단용 원문 — **사용자 노출 문구가 아니다.** 화면 문구는 `errorCode` 로 분기해 앱이 만든다. `errorCode` 는 append-only 라 앱은 모르는 코드를 `INTERNAL` 처럼 다룬다.
+  - `errorMessage` 는 서버 진단용 원문 — **사용자 노출 문구가 아니다.** 화면 문구는 `errorCode` 로 분기해 앱이 만든다. `errorCode` 는 append-only 라 앱은 모르는 코드를 `INTERNAL` 처럼 다룬다. `TIMEOUT` 은 작업이 워커 제한 시간(`EDIT_TIMEOUT_SECONDS`)을 넘긴 것이다 — 멈춘 ffmpeg·whisper 가 워커를 붙잡아 두지 않게 한다.
   - `pipelineVersion`·`editSpec`·`renderSpec` 은 재현 가능한 작업 스냅샷이다.
 - `DELETE /edit-jobs/{id}` 🔒 — `queued`/`processing` 취소. 최종 상태 `canceled`, 결과물 레코드는 목록에서 사라진다. 대기 중은 큐에서 제거, 처리 중은 워커가 다음 진행률 갱신 시점에 중단(업로드 직전이면 산출물이 생길 수 있으나 `canceled` 가 `done` 으로 되살아나지 않는다). 재취소는 200(멱등), `done`/`failed` 는 `409 CONFLICT`. 예약 크레딧은 전액 환급(한 번만 기록).
 
