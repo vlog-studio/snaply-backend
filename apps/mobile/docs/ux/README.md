@@ -17,9 +17,9 @@ Design tokens (color, type scale, spacing, radius, motion curves) are **out of s
 | 7 | [`ux-writing.md`](ux-writing.md) | Copy rules for CTAs, questions, explanations, errors |
 | 8 | [`examples.md`](examples.md) | 13 before/after screens with the reasoning shown |
 | 9 | [`agent-protocol.md`](agent-protocol.md) | How an agent runs that analysis: request modes, implementation rules, the change-report format, and when to ask |
-| 10 | [`guardrails.md`](guardrails.md) | Failure modes an agent must not commit |
+| 10 | [`guardrails.md`](guardrails.md) | Failure modes an agent must not commit, each linked to the rule it breaks |
 | 11 | [`principle-priority.md`](principle-priority.md) | How to resolve principles that conflict |
-| 12 | [`review-checklist.md`](review-checklist.md) | The gate for a PR or screen review |
+| 12 | [`review-checklist.md`](review-checklist.md) | The one checklist — the gate for a PR or a screen review |
 
 What to read and run, by task:
 
@@ -85,6 +85,6 @@ Two project decisions are settled, and this system encodes them rather than re-l
 ## Maintaining this directory
 
 - Treat these documents as code. A UX rule that the app knowingly violates is either a documented exception or a bug — never a silent divergence.
-- When a review produces a genuinely new rule, add it with a `Derived Principle` label, a Detection Rule, and at least one Exception. A rule with no exception is a bug in the rule.
+- When a review produces a genuinely new rule, add it to `principles.md` with a `Derived Principle` label, a Detection Rule, and at least one Exception. A rule with no exception is a bug in the rule.
 - When a `Toss Principle` claim cannot be traced to a URL, downgrade its label instead of deleting the rule.
 - Add new before/after cases to `examples.md` as they occur in real PRs; the catalog's value comes from being drawn from this app.

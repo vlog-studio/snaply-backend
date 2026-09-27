@@ -1,6 +1,6 @@
 # Agent UX review protocol
 
-The procedure an agent follows when asked to review or improve a screen. It exists to convert vague requests ("this screen feels off") into reasoned, reviewable changes.
+How an agent runs the UX analysis when asked to review or improve a screen. It exists to convert vague requests ("this screen feels off") into reasoned, reviewable changes.
 
 ## Trigger phrases and what they mean
 
