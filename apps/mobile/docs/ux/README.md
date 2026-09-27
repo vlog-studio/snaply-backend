@@ -21,7 +21,12 @@ Design tokens (color, type scale, spacing, radius, motion curves) are **out of s
 | 11 | [`principle-priority.md`](principle-priority.md) | How to resolve principles that conflict |
 | 12 | [`review-checklist.md`](review-checklist.md) | The gate for a PR or screen review |
 
-Minimum context for any UX task: `principles.md`, `ux-smells.md`, `agent-protocol.md`, `guardrails.md`. Add the rest as the task requires.
+What to read and run, by task:
+
+| Task | Read | Run |
+| --- | --- | --- |
+| Copy only — a label, a question, a message, an empty state's line | [`ux-writing.md`](ux-writing.md) | The copy path of the [review checklist](review-checklist.md#fast-path) |
+| Anything else — a review, a smell scan, a proposal, or a change | `principles.md`, `ux-smells.md`, `agent-protocol.md`, `guardrails.md`; the rest as the task requires | [`screen-analysis.md`](screen-analysis.md), then the review checklist path the change's size calls for |
 
 ## Evidence labels
 

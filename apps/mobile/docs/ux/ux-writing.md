@@ -178,13 +178,4 @@ When a new concept needs a name: pick a Korean word a first-time user would use,
 
 ## Pre-merge copy checklist
 
-- [ ] Every CTA names its outcome, or is a justified generic exception.
-- [ ] Every question is answerable in ~3 seconds from facts the user holds.
-- [ ] No sentence teaches the UI; state read-outs carry the meaning instead.
-- [ ] No internal vocabulary, codes, IDs, or enum values are visible.
-- [ ] Every error has a state and a fix, and blames no one.
-- [ ] Empty states distinguish nothing-yet / nothing-matched / failed.
-- [ ] Terminology matches the table above exactly.
-- [ ] Every string is 해요체, active, and positive.
-- [ ] Labels fit one line at the largest supported font scale; accessibility labels carry the full phrase.
-- [ ] Read aloud: it sounds like a person, not a system.
+Run the copy path of [`review-checklist.md`](review-checklist.md#fast-path) — the items marked `copy`, which check every rule above.

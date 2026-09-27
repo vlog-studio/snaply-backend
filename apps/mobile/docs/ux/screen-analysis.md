@@ -164,18 +164,7 @@ For each change, write one block in the change-report format of [`agent-protocol
 
 ## Step 10 — Verification
 
-Before calling the analysis done, run these checks. They are cheap and catch most bad proposals.
-
-1. **Findability question (TNS-style, [source](https://toss.tech/article/Toss_Navigation_Score)).** For each capability that moved or was deferred: "Where would a first-time user tap to ___?" If the answer is not the new location, the move failed.
-2. **Three-second question test.** Read each question and its options aloud. If an answer does not form in about three seconds, `Easy to Answer` still fires.
-3. **Squint / grayscale test.** In grayscale at reduced size, is there exactly one obvious entry point, and does reading order match importance?
-4. **Label prediction test.** Cover the screen; from each CTA label alone, state what will happen. Wrong or vague → `Mystery CTA` remains.
-5. **State sweep.** Walk empty / loading / error / offline / partial. Each one names its state and offers one resolving action.
-6. **Exit test.** From every screen and sheet in the change, can the user leave without complying? Is unsaved work protected by exactly one question?
-7. **Density check.** For list, grid, and library surfaces: did the change add scroll length or transitions to the common task? If yes, `Density Where Density Pays` was violated.
-8. **Accessibility floor.** Every control has an accessible label and role; hit targets are adequate; the layout survives the largest supported font scale; nothing relies on color alone.
-9. **Regression check.** Every capability present before is still reachable, and its new path is named in the report.
-10. **Code reality check.** The proposal is implementable within the current architecture, or the extra work is stated. Verify against the slice that owns the screen and [`../conventions/cookbook.md`](../conventions/cookbook.md) rather than assuming.
+Before calling the analysis done, run [`review-checklist.md`](review-checklist.md) against the proposal, on the path its size calls for ([Fast path](review-checklist.md#fast-path)). The checks are cheap and catch most bad proposals — among them the findability question for anything moved or deferred, the check that no capability was lost, and the check that the proposal fits the code.
 
 ---
 
@@ -195,4 +184,4 @@ Before calling the analysis done, run these checks. They are cheap and catch mos
 
 **Step 8–9.** Proposed wireframe, exact labels, and one change-report block per change.
 
-**Step 10.** All ten checks, with the state sweep run against the four real states.
+**Step 10.** The whole review checklist, with its state items run against the four real states.

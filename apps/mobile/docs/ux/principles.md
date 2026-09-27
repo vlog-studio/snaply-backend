@@ -285,7 +285,7 @@ Index:
 
 **Better Pattern.** Import lives as the first cell in the snap grid — inside the surface it affects. Every route reachable by one name. Every full-screen modal has a visible ✕ whose destination is stated by context.
 
-**Why.** Discoverability and orientation. This is measurable: run the TNS-style question on our own screens (see `screen-analysis.md`, Step 10).
+**Why.** Discoverability and orientation. This is measurable: run the TNS-style question on our own screens (the findability item in [`review-checklist.md`](review-checklist.md#b-predictability)).
 
 **Detection Rule.** Any of:
 - Reaching a feature from the relevant tab root takes three or more taps while a one- or two-tap placement exists.
