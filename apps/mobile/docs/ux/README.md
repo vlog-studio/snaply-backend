@@ -36,7 +36,7 @@ Every principle, pattern, and rule in this directory carries one label. The labe
 
 ### Verified `Toss Principle` sources
 
-These are the Toss-published items this directory relies on. Everything else labeled `Toss Principle` must add its own source.
+These are the Toss-published items this directory relies on. A new Toss source is added to this table before anything cites it as `Toss Principle`.
 
 | Item as published | Source |
 | --- | --- |
@@ -75,10 +75,7 @@ Use these terms in reviews instead of aesthetic adjectives ("clean", "pretty", "
 
 Snaply is an AI short-form vlog studio: a user captures short snaps, gathers picks into a draft movie, and generates the finished movie from it. Four tabs (`스튜디오`, `스냅`, `무비`, `나`) plus a center capture button; full-screen modals for `/capture` and `/extract`. See [`../features/README.md`](../features/README.md) for the current route map and implementation status, which is the factual baseline any UX review must read before claiming a screen is broken.
 
-Two project decisions already settled, which this system encodes rather than re-litigates:
-
-- **No explanatory UI copy.** Screens do not narrate themselves. State, short read-outs, and accessibility hints stay; instruction lines and empty-state paragraphs are cut. See `principles.md` → `Show State, Not Instructions`.
-- **Korean product copy in 해요체.** Product strings are Korean. Code identifiers, file paths, and this documentation stay English.
+Two project decisions are settled, and this system encodes them rather than re-litigating them: **no explanatory UI copy** — defined, with its exceptions, in [`principles.md` → `Show State, Not Instructions`](principles.md#13--show-state-not-instructions) — and **Korean product copy in 해요체** ([`ux-writing.md`](ux-writing.md#tone)).
 
 ## Maintaining this directory
 

@@ -129,7 +129,7 @@ Index:
 
 **Exceptions.**
 - **Numbered or clearly linear steps** where `다음` is the honest description and the following screen was announced by the current one.
-- **Dismissals**: `닫기`, `취소`, `나중에` are outcome labels already.
+- **Dismissals and pure acknowledgements**, which are outcome labels already — the allowed words are listed once, under Allowed generic labels in [`ux-writing.md` → CTA](ux-writing.md#cta).
 - **System dialogs** (OS permission prompts, share sheets) whose labels we do not control — then the *preceding* screen must supply the prediction.
 - **Very tight controls** (icon-only, a chip row) where a full outcome phrase does not fit: keep the short label and put the outcome in the accessibility label and the adjacent heading.
 

@@ -95,7 +95,7 @@ Verdict rules:
 - `user` + answerable + rare → **defer** behind one disclosure.
 - `user` + answerable + common → **keep**.
 
-Then count the `keep` rows on the primary path. More than two on a creation or commit path is a `Decision Dump` candidate.
+Then run [`Reduce Decision Cost`](principles.md#6--reduce-decision-cost)'s Detection Rule on the `keep` rows of the primary path; if it fires and none of its Exceptions applies, `Decision Dump` is a candidate.
 
 ---
 

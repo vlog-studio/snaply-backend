@@ -1,6 +1,6 @@
 # Core philosophy
 
-Four root ideas. Every principle in [`principles.md`](principles.md) must derive from at least one of them; if a proposed rule cannot be traced back here, either the rule is wrong or the philosophy is incomplete — say which.
+Four root ideas. Every principle in [`principles.md`](principles.md) must derive from at least one of them — the *Derives from* column of its index records which; if a proposed rule cannot be traced back here, either the rule is wrong or the philosophy is incomplete — say which.
 
 The single sentence all four serve:
 
@@ -22,8 +22,6 @@ Not "the screen is simple". Not "the screen looks calm". Simplicity is a means; 
 
 **Failure when misapplied.** Thinking cost gets confused with *element count*, so elements get deleted and the user now has to remember, hunt, or guess — the cost moved out of the screen and into the user's head. Also: over-automation that hides a consequential decision the user actually wanted to make, which trades thinking cost for lost User Control and later distrust.
 
-**Derives:** `Easy to Answer`, `Smart Default`, `Reduce Decision Cost`, `Recognition Over Recall`, `Show State, Not Instructions`.
-
 ---
 
 ## P2 — Make the Next Action Obvious
@@ -37,8 +35,6 @@ Not "the screen is simple". Not "the screen looks calm". Simplicity is a means; 
 **What it solves.** Dead-end screens, competing CTAs, users tapping the wrong control, reversible actions treated as scary, features that exist but are never found.
 
 **Failure when misapplied.** Enforcing exactly one visible CTA everywhere, which pushes frequent secondary actions behind menus and raises Interaction Cost for the majority path. Or shouting: three "primary" buttons is the same as none. Or over-labeling every control with a result sentence until the screen becomes copy-heavy and slow to scan.
-
-**Derives:** `Action First`, `Outcome-Oriented CTA`, `Clear Visual Hierarchy`, `Obvious Navigation`, `One Primary Path`, `Predictable Transitions`.
 
 ---
 
@@ -54,8 +50,6 @@ Not "the screen is simple". Not "the screen looks calm". Simplicity is a means; 
 
 **Failure when misapplied.** Dumbing a question down until it becomes ambiguous ("좋은 화질로 만들까요?" hides what is actually traded). Or splitting one answerable question into three trivial ones, each cheap but the sequence expensive. Or hiding a consequence to make a question feel easy — that is a dark pattern, not an easy question.
 
-**Derives:** `Easy to Answer`, `Speak the User's Domain`, `Question, Not Configuration`, `Consequence Visibility`.
-
 ---
 
 ## P4 — Reveal Complexity Gradually
@@ -69,8 +63,6 @@ Not "the screen is simple". Not "the screen looks calm". Simplicity is a means; 
 **What it solves.** Overloaded first screens, premature configuration, forms that demand data before showing the payoff, dense screens where the user cannot locate the part that matters now.
 
 **Failure when misapplied.** Burying real functionality one tap too deep, so Discoverability collapses and expert users pay a permanent tax. Or turning one screen into a five-step wizard for a decision the user could have made at a glance. Or hiding *state* (what the system currently believes) rather than hiding *options* — state must stay visible.
-
-**Derives:** `Progressive Disclosure`, `Value Before Cost`, `One Thing per Page`, `Defer, Don't Delete`, `Density Where Density Pays`.
 
 ---
 

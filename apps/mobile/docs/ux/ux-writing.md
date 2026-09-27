@@ -19,7 +19,7 @@ Toss publishes eight writing principles ([source](https://toss.tech/article/8-wr
 
 Toss's published guidance for apps inside Toss adds: 해요체 throughout, active voice over passive, positive phrasing (`할 수 있어요` over `안 돼요`), casual politeness without heavy honorifics (`~시`, `~께`), and verb forms instead of stacked nouns ([source](https://developers-apps-in-toss.toss.im/design/consumer-ux-guide)).
 
-Project addition (`Derived Principle`): **no explanatory UI copy.** Screens do not narrate themselves. Delete the sentence and strengthen the label, the state read-out, or the structure instead.
+Project addition: **no explanatory UI copy** — defined, with its exceptions, by [`Show State, Not Instructions`](principles.md#13--show-state-not-instructions). In copy terms: delete the sentence and strengthen the label, the state read-out, or the structure instead.
 
 ---
 
@@ -71,7 +71,7 @@ Project addition (`Derived Principle`): **no explanatory UI copy.** Screens do n
 
 ## Explanations
 
-**Rule.** Lead with what the user gets, not how the feature works. Then stop.
+**Rule.** Where a sentence is allowed at all — one that names an outcome, or one of the exceptions in [`Show State, Not Instructions`](principles.md#13--show-state-not-instructions) — lead with what the user gets, not how the feature works. Then stop.
 
 | Bad | Better |
 | --- | --- |

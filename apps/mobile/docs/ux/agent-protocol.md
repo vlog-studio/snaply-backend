@@ -51,8 +51,7 @@ Problem    <what the screen did, and what it cost the user>
 UX Smell   <smell name(s)>
 Principle  <#, name, evidence label>
 Change     <what was actually modified — files, blocks, strings>
-Why        <which cost went down: Cognitive Load / Decision Cost / Interaction Cost /
-            Discoverability / Predictability / User Control / Error Prevention>
+Why        <which cost went down, named with the terms in README.md → Vocabulary>
 Trade-off  <what got worse, for whom, and why the exchange is worth it>
 ```
 
@@ -63,7 +62,7 @@ Rules for the report:
 - **"Trade-off: none" must be justified**, and usually is wrong.
 - **List removals explicitly.** Anything deleted, deferred, or moved is named with its new location or the reason it has none.
 - **State what was not changed** and why, so the reviewer knows the scope was deliberate.
-- Report in the language the user wrote in; keep code identifiers, file paths, and Korean product strings in their original form.
+- Report in the language the root [`AGENTS.md`](../../../../AGENTS.md#응답-언어) sets for replies to the user; keep code identifiers, file paths, and Korean product strings in their original form.
 
 ## Implementation rules
 
@@ -72,9 +71,9 @@ Rules for the report:
 - Copy changes touch the string's single source; do not fork a string per screen.
 - Every state in the proposal must exist in code: empty, loading, error, offline, partial.
 - Accessibility is part of the change, not a follow-up: labels, roles, hit targets, largest font scale, no color-only signals.
-- Run `npm run verify` before finishing. Report a pre-existing, unrelated failure with evidence instead of expanding scope.
-- Update the affected document under [`../features/`](../features/README.md) in the same change when user-visible behavior changed. This is mandatory, not optional follow-up.
-- Verify on a device per [`../workflows/android-device-verification.md`](../workflows/android-device-verification.md) when the change is visual or interactive, and say plainly if it was not verified on hardware.
+- Run the verification gate before finishing, per [`../../AGENTS.md` → Verification](../../AGENTS.md#verification).
+- Update the documentation in the same change — the affected feature document, and the root `docs/specs/` requirement when the behavior contract changes — per [`../../AGENTS.md` → Feature documentation maintenance](../../AGENTS.md#feature-documentation-maintenance).
+- Verify visual and interactive changes on the surfaces in [`../workflows/local-development-and-testing.md`](../workflows/local-development-and-testing.md#verification-surfaces-read-first), and say plainly what was not verified on hardware.
 
 ## Escalation and confirmation
 

@@ -26,7 +26,7 @@ Use it as: copy the relevant section into the PR, mark each item, and for every 
 - [ ] **Every question is answerable in about three seconds.** Pass: read aloud, an answer forms from facts the user holds. Fail → `System-Centric Question`.
 - [ ] **No question requires knowing how the app works.** Pass: no option label names a mode, engine, tier, or internal object. Fail → `System-Centric Question` / `Leaky Vocabulary`.
 - [ ] **Nothing the system could decide is asked of the user.** Pass: every remaining decision passed the Step 5 table in [`screen-analysis.md`](screen-analysis.md). Fail → `Decision Dump`.
-- [ ] **At most two user decisions on the primary path** (creation/commit screens). Pass: counted, with defaults applied to the rest. Fail → `Decision Dump`.
+- [ ] **The primary path asks only the decisions that are the user's.** Pass: [`Reduce Decision Cost`](principles.md#6--reduce-decision-cost)'s Detection Rule does not fire once its Exceptions are applied. Fail → `Decision Dump`.
 - [ ] **Defaults are visible and reversible; none is permission-like, destructive, or paid.** Fail → `Silent Automation`.
 - [ ] **Nothing must be remembered from a previous screen.** Pass: the deciding facts are restated where the decision happens. Fail → `Recall Tax`.
 
