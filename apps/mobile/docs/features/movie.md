@@ -5,7 +5,7 @@
 Users run a movie, watch it, fix what came back, and run it again. All of that happens on one screen, because it is one object at four points of its life.
 
 ```text
-/  (스튜디오)  이 스냅으로 새 무비        →  /movie/[id]
+/  (스튜디오)  스냅 골라 새 무비 → /snaps · 이 스냅으로 새 무비  →  /movie/[id]
 /  (스튜디오)  무비 board row            →  /movie/[id]
 /movies       any tile                  →  /movie/[id]
 /template/[id]  이대로 만들기            →  /movie/[id]   (an editable draft)
