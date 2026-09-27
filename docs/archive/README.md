@@ -15,6 +15,15 @@
 | [mobile-handover-lifecycle.md](./mobile-handover-lifecycle.md) | 무비 서버 전환·만료 표시의 앱 인수인계(2026-09-09). 2026-09-12 앱 전환 구현 완료 | 앱 동작 [apps/mobile/docs/features/movie.md](../../apps/mobile/docs/features/movie.md) · 남은 것 [backlog.md](../backlog.md) A-1·A-4 |
 | [movie-server-transition.md](./movie-server-transition.md) | 무비 서버 전환의 앱 착수 계획과 결정 요청 3건(2026-09-12). 같은 날 승인·구현 | 결정 [decisions/movie-client-cache.md](../decisions/movie-client-cache.md) · 앱 동작 [apps/mobile/docs/features/movie.md](../../apps/mobile/docs/features/movie.md) |
 | [2026-08-12-rewarded-credit-review.md](./2026-08-12-rewarded-credit-review.md) | 열리지 않은 회의의 광고 보상 제안(한도 3회·쿨다운 5~15분 등). 다른 값으로 확정됨 | 정책 [decisions/ad-reward-credits.md](../decisions/ad-reward-credits.md) §7 · 미결 [backlog.md](../backlog.md) C-6 |
+| [progress-integrations-2026-08.md](./progress-integrations-2026-08.md) | 연동/수익화 트랙 하드닝 기록(2026-08-03~08-10). 2026-09-27 에 [progress.md](../progress.md) 에서 분리 — Stripe 하드닝·Stripe 웹훅 e2e 등 이후 뒤집힌 내용 포함 | 이후 진행 [progress.md](../progress.md) · SNS 셋업 [sns-setup.md](../sns-setup.md) · 결제 [decisions/payment-channel-iap.md](../decisions/payment-channel-iap.md) · 미결 [backlog.md](../backlog.md) C-2 |
+| [lifecycle-alignment.md](./lifecycle-alignment.md) | 영상·프로젝트·결과물 생애주기 정합 계획(2026-09-09). 결정 셋과 트랙이 2026-09-09~09-27 에 끝남 | 만료 구조 [decisions/snap-retention-period.md](../decisions/snap-retention-period.md#만료의-동작-구조) · 요구 [specs/movie.md](../specs/movie.md)·[specs/snap-library.md](../specs/snap-library.md) · 미결 [backlog.md](../backlog.md) |
+| [snap-reconcile.md](./snap-reconcile.md) | 스냅 reconcile(기기 간·재설치 동기화) 계획(2026-09-27). 0~3단계 구현·Android 실기기 검증 완료 | 설계 [decisions/snap-sync-across-devices.md](../decisions/snap-sync-across-devices.md#동기화-설계) · 앱 동작 [apps/mobile/docs/features/snaps.md](../../apps/mobile/docs/features/snaps.md) · 미결 [backlog.md](../backlog.md) A-4 |
+| [2026-08-31-dev-sync-follow-up.md](./2026-08-31-dev-sync-follow-up.md) | 2026-08-31 개발자 회의 후속 계획(2026-09-05). T2·T3 는 2026-09-09 결정 | 남은 결정과 착수 순서 [decisions/README.md](../decisions/README.md) §결정 대기 · 미결 [backlog.md](../backlog.md) |
+| [movie-cleanup-ux-comparison.md](./movie-cleanup-ux-comparison.md) | 끝내기 후 정리 결정의 선택지별 화면 비교(2026-09-09) | 결정 [decisions/movie-cleanup-after-export.md](../decisions/movie-cleanup-after-export.md) · 앱 화면 [apps/mobile/docs/features/movie.md](../../apps/mobile/docs/features/movie.md) |
+| [on-prem-deploy.md](./on-prem-deploy.md) | 사내 서버 배포 계획(2026-09-15 착수) | 절차·시크릿·배치 [deployment.md](../deployment.md) · 구성을 고른 이유 [decisions/on-prem-deployment.md](../decisions/on-prem-deployment.md) · 서버 작업 [backlog.md](../backlog.md) B-1 |
+| [edit-spec-v3-kickoff.md](./edit-spec-v3-kickoff.md) | editSpec v3 착수 계획(어휘 사전·시드·무효화 규칙 커밋 1~4). 커밋 1~3 은 2026-08-20 구현 | 확정 결정 [decisions/edit-spec-v3.md](../decisions/edit-spec-v3.md) · 남은 개정 [backlog.md](../backlog.md) A-7 |
+| [plan-limits.md](./plan-limits.md) | 정기 구독 시절 플랜 차등 집행 보류 결정과 기술 보호 제한 표 | 기각 근거 [decisions/credit-payment-model.md](../decisions/credit-payment-model.md) · 현행 요청 제한 [api-spec.md](../api-spec.md) |
+| [ai-vlog-studio/concept.md](./ai-vlog-studio/concept.md) (+ [목업](./ai-vlog-studio/studio-mockup.html)) | 2026-08-03 확정 제품 기획과 그 시점의 화면 목업. 원래 위치는 `apps/mobile/docs/guides/ai-vlog-studio/` | 결정 [decisions/product-concept.md](../decisions/product-concept.md) · 앱 동작 [apps/mobile/docs/features/](../../apps/mobile/docs/features/README.md) |
 
 ## 왜 옮겼는지
 
@@ -30,3 +39,12 @@
   진행 기록과 결제 결정 문서로 이동했다.
 - **의사결정 워크시트**: 회의 전 제안 상태로 남은 `next-agenda.md`가 이미 확정된 정책과 오래된
   FE/BE 분리를 다시 미결처럼 보이게 했다. 실제 미결만 backlog에 남겼다.
+- **착수·완료된 계획**(lifecycle-alignment · snap-reconcile · dev-sync follow-up · on-prem-deploy ·
+  edit-spec-v3-kickoff): `plans/` 의 수명(구현 시작까지)을 넘겨 착수 전이거나 현행인 것처럼 보였고, 일부는
+  진행 추적기로 쓰였다. 코드·문서가 근거로 인용하던 살아 있는 설계·결정은 결정 문서로 옮기고 인용을 바꿨다.
+- **plan-limits · 정리 화면 비교**: 대체됐거나 결정이 끝나 쓸 곳이 없는 판단 자료다. plan-limits 는 낡은
+  "현행 사실" 표가 api-spec 보다 우선한다고 주장하고 있었다.
+- **2026-08 연동 하드닝 기록**: Phase 1~9 와 같은 기준 — 이후 뒤집힌 Stripe 내용과 틀린 이동 안내가 현행
+  진행 기록에 표시 없이 남아 있었다.
+- **제품 콘셉트**: 실무 가이드 폴더에 놓인 결정 기록이었고, 구현과 어긋난 부분까지 현행 문서가 근거로
+  인용했다. 아직 유효한 결정만 [decisions/product-concept.md](../decisions/product-concept.md)로 옮겼다.

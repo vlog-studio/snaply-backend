@@ -51,6 +51,7 @@
 | [movie-ready-notification.md](movie-ready-notification.md) | 무비 완성 알림은 편집 워커가 큐에 넣고 Node 쪽 알림 워커가 발송 | 완료(2026-09-11), 실기기 미검증(A-1) |
 | [payment-channel-iap.md](payment-channel-iap.md) | 결제 채널 IAP + RevenueCat, Stripe 제거 | 완료, 스토어 등록 대기(C-1) |
 | [credit-payment-model.md](credit-payment-model.md) | 구독 제거, 무비 생성 = 크레딧 100 | 완료 |
+| [product-concept.md](product-concept.md) | 제품 방향 — 필름 은유를 걷고 스튜디오(작업대형)를 채택, 이름(스냅·무비·컷·초안 무비·스튜디오·나), 원본/조합 모델, 무비 한 화면·실행 밖 편집·순서 고정 | 완료 |
 | [movie-model.md](movie-model.md) | 영상 묶음은 평면 `Video`를 참조하는 `Movie` 엔티티 | 완료(서버 2026-09-09 · 앱 전환 2026-09-12). 세부 규칙은 movie-export-policy |
 | [on-prem-deployment.md](on-prem-deployment.md) | 팀 공용 통합 서버를 사내 물리 서버 한 대에 compose 로 올린다 — DB 는 서버 컨테이너(Supabase 는 Auth 전용), 배포는 self-hosted runner | 저장소 쪽 완료(2026-09-15). 서버 작업은 B-1 |
 | [env-management.md](env-management.md) | 로컬은 `apps/api/.env`, 운영은 서버 측 주입(플랫폼 시크릿 — 사내 서버는 root 전용 파일) | 완료 |
