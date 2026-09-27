@@ -1,8 +1,8 @@
-# Supabase 소셜 로그인 설정 가이드
+# Supabase 로그인 설정 가이드
 
 > 이 문서는 사람 개발자를 위한 한글 가이드입니다. 에이전트용 문서가 아니므로 `AGENTS.md` 색인에 포함하지 않습니다. 기능의 코드 소유 계층과 동작 정의는 [`docs/features/authentication.md`](../features/authentication.md)(영문, 에이전트용)를 참고하세요.
 
-이 앱의 로그인은 **Supabase Auth**로 동작합니다. Google·Apple 소셜 로그인을 실제로 켜려면 개발자가 직접 세팅해야 하는 값과 외부 콘솔 설정이 있습니다. 이 문서는 **무엇을**, **어디서**, **왜** 설정하는지 순서대로 정리합니다.
+이 앱의 로그인(이메일·Google)은 **Supabase Auth**로 동작합니다. 실제 로그인을 켜려면 개발자가 직접 세팅해야 하는 값과 외부 콘솔 설정이 있습니다. 이 문서는 **무엇을**, **어디서**, **왜** 설정하는지 순서대로 정리합니다.
 
 ---
 
@@ -52,7 +52,9 @@
 
 이 두 값이 없으면 앱은 mock 로그인 상태로 부팅되며(개발 편의용) 실제 로그인은 완료되지 않습니다.
 
-## 2. Supabase에서 Redirect URL 허용하기
+## 2. Supabase에서 이메일 로그인과 Redirect URL 설정하기
+
+**Supabase Dashboard → Authentication → Sign In / Providers → Email** 에서 **Email** 을 켜 두고, **Confirm email** 을 켠 채 가입을 허용합니다. 가입 확인·비밀번호 재설정 메일은 기본 템플릿(`{{ .ConfirmationURL }}`)을 그대로 씁니다 — 템플릿을 고칠 필요가 없습니다.
 
 **Supabase Dashboard → Authentication → URL Configuration → Redirect URLs** 에 아래 두 값을 추가합니다.
 

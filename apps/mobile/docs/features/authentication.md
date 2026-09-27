@@ -120,21 +120,9 @@ That injection is wired: `src/shared/api/auth-header.ts` reads the token from `s
 
 ## Configuration
 
-Environment (`.env`, see `.env.example`):
+The app reads `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY` (`.env`, see `.env.example`) — client-safe values (the anon key is public, gated by Row Level Security); without them a dev build boots on the offline mock and real sign-in cannot complete. It passes two redirect targets, built in `shared/lib/supabase/auth-redirect.ts`, and the Supabase project must allow **both**: `snaplyapp://auth/callback` (sign-up confirmation, and the OAuth return — the `emailRedirectTo` target) and `snaplyapp://auth/reset` (password recovery — the `redirectTo` target). The deep links are also why the default **Confirm signup** and **Reset password** email templates work unedited: editing default-sender templates is restricted on new free-tier projects, whereas Redirect URL configuration is not.
 
-- `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY` — client-safe values from the Supabase project (anon key is public, gated by Row Level Security). Without them the app still boots for mock/offline development but real sign-in cannot complete.
-
-Supabase dashboard (one-time setup for email/password):
-
-- Auth → Sign In / Providers → Email: keep **Email** enabled, **Confirm email** on, and user sign-up allowed.
-- Auth → URL Configuration → Redirect URLs: allow **both** `snaplyapp://auth/callback` (sign-up confirmation) and `snaplyapp://auth/reset` (password recovery). These are the `emailRedirectTo` / `redirectTo` targets the app passes.
-- The default **Confirm signup** and **Reset password** email templates (which use `{{ .ConfirmationURL }}`) work as-is — **no template editing required**. This is the reason for the deep-link approach: editing default-sender templates is restricted on new free-tier projects, whereas Redirect URL configuration is not.
-
-Social provider setup:
-
-- Auth → Providers: enable **Google** (OAuth client id/secret from Google Cloud Console) — **required** for the Google button to complete sign-in. Enable **Apple** (Service ID, Team ID, Key ID, private key from Apple Developer) only when re-enabling Apple.
-- The `snaplyapp://auth/callback` redirect above is reused by the OAuth flow.
-- Google/Apple consoles: register the Supabase callback `https://<project-ref>.supabase.co/auth/v1/callback`.
+The console steps — the Supabase project and keys, the Email provider, the redirect allowlist, the Google provider and its Google Cloud client, and Apple for when it is re-enabled — are the human guide [`docs/guides/supabase-auth-setup.md`](../guides/supabase-auth-setup.md).
 
 ## Token storage
 

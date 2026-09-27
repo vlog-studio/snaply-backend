@@ -60,7 +60,7 @@ src/
 ### 개발자 가이드
 
 - [`Android 실기기 무선 연동 가이드`](docs/guides/android-wireless-debugging.md): 실제 Android 기기의 Wi-Fi 디버깅 연결과 개발 빌드 실행 방법
-- [`Supabase 소셜 로그인 설정 가이드`](docs/guides/supabase-auth-setup.md): Google·Apple 로그인을 켜기 위한 `.env` 값, Supabase·Google·Apple 콘솔 설정, 개발 빌드 실행 절차
+- [`Supabase 로그인 설정 가이드`](docs/guides/supabase-auth-setup.md): 이메일·Google 로그인을 켜기 위한 `.env` 값, Supabase 콘솔(이메일·Redirect URL)과 Google 콘솔 설정, 개발 빌드 실행 절차(Apple 로그인은 보류)
 - [`FCM 푸시 알림 설정 가이드`](docs/guides/fcm-push-setup.md): 네이티브 FCM 토큰용 Firebase 프로젝트·앱 등록, `google-services.json`/`GoogleService-Info.plist`/APNs 준비 절차
 
 제품 방향(스냅↔무비, 4탭, 이름)을 고른 이유는 모노레포의 결정 문서 [`docs/decisions/product-concept.md`](../../docs/decisions/product-concept.md)에 있습니다. 지금 무엇이 어떻게 동작하는지는 [`docs/features/`](docs/features)가 원천입니다.
@@ -135,7 +135,7 @@ src/
 | `expo-web-browser` | 인증 시 시스템 브라우저 세션 실행. |
 | `expo-secure-store` | 세션 토큰 등 민감 정보의 암호화 저장. |
 
-> 소셜 로그인 설정 절차는 [`docs/guides/supabase-auth-setup.md`](docs/guides/supabase-auth-setup.md)를 참고합니다.
+> 로그인 설정 절차는 [`docs/guides/supabase-auth-setup.md`](docs/guides/supabase-auth-setup.md)를 참고합니다.
 
 ### 카메라와 미디어
 
