@@ -748,9 +748,8 @@ export function XPage() {
   `Fonts.mono` is the system monospace for the `edge`/`code` roles). `ThemedText`
   applies it once for every variant, so only text outside `ThemedText` names a family —
   and it names `Fonts.sans`, never a single face like `'PretendardGOV-Bold'`. Pair it
-  with `fontWeight` from the four embedded weights **400 / 500 / 700 / 800**; 600 is not
-  embedded and resolves down to 500 (see
-  [app branding and native config](../workflows/app-branding-and-native-config.md#app-font)).
+  with a `fontWeight` that is embedded — which weights are, and why not `600`, is in
+  [app branding and native config](../workflows/app-branding-and-native-config.md#app-font).
 - **A micro-label picks its role by the script it holds, not by what it means.** `edge`
   and `note` are one tier — both are `Typography.micro` — and differ only in family:
   `edge` is the mono stamp for **Latin and digits** (`REC`, a bare count, `70%`, a

@@ -46,9 +46,12 @@ documents (for example the tab switch in
 ### Prefer runtime shared-value animations over `entering`/`exiting` presets
 
 Reanimated entering presets (`FadeInDown`, `ZoomIn`, …) never start on iOS in Expo
-Go, leaving views stuck at opacity 0 (recorded in `fade-in-view.tsx`). Drive mount
-animations from a shared value in an effect instead. `AnimatedSplashOverlay`'s
-`Keyframe` is the lone exception; verify on iOS before adding another.
+Go (Android runs them), leaving views stuck at opacity 0 (recorded in
+`fade-in-view.tsx`). Drive mount animations from a shared value in an effect instead.
+`AnimatedSplashOverlay`'s `Keyframe` is the lone exception: its completion callback
+unmounts the splash, so re-verify splash dismissal on the iOS Simulator whenever that
+file or Reanimated changes — a Keyframe that does not start leaves the splash on
+screen. Verify on iOS before adding another.
 
 ### Keep per-frame state on the UI thread
 

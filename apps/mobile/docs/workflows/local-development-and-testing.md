@@ -86,7 +86,7 @@ Verify each interaction with `xcrun simctl io "iPhone 16" screenshot <path>`. To
 
 Only native modules bundled in Expo Go work, and `expo-dev-client` configuration is ignored. Custom native behavior (e.g. `expo-camera` config-plugin options, `expo-glass-effect`) may differ from a real build or be unavailable. When a feature depends on such modules, verify it with EAS Build instead.
 
-Known Expo Go pitfall confirmed in this project: Reanimated `entering` presets (`FadeInDown`, `ZoomIn`, …) never start on iOS in Expo Go, leaving those views stuck at opacity 0 (Android runs them fine). Use the shared `FadeInView` (`src/shared/ui/fade-in-view`), which animates a shared value on mount and works on both platforms. Exception: the splash overlay (`src/_app/routes/animated-splash-overlay.tsx`) uses a custom `Keyframe` entering animation whose completion callback unmounts the overlay; this has worked where the presets do not, but re-verify splash dismissal on the iOS simulator whenever that file or Reanimated changes, because a non-starting animation there would leave the splash stuck on screen.
+Reanimated `entering` presets never start on iOS in Expo Go; the rule, `FadeInView`, and the splash exception are in [animations and gestures](../frameworks/animations-and-gestures.md#prefer-runtime-shared-value-animations-over-enteringexiting-presets).
 
 ## Android emulator — dev build
 
