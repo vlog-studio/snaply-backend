@@ -100,6 +100,7 @@ adb -s 192.168.0.42:40913 reverse tcp:8081 tcp:8081
 | 증상 | 조치 |
 | --- | --- |
 | `adb connect` 이 `failed to connect` 으로 실패 | 기기의 무선 디버깅 화면에서 **현재 포트**를 다시 확인 (껐다 켜면 포트가 바뀜). Mac과 기기가 같은 Wi-Fi인지 확인. |
+| `adb connect` 이 `No route to host` 로 실패하고 `adb mdns services` 에도 기기가 없는데 같은 셸의 `ping` 은 됨 | 먼저 떠 있던 adb 서버가 macOS 로컬 네트워크 권한 없이 시작된 경우. `adb kill-server && adb start-server` 후 다시 `adb connect` — 기존 페어링은 그대로 유효. |
 | `adb devices` 에 `offline` 으로 표시 | `adb disconnect` 후 재연결. 그래도 안 되면 `adb kill-server && adb start-server` 후 다시 `adb connect`. |
 | 연결이 수시로 끊김 | 기기 절전 시 Wi-Fi가 꺼지지 않도록 설정하거나, 개발 중에는 `개발자 옵션 > 화면 켜짐 상태 유지`를 활성화. |
 | `more than one device/emulator` 오류 | 에뮬레이터가 함께 떠 있는 상태. 모든 adb 명령에 `-s <IP:포트>` 를 붙여 실기기를 지정. |
