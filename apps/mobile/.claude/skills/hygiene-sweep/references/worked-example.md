@@ -6,7 +6,7 @@ findings belong to that repo, the reasoning transfers.
 
 ## Phase 0 — Orient
 
-Root `AGENTS.md` turned out to be an index, not the rules: a table routing task categories to
+The workspace `AGENTS.md` turned out to be an index, not the rules: a table routing task categories to
 documents under `docs/architecture/`, `docs/conventions/`, `docs/workflows/`, `docs/features/`.
 Following those links produced the four things the sweep needed:
 
@@ -14,12 +14,13 @@ Following those links produced the four things the sweep needed:
   justified "when a second real consumer appears."
 - **Doc contract** — any user-visible change must update the affected `docs/features/*` document
   *in the same change*; agent docs in English, human guides in Korean.
-- **Gates** — `typecheck`, `lint`, `test:ci` (not `test`, which is watch mode).
-- **Conventions** — `git log` showed `<Type>: <Korean subject>` with long *why*-focused bodies
+- **Gates** — the type check, lint, and CI test scripts, read from `package.json` rather than
+  guessed from their usual names.
+- **Conventions** — `git log` showed the subject prefix and language, long *why*-focused bodies,
   and a device-verification paragraph; `gh pr view` showed a fixed four-section body.
 
-Skipping this phase would have produced an extraction in the wrong layer, an English commit in a
-Korean history, and a `npm test` invocation that hangs in watch mode.
+Skipping this phase would have produced an extraction in the wrong layer, commits in the wrong
+language, and a test command that was not the one the repo runs.
 
 ## Phase 1–2 — Scan, then judge
 
