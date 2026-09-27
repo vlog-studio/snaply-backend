@@ -5,6 +5,8 @@
 
 > 진행 기록은 [progress.md](./progress.md), API 계약은
 > [contract/sns.ts](../packages/shared-types/src/contract/sns.ts)(동작 안내는 [api-spec.md](./api-spec.md) §SNS 연동) 참고.
+> 닫히지 않은 항목(받은함 미도착·심사·검수 URL·고정 도메인·prefix 재등록)은 [backlog.md](./backlog.md)
+> C-2·C-3·C-5·D-1·D-3 에만 있다.
 
 ---
 
@@ -304,18 +306,9 @@ TIKTOK_CLIENT_SECRET=...
 심사 전에도 테스트는 되지만, **심사 미통과 앱이 올린 콘텐츠는 무조건 비공개로만 게시된다.**
 코드도 이에 맞춰 `privacy_level: 'SELF_ONLY'` 를 보낸다. 기능 검증에는 충분하다.
 
-**(2) PULL_FROM_URL 은 영상 URL의 도메인/URL prefix 소유권 검증을 요구한다.**
-이게 로컬 검증의 실질적 걸림돌이다. `trycloudflare.com` 은 우리 도메인이 아니다.
-
-선택지:
-- **a. URL prefix 검증을 터널 주소로 시도** — TikTok 콘솔이 주는 검증 파일을 해당 prefix 아래에
-  올려서 서빙하면 통과할 수도 있다. MinIO 버킷에 그 파일을 넣으면 터널로 서빙된다. 먼저 이걸 시도.
-- **b. 보유 도메인으로 검증** — 운영 CloudFront 도메인이 정해지면 그걸 검증하는 게 정공법이다.
-- **c. `FILE_UPLOAD` 방식으로 전환** — 영상 바이트를 우리가 직접 틱톡에 업로드한다.
-  도메인 검증이 아예 필요 없다. 다만 클라이언트 구현이 추가로 필요하다(현재 미구현).
-
-> 정리: **인스타는 터널만으로 로컬 실업로드가 될 가능성이 높고, 틱톡은 (2) 때문에 막힐 수 있다.**
-> 틱톡이 막히면 위 c 안(FILE_UPLOAD)을 추가 구현하는 것이 다음 단계다.
+**(2) PULL_FROM_URL 은 영상 URL의 URL prefix 소유권 검증을 요구한다.**
+영상을 내주는 호스트(로컬은 MinIO 터널)의 prefix 를 API 호스트와 **별개로** 검증해야 한다.
+`trycloudflare.com` 같은 공유 도메인도 파일 서빙 방식으로 통과한다 — 아래 "URL prefix 소유권 검증".
 
 ---
 
@@ -430,19 +423,3 @@ curl -X POST -H "Authorization: Bearer <토큰>" -H 'content-type: application/j
 - 콜백 `state` 가 변조되면 `reason=invalid_state` 로 거부되는지
 - 개인 계정으로 시도하면 `reason=account_type` 으로 거부되는지
 - 업로드 후 `sns_uploads` 에 `success`(또는 틱톡은 `pending`) 로 기록되는지
-
----
-
-## 5. 상태 요약
-
-> 닫히지 않은 항목의 완료 조건은 [backlog.md](./backlog.md) C-2·C-3·C-5·D-1·D-3 에 있다.
-> 이 표는 셋업 절차의 진척만 나타낸다.
-
-| 항목 | 상태 |
-|---|---|
-| 코드 (OAuth·암호화·폴링·장기토큰·가드) | 완료, 테스트 38개 |
-| 공개 콜백 URL | cloudflared 터널로 확보 |
-| 공개 영상 URL + 버킷 익명 읽기 | 확보 (`npm run dev:public-bucket`) |
-| 인스타 앱 등록·연동·게시 파이프라인 | **완료** — 컨테이너 FINISHED 까지 실검증. 남은 건 실제 게시 1회 |
-| 틱톡 앱 등록·연동 | 완료 / **업로드는 API 수락까지만** — 받은함 실물 미도착, 조사 중 |
-| 틱톡 FILE_UPLOAD 대안 | 미구현 (필요 시) |
