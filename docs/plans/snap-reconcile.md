@@ -1,9 +1,10 @@
 # 스냅 reconcile — 다른 기기·재설치에서도 스냅이 보이게 하는 계획
 
 **작성일**: 2026-09-27
-**상태**: 제안 — 착수 전. 스냅 서버 원천 전환의 3단계([backlog.md](../backlog.md) A-4).
-§3.1의 제품 결정 셋은 2026-09-27 권장안대로 결정됐다([decisions/snap-sync-across-devices.md](../decisions/snap-sync-across-devices.md)).
-**선행 결함 E-8을 먼저 닫는다**
+**상태**: 진행 중 — **0~3단계 2026-09-27 구현**([progress.md](../progress.md)), 4단계 실기기 검증이 남았다
+([backlog.md](../backlog.md) A-4). §3.1의 제품 결정 셋은 같은 날 권장안대로 결정됐다
+([decisions/snap-sync-across-devices.md](../decisions/snap-sync-across-devices.md)). 구현이 이 계획과 다른 곳은
+§4.2 아래의 "구현하며 바뀐 것"에 적었다
 **원천**: 앱이 서버의 스냅 목록을 읽어 로컬 라이브러리와 맞추는 작업의 설계와 순서
 **관련 문서**: [decisions/snap-source-of-truth.md](../decisions/snap-source-of-truth.md) §3.2·§5 ·
 [decisions/local-copy-after-upload.md](../decisions/local-copy-after-upload.md) ·
@@ -144,6 +145,16 @@
 | 무비 — 컷 연결 | **바꿀 것이 없다.** 읽어 온 컷은 짝이 없으면 `snapId`에 `videoId`를 쓰므로(`mapRemoteMovie`), T1로 추가된 스냅에 그대로 이어진다 |
 | 무비 — 만료 컷 표시 | 로컬 스냅이 없어도 `unavailable`이면 "만료"로 그린다. 지금은 스냅이 없으면 "스냅이 삭제됐어요"가 먼저다(`timeline-cut.tsx`의 `expired = !missing && cut.unavailable`, `cut-inspector.tsx`). P3로 새 기기에는 만료 스냅이 오지 않으므로, 고치지 않으면 만료된 컷이 삭제로 보인다 |
 | 무비에 담기 | 만료된 스냅은 고를 수 없다(P2) |
+
+### 4.3 구현하며 바뀐 것 (2026-09-27)
+
+- **다른 기기에서 지운 스냅은 무비를 건드리지 않는다.** 표의 "연쇄 삭제(SNAP-5)"는 스냅·파일·동기화 항목만
+  지운다. 지운 기기가 이미 컷을 뺀 무비를 서버에 보냈으므로, 여기서 무비까지 고쳐 보내면 그 기기의 더 새
+  편집을 덮을 수 있다. 무비는 무비 동기화가 서버 것을 받아 온다.
+- **새 기기의 만료 컷**: P3로 만료 스냅이 오지 않으므로, 원본이 없는 컷도 `unavailable` 이면 "만료"로 읽게
+  타임라인·인스펙터·빈 상태 문구를 고쳤다(§4.2 표의 "무비 — 만료 컷 표시").
+- **파일을 못 지운 제거는 항목을 남긴다** — 다음 패스가 다시 묻는다.
+- **렌디션 워커의 치수는 배포본에서 잰다.** 다른 기기가 받는 파일이 배포본이라 그 치수가 맞다.
 
 ---
 
