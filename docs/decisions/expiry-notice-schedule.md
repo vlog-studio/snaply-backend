@@ -2,8 +2,7 @@
 
 **작성일**: 2026-09-09
 **상태**: 결정 — 서버 구현 완료. 앱의 남은 기간 표시는 [specs/snap-library.md](../specs/snap-library.md) SNAP-13 의 상태를 본다
-**관련**: [snap-retention-period.md](./snap-retention-period.md) ·
-[lifecycle-alignment.md](../plans/lifecycle-alignment.md) §6-2 ·
+**관련**: [snap-retention-period.md](./snap-retention-period.md) §[만료의 동작 구조](./snap-retention-period.md#만료의-동작-구조) ·
 [specs/snap-library.md](../specs/snap-library.md) SNAP-13
 
 ---

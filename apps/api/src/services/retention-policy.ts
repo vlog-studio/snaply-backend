@@ -6,7 +6,7 @@
  * 전 행을 백필해야 하고, 요금제가 사용자마다 다른 기간을 팔기 시작하면 그마저도 표현되지
  * 않는다. 그래서 행에는 **사실**(업로드 시각·생성 시각)만 두고 만료 여부는 조회·배치 시점에
  * 아래 값으로 **유도**한다 — 정책 변경이 즉시 반영되고 백필이 없다.
- * (docs/plans/lifecycle-alignment.md §6-2)
+ * (docs/decisions/snap-retention-period.md §만료의 동작 구조)
  *
  * 확정된 것과 아직 아닌 것:
  * - 스냅 서버 보관 **15일** — 확정 (docs/decisions/snap-retention-period.md, SNAP-9)
@@ -35,7 +35,7 @@ export const MOVIE_RESULT_RETENTION_DAYS = 30;
  *
  * 요금제에 복구 기능이 들어가면 **이 값만 늘리면 된다** — 스냅 원본은 사용자가 찍은 영상이라
  * 재생성이 불가능해서, 파일을 실제로 지운 뒤에는 어떤 요금제로도 복구할 수 없다. 그래서
- * 구조를 미리 두 단계로 두었다 (docs/plans/lifecycle-alignment.md §6-1).
+ * 구조를 미리 두 단계로 두었다 (docs/decisions/snap-retention-period.md §만료의 동작 구조).
  */
 export const EXPIRY_TO_PURGE_DAYS = 0;
 
