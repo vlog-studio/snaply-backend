@@ -872,6 +872,27 @@ GHCR 패키지를 공개로 돌릴지도 정한다 — 공개면 새 개발자�
 **완료 조건**: 대체 여부 결정 → 바꾼다면 compose 3곳 + 문서 갱신 + `npm test -w apps/api`
 (통합 테스트가 MinIO 를 쓴다) 통과. 두기로 하면 이 항목을 "소스 빌드 미러 유지"로 좁혀 닫는다.
 
+### E-8. 영상 삭제·정리가 남의 파일을 지우고 제 파일은 남긴다 ⚠️ 2026-09-27 신규
+
+스냅 reconcile 계획을 세우며 코드를 읽다 찾았다. **아직 재현하지 않았다.** reconcile 은 서버 사본을
+복구 원천으로 믿기 시작하므로 그 전에 닫는다([계획](./plans/snap-reconcile.md) §5.1).
+
+1. **결과물 행이 원본 스냅의 파일을 지운다.**
+   - 무비 생성 시 결과물 `Video`(`kind: result`)는 원본 스냅의 `originalS3Keys` 를 복사해 갖는다
+     (`edit-job.service.ts` `createEditJob`).
+   - 생성을 취소하거나 결과물에 `DELETE /videos/{id}` 를 하면, 그 행은 `deletedAt` 은 있고 `purgedAt` 은
+     없는 상태가 된다.
+   - 그러면 `media:purge-expired` ③ 남은 객체 정리(`purgeOrphanedObjects`)가 그 키, 즉 **원본 스냅의
+     파일**을 지운다. 원본 행은 `ready` 로 남아 목록에 뜨고, 다시 만들기는 워커의 다운로드에서 실패한다.
+2. **렌디션이 지워지지 않는다.** 사용자 삭제(`deleteVideo`)도 만료·정리 배치(`assetKeysOf`)도
+   `renditionS3Key` 를 지우지 않는다. 지운 스냅이나 만료된 스냅의 재생 가능한 H.264 사본이 계정 purge 전까지
+   남는다 — "원본·썸네일·렌디션을 지운다"([lifecycle-alignment.md](./plans/lifecycle-alignment.md) §6-1)와
+   어긋난다.
+
+**완료 조건**: 행마다 자기가 가진 객체만 지운다. 결과물은 `editedS3Key`·`thumbnailS3Key` 만, 스냅은
+원본·썸네일·렌디션을 지운다. 통합 테스트 둘로 고정한다 — 취소 후 정리 배치를 돌려도 원본 스냅 키가 남고,
+삭제·만료 뒤에는 렌디션 키가 지워진다. 이미 파일을 잃은 원본 행을 찾는 방법을 함께 남긴다.
+
 ---
 
 ## F. 남은 실검증
