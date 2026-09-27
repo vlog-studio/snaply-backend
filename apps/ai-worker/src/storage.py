@@ -57,6 +57,12 @@ def upload(local_path: str, s3_key: str, content_type: str) -> str:
     return config.public_url(s3_key)
 
 
+def delete(s3_key: str) -> None:
+    """없는 키 삭제는 S3 에서 no-op 이다."""
+    logger.debug("S3 삭제 {}", s3_key)
+    get_client().delete_object(Bucket=config.S3_BUCKET_NAME, Key=s3_key)
+
+
 def download_url(s3_key: str) -> str:
     return get_public_client().generate_presigned_url(
         "get_object",
