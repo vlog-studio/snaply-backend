@@ -11,12 +11,12 @@ Design tokens (color, type scale, spacing, radius, motion curves) are **out of s
 | 1 | [`philosophy.md`](philosophy.md) | The four root ideas every other rule derives from |
 | 2 | [`principles.md`](principles.md) | 17 applicable principles, each with a machine-checkable Detection Rule |
 | 3 | [`ux-smells.md`](ux-smells.md) | Named defects to classify a screen's problems quickly |
-| 4 | [`screen-analysis.md`](screen-analysis.md) | The 10-step analysis a review must run before proposing anything |
+| 4 | [`screen-analysis.md`](screen-analysis.md) | The Step 0–10 analysis a review must run before proposing anything |
 | 5 | [`visual-hierarchy.md`](visual-hierarchy.md) | Semantic role, weight, and misuse of every screen element |
 | 6 | [`interaction-patterns.md`](interaction-patterns.md) | Canonical answers for 22 recurring situations |
 | 7 | [`ux-writing.md`](ux-writing.md) | Copy rules for CTAs, questions, explanations, errors |
 | 8 | [`examples.md`](examples.md) | 13 before/after screens with the reasoning shown |
-| 9 | [`agent-protocol.md`](agent-protocol.md) | The exact procedure and output format for an agent doing UX work |
+| 9 | [`agent-protocol.md`](agent-protocol.md) | How an agent runs that analysis: request modes, implementation rules, the change-report format, and when to ask |
 | 10 | [`guardrails.md`](guardrails.md) | Failure modes an agent must not commit |
 | 11 | [`principle-priority.md`](principle-priority.md) | How to resolve principles that conflict |
 | 12 | [`review-checklist.md`](review-checklist.md) | The gate for a PR or screen review |

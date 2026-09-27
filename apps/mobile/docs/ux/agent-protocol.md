@@ -8,7 +8,7 @@ The procedure an agent follows when asked to review or improve a screen. It exis
 | --- | --- | --- |
 | "이 화면을 UX 가이드라인 기준으로 리뷰해줘" | **Review** | Findings report. No code changes. |
 | "이 화면에서 UX Smell 찾아줘" | **Smell scan** | Named smells with confidence and cost. No design proposal. |
-| "Primary Action이 제대로 드러나는지 확인해줘" | **Focused check** | Steps 1–3 + the relevant principles only. |
+| "Primary Action이 제대로 드러나는지 확인해줘" | **Focused check** | [`screen-analysis.md`](screen-analysis.md) Steps 1–3 + the relevant principles only. |
 | "개선안을 제안해줘" | **Proposal** | Findings + revised structure + exact copy. No code changes. |
 | "개선안을 코드에 적용하고 근거를 설명해줘" | **Implement** | Code changes + change report. |
 | "이 화면 뭔가 어색한데 개선해줘" | **Ambiguous → Proposal first** | Analyze, propose, then implement `copy`/`hierarchy` scope; ask before `structure`/`flow`/`system`. |
@@ -23,22 +23,16 @@ Default when the mode is unclear: analyze and propose. Do not start editing file
 4. The relevant document under [`../features/`](../features/README.md) — what the screen currently *is*, including its implementation status
 5. For implementation: [`../architecture/feature-sliced-design.md`](../architecture/feature-sliced-design.md), [`../conventions/module-boundaries.md`](../conventions/module-boundaries.md), [`../conventions/cookbook.md`](../conventions/cookbook.md)
 
-## The ten steps
+## The procedure
 
-Run [`screen-analysis.md`](screen-analysis.md) in full. Condensed:
+[`screen-analysis.md`](screen-analysis.md) is the procedure; its step numbers are the ones every document cites. This document adds where implementing and reporting fit:
 
-1. **Screen goal** — what this screen exists to accomplish, from the product's side.
-2. **User intent** — one sentence in the user's voice, no app vocabulary, no "and".
-3. **Primary action** — the one control, its current label, its position, its enabled state.
-4. **Current information hierarchy** — every block, its weight, its bucket (`supports` / `later` / `elsewhere` / `noise`).
-5. **UX smell detection** — Detection Rules run, exceptions applied, costs named, confidence assigned.
-6. **Principle selection** — one driving principle per confirmed finding.
-7. **Scope decision** — `copy` < `hierarchy` < `structure` < `flow` < `system`; smallest that resolves the finding; conflicts resolved via [`principle-priority.md`](principle-priority.md).
-8. **Design** — text wireframe with weight levels and exact Korean strings; every existing block accounted for; all states specified.
-9. **Implement** — only within the approved scope.
-10. **Explain** — the change report below.
+1. **Analyze** — screen-analysis Steps 0–8. Step 0 includes what the screen exists to accomplish from the product's side, read from its feature document.
+2. **Check the proposal** — screen-analysis Step 10.
+3. **Implement** — only within the approved scope ([Escalation and confirmation](#escalation-and-confirmation)).
+4. **Report** — one block per change in the format below, which is also Step 9's output.
 
-Steps 1–8 happen before any file is edited. If the analysis shows the screen is fine, say so and stop; "no change needed, here is why" is a valid and valuable outcome.
+Nothing is edited before item 3. If the analysis shows the screen is fine, say so and stop; "no change needed, here is why" is a valid and valuable outcome.
 
 ## Change report format
 
@@ -50,7 +44,7 @@ One block per change. This is the user-facing output.
 Problem    <what the screen did, and what it cost the user>
 UX Smell   <smell name(s)>
 Principle  <#, name, evidence label>
-Change     <what was actually modified — files, blocks, strings>
+Change     <what was modified — files, blocks, strings; in a proposal, what would be>
 Why        <which cost went down, named with the terms in README.md → Vocabulary>
 Trade-off  <what got worse, for whom, and why the exchange is worth it>
 ```
@@ -59,7 +53,7 @@ Rules for the report:
 
 - **No aesthetic justification.** "더 깔끔해요", "세련돼요", "요즘 스타일이에요" are not reasons. If the only reason is taste, do not make the change.
 - **No unattributed Toss claims.** Cite only what [`README.md`](README.md#verified-toss-principle-sources) verifies, with the right label.
-- **"Trade-off: none" must be justified**, and usually is wrong.
+- **"Trade-off: none" must be justified**, and usually is wrong: nearly every improvement moves cost somewhere — to another screen, to an extra tap for a minority path, to more density, to a longer label.
 - **List removals explicitly.** Anything deleted, deferred, or moved is named with its new location or the reason it has none.
 - **State what was not changed** and why, so the reviewer knows the scope was deliberate.
 - Report in the language the root [`AGENTS.md`](../../../../AGENTS.md#응답-언어) sets for replies to the user; keep code identifiers, file paths, and Korean product strings in their original form.
@@ -79,7 +73,7 @@ Rules for the report:
 
 Ask the user before implementing when:
 
-- The scope is `flow` or `system` (screen sequence, navigation structure, shared components).
+- The scope is `flow` or `system` (screen sequence, navigation structure, shared components) — or `structure`, when the request was ambiguous (see the mode table above).
 - A capability would be removed, or moved somewhere harder to reach.
 - Two principles conflict and the resolution is a genuine product judgment (which user group to favor, which path is the majority).
 - The change depends on data the agent does not have (actual usage frequency, which of two intents dominates). State the assumption, offer the alternative, and let the user pick.

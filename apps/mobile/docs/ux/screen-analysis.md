@@ -1,6 +1,6 @@
 # Screen analysis framework
 
-The mandatory analysis before any UX change proposal. Ten steps, run in order. Steps 0–5 are *observation* — no improvement ideas allowed yet. Only from Step 6 onward may the reviewer name problems, and only from Step 8 may they propose structure.
+The mandatory analysis before any UX change proposal. Eleven steps, Step 0 to Step 10, run in order; every document in this directory cites these numbers. Steps 0–5 are *observation* — no improvement ideas allowed yet. Only from Step 6 onward may the reviewer name problems, and only from Step 8 may they propose structure.
 
 The order exists because the most common review failure is redesigning before understanding: an agent that proposes layout in Step 2 will spend the rest of the analysis rationalizing it.
 
@@ -126,7 +126,7 @@ For each confirmed finding, choose the principle that will drive the fix (the on
 | `flow` | Change screen sequence, navigation, or where a decision happens | The problem is between screens, not on one |
 | `system` | Shared component or pattern change | The same defect exists on three or more screens |
 
-Prefer the smallest scope that resolves the finding. Escalate scope only with a stated reason: `copy` before `hierarchy` before `structure` before `flow` before `system`. A `flow` or `system` scope change requires the user's confirmation before implementation (see [`agent-protocol.md`](agent-protocol.md)).
+Prefer the smallest scope that resolves the finding. Escalate scope only with a stated reason: `copy` before `hierarchy` before `structure` before `flow` before `system`. Which scopes need the user's confirmation before implementation is set in [`agent-protocol.md` → Escalation and confirmation](agent-protocol.md#escalation-and-confirmation).
 
 Also check the conflicts: if two findings' fixes pull against each other, resolve with [`principle-priority.md`](principle-priority.md) *before* designing.
 
@@ -134,7 +134,7 @@ Also check the conflicts: if two findings' fixes pull against each other, resolv
 
 ## Step 8 — Revised structure
 
-Propose the improved screen as a text wireframe with explicit hierarchy levels, not prose. Required form:
+Propose the improved screen as a text wireframe, not prose. `L1`–`L5` order the blocks by importance to the current step; they are not the weight levels of [`visual-hierarchy.md`](visual-hierarchy.md), which then assign each element's visual weight — exactly one element takes `W1`. Required form:
 
 ```text
 [screen title / context]
@@ -158,18 +158,7 @@ Rules for this step:
 
 ## Step 9 — Explanation
 
-For each change, exactly this shape:
-
-```text
-Before  → <what the screen did>
-Problem → <smell name> + the user cost, in the vocabulary
-Principle → <#, name, evidence label>
-After   → <what it does now>
-Why     → <which cost went down, and how the user's path is shorter or clearer>
-Trade-off → <what got worse, who it affects, and why the exchange is worth it>
-```
-
-"Trade-off: none" is almost always wrong and must be justified. Nearly every improvement moves cost somewhere: to another screen, to an extra tap for a minority path, to more density, to a longer label.
+For each change, write one block in the change-report format of [`agent-protocol.md`](agent-protocol.md#change-report-format). Its rules apply here too — above all, "Trade-off: none" must be justified.
 
 ---
 
@@ -204,6 +193,6 @@ Before calling the analysis done, run these checks. They are cheap and catch mos
 
 **Step 7.** Scopes: `copy` for the CTA, `hierarchy` for surfacing the cut count and cost next to it, `structure` only if trim precision needs deferring.
 
-**Step 8–9.** Proposed wireframe, exact labels, and the Before → Problem → Principle → After → Why → Trade-off block per change.
+**Step 8–9.** Proposed wireframe, exact labels, and one change-report block per change.
 
 **Step 10.** All ten checks, with the state sweep run against the four real states.
