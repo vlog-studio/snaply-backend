@@ -73,40 +73,5 @@ packages/
 
 ## 빠른 시작
 
-전체 절차와 환경변수는 [ONBOARDING.md](ONBOARDING.md)에 있다. 요약:
-
-```bash
-nvm use                         # .nvmrc: Node 26
-npm ci
-cp .env.example apps/api/.env
-cp apps/mobile/.env.example apps/mobile/.env
-npm run infra:up                # MinIO(:9100/:9101) + Redis(:6379) + 로컬 Postgres
-npm run db:generate
-npm run db:migrate
-npm run db:seed
-npm run dev:api                 # http://localhost:3000 · /docs
-npm run dev:mobile              # Android dev client용 Metro
-```
-
-두 환경파일에 넣을 값과 최초 네이티브 앱 빌드 순서는 [ONBOARDING.md](ONBOARDING.md)를 따른다.
-RLS 정책은 최초 1회 `apps/api/prisma/rls-policies.sql`을 Supabase SQL Editor에서 실행한다.
-AI 편집 워커는 `npm run worker:install` 후 `npm run worker`.
-스냅 분석 워커는 같은 venv 에서 `npm run worker:analysis` — `OPENAI_API_KEY` 가 없으면 기동 단계에서 종료된다.
-배포 렌디션 워커는 `npm run worker:rendition` — 업로드된 스냅의 H.264/SDR 사본을 만든다(없으면 다른 플랫폼에서 재생이 안 될 수 있다).
-
-## 스크립트 (루트)
-
-| 명령 | 설명 |
-|---|---|
-| `npm run infra:up` / `infra:down` / `infra:logs` | 개발 인프라 |
-| `npm run stack` / `stack:down` | 전체 컨테이너 스택 빌드·migration·기동 / 중지 (기본 mock) |
-| `npm run stack:up` / `stack:migrate` | API만 기동 / migration 수동 재실행 |
-| `npm run dev:api` | API 서버(watch) |
-| `npm run dev:mobile` | Android dev client용 Expo Metro |
-| `npm run verify:mobile` | 모바일 자동 검증 게이트 — 검사 목록은 `apps/mobile/package.json`의 `verify` |
-| `npm run worker` / `worker:analysis` / `worker:rendition` / `worker:install` | AI 편집 워커 / 스냅 분석 워커 / 배포 렌디션 워커 / venv 설치 |
-| `npm run analysis:run` | 분석 워커 단발 실행(디버그) |
-| `npm run build` / `typecheck` / `lint` | 전체 빌드·검사 |
-| `npm run db:generate` / `db:migrate` / `db:seed` / `db:studio` | Prisma |
-| `npm test -w apps/api` | API 통합 테스트 — **반드시 API workspace 기준으로 실행** ([이유](AGENTS.md)) |
-| `npm run media:e2e` / `media:cleanup` | 업로드→편집→결과 e2e / 테스트 데이터 정리 |
+clone부터 API·모바일 dev client·워커 실행까지의 순서, 자주 쓰는 루트 명령, 트러블슈팅은
+[ONBOARDING.md](ONBOARDING.md)가 원천이다 — 처음이면 §3을 순서대로, 명령 표는 §4.
