@@ -61,7 +61,8 @@
 - 호스트 5432가 점유되면 `apps/api/.env`의 `POSTGRES_HOST_PORT`, `DATABASE_URL`, `DIRECT_URL`을
   함께 바꾼다. 5433은 전체 스택용 compose가 사용하므로 피한다.
 - 스키마 변경은 마이그레이션과 함께 커밋하고, pull 뒤 `npm run db:generate`를 실행한다.
-- 운영 DB 반영은 머지 순서대로 한 명이 `prisma migrate deploy`를 실행한다.
+- 운영 DB 반영은 손으로 하지 않는다 — main 머지 때 배포 잡이 컨테이너 교체 전에 마이그레이션을
+  적용한다([deployment.md](./deployment.md) §2).
 - API 통합 테스트는 `snaply_test`를 자동 생성한다. 루트 또는 API workspace 스크립트 외의
   `npx vitest` 직접 실행은 금지한다.
 
