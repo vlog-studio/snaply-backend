@@ -3,7 +3,8 @@
  *
  * Mood used to live here too. It moved to the movie: the look belongs to the
  * finished vlog, chosen once on the movie screen with the whole cut list in view,
- * rather than to each fragment as it is shot (concept §8).
+ * rather than to each fragment as it is shot (root
+ * docs/decisions/product-concept.md §5).
  */
 export type CaptureDuration = 3 | 5;
 

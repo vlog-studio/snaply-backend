@@ -1,6 +1,6 @@
 /**
  * How many snaps one movie may hold. The single hard constraint of the product
- * (concept §5): a movie is a short-form vlog, not an album. Every picking
+ * (MOV-5): a movie is a short-form vlog, not an album. Every picking
  * surface measures its picks against this same number.
  */
 export const MovieSnapLimit = 10;
@@ -42,11 +42,12 @@ export type MovieStatus = 'draft' | 'generating' | 'ready' | 'failed';
  * `ai` — the order was produced by template matching, and re-matching may
  * produce a different one.
  *
- * The rule that follows from it is the whole point (concept §6): whoever chose
- * the material also arranges it, and the moment the user reorders an `ai` movie
- * by hand it becomes `user` and stops being re-arrangeable. That is the "순서
- * 고정" the user was promised — it happens by editing rather than by remembering
- * to flip a switch, and the switch exists only to hand arrangement back.
+ * The rule that follows from it is the whole point: whoever chose the material
+ * also arranges it, and the moment the user reorders an `ai` movie by hand it
+ * becomes `user` and stops being re-arrangeable. That is the "순서 고정" the user
+ * was promised — it happens by editing rather than by remembering to flip a
+ * switch, and the switch exists only to hand arrangement back (root
+ * docs/decisions/product-concept.md §6).
  */
 export type MovieArranger = 'user' | 'ai';
 
@@ -142,7 +143,7 @@ export type MovieRender = {
  *
  * Kept on the movie rather than in memory so a job outlives the screen that
  * started it and the app session it started in: the user is expected to leave
- * while a movie generates (concept §6 step ③), and progress that lived in a
+ * while a movie generates, and progress that lived in a
  * component would be lost the moment they did.
  */
 export type MovieJob = {

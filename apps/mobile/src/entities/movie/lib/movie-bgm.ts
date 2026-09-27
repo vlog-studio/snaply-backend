@@ -6,7 +6,7 @@ export type MovieBgmOption = {
 };
 
 /**
- * The background tracks a movie can be scored with (concept §6 step ②).
+ * The background tracks a movie can be scored with.
  *
  * **Nothing shows these to the user, and nothing sends one to a run
  * (2026-08-13).** `POST /edit-jobs` takes no track id — the pipeline picks the

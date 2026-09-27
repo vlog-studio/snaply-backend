@@ -50,7 +50,7 @@ export type SnapPicking = {
  * position and that position becomes the target's order. A pick past the room
  * left is refused with a notice rather than silently dropped, because the
  * ten-snap cap is the product's one hard constraint and this is the moment it
- * bites (concept §5). And snaps the target already holds are free: picking one
+ * bites (MOV-5). And snaps the target already holds are free: picking one
  * adds nothing, so it can never be the pick that hits the cap.
  */
 export function useSnapPicking(target: SnapPickTarget): SnapPicking {

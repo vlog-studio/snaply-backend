@@ -13,7 +13,8 @@ import { useReducedMotion, useTheme } from '@/shared/ui/theme';
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 // Reduced motion shows a static partial arc as the "holding" indicator instead
-// of a continuous fill (concept §7 저감 모션; matches the motion.html demo).
+// of a continuous fill (docs/frameworks/animations-and-gestures.md, "Respect
+// reduced motion").
 const REDUCED_MOTION_FILL = 0.4;
 const RELEASE_RESET_MS = 250;
 
