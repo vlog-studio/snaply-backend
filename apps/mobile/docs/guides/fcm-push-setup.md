@@ -68,9 +68,8 @@
    - `expo-build-properties` 플러그인으로 iOS `useFrameworks: "static"` + `ios.forceStaticLinking: ["RNFBApp", "RNFBMessaging"]`
 3. `shared/lib/notifications` 어댑터: `getToken`, `onTokenRefresh`, `onMessage`(포그라운드 수신 → `expo-notifications`로 로컬 알림 표시), iOS `requestPermission`/`registerDeviceForRemoteMessages`
 4. `features/register-push-token`: 토큰 발급 → `registerFcmToken` 호출, 토큰 갱신 시 재등록
-5. `expo prebuild --clean` 후 Android dev build로 검증: 실제 FCM 토큰 발급 + Firebase 콘솔 테스트 발송으로 포그라운드/백그라운드 수신 확인
 
-> 서버의 알림 판정·FCM 발송 파이프라인까지 구현돼 있습니다. 남은 미검증 항목은 실제 dev/release build의 토큰으로 geofence 진입 보고부터 기기 표시까지 통과하는 **end-to-end 푸시 수신**입니다.
+Firebase 파일을 바꾼 뒤에는 `expo prebuild --clean` 후 Android dev build에서 실제 FCM 토큰이 발급되는지, Firebase 콘솔 테스트 발송이 포그라운드·백그라운드에서 도착하는지 확인합니다. 실기기에서 geofence 진입 보고부터 기기 표시까지 통과하는 end-to-end 수신은 아직 검증되지 않았습니다 — 동작 범위는 [기능 문서](../features/location-and-push-notifications.md), 남은 검증은 루트 backlog C-4.
 
 ---
 
