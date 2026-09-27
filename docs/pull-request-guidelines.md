@@ -15,22 +15,8 @@
 
 ## 2. 제목
 
-제목은 [`commit-guidelines.md`](commit-guidelines.md)의 Conventional Commits 형식을
-사용하고 PR 전체의 대표 변경을 설명한다.
-
-```text
-<type>(<scope>): <영문 요약>
-```
-
-예시:
-
-```text
-feat(api): add Supabase login to Swagger
-fix(api): reject expired billing webhooks
-docs: document local development setup
-```
-
-제목은 명령형 현재 시제의 간결한 영어로 작성하고 마침표를 붙이지 않는다.
+제목은 커밋 제목과 같은 형식을 쓰고([`commit-guidelines.md`](commit-guidelines.md) §1·§4 — 형식·예시·작성법),
+PR 전체의 대표 변경을 설명한다.
 
 ## 3. 본문 순서
 
