@@ -352,7 +352,7 @@ Index:
 **Exceptions.**
 - **Diagnostics deliberately surfaced for support** (a short error reference under a disclosure) — clearly separated from the human message.
 - **Established real-world domain terms** the user already owns.
-- **Our own coined product terms** (`스냅`, `무비`, `컷`, `스튜디오`), which are allowed and must stay consistent. `트레이` left this list with the tray's removal (2026-08-12) — see [UX writing](ux-writing.md#terminology).
+- **Our own coined product terms** (`스냅`, `무비`, `컷`, `스튜디오` — the full list is in [UX writing](ux-writing.md#terminology)), which are allowed and must stay consistent.
 
 ---
 

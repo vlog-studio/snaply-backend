@@ -73,7 +73,7 @@ Use these terms in reviews instead of aesthetic adjectives ("clean", "pretty", "
 
 ## Product context this system assumes
 
-Snaply is an AI short-form vlog studio: a user captures short snaps, gathers picks into a draft movie, and generates the finished movie from it (the intermediate 담기 트레이 was removed 2026-08-12). Four tabs (`스튜디오`, `스냅`, `무비`, `나`) plus a center capture button; full-screen modals for `/capture` and `/extract`. See [`../features/README.md`](../features/README.md) for the current route map and implementation status, which is the factual baseline any UX review must read before claiming a screen is broken.
+Snaply is an AI short-form vlog studio: a user captures short snaps, gathers picks into a draft movie, and generates the finished movie from it. Four tabs (`스튜디오`, `스냅`, `무비`, `나`) plus a center capture button; full-screen modals for `/capture` and `/extract`. See [`../features/README.md`](../features/README.md) for the current route map and implementation status, which is the factual baseline any UX review must read before claiming a screen is broken.
 
 Two project decisions already settled, which this system encodes rather than re-litigates:
 

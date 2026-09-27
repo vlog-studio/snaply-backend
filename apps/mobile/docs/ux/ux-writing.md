@@ -152,9 +152,9 @@ Fixed product vocabulary. Use exactly these words; never introduce a synonym.
 | 삭제 | Removing something: `…삭제할까요?` / `삭제` / `삭제하는 중…` | 지우기, 지울까요 |
 | 정리 | Removing a finished movie's server copy once the user saved it (`무비 정리`, `정리하기`) | 끝내기, 서버에서 삭제 |
 
-`트레이` left the vocabulary with the tray's removal (2026-08-12): picks now go straight into a movie (`이 스냅으로 새 무비`, `스냅 더 넣기`), and no surface may name a destination other than a movie. Do not reintroduce it.
+`트레이` is not a product term: picks go straight into a movie (`이 스냅으로 새 무비`, `스냅 더 넣기`), and no surface may name a destination other than a movie ([why there is no basket](../features/studio.md#why-there-is-no-basket-between-a-pick-and-a-movie)).
 
-`담김` stayed, because it names the confirmation that a snap was taken, which no other word covers: the `담김 · 스냅 N개` badge after a capture or an extraction, and the picker cell's `담김` badge for a snap the target movie already holds. Use it for that confirmation only — never for a place things are collected into, which is what the tray was.
+`담김` names the confirmation that a snap was taken, which no other word covers: the `담김 · 스냅 N개` badge after a capture or an extraction, and the picker cell's `담김` badge for a snap the target movie already holds. Use it for that confirmation only — never for a place things are collected into, which is what the tray was.
 
 The camera's own controls say `찍기` (owner decision, 2026-09-24): the shutter's `꾹 눌러 찍기`, the review stage's `다시 찍기`, and the template's `지금 찍기` — the everyday word a first-time user already has for pointing a camera. Never `촬영` or `담기` on a camera control. Cutting a snap out of a gallery video is not shooting, so the extract screen's `이 구간을 스냅으로 담기` keeps `담기`.
 
