@@ -91,10 +91,8 @@ This project enables `typedRoutes: true` in `app.json`.
 
 ## Platform-specific code
 
-- Keep `.ios.tsx`, `.android.tsx`, `.native.tsx`, and `.web.tsx` UI variants in the same slice as the module they implement.
-- Generic connections to Expo SDK packages such as Camera, Location, or Notifications may be wrapped in narrow `shared/lib` adapters.
-- Product actions that use those adapters belong in a feature or page. For example, a camera-permission adapter may be shared, while the photo-capture flow may belong in `features/capture-photo`.
-- Platform files must preserve the same Public API contract.
+- `.ios.tsx`, `.android.tsx`, `.native.tsx`, and `.web.tsx` variants follow [module boundaries](../conventions/module-boundaries.md#platform-specific-modules): same slice, same export contract.
+- A narrow `shared/lib` adapter over an Expo SDK package, with the product flow in a feature or page, follows [state and data](state-and-data.md#securestore-and-device-apis).
 
 ## Asset placement
 

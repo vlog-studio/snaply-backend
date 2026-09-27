@@ -661,10 +661,9 @@ shared/lib/notifications/
 └── index.ts            # re-exports; consumers import only this
 ```
 
-**Rules**
-- Every platform file exports the **same contract**; consumers import the module's
-  Public API and let Metro pick `.ios` / `.android` / `.native` / `.web`.
-- Never import a platform file directly by extension.
+**Rules** — [platform-specific modules](module-boundaries.md#platform-specific-modules):
+one export contract across the files, consumers import the module's Public API, and Metro
+picks the platform file.
 
 ### 13a. Global-scope background task definition
 
@@ -1020,7 +1019,7 @@ async function press(name: string): Promise<void> {
 
 1. **One reason to change per file** — transport ≠ mapping ≠ query key ≠ product flow.
 2. **Cross boundaries only through Public APIs** — named exports in `index.ts`, no
-   `export *`, no deep imports.
+   `export *`, no deep imports ([module boundaries](module-boundaries.md)).
 3. **Every stand-in says what it stands in for** — mock routing, local persistence, and
    in-memory cooldowns all comment on what the real backend does instead.
 4. **User-facing copy (Korean) lives in features/pages; raw native lives in shared.**

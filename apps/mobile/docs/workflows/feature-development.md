@@ -49,7 +49,7 @@ Do not create secondary technical classifications such as `ui/components`, `mode
 
 ## 5. Review dependencies
 
-For each new import, check:
+For each new import, check (the rules are in [module boundaries](../conventions/module-boundaries.md)):
 
 - Is the dependency on a lower layer?
 - If it is on the same layer, is it within the same slice?
@@ -99,7 +99,7 @@ Update the affected feature document in the same change. A feature is not comple
 - [ ] No same-layer slice imports exist.
 - [ ] External slices are consumed through explicit Public APIs.
 - [ ] No `export *` or deep imports exist.
-- [ ] No collection directories named `utils`, `helpers`, `types`, `components`, or `hooks` were introduced.
+- [ ] No broad collection directories forbidden by the [naming rules](../conventions/module-boundaries.md#naming-rules) were introduced.
 - [ ] Server, client, and form state use tools and locations appropriate to their roles.
 - [ ] SDK APIs match the Expo SDK 57 documentation.
 - [ ] Every affected document under `docs/features` matches the implemented behavior, routes, ownership, platform support, persistence, status, and limitations.

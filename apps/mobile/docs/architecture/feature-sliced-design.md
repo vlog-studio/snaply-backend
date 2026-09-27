@@ -125,7 +125,7 @@ Shared code can be explained without knowing a specific product use case.
 - `routes`: href builders for targets more than one screen navigates to
 - `assets`: runtime assets reused across slices
 
-`shared` is not a dumping ground for `utils`, `helpers`, `types`, `components`, or `hooks`. Use focused responsibilities such as `shared/lib/date` or `shared/lib/secure-storage`.
+`shared` is not a dumping ground: the broad names the [naming rules](../conventions/module-boundaries.md#naming-rules) forbid are forbidden here too. Use focused responsibilities such as `shared/lib/date` or `shared/lib/secure-storage`.
 
 ## Slices and segments
 
@@ -141,7 +141,7 @@ features/
 
 `capture-photo` must not import `share-photo`. Compose them in a widget or page, or move a genuinely shared domain concept down to an entity or shared module.
 
-Use a slice group only when the number of slices makes navigation difficult. A group is a navigation-only folder: it has no `index.ts`, segments, or shared code of its own.
+Use a slice group only when the number of slices makes navigation difficult. A group is a navigation-only folder: it has no `index.ts`, segments, or shared code of its own, and it does not relax the same-layer import rule.
 
 ### Segment
 
@@ -155,7 +155,7 @@ A segment groups files within a slice by technical purpose.
 | `lib` | Supporting logic used only inside the slice |
 | `config` | Slice-specific flags and configuration |
 
-Do not create every segment in every slice. A slice may contain one segment and an `index.ts`. Do not use `components`, `hooks`, `types`, or `utils` as segment names because they describe what files are rather than what they are for.
+Do not create every segment in every slice. A slice may contain one segment and an `index.ts`. Name a segment for what its files are for, not what they are — the forbidden names are in the [naming rules](../conventions/module-boundaries.md#naming-rules).
 
 ## Placement algorithm
 
@@ -181,8 +181,6 @@ The starter's technical directories — `src/components`, `src/hooks`, `src/cons
 - App and Shared contain no slices. Do not create `_app/auth` as an auth slice; organize App by responsibilities such as `_app/providers` and `_app/routes`.
 - Features are not the default location for all functionality. Use them selectively for reused user actions.
 - A page containing substantial code is not itself a violation. Keep code in the page when it is clear and screen-specific.
-- A Public API is not an indiscriminate barrel export. Explicitly expose only the contract needed by consumers.
-- Imports between same-layer slices are forbidden. A slice group does not alter this rule.
 
 ## Sources
 
