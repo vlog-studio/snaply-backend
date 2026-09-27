@@ -1,6 +1,11 @@
 import { useEffect } from 'react';
 
-import { getSnaps, useRecordSnapMeasurement, useSnapsHydrated } from '@/entities/snap';
+import {
+  getSnaps,
+  isSnapFileLocal,
+  useRecordSnapMeasurement,
+  useSnapsHydrated,
+} from '@/entities/snap';
 import { readVideoMetadata } from '@/shared/lib/video-metadata';
 
 /**
@@ -45,6 +50,9 @@ export function SnapMetadataBackfill(): null {
       for (const snap of getSnaps()) {
         if (cancelled) return;
         if (snap.durationMeasured && snap.dimensionsMeasured) continue;
+        // A snap from another device is measured once its copy has been
+        // fetched; until then there is no file to read.
+        if (!isSnapFileLocal(snap)) continue;
         const measured = await readVideoMetadata(snap.uri);
         if (cancelled) return;
         recordMeasurement(snap.id, measured);

@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 
 import type { MovieTemplate, TemplateSlot } from '@/entities/movie-template';
-import { useSnaps, type Snap } from '@/entities/snap';
+import { useSnapsForMovies, type Snap } from '@/entities/snap';
 
 import { describeSession } from '../lib/describe-match';
 import {
@@ -101,7 +101,8 @@ export type TemplateFill = {
  * nothing.
  */
 export function useTemplateFill(template: MovieTemplate | undefined): TemplateFill {
-  const snaps = useSnaps();
+  // A snap whose server copy expired cannot be made into a movie (SNAP-12).
+  const snaps = useSnapsForMovies();
   const [dropped, setDropped] = useState<ReadonlySet<string>>(new Set());
   const [shot, setShot] = useState<Readonly<Record<string, Snap>>>({});
   // Which proposal entry each slot draws from. A permutation rather than a

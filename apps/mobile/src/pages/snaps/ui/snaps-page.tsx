@@ -1,9 +1,15 @@
 import { useIsFocused, useRouter, useScrollToTop } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BackHandler, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { MovieSnapLimit } from '@/entities/movie';
-import { useFailedUploadCount, useRetryFailedUploads, type Snap } from '@/entities/snap';
+import {
+  useExpiredSnapIds,
+  useFailedUploadCount,
+  useRetryFailedUploads,
+  useSnapFiles,
+  type Snap,
+} from '@/entities/snap';
 import { useComposeMovie } from '@/features/compose-movie';
 import { useDeleteSnaps } from '@/features/delete-snap';
 import { formatDuration, formatSeconds } from '@/shared/lib/datetime';
@@ -85,7 +91,7 @@ export function SnapsPage({ startSelecting = false }: SnapsPageProps) {
 
   // A new movie starts empty, so nothing in the library is "held" here — unlike
   // a movie's picker, where the movie's own cuts are.
-  const { picked, notice, toggle, drop, clear, reset } = useSnapPicking({
+  const { picked, notice, toggle, drop, clear, reset, announce } = useSnapPicking({
     heldIds: NoHeldIds,
     heldCount: 0,
     capacity: MovieSnapLimit,
@@ -93,6 +99,21 @@ export function SnapsPage({ startSelecting = false }: SnapsPageProps) {
   });
 
   const impact = useMovieDeleteImpact(deleteOpen ? picked : EmptySelection);
+  const expiredIds = useExpiredSnapIds();
+
+  // A snap shot on another device plays from a copy fetched on first play; the
+  // player opens at once and says so while the copy is on its way.
+  const playingSnaps = useMemo(() => (playing ? [playing] : []), [playing]);
+  const playingFile = useSnapFiles(playingSnaps);
+  const playingUri =
+    playing && !playingFile.fetching && !playingFile.failed ? playing.uri : undefined;
+  const playingPlaceholder = !playing
+    ? undefined
+    : playingFile.failed
+      ? { text: '스냅을 불러오지 못했어요', actionLabel: '다시 시도', onAction: playingFile.retry }
+      : playingFile.fetching
+        ? { text: '불러오는 중…' }
+        : undefined;
 
   // Arriving with `?select=1` (the studio sending the user to pick for a new
   // movie) opens selection mode. The tab stays mounted across visits, so the initial
@@ -170,6 +191,15 @@ export function SnapsPage({ startSelecting = false }: SnapsPageProps) {
   };
 
   const confirmPicks = () => {
+    // Selection here also deletes, so an expired snap may be picked — but a
+    // movie is made from the server's copies, and its copy is gone (SNAP-12).
+    // It is taken out of the picks, which leaves the rest ready to confirm.
+    const expiredPicks = picked.filter((snapId) => expiredIds.has(snapId));
+    if (expiredPicks.length > 0) {
+      drop(expiredPicks);
+      announce(ExpiredSnapRefusal);
+      return;
+    }
     // The draft is where the picks land, so open it — the cap was enforced pick
     // by pick, so a non-empty selection always makes a movie.
     const movie = startMovieFromSnaps(picked);
@@ -320,9 +350,11 @@ export function SnapsPage({ startSelecting = false }: SnapsPageProps) {
       ) : null}
 
       <VideoPlayerModal
-        uri={playing?.uri}
+        uri={playingUri}
+        placeholder={playingPlaceholder}
         closeLabel="스냅 닫기"
         edgeLabel={playing ? formatSeconds(playing.durationSec) : undefined}
+        caption={playing && expiredIds.has(playing.id) ? '보관 기간이 끝났어요' : undefined}
         onClose={() => setPlaying(undefined)}
       />
 
@@ -341,6 +373,9 @@ export function SnapsPage({ startSelecting = false }: SnapsPageProps) {
 
 /** Stable reference, so the impact hook does not recompute on every render. */
 const EmptySelection: string[] = [];
+
+/** A movie is made from the server's copies, and this snap's is gone (SNAP-12). */
+const ExpiredSnapRefusal = '보관 기간이 끝난 스냅은 무비에 넣을 수 없어요.';
 
 /** A new movie holds nothing yet, so no snap in the library reads as 담김. */
 const NoHeldIds: ReadonlySet<string> = new Set();

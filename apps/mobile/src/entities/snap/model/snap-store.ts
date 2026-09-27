@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
@@ -9,6 +10,7 @@ import {
 } from '@/shared/lib/scoped-store';
 
 import { orientationOf, type Snap, type SnapMeasurement } from './snap';
+import { useExpiredSnapIds } from './snap-sync-store';
 
 const SnapStoreName = 'snaply.snaps';
 
@@ -42,6 +44,13 @@ type SnapState = {
   snaps: Snap[];
   hasHydrated: boolean;
   addSnap: (snap: Snap) => void;
+  /**
+   * Takes in snaps from the server's list in one write: those the library does
+   * not hold yet are added, and those it already holds from the server take any
+   * length or size the server measured. A snap shot on this device is never
+   * touched — its own file is the source of truth.
+   */
+  mergeServerSnaps: (snaps: readonly Snap[]) => void;
   removeSnaps: (ids: readonly string[]) => void;
   recordMeasurement: (id: string, measurement: SnapMeasurement) => void;
   setHasHydrated: (value: boolean) => void;
@@ -74,6 +83,14 @@ function applyMeasurement(snap: Snap, measurement: SnapMeasurement): Snap {
   return next;
 }
 
+/** What a snap carries that was actually measured — a stand-in is not a measurement. */
+function measurementOf(snap: Snap): SnapMeasurement {
+  return {
+    ...(snap.durationMeasured ? { durationSec: snap.durationSec } : null),
+    ...(snap.dimensionsMeasured ? { width: snap.width, height: snap.height } : null),
+  };
+}
+
 export const useSnapStore = create<SnapState>()(
   persist(
     (set) => ({
@@ -85,6 +102,31 @@ export const useSnapStore = create<SnapState>()(
             ? state
             : { snaps: [snap, ...state.snaps] },
         ),
+      mergeServerSnaps: (incoming) =>
+        set((state) => {
+          if (incoming.length === 0) return state;
+          const byId = new Map(state.snaps.map((snap) => [snap.id, snap]));
+          const added: Snap[] = [];
+          let changed = false;
+          for (const snap of incoming) {
+            const held = byId.get(snap.id);
+            if (!held) {
+              added.push(snap);
+              byId.set(snap.id, snap);
+              continue;
+            }
+            if (held.origin !== 'server') continue;
+            const measured = applyMeasurement(held, measurementOf(snap));
+            if (measured !== held) {
+              byId.set(snap.id, measured);
+              changed = true;
+            }
+          }
+          if (added.length === 0 && !changed) return state;
+          return {
+            snaps: [...added, ...state.snaps.map((snap) => byId.get(snap.id) ?? snap)],
+          };
+        }),
       removeSnaps: (ids) =>
         set((state) => {
           const removed = new Set(ids);
@@ -151,12 +193,37 @@ export function useSnaps(): Snap[] {
   return useSnapStore((state) => state.snaps);
 }
 
+/**
+ * The library minus the snaps whose server copy has expired — what a movie can
+ * be made of. A movie is rendered from the server's copies, so an expired snap
+ * put into one would wait for an upload that can never happen, and the movie
+ * would never reach the server (SNAP-12).
+ */
+export function useSnapsForMovies(): Snap[] {
+  const snaps = useSnaps();
+  const expired = useExpiredSnapIds();
+  return useMemo(
+    () => (expired.size === 0 ? snaps : snaps.filter((snap) => !expired.has(snap.id))),
+    [snaps, expired],
+  );
+}
+
 export function useSnapsHydrated(): boolean {
   return useSnapStore((state) => state.hasHydrated);
 }
 
 export function useAddSnap(): (snap: Snap) => void {
   return useSnapStore((state) => state.addSnap);
+}
+
+/** Non-reactive entry point for the reconcile, which merges from an async pass. */
+export function mergeServerSnaps(snaps: readonly Snap[]): void {
+  useSnapStore.getState().mergeServerSnaps(snaps);
+}
+
+/** Non-reactive removal, for the reconcile's async pass (see `mergeServerSnaps`). */
+export function removeSnaps(ids: readonly string[]): void {
+  useSnapStore.getState().removeSnaps(ids);
 }
 
 /**

@@ -3,4 +3,4 @@ export {
   getVideoThumbnail,
   type VideoThumbnailOptions,
 } from './video-thumbnails';
-export { useVideoThumbnail } from './use-video-thumbnail';
+export { primeVideoThumbnail, useVideoThumbnail } from './use-video-thumbnail';

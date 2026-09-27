@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 
 import { useMovieTemplates, type MovieTemplate } from '@/entities/movie-template';
-import { useSnaps, type Snap } from '@/entities/snap';
+import { useSnapsForMovies, type Snap } from '@/entities/snap';
 
 import { groupIntoSessions, pickBestSession, spreadAcrossSlots } from '../lib/match-template';
 
@@ -42,7 +42,8 @@ export type TemplateOffer = {
  * answer arrives.
  */
 export function useTemplateOffers(): TemplateOffer[] {
-  const snaps = useSnaps();
+  // A snap whose server copy expired cannot be made into a movie (SNAP-12).
+  const snaps = useSnapsForMovies();
   const templates = useMovieTemplates();
 
   return useMemo(

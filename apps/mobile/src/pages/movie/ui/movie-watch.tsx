@@ -1,7 +1,9 @@
+import { useMemo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { movieStyleLabel, type Movie } from '@/entities/movie';
+import { useSnapFiles, type Snap } from '@/entities/snap';
 import type { RenderSource } from '@/features/compose-movie';
 import { ShareBlockMessages, type MovieSharing } from '@/features/share-movie';
 import { formatDateTime, formatSeconds } from '@/shared/lib/datetime';
@@ -12,6 +14,7 @@ import { ThemedText } from '@/shared/ui/themed-text';
 import { toPlaybackCuts } from '../model/playback-cuts';
 import type { Cut } from '../model/use-movie-cuts';
 import { watchDurationSec } from '../model/watch-cuts';
+import { CutFilesStage } from './cut-files-stage';
 import { CutPlayer } from './cut-player';
 import { RenderPlayer } from './render-player';
 
@@ -83,6 +86,15 @@ export function MovieWatch({
   const insets = useSafeAreaInsets();
   const playbackCuts = toPlaybackCuts(cuts);
   const totalSec = watchDurationSec(movie, cuts);
+  // The cuts play only when there is no render to play; only then must their
+  // videos be here, and only then is a snap from another device fetched.
+  const playsCuts =
+    !renderSource.resolving && renderSource.uri === undefined && !renderSource.unresolved;
+  const cutSnaps = useMemo(
+    () => (playsCuts ? cuts.flatMap((cut): Snap[] => (cut.snap ? [cut.snap] : [])) : []),
+    [playsCuts, cuts],
+  );
+  const cutFiles = useSnapFiles(cutSnaps);
   // Facts about the *finished* movie, so each one comes off the render rather
   // than off the movie's live settings, which keep moving after a run: the style
   // is the preset the file was actually graded and cut with, and a render that
@@ -141,6 +153,8 @@ export function MovieWatch({
               </ThemedText>
             </Pressable>
           </View>
+        ) : playbackCuts.length > 0 && (cutFiles.fetching || cutFiles.failed) ? (
+          <CutFilesStage files={cutFiles} />
         ) : playbackCuts.length > 0 ? (
           <View style={styles.playerBox}>
             <CutPlayer cuts={playbackCuts} style={styles.player} />
@@ -149,7 +163,9 @@ export function MovieWatch({
           <View style={[styles.empty, { borderColor: theme.border }]}>
             <ThemedText type="heading">재생할 컷이 없어요</ThemedText>
             <ThemedText themeColor="textSecondary" style={styles.centerText}>
-              이 무비가 쓰던 스냅이 모두 삭제됐어요.
+              {cuts.every((cut) => cut.unavailable)
+                ? '이 무비가 쓰던 스냅의 보관 기간이 끝났어요.'
+                : '이 무비가 쓰던 스냅이 모두 삭제됐어요.'}
             </ThemedText>
           </View>
         )}

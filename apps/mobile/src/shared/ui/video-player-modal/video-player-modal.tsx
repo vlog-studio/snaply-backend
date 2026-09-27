@@ -1,7 +1,7 @@
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Spacing } from '@/shared/ui/theme';
+import { Radius, Spacing } from '@/shared/ui/theme';
 import { ThemedText } from '@/shared/ui/themed-text';
 import { VideoPreview } from '@/shared/ui/video-preview';
 
@@ -24,6 +24,13 @@ export type VideoPlayerModalProps = {
   edgeLabel?: string;
   /** Dimmer second line under the edge print. */
   caption?: string;
+  /**
+   * What to show while there is nothing to play *yet* — the video is still on
+   * its way, or could not be brought. Keeps the modal open without a `uri`, so
+   * a tap on something that must first be fetched opens at once instead of
+   * doing nothing for a while. The optional action is offered under the text.
+   */
+  placeholder?: { text: string; actionLabel?: string; onAction?: () => void };
 };
 
 /**
@@ -46,6 +53,7 @@ export function VideoPlayerModal({
   closeLabel,
   edgeLabel,
   caption,
+  placeholder,
 }: VideoPlayerModalProps) {
   const insets = useSafeAreaInsets();
 
@@ -54,13 +62,30 @@ export function VideoPlayerModal({
       animationType="fade"
       onRequestClose={onClose}
       presentationStyle="fullScreen"
-      visible={uri !== undefined}
+      visible={uri !== undefined || placeholder !== undefined}
     >
       <View style={styles.screen}>
         {uri ? (
           // Keyed on the URI so switching videos remounts the player instead of
           // re-pointing a running one, which carries the old playhead over.
           <VideoPreview key={uri} contentFit="contain" muted={false} nativeControls uri={uri} />
+        ) : placeholder ? (
+          <View style={styles.placeholder}>
+            <ThemedText style={styles.placeholderText}>{placeholder.text}</ThemedText>
+            {placeholder.actionLabel && placeholder.onAction ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={placeholder.actionLabel}
+                hitSlop={Spacing.two}
+                onPress={placeholder.onAction}
+                style={({ pressed }) => [styles.placeholderAction, { opacity: pressed ? 0.7 : 1 }]}
+              >
+                <ThemedText selectable={false} type="smallBold" style={styles.placeholderText}>
+                  {placeholder.actionLabel}
+                </ThemedText>
+              </Pressable>
+            ) : null}
+          </View>
         ) : null}
         <Pressable
           accessibilityLabel={closeLabel}
@@ -110,4 +135,20 @@ const styles = StyleSheet.create({
     pointerEvents: 'none',
   },
   caption: { color: 'rgba(255,255,255,0.62)' },
+  placeholder: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.three,
+    paddingHorizontal: Spacing.five,
+  },
+  // Over the black letterbox, like the rest of this screen's text.
+  placeholderText: { color: '#FFFFFF', textAlign: 'center' },
+  placeholderAction: {
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.62)',
+    borderRadius: Radius.pill,
+    paddingHorizontal: Spacing.four,
+    paddingVertical: Spacing.two,
+  },
 });

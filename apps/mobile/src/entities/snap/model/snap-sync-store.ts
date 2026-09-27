@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
@@ -8,11 +9,18 @@ import { createScopedPersistence, deleteScopedState } from '@/shared/lib/scoped-
  * How far a snap has gotten toward the backend. `pending` is the absence of an
  * entry rather than a stored value, so a freshly captured snap is in the queue
  * without anyone having to write anything.
+ *
+ * `uploaded` may carry when the server's copy runs out (`expiresAt`, epoch ms),
+ * learned from the server's list — the upload itself does not say. `expired` is
+ * a snap whose server copy is gone for good at the end of its retention
+ * (SNAP-9): the device may still hold the file, but nothing can be made from it
+ * on the server any more, so it is neither uploaded again nor put into a movie.
  */
 export type SnapSyncEntry =
   | { status: 'uploading' }
-  | { status: 'uploaded'; videoId: string }
-  | { status: 'failed'; attempts: number };
+  | { status: 'uploaded'; videoId: string; expiresAt?: number }
+  | { status: 'failed'; attempts: number }
+  | { status: 'expired'; videoId: string };
 
 export type SnapSyncStatus = SnapSyncEntry['status'] | 'pending';
 
@@ -20,7 +28,8 @@ const SnapSyncStoreName = 'snaply.snap-sync';
 
 /**
  * Owns what the backend knows about each snap: the upload state per snap id,
- * the server `videoId` a completed upload earned, the tombstones of remote
+ * the server `videoId` a completed upload earned (or a snap brought in from the
+ * server was born with), when that copy expires, the tombstones of remote
  * videos whose local snap is already gone, and how often each of those deletes
  * has been refused.
  *
@@ -67,6 +76,16 @@ type SnapSyncState = {
   clearTombstone: (videoId: string) => void;
   /** Records one refused `DELETE /videos/{id}`; the tombstone itself stays. */
   markDeleteFailed: (videoId: string) => void;
+  /**
+   * What the server's list said, in one write: entries to set (a snap brought in
+   * from the server, a lost upload record restored, an expiry learned) and
+   * entries to drop. Dropping leaves **no tombstone** — the server already told
+   * us the row is gone, or has no such row and the snap is to be uploaded again.
+   */
+  applyServerState: (update: {
+    entries: Readonly<Record<string, SnapSyncEntry>>;
+    dropped: readonly string[];
+  }) => void;
   setHasHydrated: (value: boolean) => void;
 };
 
@@ -150,6 +169,24 @@ export const useSnapSyncStore = create<SnapSyncState>()(
             [videoId]: (state.deleteAttempts[videoId] ?? 0) + 1,
           },
         })),
+      applyServerState: ({ entries: incoming, dropped }) =>
+        set((state) => {
+          const entries = { ...state.entries };
+          let changed = false;
+          for (const [snapId, entry] of Object.entries(incoming)) {
+            if (sameEntry(entries[snapId], entry)) continue;
+            entries[snapId] = entry;
+            changed = true;
+          }
+          for (const snapId of dropped) {
+            if (!(snapId in entries)) continue;
+            delete entries[snapId];
+            changed = true;
+          }
+          // Every write here wakes the upload worker and the movie sync; one
+          // that changes nothing must not.
+          return changed ? { entries } : state;
+        }),
       setHasHydrated: (value) => set({ hasHydrated: value }),
     }),
     {
@@ -191,6 +228,24 @@ export function purgeSnapSyncScope(scope: string): Promise<void> {
   return deleteScopedState(SnapSyncStoreName, scope);
 }
 
+function sameEntry(left: SnapSyncEntry | undefined, right: SnapSyncEntry): boolean {
+  if (!left || left.status !== right.status) return false;
+  switch (right.status) {
+    case 'uploaded':
+      return (
+        left.status === 'uploaded' &&
+        left.videoId === right.videoId &&
+        left.expiresAt === right.expiresAt
+      );
+    case 'expired':
+      return left.status === 'expired' && left.videoId === right.videoId;
+    case 'failed':
+      return left.status === 'failed' && left.attempts === right.attempts;
+    case 'uploading':
+      return true;
+  }
+}
+
 function mergeTombstones(existing: string[], added: string[]): string[] {
   const merged = new Set(existing);
   for (const videoId of added) merged.add(videoId);
@@ -223,6 +278,39 @@ export function useFailedUploadCount(): number {
     }
     return count;
   });
+}
+
+/**
+ * When the server's copy of a snap runs out, in epoch ms — `undefined` until
+ * the server's list has said, and for a snap not uploaded (SNAP-13).
+ */
+export function useSnapExpiresAt(snapId: string): number | undefined {
+  return useSnapSyncStore((state) => {
+    const entry = state.entries[snapId];
+    return entry?.status === 'uploaded' ? entry.expiresAt : undefined;
+  });
+}
+
+/**
+ * The snaps whose server copy has expired. Nothing can be made from them on the
+ * server, so every surface that puts snaps into a movie leaves these out.
+ */
+export function useExpiredSnapIds(): ReadonlySet<string> {
+  const entries = useSnapSyncStore((state) => state.entries);
+  return useMemo(() => expiredIdsOf(entries), [entries]);
+}
+
+function expiredIdsOf(entries: Record<string, SnapSyncEntry>): ReadonlySet<string> {
+  const expired = new Set<string>();
+  for (const [snapId, entry] of Object.entries(entries)) {
+    if (entry.status === 'expired') expired.add(snapId);
+  }
+  return expired;
+}
+
+/** Non-reactive form of {@link useExpiredSnapIds}, for a commit that runs outside render. */
+export function getExpiredSnapIds(): ReadonlySet<string> {
+  return expiredIdsOf(useSnapSyncStore.getState().entries);
 }
 
 export function useSnapSyncHydrated(): boolean {
@@ -261,6 +349,14 @@ export function markSnapUploaded(snapId: string, videoId: string): void {
 
 export function markSnapUploadFailed(snapId: string): void {
   useSnapSyncStore.getState().markUploadFailed(snapId);
+}
+
+/** See the store's `applyServerState`. For the reconcile's async pass. */
+export function applyServerSnapState(update: {
+  entries: Readonly<Record<string, SnapSyncEntry>>;
+  dropped: readonly string[];
+}): void {
+  useSnapSyncStore.getState().applyServerState(update);
 }
 
 export function addSnapDeleteTombstone(videoId: string): void {

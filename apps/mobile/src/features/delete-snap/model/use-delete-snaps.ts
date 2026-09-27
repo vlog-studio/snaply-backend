@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useRemoveSnapsEverywhere } from '@/entities/movie';
-import { useForgetSnapSync, useRemoveSnaps } from '@/entities/snap';
-import { deleteLocalRecording } from '@/shared/lib/recording-files';
+import { deleteSnapFile, useForgetSnapSync, useRemoveSnaps } from '@/entities/snap';
 import { deleteVideoThumbnail } from '@/shared/lib/video-thumbnails';
 
 const PartialFailureMessage = '일부 스냅을 삭제하지 못했어요. 다시 시도해 주세요.';
@@ -64,7 +63,7 @@ export function useDeleteSnaps() {
       // succeed instead of aborting the whole batch.
       for (const target of targets) {
         try {
-          await deleteLocalRecording(target.uri);
+          await deleteSnapFile(target.uri);
           deletedIds.push(target.id);
         } catch {
           hadFailure = true;

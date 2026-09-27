@@ -1,15 +1,18 @@
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { MovieSnapLimit, useMovieById } from '@/entities/movie';
-import type { Snap } from '@/entities/snap';
+import { useExpiredSnapIds, type Snap } from '@/entities/snap';
 import { canEditMovie, useComposeMovie } from '@/features/compose-movie';
 import { movieHref } from '@/shared/routes';
 import { BackBar } from '@/shared/ui/back-bar';
 import { MaxContentWidth, Radius, Spacing, useTheme } from '@/shared/ui/theme';
 import { ThemedText } from '@/shared/ui/themed-text';
 import { SnapDayGrid, SnapSelectionBar, useSnapDays, useSnapPicking } from '@/widgets/snap-grid';
+
+/** A movie is made from the server's copies, and this snap's is gone (SNAP-12). */
+const ExpiredSnapRefusal = '보관 기간이 끝난 스냅은 무비에 넣을 수 없어요.';
 
 export type AddSnapsPageProps = {
   /** `/movie/[id]/add-snaps` — the movie the picks are headed for. */
@@ -49,10 +52,16 @@ export function AddSnapsPage({ movieId }: AddSnapsPageProps) {
     () => new Set(movie?.snapRefs.map((ref) => ref.snapId) ?? []),
     [movie?.snapRefs],
   );
+  const expiredIds = useExpiredSnapIds();
+  const refuseSnap = useCallback(
+    (snapId: string) => (expiredIds.has(snapId) ? ExpiredSnapRefusal : undefined),
+    [expiredIds],
+  );
   const { picked, room, notice, toggle, clear, announce } = useSnapPicking({
     heldIds,
     heldCount: movie?.snapRefs.length ?? 0,
     capacity: MovieSnapLimit,
+    refuseSnap,
     describeRefusal: (room) =>
       room === 0
         ? `이 무비는 이미 스냅 ${MovieSnapLimit}개를 갖고 있어요.`

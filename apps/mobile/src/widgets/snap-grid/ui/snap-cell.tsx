@@ -1,7 +1,12 @@
 import { memo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { useSnapSyncStatus, type Snap, type SnapSyncStatus } from '@/entities/snap';
+import {
+  useSnapExpiresAt,
+  useSnapSyncStatus,
+  type Snap,
+  type SnapSyncStatus,
+} from '@/entities/snap';
 import { formatSeconds } from '@/shared/lib/datetime';
 import { Radius, Spacing, useTheme } from '@/shared/ui/theme';
 import { ThemedText } from '@/shared/ui/themed-text';
@@ -33,12 +38,32 @@ const SyncBadgeLabel: Record<SnapSyncStatus, string | undefined> = {
   uploading: '올리는 중',
   uploaded: undefined,
   failed: '올리지 못함',
+  // The server's copy is gone (SNAP-12). The file may still play here, but no
+  // movie can be made from it — which is what the badge is there to say.
+  expired: '만료됨',
 };
 
 /**
+ * How many days before the server's copy runs out a cell starts counting down
+ * (SNAP-13) — the first of the two expiry pushes, so the library says what the
+ * notification said, and still says it to someone who turned notifications off.
+ */
+const ExpiryCountdownDays = 3;
+
+const DayMs = 24 * 60 * 60 * 1000;
+
+/** `3일 남음` inside the countdown window, nothing before it or once it has passed. */
+function expiryCountdownOf(expiresAt: number | undefined, now: number): string | undefined {
+  if (expiresAt === undefined) return undefined;
+  const days = Math.ceil((expiresAt - now) / DayMs);
+  return days >= 1 && days <= ExpiryCountdownDays ? `${days}일 남음` : undefined;
+}
+
+/**
  * One snap in the grid: its first frame, its length, its pick number while
- * selecting, a "담김" badge whenever the target already holds it, and its
- * upload state while it is not settled on the backend yet.
+ * selecting, a "담김" badge whenever the target already holds it, its upload
+ * state while it is not settled on the backend yet, and — once it is — the days
+ * left on the server's copy near the end, or that the copy has expired.
  *
  * The badge stays visible during selection because that is exactly when it
  * matters: picking a snap the target already has does nothing, and without the
@@ -63,12 +88,16 @@ export const SnapCell = memo(function SnapCell({
   const isPicked = pickNumber !== undefined;
   const syncStatus = useSnapSyncStatus(snap.id);
   const syncLabel = SyncBadgeLabel[syncStatus];
+  const expiresAt = useSnapExpiresAt(snap.id);
+  // Read at render: a library left open across a day boundary shows yesterday's
+  // count until something re-renders the cell, as the day headings do.
+  const countdown = syncLabel ? undefined : expiryCountdownOf(expiresAt, Date.now());
 
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityState={selecting ? { selected: isPicked } : undefined}
-      accessibilityLabel={`${formatSeconds(snap.durationSec)} 스냅${isHeld ? ' · 이미 담김' : ''}${syncLabel ? ` · ${syncLabel}` : ''}`}
+      accessibilityLabel={`${formatSeconds(snap.durationSec)} 스냅${isHeld ? ' · 이미 담김' : ''}${syncLabel ? ` · ${syncLabel}` : ''}${countdown ? ` · 보관 ${countdown}` : ''}`}
       accessibilityHint={selecting ? '탭하면 선택해요' : '탭하면 재생해요. 길게 누르면 선택해요'}
       onPress={() => onPress(snap)}
       onLongPress={() => onLongPress(snap)}
@@ -111,13 +140,19 @@ export const SnapCell = memo(function SnapCell({
         <View
           style={[
             styles.syncBadge,
-            syncStatus === 'failed'
+            syncStatus === 'failed' || syncStatus === 'expired'
               ? { backgroundColor: theme.danger }
               : styles.syncBadgeInProgress,
           ]}
         >
           <ThemedText selectable={false} type="note" style={styles.syncBadgeText}>
             {syncLabel}
+          </ThemedText>
+        </View>
+      ) : countdown ? (
+        <View style={[styles.syncBadge, { backgroundColor: theme.amber }]}>
+          <ThemedText selectable={false} type="note" style={styles.syncBadgeText}>
+            {countdown}
           </ThemedText>
         </View>
       ) : null}
