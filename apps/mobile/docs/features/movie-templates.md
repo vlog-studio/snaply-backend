@@ -52,7 +52,7 @@ The match answers one question — *which snaps were shot on the same outing* �
 
 ### What stage 2 adds
 
-The app sends the chosen outing's **uploaded** snaps — in capture order, at most twelve, evenly sampled if there are more — and the template id. The server ensures each candidate is analysed, scores every (slot, snap) pair, and answers with one snap per slot.
+The app sends the chosen outing's **uploaded** snaps — in capture order, at most the server's per-request cap of twelve ([REC-3](../../../../docs/specs/template-and-recommendation.md)), evenly sampled if there are more — and the template id. The server ensures each candidate is analysed, scores every (slot, snap) pair, and answers with one snap per slot.
 
 Scoring is rule-based and lives on the server, so its weights can be tuned without an app release ([server decision](../../../../docs/decisions/template-snap-recommendation.md) §7). What the app is entitled to rely on:
 
