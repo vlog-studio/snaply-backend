@@ -270,7 +270,7 @@ A finished movie's file lives on the server for a bounded time (MOV-16, 30 days)
 | No cut or style edits while a job owns the movie (`generating`) | `saveCuts` → `frozen`, `saveStyle` → `false` |
 | At least one cut | `saveCuts` → `empty` |
 | At most ten cuts (`MovieSnapLimit`) | `saveCuts` / `appendSnaps` → `full` |
-| No second job while one is running | `startGeneration` → `frozen` |
+| No second job on a movie while one is running on it — the rule is per movie; other movies can run at the same time | `startGeneration` → `frozen` |
 | Nothing to generate from | `startGeneration` → `empty` |
 | Every cut must be on the backend before a run | `startGeneration` → `uploading` |
 | The backend may refuse the run (an expired or deleted cut, ownership, `ready`) | `startGeneration` → `rejected`, carrying the server's message for debugging; the screen words it itself |
