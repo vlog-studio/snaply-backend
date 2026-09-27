@@ -82,7 +82,7 @@ Contract types are referenced **only** inside `shared/api` and at the input boun
 ## Authentication and error ownership
 
 - Token injection (the Supabase JWT `Authorization` header) and HTTP/transport error normalization live in `shared/api/client.ts`.
-- The **meaning** of a session token — which keys are stored and when they are cleared — belongs to the session domain, not to `shared`. Persist tokens through the `shared/lib/secure-storage` adapter, orchestrated by `entities/session` and a sign-in feature, per [`state-and-data.md`](../frameworks/state-and-data.md).
+- The session itself — persisting and refreshing the tokens — belongs to the Supabase client, not to the transport; see [`state-and-data.md`](../frameworks/state-and-data.md#securestore-and-device-apis).
 
 ## Zod validation policy
 
