@@ -1,10 +1,16 @@
 # Before / after examples
 
-Thirteen worked cases. They are **illustrative**, not an audit of the current build: the "before" side is a realistic composite of common failure shapes, written so the reasoning is transferable. Before citing a case against a real screen, verify the screen's actual state against [`../features/README.md`](../features/README.md) and the code.
+Thirteen worked cases, each in the same shape: Before → Problems (smell names) → Applied principles → After → Why → Trade-off. The Before is a realistic composite of a common failure shape, written so the reasoning is transferable; it may keep a concept the product has dropped, because it is the rejected design.
 
-Each case uses the same shape: Before wireframe → Problems (smell names) → Applied principles → After wireframe → Why → Trade-off. Weight levels (`L1`…) follow [`visual-hierarchy.md`](visual-hierarchy.md).
+Each After is one of three kinds, and every case says which:
 
-An "after" is a recommendation, so it must never stand on a concept the product has since dropped — a reader cannot tell a proposal from a fossil, and an agent will build what it reads. When a shipped screen or its vocabulary changes, correct the affected "after" and state what changed and why (case 1 is the worked example of that correction). A "before" may keep a dead concept: it is the rejected design.
+- **Shipped** — the app's own answer (cases 1, 2, 4, 6–11). The After is a link to the feature document that owns the screen plus a one-line summary, not a wireframe: the current screen is described there, and a copy here would drift from it.
+- **Proposal** — a recommended After the app has not built (case 5).
+- **Hypothetical** — no such screen exists; the case is kept for its reasoning (cases 3, 12, 13).
+
+A Proposal or Hypothetical After must never stand on a concept the product has dropped — a reader cannot tell a proposal from a fossil, and an agent will build what it reads. Before citing any case against a real screen, verify the screen's state against [`../features/README.md`](../features/README.md) and the code.
+
+In wireframes, `L1`–`L5` order the blocks by importance to the current step, as in the Step 8 template of [`screen-analysis.md`](screen-analysis.md#step-8--revised-structure). They are not the weight levels of [`visual-hierarchy.md`](visual-hierarchy.md), which assign each element's visual weight (exactly one `W1`); a `W`-level in a wireframe, such as `W6` for a recessive element, is that weight.
 
 ---
 
@@ -23,20 +29,11 @@ An "after" is a recommendation, so it must never stand on a concept the product 
 
 **Applied principles** — 1 One Thing per Page, 3 Action First, 9 Clear Visual Hierarchy, 13 Show State Not Instructions.
 
-**After** (what shipped)
-```text
-[스튜디오]
-  L2  [새 무비 · 스냅 고르기]      ← single primary, the whole row is the target
-  L3  템플릿으로 시작 (카드 목록)   ← section, not a peer button
-  L4  무비 — 미완성 먼저, 앞의 3편 + 전체 보기 →
-        · 무비가 하나도 없으면 이 블록 자체가 없음
-  [removed] banner → no user decision depended on it
-```
+**After** — shipped: [Studio](../features/studio.md#user-goal). One whole-block `스냅 골라 새 무비` leads; the templates and then the movie board follow as lower-weight sections; the banner is gone.
+
 **Why** — Cognitive Load at entry drops to one action; the banner and the three peer CTAs are gone. Templates stay discoverable as a section (Discoverability preserved), so nothing was truncated.
 
 **Trade-off** — Template start loses its button-level prominence, costing template-first users one extra glance. Accepted because picking snaps is the majority path; revisit if template starts dominate.
-
-> **This After was revised once.** Its first version led with `담긴 스냅 6` as L1 — "the deciding state" — because the 담기 트레이 made *how much material is waiting* a single readable number. The tray was removed on 2026-08-12: picks become a draft movie immediately, so that number no longer exists and the board's unfinished-first ordering carries "what is waiting" instead. The principles the case demonstrates are unchanged; only the fact available to lead with is. Do not reintroduce `트레이` from this example ([`ux-writing.md`](ux-writing.md)).
 
 ---
 
@@ -54,21 +51,17 @@ An "after" is a recommendation, so it must never stand on a concept the product 
 
 **Applied principles** — 13, 3, 16 Errors Are Design Failures First.
 
-**After**
-```text
-[스냅]
-  L1  아직 스냅이 없어요
-  L2  [첫 스냅 찍기]   [영상에서 가져오기]
-  (load failed 변형)  불러오지 못했어요   [다시 시도]
-  (filter empty 변형) 조건에 맞는 스냅이 없어요   [필터 지우기]  ← filter chips stay visible
-```
-**Why** — Interaction Cost falls from "read, then find the tab bar button" to one tap. Three distinct empty causes now produce three distinct, actionable states.
+**After** — shipped: [Snap library](../features/snaps.md#browsing-and-playback). No line of copy and no button: the header reads `0개 · 0:00`, and the `가져오기` cell — the control a full library leads with — stands alone in the grid; capture stays the shell's center button.
 
-**Trade-off** — First-time users no longer get told what a snap is; the concept must be carried by the capture flow itself. That is the correct place for it.
+**Why** — Nothing on the empty screen has to be read: the read-out is the state, and the one control on the surface is the one that fills it. The cell is not drawn until the library has loaded, so "nothing yet" never stands in for "not read yet".
+
+**Trade-off** — First-time users are not told what a snap is; the capture flow carries the concept, which is the correct place for it.
 
 ---
 
 ## 3 — Place detail
+
+*Hypothetical — the app has no place screen and no saved places: location alerts are one switch in the 나 tab over places the server provides ([Location alerts](../features/location-and-push-notifications.md#user-goal)).*
 
 **Before**
 ```text
@@ -115,23 +108,17 @@ An "after" is a recommendation, so it must never stand on a concept the product 
 
 **Applied principles** — 8 Value Before Cost, 15 Preserve User Control and Exit, 2 Easy to Answer.
 
-**After**
-```text
-(user just saved a place, and can see it)
-  L1  이 장소 근처에 오면 알려드릴까요?
-  L3  근처에 왔을 때 한 번만 알려드려요
-  L2  [알림 받기]        [안 받기]
-       → yes → OS 위치 권한 프롬프트 (foreground first)
-       → 항상 허용은 이 기능을 켤 때만 별도로 요청
-  (declined) 장소는 저장돼요. 알림은 [나]에서 켤 수 있어요.   ← state, one line
-```
-**Why** — The request now follows visible value and is phrased as a fact the user holds. Declining keeps the feature reachable, so User Control is intact and the permission can be re-asked honestly later.
+**After** — shipped: the 위치 알림 받기 switch in the [Me tab](../features/me.md#current-behavior). Nothing is asked at launch; turning the switch on asks `주변 장소 알림을 받을까요?` (`알림 받기` / `안 받기`) first, only a yes runs the OS prompts, and a refusal leaves the switch off with `설정에서 권한 켜기` on its row.
+
+**Why** — The ask is caused by the user's own act and phrased as a question they can answer. Our own question can be re-asked freely, so the one-shot OS "always allow" prompt only ever follows a yes, and declining keeps the feature reachable from the same row.
 
 **Trade-off** — Fewer grants at launch, and the geofence feature activates later in the lifecycle. Accepted: a denied OS permission is far more expensive to recover than a deferred ask.
 
 ---
 
 ## 5 — Notification permission
+
+*Proposal — not built: the app asks for the notification permission when the user turns on 무비 완성 알림 in the 나 tab ([Me tab](../features/me.md#current-behavior)).*
 
 **Before**
 ```text
@@ -168,15 +155,8 @@ An "after" is a recommendation, so it must never stand on a concept the product 
 
 **Applied principles** — 3 Action First, 6 Reduce Decision Cost, 5 Smart Default, 13.
 
-**After**
-```text
-[/capture]  full-screen viewfinder
-  L1  live viewfinder
-  L2  press-and-hold shutter (accessibility label: 길게 눌러 스냅 찍기)
-  L3  3초 | 5초   ← inline while idle, current one marked
-  W6  ✕ (→ 스튜디오)
-  quality: product policy, no control
-```
+**After** — shipped: [Capture](../features/capture-flow.md#user-goal-and-screen-flow). `/capture` opens straight into the viewfinder with the 3초 / 5초 option inline and the `꾹 눌러 찍기` hold shutter; ✕ leaves to the Studio; quality is product policy, with no control.
+
 **Why** — Time-to-record drops by a screen; the only remaining decision is answerable and reversible; quality became policy because the user could not evaluate it in outcome terms.
 
 **Trade-off** — Users who wanted quality control lose it. Reinstate only as an expert setting in `나`, never on the capture path.
@@ -197,19 +177,11 @@ An "after" is a recommendation, so it must never stand on a concept the product 
 
 **Applied principles** — 5 Smart Default, 6, 2, 4, 22-pattern (costly action).
 
-**After**
-```text
-[무비]  draft state
-  L1  컷 6개 · 15초
-  L3  스타일  기본 ▾        ← default applied, visible, one tap to change
-  L3  순서    찍은 순서 ▾
-  L2  [무비 만들기]  · 1분 정도 걸려요     ← cost adjacent to the commit
-  L5  세부 조정 →           ← music, transitions, per-cut trim
-  policy: model, auto-cut
-```
-**Why** — Two visible decisions instead of six, both defaulted and both answerable; the summary line removes recall; the cost is stated before the commit rather than discovered after it.
+**After** — shipped: the studio face of [the movie screen](../features/movie.md#user-goal). The stage previews the cuts and the timeline strip shows them in order; two chips, 스타일 · 세부, open sheets over values that are already set; the footer runs `무비 만들기`. Music follows the style preset, and the model is policy.
 
-**Trade-off** — Power users reach music and transitions through one disclosure. Acceptable because this project's model puts refinement *after* generation.
+**Why** — Nothing blocks the commit: every setting already has a value one chip away, and the stage and strip show what will be generated, so nothing has to be recalled. The run's cost is not beside the button yet, so `Hidden Cost` still fires here ([How many runs a user gets](../features/movie.md#how-many-runs-a-user-gets)).
+
+**Trade-off** — Precise settings sit one sheet away. Acceptable because generating does not end them: a movie is editable whenever no run owns it.
 
 ---
 
@@ -226,18 +198,11 @@ An "after" is a recommendation, so it must never stand on a concept the product 
 
 **Applied principles** — 12, 15, 11-pattern (loading), 12-pattern (long-running).
 
-**After**
-```text
-[무비]  generating state
-  L1  progress ring · 만드는 중
-  L3  1분 정도 걸려요 · 나가도 계속 만들어요
-  L2  [다 만들어지면 알려주기]   ← notification ask, in context
-  W6  그만두기
-  (완료) 결과가 바로 재생 · [공유하기]
-```
-**Why** — The user can leave without losing work (User Control), knows the wait, and lands directly on the result. Three internal stages collapsed into one honest state.
+**After** — shipped: the `generating` state of [the movie screen](../features/movie.md#what-each-status-shows). The progress ring fills the stage with the stage named by the app (`컷 자르는 중`, `음악 고르는 중`, …), the strip stays as a read-out, and the footer's one act is `만들기 취소`, confirmed in place; the finished movie then plays on the same screen.
 
-**Trade-off** — Less visible detail about what the pipeline is doing; that detail never helped a user decision.
+**Why** — The run belongs to the backend, so leaving loses nothing, and the screen shows it by keeping the run rather than by a sentence promising it. The worker's step strings never reach the screen, and the result lands where the user already is.
+
+**Trade-off** — Less visible detail about what the pipeline is doing; that detail never helped a user decision. The wait is not stated either — the ring moves only at the pipeline's own milestones ([Running a movie](../features/movie.md#running-a-movie)) — so `Hidden Cost` still fires for duration.
 
 ---
 
@@ -253,26 +218,13 @@ An "after" is a recommendation, so it must never stand on a concept the product 
 ```
 **Problems** — `Flat Hierarchy` (no ranking), `Navigation Maze` (frequent settings equal to rare ones), destructive adjacency, `Leaky Vocabulary` (`실험실`, `업로드`).
 
-**Applied principles** — 9, 10 Obvious Navigation, 6, 12.
+**Applied principles** — 9, 7 Progressive Disclosure, 10 Obvious Navigation, 12.
 
-**After**
-```text
-[나]
-  L1  프로필 (이름 · 스냅 수 · 무비 수)
-  L3  알림
-        이 장소 근처 알림      [on]
-        무비 완성 알림         [on]
-  L3  스냅
-        와이파이에서만 올리기  [on]
-  L4  계정
-  L5  정보
-  W6  로그아웃
-  W6  계정 삭제               ← separated from 로그아웃 by a section break
-  [renamed] 업로드 → 스냅 / 실험실 → removed from view until it ships
-```
-**Why** — Frequency-ordered, grouped by the user's mental model, each toggle named by what it does. Destructive actions are findable but no longer neighbours of a routine one.
+**After** — shipped, by owner decision: the [Me tab](../features/me.md#user-goal). The record is the hero (the week ring, the name, the two counts); five summary rows — 크레딧, 알림, 화면 테마, 관심사, 소셜 연결 — read out the current settings while the controls sit one push away on `/settings/*`; 로그아웃 and 계정 삭제 close the screen, and deletion is a confirmation screen of its own.
 
-**Trade-off** — Deliberate density in a settings screen; this is `Density Where Density Pays`, not a violation.
+**Why** — The root shows state, not controls: each row's read-out is the current setting, so nothing has to be opened to know it, and the row order is deliberate — the balance first, then the preferences most likely to be touched ([Ownership and state](../features/me.md#ownership-and-state)). The destructive actions sit last, away from routine rows.
+
+**Trade-off** — Changing a setting costs one push. Accepted because the state it changes stays visible on the root: fully expanded, the controls ran three viewports deep at one visual weight.
 
 ---
 
@@ -288,16 +240,9 @@ An "after" is a recommendation, so it must never stand on a concept the product 
 
 **Applied principles** — 12, 7, 13.
 
-**After**
-```text
-[나]
-  L1  프로필 이름
-  L2  스냅 128 · 무비 12
-  L5  이번 달에 무비 3개 만들었어요
-  [removed] 평균 생성 시간, 실패율 → belong to internal telemetry
-  [moved] 스토리지 → 계정 섹션, where the delete action lives
-```
-**Why** — Stats now say something the user recognizes; the one number tied to an action (storage) sits next to that action.
+**After** — shipped: the hero of the [Me tab](../features/me.md#current-behavior) — the week ring with `이번 주 N일 기록`, the name, and two read-only pills for the snap and movie counts. No operational metric and no storage figure appears.
+
+**Why** — Every number on the screen is one the user recognizes as their own record; operational metrics belong to internal telemetry.
 
 **Trade-off** — Curious users lose numeric detail. Reintroduce only if a user decision depends on it.
 
@@ -315,22 +260,17 @@ An "after" is a recommendation, so it must never stand on a concept the product 
 
 **Applied principles** — 16, 15, 15-pattern (failure), 16-pattern (retry).
 
-**After**
-```text
-[무비]  failed state, draft intact
-  L1  무비를 만들지 못했어요
-  L2  [다시 시도]
-  L5  계속 안 되면 문의하기 →      ← after repeated failure only
-  (transient network cause known) 인터넷 연결이 불안정해요  [다시 시도]
-  diagnostics: under 문의하기, copyable
-```
-**Why** — The draft survives, the fix is one tap at the failure site, and the message is in the user's language with no blame. Diagnostics remain available for support without being the message.
+**After** — shipped: a `failed` movie keeps its cuts and settings and shows its reason with `다시 시도` — in the movie screen's footer, and through the same control on its board row and grid tile ([What each status shows](../features/movie.md#what-each-status-shows), [The board](../features/studio.md#the-board)).
 
-**Trade-off** — We sometimes cannot name the cause; saying so honestly beats inventing one.
+**Why** — The draft survives, the fix is one tap wherever the failed movie appears, and the reason is the app's own words for the failure's code — the server's message is kept for debugging and never drawn ([How a job fails](../features/movie.md#how-a-job-fails)).
+
+**Trade-off** — We sometimes cannot name the cause; saying so honestly (`무비를 만들지 못했어요.`) beats inventing one.
 
 ---
 
 ## 12 — Onboarding
+
+*Hypothetical — the app has no onboarding: a first launch signs in, then opens on the Studio ([Application shell](../features/app-shell-and-navigation.md#user-visible-behavior)).*
 
 **Before**
 ```text
@@ -343,13 +283,14 @@ An "after" is a recommendation, so it must never stand on a concept the product 
 
 **After**
 ```text
-(첫 실행)
-  L1  viewfinder, 바로 촬영 가능
-  L3  길게 눌러 스냅 찍기      ← one-time hint at the point of use, dismissible
-  (첫 스냅 후) 스냅 1개 카운터가 튀고 뷰파인더 유지 — 스냅은 라이브러리에 쌓이고,
-              무비로 엮는 것은 스냅 탭에서 하는 별개의 행위
-  권한: 촬영 시점에 카메라, 그 외는 각 기능을 켤 때
-  건너뛰기: always available
+(first launch)
+  L1  viewfinder, ready to shoot
+  L3  꾹 눌러 찍기      ← one-time hint at the point of use, dismissible
+  (after the first snap) the snap counter bumps and the viewfinder stays — snaps
+              collect in the library; making a movie is a separate act, started
+              from the Studio or the Snap tab
+  permissions: the camera when shooting starts, everything else when its feature is turned on
+  skip: always available
 ```
 **Why** — The product teaches itself by being used; the vocabulary is learned from labels attached to real objects the user just made.
 
@@ -358,6 +299,8 @@ An "after" is a recommendation, so it must never stand on a concept the product 
 ---
 
 ## 13 — Snap library search and filter
+
+*Hypothetical — the snap library has no search, filter, or sort control ([Snap library](../features/snaps.md#browsing-and-playback)); the case applies patterns 19–21 to its day-grouped grid.*
 
 **Before**
 ```text
@@ -377,7 +320,7 @@ An "after" is a recommendation, so it must never stand on a concept the product 
   L3  chips: [이번 주 ✕] [장소: 카페 ✕]   ← active filters visible and removable
   L4  day-grouped grid (기본: 최신순)
   (zero results) 조건에 맞는 스냅이 없어요   [필터 지우기]
-  sort: 최신순 / 오래된순 toggle only (하나뿐인 대안이므로 시트 불필요)
+  sort: a 최신순 / 오래된순 toggle only (one alternative, so no sheet)
 ```
 **Why** — The screen now reports its own state: the user can see why results are missing and remove the cause in one tap. Icons gained labels, so Discoverability and accessibility both improve.
 
