@@ -1,7 +1,7 @@
 # 기기 간 스냅 동기화 — 삭제 전파와 만료 스냅의 표시
 
 **작성일**: 2026-09-27
-**상태**: 결정 — 세 가지 모두 계획의 권장안을 채택했다. 미구현([backlog.md](../backlog.md) A-4 "3단계 — reconcile")
+**상태**: 결정 — 세 가지 모두 계획의 권장안을 채택했다. 2026-09-27 구현, 실기기 미검증([backlog.md](../backlog.md) A-4 "3단계 — reconcile")
 **관련**: [snap-source-of-truth.md](./snap-source-of-truth.md) §3.2 ·
 [local-copy-after-upload.md](./local-copy-after-upload.md) · [snap-retention-period.md](./snap-retention-period.md) ·
 [movie-snap-expiry-exemption.md](./movie-snap-expiry-exemption.md) ·
