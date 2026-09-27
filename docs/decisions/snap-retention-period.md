@@ -7,7 +7,7 @@
 **출처**: [meetings/2026-08-31-dev-sync.md](../meetings/2026-08-31-dev-sync.md) §4 "video (15일 지속)"
 **관련 문서**: [specs/snap-library.md](../specs/snap-library.md) SNAP-9 · [storage-and-subscription-policy.md](storage-and-subscription-policy.md) §1·§2 ·
 [snap-source-of-truth.md](snap-source-of-truth.md) §6 · [backlog.md](../backlog.md) A-1 ⑥ ·
-후속 계획 [plans/2026-08-31-dev-sync-follow-up.md](../plans/2026-08-31-dev-sync-follow-up.md) T2
+후속 계획(보관) [archive/2026-08-31-dev-sync-follow-up.md](../archive/2026-08-31-dev-sync-follow-up.md) T2
 
 ## 한 줄 요약
 

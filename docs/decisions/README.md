@@ -20,7 +20,16 @@
 | [bgm-sourcing.md](bgm-sourcing.md) | BGM 조달(AI 생성 · 라이선스 구독 · 커미션) — 법적 검토 6항목 선행 | A-7 · E-5 | 2026-08-31 회의 |
 | [movie-snap-expiry-exemption.md](movie-snap-expiry-exemption.md) | 무비가 참조 중인 스냅의 만료 예외 — 잠정 결정은 "예외 없음"(현행 유지), 다음 회의에서 다시 본다 | A-1 · A-2 | 2026-09-15 잠정 결정 |
 
-2026-08-31 회의에서 온 네 건의 선후관계와 착수 순서는 [plans/2026-08-31-dev-sync-follow-up.md](../plans/2026-08-31-dev-sync-follow-up.md) §2.
+각 결정의 착수 순서와, 결정을 기다리지 않고 시작할 수 있는 일:
+
+- **sns-webhook-scope** — 어느 답이든 고정 도메인이 필요하다. 도메인·인증서·배포 타깃(D-1·B-1)은 결정 전에
+  시작할 수 있고, 도메인이 생겨야 웹훅·검수·결제 검증(C-1·C-5·C-6·D-3)이 이어진다.
+- **bgm-sourcing** — 법적 검토 → 조달 → `bgm_tracks` → E-5 해소 순이다. 후보 서비스의 약관 비교표는 결정
+  전에 만들 수 있다.
+- **sticker-asset-sourcing** — 에셋 조달 → 매니페스트 시드 등록 → (필요해지면) 관리자 페이지 순이다. 에셋
+  라이선스 조사는 결정 전에 시작할 수 있다.
+- **subtitle-rendering** — 다른 결정과 독립이다.
+- **movie-snap-expiry-exemption** — 요금제 설계(A-2)와 같은 자리에서 본다.
 
 ## 결정 완료 — 현행 정책의 근거
 

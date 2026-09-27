@@ -1,5 +1,16 @@
 # 2026-08-31 개발자 회의 후속 계획 — 도메인 · 생애주기 · 프로젝트 내보내기 · 에셋
 
+> **2026-09-27 보관.** T2(생애주기)·T3(무비 내보내기)는 2026-09-09 에 결정됐고 구현 기록은
+> [progress.md](../progress.md) 에 있다. 남은 T1·T4·T5·T6 은 각자의 결정 요청 문서가 선택지와 검토 항목을
+> 담고, 그 착수 순서는 [decisions/README.md](../decisions/README.md) §결정 대기로 옮겼다. 아래는 착수 전
+> 계획이라 판단 근거로 인용하지 않는다.
+>
+> 현행 원천: 남은 결정과 착수 순서 → [decisions/README.md](../decisions/README.md) · T2 →
+> [snap-retention-period.md](../decisions/snap-retention-period.md) ·
+> [local-copy-after-upload.md](../decisions/local-copy-after-upload.md) ·
+> [movie-cleanup-after-export.md](../decisions/movie-cleanup-after-export.md) · T3 →
+> [movie-export-policy.md](../decisions/movie-export-policy.md) · 미결 작업 → [backlog.md](../backlog.md).
+
 **작성일**: 2026-09-05
 **상태**: 제안 — 착수 전 계획이며 현행 사실이 아니다. 미결 결정은 [backlog.md](../backlog.md)에만 둔다.
 **관련 문서**: [meetings/2026-08-31-dev-sync.md](../meetings/2026-08-31-dev-sync.md) ·
