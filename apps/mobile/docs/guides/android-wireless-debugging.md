@@ -59,7 +59,7 @@ adb connect 192.168.0.42:5555        # 기기 IP는 설정 > 휴대전화 정보
 
 ## 3. 개발 빌드 설치와 실행
 
-무선 adb 연결 상태에서 로컬 네이티브 빌드를 실기기에 설치합니다(iOS와 달리 Android 로컬 빌드는 이 Mac에서 가능):
+무선 adb 연결 상태에서 로컬 네이티브 빌드를 실기기에 설치합니다. 머신마다 달라지는 빌드 제약(구형 Mac의 iOS 로컬 빌드 불가 등)은 [`Environment and legacy macOS limitation`](../workflows/local-development-and-testing.md#environment-and-legacy-macos-limitation)(영문)을 보세요.
 
 ```bash
 npm run android:device               # expo run:android --device — 연결된 기기 목록에서 실기기 선택

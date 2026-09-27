@@ -48,7 +48,7 @@ To add or drop a weight: link/unlink it in **both** the `android.fonts[].fontDef
 Styles say `fontFamily: Fonts.sans` (`'Pretendard GOV'`) and let `fontWeight` choose the face. Nothing names a single face like `'PretendardGOV-Bold'`. This works because of two separate mechanisms that happen to agree:
 
 - **Android** — `fontDefinitions` generates `res/font/xml_pretendard_gov.xml`, a `<font-family>` mapping each `app:fontWeight` to a file, and the plugin registers it under the family name from the config with `ReactFontManager.getInstance().addCustomFont(this, "Pretendard GOV", …)`. The JS `fontFamily` string must match that config value **exactly**, spaces included.
-- **iOS** — the plugin only lists the files in `UIAppFonts`; the family name comes from inside the font. CoreText groups faces by the **typographic family** (name ID 16), which is `Pretendard GOV` in all nine files, so all of them land in one family even though six of them carry a per-weight *legacy* family name (name ID 1, e.g. `Pretendard GOV SemiBold`). React Native then picks the face in that family whose weight trait is closest to the requested one (`RCTFontWithFontProperties` in `RCTFontUtils.mm`). A font whose ID 16 is unset would **not** group this way, and its heavier weights would silently collapse onto Regular on iOS. Verify before assuming a new family behaves like this one: this Mac has no `fc-scan`, `fontTools`, or `otfinfo`, so ask CoreText itself — register the files with `CTFontManagerRegisterFontsForURLs(urls, .process, …)` in a throwaway `swift` script, then print `CTFontManagerCopyAvailableFontFamilyNames()` and the descriptors matching `kCTFontFamilyNameAttribute`. Checked that way against all nine upstream Pretendard GOV faces, every one answered to the single family name — which is what iOS's `-[UIFont fontNamesForFamilyName:]` sees.
+- **iOS** — the plugin only lists the files in `UIAppFonts`; the family name comes from inside the font. CoreText groups faces by the **typographic family** (name ID 16), which is `Pretendard GOV` in all nine files, so all of them land in one family even though six of them carry a per-weight *legacy* family name (name ID 1, e.g. `Pretendard GOV SemiBold`). React Native then picks the face in that family whose weight trait is closest to the requested one (`RCTFontWithFontProperties` in `RCTFontUtils.mm`). A font whose ID 16 is unset would **not** group this way, and its heavier weights would silently collapse onto Regular on iOS. Verify before assuming a new family behaves like this one. CoreText answers it without `fc-scan`, `fontTools`, or `otfinfo` installed — register the files with `CTFontManagerRegisterFontsForURLs(urls, .process, …)` in a throwaway `swift` script, then print `CTFontManagerCopyAvailableFontFamilyNames()` and the descriptors matching `kCTFontFamilyNameAttribute`. Checked that way against all nine upstream Pretendard GOV faces, every one answered to the single family name — which is what iOS's `-[UIFont fontNamesForFamilyName:]` sees.
 
 ### Where the font reaches text, and where it does not
 
@@ -91,12 +91,11 @@ Use `--platform` to regenerate one platform at a time so you don't disturb the o
 Icon/name/splash are build-time, so reinstall is required:
 
 ```bash
-# Android — see the local development guide; run:android needs the AVD *name*, not the adb serial
-npx expo run:android --device Pixel_API_35
+# Android — the emulator; a connected phone takes `npm run android:device`
+npm run android
 ```
 
-iOS cannot be built locally on the current machine (Xcode too old — see
-[`local-development-and-testing.md`](local-development-and-testing.md)). Verify iOS at the config level, or through an **EAS Build**.
+iOS: where a local native build is possible, `npm run ios` rebuilds it. On a machine that cannot build iOS locally ([`local-development-and-testing.md`](local-development-and-testing.md#environment-and-legacy-macos-limitation)), verify iOS at the config level, or through an **EAS Build**.
 
 ### 4. Verify
 
@@ -106,7 +105,7 @@ iOS cannot be built locally on the current machine (Xcode too old — see
   adb -s emulator-5554 shell dumpsys package com.anonymous.snaplyapp | grep versionName
   cat android/app/src/main/res/values/strings.xml            # app_name should match expo.name
   ```
-- **iOS** — the app icon **cannot be seen locally**: no local native build is possible, and Expo Go renders *its own* icon regardless of this config. Verify by inspection instead:
+- **iOS** — without a local native build, the app icon **cannot be seen locally**: Expo Go renders *its own* icon regardless of this config. Verify by inspection instead:
   ```bash
   /usr/libexec/PlistBuddy -c "Print :CFBundleDisplayName" ios/<Name>/Info.plist   # expect the new name
   diff -rq assets/expo.icon ios/<Name>/expo.icon                                  # expect identical
@@ -129,10 +128,10 @@ iOS cannot be built locally on the current machine (Xcode too old — see
 - **Splash config must include an `image`.** The generated `styles.xml` always references `@drawable/splashscreen_logo`. If the `expo-splash-screen` plugin has only a `backgroundColor` and no `image`, a clean prebuild produces no such drawable and the Android build fails resource linking:
   `error: resource drawable/splashscreen_logo ... not found`. This project uses `./assets/images/brand-glyph-ember.png` at `imageWidth` 150. (A stale native folder can hide this — an old splash drawable lingers until the first clean prebuild.)
 - **Android 12+ masks the splash icon to a circle, so a splash image whose art extends past its inscribed circle gets clipped.** The `expo-splash-screen` plugin maps to the system `windowSplashScreenAnimatedIcon`, which Android renders inside a circular mask (Google's safe zone is a 192dp-diameter circle within the 288dp icon canvas; some OEMs — e.g. Samsung One UI — mask even tighter). Compute the mark's bounding-circle factor (farthest content point from the canvas center ÷ half the canvas width) and keep `imageWidth × factor ≤ 192`. The 2026-07 moment-ring mark in `brand-glyph-ember.png` has factor ≈ 0.92 (the dot's outer edge is the extreme, 234px from center in the 512px canvas) → `imageWidth ≤ ~208`; this project uses **150**, well within the mask. (The previous play-triangle mark had factor ≈ 1.22, which is what originally clipped at `imageWidth` 200.) Adjusting `imageWidth` — not editing the shared glyph asset, which is also the in-app brand mark — is the correct lever: the area outside the circle is the same `backgroundColor`, so the mask itself is invisible. This is a system splash, not the legacy full-screen splash — you cannot avoid the circular mask; the logo must fit inside it.
-- **`expo run:android --device` wants the AVD name, not the adb serial.** Pass `Pixel_API_35`, not `emulator-5554`; the serial errors with "Could not find device with name". Find the AVD name via `adb -s emulator-5554 emu avd name`.
-- **`pod install` is broken locally.** During iOS prebuild the final `pod install` throws `Unicode Normalization not appropriate for ASCII-8BIT` (Homebrew Ruby 4.0.6 + CocoaPods 1.17.0). Native *file* generation completes before that step, so name/icon still update correctly. It is irrelevant here because local iOS builds are already blocked by Xcode and EAS runs its own `pod install`.
+- **`expo run:android --device <name>` wants the AVD name, not the adb serial.** Passing `emulator-5554` errors with "Could not find device with name"; `adb -s emulator-5554 emu avd name` prints the name to pass.
+- **`pod install` can fail at the end of an iOS prebuild.** With Homebrew Ruby 4.0.6 + CocoaPods 1.17.0 (the legacy machine profile in [`local-development-and-testing.md`](local-development-and-testing.md#environment-and-legacy-macos-limitation)) it throws `Unicode Normalization not appropriate for ASCII-8BIT`. Native *file* generation completes before that step, so name/icon still update correctly, and EAS runs its own `pod install`.
 
 ## Related
 
-- [`local-development-and-testing.md`](local-development-and-testing.md) — machine constraints, emulator/simulator boot, and why local iOS native builds are not possible here.
+- [`local-development-and-testing.md`](local-development-and-testing.md) — machine constraints (including when a local iOS native build is not possible) and emulator/simulator boot.
 - [`feature-development.md`](feature-development.md) — general implementation workflow and completion checklist.

@@ -65,7 +65,7 @@ After install, Expo Go stays on the simulator across sessions; just re-run `npx 
 
 ### iOS Simulator touch automation — idb
 
-`xcrun simctl` cannot inject touches. For automated taps/swipes on the iOS Simulator, this machine has [idb](https://fbidb.io) set up (screen-coordinate tools like `cliclick` proved unreliable for in-app taps):
+`xcrun simctl` cannot inject touches. Automated taps/swipes on the iOS Simulator use [idb](https://fbidb.io) (screen-coordinate tools like `cliclick` proved unreliable for in-app taps). On the legacy-profile machine it was set up like this:
 
 - `idb-companion` is installed via Homebrew (`brew install facebook/fb/idb-companion`).
 - The `fb-idb` Python client lives in a dedicated venv at `~/.venvs/fb-idb` because it is incompatible with the system Python 3.14 out of the box — `idb/cli/main.py` in that venv is patched to replace `asyncio.get_event_loop()` with `asyncio.new_event_loop()`. Recreating the venv requires re-applying that one-line patch.
@@ -117,7 +117,7 @@ If physical Android devices are also connected over adb, target the emulator exp
 
 `npm run android:device:release` (`scripts/install-android-release.sh`) builds the release APK with Gradle (`gradlew app:assembleRelease`), then installs and launches it on the connected physical device via adb. The JS bundle is embedded in the APK, so the app runs standalone without Metro — use this to hand a device a self-contained build or to verify near-production behavior. The Expo prebuild template signs release builds with the debug keystore, so no signing setup is needed, and it overwrites an installed debug build in place. With multiple devices connected, set `ANDROID_SERIAL` to the adb serial of the target.
 
-The script deliberately does **not** use `expo run:android --variant release`: on this machine the expo-driven release build repeatedly fails in `:app:mergeReleaseResources` with corrupted incremental state (`merged.dir/values*.xml (No such file or directory)`), while a direct Gradle build succeeds. The script also clears that incremental state and retries once if the build fails, and recreates `android/local.properties` / runs `expo prebuild` when the generated `android/` folder is missing.
+The script deliberately does **not** use `expo run:android --variant release`: on the legacy-profile machine the expo-driven release build repeatedly failed in `:app:mergeReleaseResources` with corrupted incremental state (`merged.dir/values*.xml (No such file or directory)`), while a direct Gradle build succeeded. The script also clears that incremental state and retries once if the build fails, and recreates `android/local.properties` / runs `expo prebuild` when the generated `android/` folder is missing.
 
 Release builds need more Gradle daemon memory than the template default (`-Xmx2048m -XX:MaxMetaspaceSize=512m`): `lintVitalAnalyzeRelease` fails with a Metaspace OOM. The local config plugin `plugins/with-gradle-jvmargs.js` (registered in `app.json`) raises this to `-Xmx4096m -XX:MaxMetaspaceSize=1024m` via `withGradleProperties`, so the fix survives `prebuild --clean`. Do not hand-edit `android/gradle.properties` for this; change the plugin.
 
