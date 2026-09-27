@@ -1,6 +1,6 @@
 # Snaply
 
-Snaply는 짧게 여러 번 찍어두면 AI가 한 편의 숏폼 브이로그로 만들어 주는 앱입니다. 3초 또는 5초짜리 **스냅**을 모아두고, 스냅 탭에서 골라 확정하면 곧바로 초안 **무비**가 만들어집니다. 무비 화면은 타임라인 스튜디오입니다: 컷 순서·트림·스타일을 정리한 뒤 생성을 실행하고, 완성본을 같은 화면에서 감상·공유합니다. 촬영 원본은 앱의 문서 디렉터리에 저장되고, 생성에 쓰일 수 있도록 백그라운드에서 백엔드에 업로드됩니다.
+Snaply는 짧게 여러 번 찍어두면 AI가 한 편의 숏폼 브이로그로 만들어 주는 앱입니다. 짧은 **스냅**(카메라로 3초·5초까지 찍거나 갤러리 영상에서 0.5~5초를 잘라낸 클립)을 모아두고, 스냅 탭에서 골라 확정하면 곧바로 초안 **무비**가 만들어집니다. 무비 화면은 타임라인 스튜디오입니다: 컷 순서·트림·스타일을 정리한 뒤 생성을 실행하고, 완성본을 같은 화면에서 감상·공유합니다. 촬영 원본은 앱의 문서 디렉터리에 저장되고, 생성에 쓰일 수 있도록 백그라운드에서 백엔드에 업로드됩니다.
 
 > **AI 합성은 실제 백엔드 작업으로 동작합니다.** 앱이 무비를 서버에 보내고 `POST /movies/{id}/export`로 생성을 요청하면 백엔드가 컷을 자르고 스타일을 입히고 음악을 붙여 렌더 파일을 만들며, 완성 무비는 그 파일을 재생하고 공유합니다. 백엔드 없이(mock 모드) 실행하면 합성 없이 컷을 순서대로 이어 재생합니다. 무엇이 실제로 동작하는지는 [`docs/features/`](docs/features)를 보세요.
 
@@ -12,7 +12,7 @@ Expo SDK 57(React Native 0.86, Expo Router)을 사용하며, Feature-Sliced Desi
 따르세요. 의존성 설치와 lockfile은 저장소 루트에서 한 번만 관리합니다. 아래 명령은
 `apps/mobile` 디렉터리에서 직접 실행할 때의 형태입니다.
 
-의존성을 설치하고, Android 기기(또는 에뮬레이터)에 개발 빌드를 올린 뒤 Metro를 붙입니다. **이 앱은 Expo Go에서 Android가 부팅되지 않습니다** — 시작 시 `expo-notifications`를 import하는데 SDK 53부터 Android Expo Go에서 제거된 모듈이라 렌더 이전에 죽습니다. 따라서 Android의 기준 런타임은 dev build입니다.
+의존성을 설치하고, Android 기기(또는 에뮬레이터)에 개발 빌드를 올린 뒤 Metro를 붙입니다. Android는 Expo Go에서 부팅되지 않으므로 dev build가 기준 런타임입니다(원인: [`docs/workflows/local-development-and-testing.md`](docs/workflows/local-development-and-testing.md#expo-go-limitations)).
 
 ```bash
 npm run android:device     # 실기기. 에뮬레이터는 npm run android
@@ -56,6 +56,7 @@ src/
 | [`docs/frameworks/`](docs/frameworks) | Expo Router와 상태·데이터 처리 규칙 |
 | [`docs/workflows/`](docs/workflows) | 기능 개발, 검증, 브랜딩 변경 절차 |
 | [`docs/features/`](docs/features) | 현재 사용자 기능, 구현 상태, 소유 계층 기록 |
+| [`docs/ux/`](docs/ux) | 화면 UX 판단 체계 — 원칙, UX 스멜, 화면 분석, UX 라이팅, 리뷰 체크리스트 |
 
 ### 개발자 가이드
 
@@ -74,6 +75,7 @@ src/
 | `npx expo start --dev-client` | 개발 빌드용 Metro 서버 실행(Android 기준 런타임) |
 | `npx expo start --go` | Expo Go용 Metro 서버 실행(iOS 시뮬레이터 전용 — Android Expo Go는 부팅 불가) |
 | `npm run android` / `npm run android:device` | Android 개발 빌드를 에뮬레이터/실기기에 빌드·실행 |
+| `npm run ios` | iOS 개발 빌드를 시뮬레이터에 빌드·실행(Swift 6.2를 지원하는 Xcode 필요) |
 | `npm run android:device:release` | 릴리스 APK를 빌드해 실기기에 설치 |
 | `npm run web` | 웹 환경 실행(기준 개발 환경 아님) |
 | `npm run contract:build` | 공유 계약 패키지(`packages/shared-types`) 빌드 — `verify`가 먼저 실행하며, 계약 변경을 pull한 뒤 `typecheck`만 돌릴 때 한 번 필요 |
@@ -88,7 +90,7 @@ src/
 
 ## 런타임 의존성
 
-`dependencies`는 앱 번들에 포함되어 실제 기능을 구성하는 패키지입니다. 버전은 Expo SDK 57에 맞춰 고정합니다. 일부 Expo 모듈은 코드에서 직접 `import`하지 않고 [`app.json`](app.json)의 `plugins`로 네이티브 설정만 주입하며, 표에 `(app.json 플러그인)`으로 표시했습니다. 코드에서도 `app.json`에서도 쓰이지 않는 패키지는 두지 않습니다 — 예정 기능을 위해 미리 설치해 두면 네이티브 빌드 표면만 넓히고, 무엇이 실제로 쓰이는지 이 표에서 읽을 수 없게 됩니다.
+`dependencies`는 앱 번들에 포함되어 실제 기능을 구성하는 패키지입니다. 버전은 Expo SDK 57에 맞춰 고정합니다. [`app.json`](app.json)의 `plugins`로 네이티브 설정을 주입받는 패키지는 표에 `(app.json 플러그인)`으로 표시했습니다 — 그중 일부는 코드에서 직접 `import`하지 않고 플러그인으로만 씁니다. 코드에서도 `app.json`에서도 쓰이지 않는 패키지는 두지 않습니다 — 예정 기능을 위해 미리 설치해 두면 네이티브 빌드 표면만 넓히고, 무엇이 실제로 쓰이는지 이 표에서 읽을 수 없게 됩니다.
 
 ### 코어 프레임워크
 
@@ -103,7 +105,7 @@ src/
 
 | 패키지 | 사용 이유 |
 | --- | --- |
-| `expo-router` | 파일 기반 라우팅. `src/app/`의 파일을 화면에 연결합니다. |
+| `expo-router` | 파일 기반 라우팅. `src/app/`의 파일을 화면에 연결합니다. (app.json 플러그인) |
 | `react-native-screens` | 네이티브 화면 스택 최적화. Expo Router의 내비게이션 기반입니다. |
 | `react-native-safe-area-context` | 노치·상태바 등 안전 영역 인셋 계산. 레이아웃 전반에서 사용합니다. |
 | `react-native-gesture-handler` | 네이티브 제스처 처리. 내비게이션·애니메이션 인프라로 사용합니다. |
@@ -132,8 +134,8 @@ src/
 | 패키지 | 사용 이유 |
 | --- | --- |
 | `expo-auth-session` | OAuth 인증 세션 흐름 처리. |
-| `expo-web-browser` | 인증 시 시스템 브라우저 세션 실행. |
-| `expo-secure-store` | 세션 토큰 등 민감 정보의 암호화 저장. |
+| `expo-web-browser` | 인증 시 시스템 브라우저 세션 실행. (app.json 플러그인) |
+| `expo-secure-store` | 세션 토큰 등 민감 정보의 암호화 저장. (app.json 플러그인) |
 
 > 로그인 설정 절차는 [`docs/guides/supabase-auth-setup.md`](docs/guides/supabase-auth-setup.md)를 참고합니다.
 
@@ -142,7 +144,7 @@ src/
 | 패키지 | 사용 이유 |
 | --- | --- |
 | `expo-camera` | 영상 촬영. 앱의 핵심 기능입니다. (app.json 플러그인) |
-| `expo-video` | 촬영 원본·결과 영상 재생. |
+| `expo-video` | 촬영 원본·결과 영상 재생. (app.json 플러그인) |
 | `expo-image` | 이미지 렌더링과 캐싱. (app.json 플러그인) |
 | `expo-image-picker` | 갤러리에서 영상을 골라 스냅으로 추출하는 시스템 피커. |
 | `expo-file-system` | 촬영 영상을 로컬 문서 디렉터리에 저장·관리. |
@@ -199,6 +201,12 @@ src/
 | `expo-dev-client` | 커스텀 개발 빌드 실행기. 네이티브 모듈 포함 빌드를 Expo Go 대신 실행합니다. |
 | `expo-build-properties` | 네이티브 빌드 속성(SDK 버전 등) 설정. (app.json 플러그인) |
 
+### API 계약
+
+| 패키지 | 사용 이유 |
+| --- | --- |
+| `@vlog-studio/shared-types` | 백엔드와 공유하는 API 계약(Zod 스키마·라우트 레지스트리). `dependencies`에 있지만 앱 코드는 타입만 import하므로 번들에는 포함되지 않습니다 — `apiRequest`가 이 패키지의 타입에서 경로·메서드별 query·body·응답 타입을 유도합니다. 절차는 [`docs/workflows/api-contract-integration.md`](docs/workflows/api-contract-integration.md)를 따릅니다. |
+
 ## 개발 의존성
 
 `devDependencies`는 앱 런타임 번들에 포함되지 않고, 코드 품질 검증(테스트·린트·포맷·타입 검사)에만 사용하는 도구입니다. 도구 버전은 Expo SDK 57 프리셋에 맞춰 고정합니다.
@@ -229,9 +237,3 @@ src/
 | --- | --- |
 | `typescript` | 타입 검사기. `strict` 모드로 컴파일 없이 타입만 검사(`tsc --noEmit`)합니다. |
 | `@types/react` | React 19의 타입 정의. JSX와 훅의 타입 지원을 제공합니다. |
-
-### API 계약
-
-| 패키지 | 사용 이유 |
-| --- | --- |
-| `@vlog-studio/shared-types` | 백엔드와 공유하는 API 계약(Zod 스키마·라우트 레지스트리). `apiRequest`가 이 패키지의 타입에서 경로·메서드별 query·body·응답 타입을 유도하며, 타입 전용 import라 앱 번들에는 포함되지 않습니다. 절차는 [`docs/workflows/api-contract-integration.md`](docs/workflows/api-contract-integration.md)를 따릅니다. |
