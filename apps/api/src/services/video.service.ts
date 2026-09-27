@@ -18,6 +18,7 @@ import {
   maxUploadBytes,
   publicUrl,
 } from './storage.service.js';
+import { VIDEO_ASSET_SELECT, ownedObjectKeys } from './video-assets.js';
 
 interface VideoRow {
   id: string;
@@ -263,21 +264,19 @@ export async function purgeStalePendingVideos(
   return { purged, failed };
 }
 
-/** S3 원본 삭제 + DB 소프트 삭제 */
+/** 영상이 소유한 S3 객체 삭제 + DB 소프트 삭제 */
 export async function deleteVideo(params: { userId: string; videoId: string }): Promise<void> {
   const prisma = getPrisma();
   const video = await prisma.video.findFirst({
     where: { id: params.videoId, userId: params.userId, deletedAt: null },
-    select: { id: true, s3Key: true, editedS3Key: true, thumbnailS3Key: true },
+    select: VIDEO_ASSET_SELECT,
   });
   if (!video) {
     throw AppError.notFound('영상을 찾을 수 없습니다.');
   }
 
-  const ownedObjectKeys = [video.s3Key, video.editedS3Key, video.thumbnailS3Key].filter(
-    (key): key is string => key !== null,
-  );
-  for (const key of new Set(ownedObjectKeys)) {
+  // 결과물이면 원본 스냅의 키는 건드리지 않는다 — 빌려 온 키다(video-assets.ts).
+  for (const key of ownedObjectKeys(video)) {
     try {
       await deleteObject(key);
     } catch {

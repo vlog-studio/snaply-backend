@@ -49,7 +49,7 @@
 - `GET /videos` 🔒 — 최신순 커서 페이지네이션. `nextCursor` 가 `null` 이 아니면 다음 페이지가 있다. 삭제한 영상은 제외, 편집 결과물(`kind: result`)도 같은 목록에 온다.
 - `originalUrls`·`editedUrl`·`thumbnailUrl` 은 **presigned GET URL**(기본 1시간 유효). 만료되면 목록/상세를 다시 호출해 갱신한다.
 - `status` 의미: `pending`(URL 만 발급) → `ready`(편집 가능) / 결과물은 `processing` → `done`(`editedUrl` 사용 가능) | `failed`.
-- `DELETE /videos/{id}` 🔒 — S3 원본 실삭제 + 소프트 삭제. 되돌릴 수 없다.
+- `DELETE /videos/{id}` 🔒 — 그 영상이 소유한 S3 객체(원본·썸네일·렌디션, 결과물이면 편집본·썸네일) 실삭제 + 소프트 삭제. 되돌릴 수 없다. 결과물을 지워도 원본 스냅의 파일은 남는다.
 
 ---
 

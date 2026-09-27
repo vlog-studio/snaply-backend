@@ -29,7 +29,11 @@ import {
   purgeExpiredSnaps,
   purgeOrphanedObjects,
 } from '../src/services/retention.service.js';
-import { ensureBucketForDev } from '../src/services/storage.service.js';
+import {
+  createUploadUrl,
+  ensureBucketForDev,
+  getObjectSize,
+} from '../src/services/storage.service.js';
 import { createHarness, type Harness, type TestUser } from './helpers/harness.js';
 
 let h: Harness;
@@ -245,5 +249,152 @@ describe('남은 S3 객체 회수', () => {
     await purgeOrphanedObjects();
 
     expect((await findOrphanedObjects()).map((candidate) => candidate.id)).not.toContain(orphan.id);
+  });
+});
+
+/**
+ * 영상은 **자기가 소유한** 객체만 지운다 (backlog E-8).
+ *
+ * 결과물 행은 원본 스냅의 키를 복사해 들고 있다. 그 키를 결과물의 것으로 여기면 생성 취소 뒤
+ * 정리 배치가 원본 스냅의 파일을 지운다. 반대로 스냅이 소유한 렌디션은 어느 경로도 지우지 않았다.
+ * 실제 MinIO 에 객체를 올리고, 경로를 지난 뒤 남아 있는지를 본다.
+ */
+describe('영상 삭제는 자기가 소유한 객체만 지운다', () => {
+  async function putObject(user: TestUser, name: string): Promise<string> {
+    // buildUploadKey 가 `uploads/{userId}/{videoId}{ext}` 를 만든다 — 이름에 경로를 넣어
+    // 렌디션(`renditions/…`)·편집본(`edited/…`) 자리에도 둔다.
+    const { uploadUrl, s3Key } = await createUploadUrl({
+      userId: user.id,
+      videoId: name,
+      filename: 'clip.mp4',
+      contentType: 'video/mp4',
+    });
+    const put = await fetch(uploadUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'video/mp4' },
+      body: Buffer.from('bytes'),
+    });
+    expect(put.ok).toBe(true);
+    return s3Key;
+  }
+
+  async function snapWithRendition(user: TestUser, uploadedDaysAgo = 1) {
+    const id = crypto.randomUUID();
+    const s3Key = await putObject(user, id);
+    const renditionS3Key = await putObject(user, `renditions/${id}`);
+    await h.prisma.video.create({
+      data: {
+        id,
+        userId: user.id,
+        kind: 'source',
+        status: 'ready',
+        s3Key,
+        originalS3Keys: [s3Key],
+        renditionS3Key,
+        renditionStatus: 'ready',
+        createdAt: cutoffFor(uploadedDaysAgo),
+      },
+    });
+    return { id, s3Key, renditionS3Key };
+  }
+
+  /** 편집 작업이 만든 결과물 — createEditJob 처럼 원본 스냅의 키를 복사해 갖는다. */
+  async function resultOf(user: TestUser, source: { s3Key: string }, editedS3Key?: string) {
+    const video = await h.prisma.video.create({
+      data: {
+        userId: user.id,
+        kind: 'result',
+        status: 'processing',
+        originalS3Keys: [source.s3Key],
+        ...(editedS3Key ? { editedS3Key } : {}),
+      },
+    });
+    const job = await h.prisma.editJob.create({
+      data: { userId: user.id, videoId: video.id, status: 'queued' },
+    });
+    return { resultId: video.id, jobId: job.id };
+  }
+
+  it('생성을 취소한 뒤의 정리 배치가 원본 스냅의 파일을 지우지 않는다', async () => {
+    const user = await h.createUser();
+    const snap = await snapWithRendition(user);
+    const { jobId } = await resultOf(user, snap);
+
+    const cancel = await h.app.inject({
+      method: 'DELETE',
+      url: `/edit-jobs/${jobId}`,
+      headers: user.auth,
+    });
+    expect(cancel.statusCode).toBe(200);
+    await purgeOrphanedObjects();
+
+    expect(await getObjectSize(snap.s3Key)).not.toBeNull();
+    const source = await h.prisma.video.findUnique({ where: { id: snap.id } });
+    expect(source?.s3Key).toBe(snap.s3Key);
+  });
+
+  it('결과물을 지우면 결과물의 파일만 사라진다', async () => {
+    const user = await h.createUser();
+    const snap = await snapWithRendition(user);
+    const editedS3Key = await putObject(user, `edited/${crypto.randomUUID()}`);
+    const { resultId } = await resultOf(user, snap, editedS3Key);
+
+    const res = await h.app.inject({
+      method: 'DELETE',
+      url: `/videos/${resultId}`,
+      headers: user.auth,
+    });
+    expect(res.statusCode).toBe(200);
+    await purgeOrphanedObjects();
+
+    expect(await getObjectSize(editedS3Key)).toBeNull();
+    expect(await getObjectSize(snap.s3Key)).not.toBeNull();
+  });
+
+  it('사용자가 스냅을 지우면 렌디션도 사라진다', async () => {
+    const user = await h.createUser();
+    const snap = await snapWithRendition(user);
+
+    const res = await h.app.inject({
+      method: 'DELETE',
+      url: `/videos/${snap.id}`,
+      headers: user.auth,
+    });
+    expect(res.statusCode).toBe(200);
+
+    expect(await getObjectSize(snap.renditionS3Key)).toBeNull();
+    expect(await getObjectSize(snap.s3Key)).toBeNull();
+  });
+
+  it('만료된 스냅의 렌디션도 사라진다', async () => {
+    const user = await h.createUser();
+    const snap = await snapWithRendition(user, SNAP_RETENTION_DAYS + 1);
+
+    const outcome = await purgeExpiredSnaps();
+
+    expect(outcome.purged).toContain(snap.id);
+    expect(await getObjectSize(snap.renditionS3Key)).toBeNull();
+  });
+
+  it('렌디션만 남은 삭제 스냅도 정리 배치가 회수한다', async () => {
+    const user = await h.createUser();
+    const renditionS3Key = await putObject(user, `renditions/${crypto.randomUUID()}`);
+    const orphan = await h.prisma.video.create({
+      data: {
+        userId: user.id,
+        kind: 'source',
+        status: 'deleted',
+        renditionS3Key,
+        deletedAt: new Date(),
+        removalReason: 'user',
+      },
+    });
+
+    await purgeOrphanedObjects();
+
+    expect(await getObjectSize(renditionS3Key)).toBeNull();
+    const row = await h.prisma.video.findUnique({ where: { id: orphan.id } });
+    expect(row?.renditionS3Key).toBeNull();
+    expect(row?.purgedAt).not.toBeNull();
   });
 });
