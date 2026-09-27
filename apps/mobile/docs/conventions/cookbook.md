@@ -229,7 +229,7 @@ export const locationQueries = {
   all: () => ['location'] as const,
   nearby: (params: GetLocationsParams) =>
     queryOptions({
-      queryKey: [...locationQueries.all(), 'nearby', params.latitude, params.longitude] as const,
+      queryKey: [...locationQueries.all(), 'nearby', params.latitude, params.longitude, params.radiusMeters ?? null] as const,
       queryFn: ({ signal }) => getLocations(params, signal),
     }),
 };
@@ -274,10 +274,11 @@ result: (jobId: string) =>
 
 ## 5. Mock-or-real request routing (`USE_MOCK_API`)
 
-**When:** any request to a backend endpoint that does not exist yet (the current
-default: the app runs against in-code mocks until an origin is configured).
+**When:** every request to the backend. Mock mode is on while no API origin is
+configured (or with `EXPO_PUBLIC_USE_MOCK_API=true`), so each request function carries
+both branches.
 
-**Canonical (three identical instances):**
+**Canonical:**
 [`get-locations.ts`](../../src/entities/location/api/get-locations.ts),
 [`register-fcm-token.ts`](../../src/features/register-push-token/api/register-fcm-token.ts),
 [`report-geofence-enter.ts`](../../src/features/geofence-monitor/api/report-geofence-enter.ts).
@@ -317,7 +318,8 @@ await apiRequest('/auth/fcm-token', { method: 'POST', body: { fcmToken }, schema
 - The mock and real branches must have an **identical return type** so callers never
   branch on the mode.
 - Never log sensitive values (FCM tokens, credentials); log only that the call ran.
-- Leave a comment describing how the mock is replaced once the real endpoint exists.
+- Leave a comment where the mock deliberately differs from the real endpoint (the
+  location mock returns the whole seed set; the server filters by radius).
 
 ---
 
@@ -572,16 +574,20 @@ export function useLocalX() {
     return () => { isMounted.current = false; };
   }, []);
 
-  const removeX = async (item: X) => {
+  const saveX = async (source: string) => {
     try {
-      await deleteX(item.uri);
-      if (isMounted.current) setItems((cur) => cur.filter((i) => i.id !== item.id)); // optimistic
+      const item = await persistX(source);
+      if (isMounted.current) setItems((cur) => [item, ...cur]); // update in place, no reload
+      return item;
     } catch {
-      if (isMounted.current) setErrorMessage('삭제하지 못했어요.');
+      if (isMounted.current) setErrorMessage('저장하지 못했어요.');
+      return undefined;
     }
   };
 
-  return { items, isLoading, errorMessage, clearError: () => setErrorMessage(undefined), removeX };
+  const reloadX = async () => { /* list again, same guards */ };
+
+  return { items, isLoading, errorMessage, clearError: () => setErrorMessage(undefined), reloadX, saveX };
 }
 ```
 
@@ -591,12 +597,12 @@ export function useLocalX() {
   `clearError`, and the mutating actions.
 - Update the list optimistically on success; set a Korean `errorMessage` on failure.
   Keep the file-system/native calls in a shared adapter (§12), not in the hook.
-- Keep only the mutations that stay inside this resource. The canonical hook lists and
-  saves recording files but no longer deletes them: deleting an original also has to
-  reach snap metadata and every movie referencing it, so it became its own
-  feature ([`use-delete-snaps.ts`](../../src/features/delete-snap/model/use-delete-snaps.ts))
-  that composes both entities. When a mutation spans entities, it outgrew this pattern — the
-  caller then reloads the list from the ids that action reports.
+- Keep only the mutations that stay inside this resource. Deleting an original also
+  has to reach snap metadata and every movie referencing it, so it is its own feature
+  ([`use-delete-snaps.ts`](../../src/features/delete-snap/model/use-delete-snaps.ts))
+  composing both entities rather than an action of this hook. A mutation that spans
+  entities has outgrown this pattern; the caller reloads the list after that action
+  reports what it deleted.
 
 ---
 
@@ -605,30 +611,37 @@ export function useLocalX() {
 **When:** using a native/device capability (Location, Notifications, Camera, files).
 
 **Canonical:** raw native in [`shared/lib/location`](../../src/shared/lib/location) vs.
-product flow in [`geofence-monitor.ts`](../../src/features/geofence-monitor/model/geofence-monitor.ts);
+product flow in [`geofence-monitor.ts`](../../src/features/geofence-monitor/model/geofence-monitor.ts)
+(check-only gate, replace existing monitoring) and
+[`use-location-alerts.ts`](../../src/features/notification-settings/model/use-location-alerts.ts)
+(the prompts, from the user's own switch);
 same split for [`recording-files`](../../src/shared/lib/recording-files),
 [`notifications`](../../src/shared/lib/notifications), and
 [`haptics`](../../src/shared/lib/haptics) — the last one absorbs the project's iOS-only
 guard so no caller repeats `process.env.EXPO_OS === 'ios'`.
 
 ```ts
-// shared/lib/location — narrow native primitive, no product rules, no copy
-export function requestBackgroundLocationPermission(): Promise<PermissionResult> { /* native call */ }
+// shared/lib/location — narrow native primitives, no product rules, no copy
+export function getBackgroundLocationPermission() { /* check only — never prompts */ }
+export function requestBackgroundLocationPermission() { /* shows the OS prompt */ }
 
-// features/geofence-monitor/model — product flow: ordering, Korean copy, replace-logic
-export async function ensureGeofencePermissions(): Promise<LocationPermissionResult> {
-  const foreground = await requestForegroundLocationPermission();
-  if (!foreground.granted) return { granted: false, reason: 'foreground-denied', /* Korean message */ };
-  const background = await requestBackgroundLocationPermission();
-  if (!background.granted) return { granted: false, reason: 'background-denied', /* Korean message */ };
-  return { granted: true };
+// features/geofence-monitor/model — the gate checks; it never prompts
+export async function hasGeofencePermissions(): Promise<boolean> {
+  const foreground = await getForegroundLocationPermission();
+  if (!foreground.granted) return false;
+  return (await getBackgroundLocationPermission()).granted;
 }
+
+// features/notification-settings/model — the user's switch asks, in the order the OS needs
+const foreground = await requestForegroundLocationPermission();
+const granted = foreground.granted ? (await requestBackgroundLocationPermission()).granted : false;
 ```
 
 **Rules**
 - `shared/lib/*` owns narrow native calls and permission primitives only — no product
   rules, no user-facing copy.
-- The feature owns the product flow: permission *ordering* (foreground → background),
+- The feature owns the product flow: *when* to ask and in what order (foreground →
+  background, from the user's own action — a gate that runs at app start only checks),
   Korean copy, "replace existing monitoring" logic, cooldowns.
 - See [state and data](../frameworks/state-and-data.md#securestore-and-device-apis).
 
@@ -900,12 +913,12 @@ jest.mock('@/shared/lib/local-store', () => ({
 ```
 
 Mock whichever backend the store persists through — `local-store` for the growing
-clip/roll data, `secure-storage` for small preference stores.
+snap and movie data, `secure-storage` for small preference stores.
 
 **Rules**
 - Drive the store through `renderHook` + `act` on its exported hooks.
 - Reset the store to its default in `beforeEach`/`afterEach` so ordering never matters.
-  A store exported for its co-located test only (`useClipStore`) is reset directly with
+  A store exported for its co-located test only (`useSnapStore`) is reset directly with
   `setState`; nothing outside the slice may import it.
 
 ### 15e. Mocking native modules and `react-native`
@@ -1020,8 +1033,8 @@ async function press(name: string): Promise<void> {
 1. **One reason to change per file** — transport ≠ mapping ≠ query key ≠ product flow.
 2. **Cross boundaries only through Public APIs** — named exports in `index.ts`, no
    `export *`, no deep imports.
-3. **Every stopgap documents its replacement** — mock routing, local persistence, and
-   in-memory cooldowns all comment how the real backend supersedes them.
+3. **Every stand-in says what it stands in for** — mock routing, local persistence, and
+   in-memory cooldowns all comment on what the real backend does instead.
 4. **User-facing copy (Korean) lives in features/pages; raw native lives in shared.**
 
 ## Sources
