@@ -84,7 +84,7 @@ Reusing the contract's Zod schemas at runtime (`videoSchema.pick(...)`) would ma
 ## Open decisions
 
 - **Runtime reuse of contract schemas** at the entity boundary — see "Zod validation policy" and backlog B-5.
-- **Validation scope:** which responses warrant field-level Zod strictness beyond the fields the app consumes.
+- **Validation scope:** which responses warrant field-level Zod strictness beyond the fields the app consumes — tracked in the root backlog (B-5).
 
 ## Sources
 

@@ -11,7 +11,7 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
  *
  * 특히 **영상 내용 분석(2026-08-19 추가)** 은 아래가 확정돼야 문장이 사실이 된다. 확정 전에는
  * `MOVIE_RECOMMENDATION_ENABLED` 를 켜지 않는다 —
- * docs/decisions/template-snap-recommendation.md · backlog A-3.
+ * docs/decisions/template-snap-recommendation.md · backlog A-3·D-2.
  *
  *  1. **사업자·모델 확정.** 지금 문서는 OpenAI 를 전제로 썼고, `OPENAI_VISION_MODEL` 기본값은
  *     아직 잠정값이다. 사업자가 바뀌면 수탁자 표와 국외 이전 표의 이름·국가가 함께 바뀐다.
@@ -37,7 +37,7 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
  *     광고를 띄우는데, 수집 항목·위탁·국외 이전 어디에도 광고가 없다. 광고 SDK 는 광고 식별자와
  *     기기 정보를 Google 로 보내므로 세 곳 모두에 들어가야 하고, Play 데이터 안전성 신고와도
  *     맞물린다. 어떤 식별자가 실제로 나가는지는 맞춤 광고 설정·동의(UMP) 처리 방식에 따라
- *     달라지므로, 그 정책을 먼저 정하고 쓸 것 — backlog A-3.
+ *     달라지므로, 그 정책을 먼저 정하고 쓸 것 — backlog D-2.
  *     Sentry 보관 기간은 요금제에 따라 30일(무료)/90일(유료)이므로 요금제 확정 시 숫자를 좁힐 것.
  *     참고: 데이터 레지던시(한국 포함)는 Enterprise 승인 고객 대상이라, 신청 전에는 OpenAI 가 미국이다.
  *  4. **별도 동의 필요 여부.** 약관·방침 고지로 충분한지, 개별 동의를 받아야 하는지는 법무 판단이다.

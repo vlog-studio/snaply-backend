@@ -183,7 +183,7 @@ score = 0.50 × keyword + 0.20 × visualQuality.score
 
 카탈로그 · 추천 API(점수화 v1 + 상한) · 앱의 2단계 병합(1~3단계)은 구현됐다. 품질·단가 실측부터 생산
 활성화까지의 순서는 [plans/snap-analysis-recommendation-rollout.md](../plans/snap-analysis-recommendation-rollout.md)가,
-남은 조건(실측 · 운영 모델 고정 · §4 값 재조정 · 법무 검토)은 [backlog.md](../backlog.md) A-3·A-6 이 담는다.
+남은 조건(실측 · 운영 모델 고정 · §4 값 재조정 · 법무 검토)은 [backlog.md](../backlog.md) A-3·A-6·D-2 가 담는다.
 
 활성화의 선행 조건 중 법무 검토의 리드타임이 가장 길다. 그래서 추천 경로는
 `MOVIE_RECOMMENDATION_ENABLED` **기본 꺼짐**으로 배포된다 — 켜지 않으면 분석이 돌지 않고, 앱은

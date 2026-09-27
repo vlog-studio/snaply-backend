@@ -18,7 +18,7 @@
 - **Base URL**: `{API_BASE_URL}` (개발: `http://localhost:3000`)
 - **인증**: 🔒 표시 엔드포인트는 `Authorization: Bearer {supabase_jwt}` 헤더 필수. 토큰은 Supabase Auth 로그인으로 발급.
 - **응답 형식(공통)**: 성공 `{ "success": true, "data": … }` / 실패 `{ "success": false, "error": { "code", "message", …부가 필드 } }`.
-  부가 필드는 **라우트·상태 코드별로** 계약(`common.ts`의 `*ErrorSchema`)에 선언된 것만 온다 — 선언되지 않은 키는 직렬화에서 지워진다. 예: `403 ACCOUNT_PENDING_DELETION` 의 `purgeAfter`, `POST /edit-jobs` 의 `402 INSUFFICIENT_CREDITS` 의 `required`·`balance`(`POST /movies/{id}/export` 의 402 는 아직 이 둘을 선언하지 않아 오지 않는다 — [backlog E-9](./backlog.md)).
+  부가 필드는 **라우트·상태 코드별로** 계약(`common.ts`의 `*ErrorSchema`)에 선언된 것만 온다 — 선언되지 않은 키는 직렬화에서 지워진다. 예: `403 ACCOUNT_PENDING_DELETION` 의 `purgeAfter`, `POST /edit-jobs` 의 `402 INSUFFICIENT_CREDITS` 의 `required`·`balance`(`POST /movies/{id}/export` 의 402 는 아직 이 둘을 선언하지 않아 오지 않는다 — [backlog E-9](./backlog.md#e-9-무비-생성의-402-가-부족분-숫자를-싣지-못한다)).
 - **공통 에러 코드**: `UNAUTHORIZED`(401) · `FORBIDDEN`(403) · `ACCOUNT_PENDING_DELETION`(403, 삭제 대기 계정 — 복구는 `POST /auth/me/restore`) · `NOT_FOUND`(404) · `BAD_REQUEST`/`VALIDATION_ERROR`(400) · `RATE_LIMITED`(429) · `INTERNAL_SERVER_ERROR`(500).
   타 유저의 리소스를 **조회·삭제**하면 403 이 아니라 **404** 다(존재를 알리지 않는다). 편집 요청처럼 남의 영상을 **입력으로 넘긴** 경우만 403 이다.
 - **Rate limit**: 기본 IP당 60req/분. `POST /edit-jobs` 유저당 5req/분, `POST /notifications/geofence-enter`·`POST /movie-recommendations` 유저당 10req/분. 초과 시 `429 RATE_LIMITED`. 도메인 한도(`429 RECOMMENDATION_LIMIT`)는 다른 코드다 — 잠시 후 재시도로 풀리지 않는다.
