@@ -36,7 +36,7 @@
 | 문서 | 결정 | 구현 |
 |---|---|---|
 | [api-contract-schema-first.md](api-contract-schema-first.md) | API 계약 원천을 `packages/shared-types` Zod 스키마로 통일 | 완료 |
-| [snap-content-analysis.md](snap-content-analysis.md) | 스냅 내용 분석(vision) 도입. 법무 검토 전에는 사용자 동의(옵트인)로 켠다(2026-09-29 §6.1) | 분석 완료. 동의와 생산 활성화는 A-3 |
+| [snap-content-analysis.md](snap-content-analysis.md) | 스냅 내용 분석(vision) 도입. 법무 검토 전에는 사용자 동의(옵트인)로 켠다(2026-09-29 §6.1) | 분석·동의 완료. 생산 활성화는 A-3 |
 | [template-snap-recommendation.md](template-snap-recommendation.md) | 템플릿 기반 스냅 자동 추천 | 완료, 생산 활성화 대기(A-6) |
 | [edit-spec-v3.md](edit-spec-v3.md) | editSpec v3·에셋 매니페스트·어휘 사전의 설계 규칙(시드·핀·무효화·큐 분리·사전 로딩) | 어휘 사전 3종 구현. 스키마 본문과 남은 개정은 A-7 |
 | [auto-edit-draft.md](auto-edit-draft.md) | 고른 스냅 여러 개로 AI 가 고칠 수 있는 무비 초안을 만든다 — 결과는 렌더가 아닌 초안, 구간·경계별 전환까지 사용자가 고친다 | 미구현 — 툴 어휘·무효화 액션(A-7)과 계약·앱(A-11) 선행 |

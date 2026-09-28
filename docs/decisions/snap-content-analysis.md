@@ -2,11 +2,11 @@
 
 **작성일**: 2026-08-19 (§9 추가: 같은 날 본구현 진행 결정)
 **상태**: 결정 · **본구현 완료** (구현·검증 내역은 [progress.md](../progress.md) 2026-08-19).
-**2026-09-29**: 법무 검토 전에는 사용자 동의(옵트인)로 켜기로 했다(§6.1)
+**2026-09-29**: 법무 검토 전에는 사용자 동의(옵트인)로 켜기로 했다(§6.1). 동의는 같은 날 구현됐다([progress.md](../progress.md) 2026-09-29)
 **원천**: 스냅 내용 분석의 결과 소비자·분석 시점·엔진·구현 범위
 **관련 문서**: [movie-model.md](./movie-model.md) · [snap-source-of-truth.md](./snap-source-of-truth.md) ·
 착수 전 계획(보관) [archive/video-analysis-implementation-plan.md](../archive/video-analysis-implementation-plan.md)
-**남은 미결**: [backlog.md](../backlog.md) A-3 (품질·단가 기준선 · 운영 모델 고정 · 동의) · D-2 (법률 문서 정식화)
+**남은 미결**: [backlog.md](../backlog.md) A-3 (품질·단가 기준선 · 운영 모델 고정) · D-2 (법률 문서 정식화)
 
 §1~§6 은 방향 결정이고, **§9 는 그 방향으로 실제 구현하면서 계획과 달라진 지점**이다.
 
