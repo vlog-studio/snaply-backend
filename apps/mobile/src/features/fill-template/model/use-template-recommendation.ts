@@ -34,9 +34,10 @@ export type TemplateRecommendation = Readonly<Record<string, SlotRecommendation>
  * The server's proposal for a template's slots, or `undefined` while there is
  * none.
  *
- * `undefined` is the normal state, not an error state: mock mode, no network,
- * the endpoint switched off, an outing whose snaps have not finished uploading,
- * an analysis that is still running. Every one of those resolves the same way —
+ * `undefined` is the normal state, not an error state: the user has not agreed
+ * to analysis, mock mode, no network, the endpoint switched off, an outing whose
+ * snaps have not finished uploading, an analysis that is still running. Every
+ * one of those resolves the same way —
  * the caller keeps the local match it already drew. Nothing here surfaces a
  * failure to the user, because none of them cost the user anything.
  *
@@ -48,6 +49,12 @@ export type TemplateRecommendation = Readonly<Record<string, SlotRecommendation>
 export function useTemplateRecommendation(
   templateId: string | undefined,
   sessionSnaps: readonly Snap[] | undefined,
+  /**
+   * The user agreed to analysis (specs ANA-5). Without it nothing is asked —
+   * a recommendation makes the server analyse the candidates — and an answer
+   * still in the cache from before a withdrawal is not used either.
+   */
+  allowed: boolean,
 ): TemplateRecommendation | undefined {
   const syncEntries = useSnapSyncEntries();
 
@@ -70,7 +77,8 @@ export function useTemplateRecommendation(
     };
   }, [sessionSnaps, syncEntries]);
 
-  const enabled = !USE_MOCK_API && templateId !== undefined && candidates.length >= MinCandidates;
+  const enabled =
+    allowed && !USE_MOCK_API && templateId !== undefined && candidates.length >= MinCandidates;
 
   const request = useQuery({
     ...recommendationQueries.request(templateId ?? '', candidates),
@@ -82,7 +90,9 @@ export function useTemplateRecommendation(
   });
 
   return useMemo(() => {
-    const dto = result.data;
+    // A disabled query still hands back what it cached — after a withdrawal
+    // that is an answer the server has since destroyed.
+    const dto = enabled ? result.data : undefined;
     if (!dto || dto.status !== 'done') return undefined;
 
     const assigned = dto.slots.flatMap((slot) => {
@@ -95,5 +105,5 @@ export function useTemplateRecommendation(
 
     // An answer that fills nothing is the same as no answer: keep the local match.
     return assigned.length > 0 ? Object.fromEntries(assigned) : undefined;
-  }, [result.data, snapIdByVideoId]);
+  }, [enabled, result.data, snapIdByVideoId]);
 }

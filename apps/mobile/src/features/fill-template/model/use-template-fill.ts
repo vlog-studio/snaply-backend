@@ -100,7 +100,19 @@ export type TemplateFill = {
  * write to until the movie is created, and abandoning the screen should cost
  * nothing.
  */
-export function useTemplateFill(template: MovieTemplate | undefined): TemplateFill {
+export type TemplateFillOptions = {
+  /**
+   * Ask the server to recommend snaps for the slots. Only with the user's
+   * consent to analysis (specs ANA-5) — the caller owns that question, since
+   * this feature cannot see the consent slice. Off by default, as the consent is.
+   */
+  recommend?: boolean;
+};
+
+export function useTemplateFill(
+  template: MovieTemplate | undefined,
+  { recommend = false }: TemplateFillOptions = {},
+): TemplateFill {
   // A snap whose server copy expired cannot be made into a movie (SNAP-12).
   const snaps = useSnapsForMovies();
   const [dropped, setDropped] = useState<ReadonlySet<string>>(new Set());
@@ -124,7 +136,7 @@ export function useTemplateFill(template: MovieTemplate | undefined): TemplateFi
   // The second stage. The local match above has already filled the screen; this
   // arrives later, if at all, and only ever replaces snaps the user has not
   // touched — a dropped or shot slot is pinned and never drawn from a proposal.
-  const recommendation = useTemplateRecommendation(template?.id, session?.snaps);
+  const recommendation = useTemplateRecommendation(template?.id, session?.snaps, recommend);
 
   const snapById = useMemo(() => new Map(snaps.map((snap) => [snap.id, snap])), [snaps]);
 

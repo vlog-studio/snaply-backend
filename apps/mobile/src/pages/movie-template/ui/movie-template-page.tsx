@@ -5,6 +5,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useMovieTemplate } from '@/entities/movie-template';
 import { useSnaps } from '@/entities/snap';
+import {
+  AnalysisConsentSheet,
+  useAnalysisConsent,
+  useAnalysisConsentActions,
+  useAnalysisOffer,
+} from '@/features/analysis-consent';
 import { useComposeMovie } from '@/features/compose-movie';
 import { useTemplateFill } from '@/features/fill-template';
 import { formatSeconds } from '@/shared/lib/datetime';
@@ -14,6 +20,7 @@ import { SnaplyButton } from '@/shared/ui/snaply-button';
 import { MaxContentWidth, Radius, Spacing, useTheme } from '@/shared/ui/theme';
 import { ThemedText } from '@/shared/ui/themed-text';
 
+import { AnalysisOffer } from './analysis-offer';
 import { SlotRow, confidenceLabel } from './slot-row';
 
 export type MovieTemplatePageProps = {
@@ -30,6 +37,11 @@ export type MovieTemplatePageProps = {
  * what to go and shoot, and `지금 찍기` walks them to the camera and puts the
  * result in that exact row on the way back.
  *
+ * The server's recommendation — the second stage — runs only for someone who
+ * agreed to snap analysis (specs ANA-5): the frames of the outing's snaps go to
+ * an outside provider. The screen asks once, under the slots, and composes the
+ * two features itself because neither may see the other.
+ *
  * Making the movie lands on an editable draft rather than starting generation:
  * generation is slow remote work once a real backend runs it, so the movie
  * screen is where the user settles the cut lengths and the style first and then
@@ -41,7 +53,11 @@ export function MovieTemplatePage({ templateId }: MovieTemplatePageProps) {
   const insets = useSafeAreaInsets();
   const snaps = useSnaps();
   const template = useMovieTemplate(templateId);
-  const fill = useTemplateFill(template);
+  const consent = useAnalysisConsent();
+  const offer = useAnalysisOffer();
+  const consentActions = useAnalysisConsentActions();
+  const [consentSheetVisible, setConsentSheetVisible] = useState(false);
+  const fill = useTemplateFill(template, { recommend: consent.available && consent.granted });
   const { fillSlot } = fill;
   const { startMovieFromTemplate } = useComposeMovie();
   const [error, setError] = useState<string>();
@@ -150,6 +166,10 @@ export function MovieTemplatePage({ templateId }: MovieTemplatePageProps) {
           </Pressable>
         ) : null}
 
+        {offer.visible ? (
+          <AnalysisOffer onAccept={() => setConsentSheetVisible(true)} onDecline={offer.decline} />
+        ) : null}
+
         {error ? (
           <View
             style={[
@@ -191,6 +211,21 @@ export function MovieTemplatePage({ templateId }: MovieTemplatePageProps) {
           onPress={makeMovie}
         />
       </View>
+
+      <AnalysisConsentSheet
+        visible={consentSheetVisible}
+        pending={consentActions.pending === 'give'}
+        error={consentActions.error}
+        onAccept={async () => {
+          if (await consentActions.give()) setConsentSheetVisible(false);
+        }}
+        // Reading the whole wording and saying no is an answer to the offer too,
+        // so it is not asked again; the 나 tab switch stays the way back in.
+        onDecline={() => {
+          setConsentSheetVisible(false);
+          offer.decline();
+        }}
+      />
     </View>
   );
 }

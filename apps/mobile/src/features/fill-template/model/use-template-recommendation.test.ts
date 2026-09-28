@@ -42,11 +42,15 @@ function uploaded(...ids: string[]) {
   return Object.fromEntries(ids.map((id) => [id, { status: 'uploaded', videoId: `v-${id}` }]));
 }
 
-function render(templateId: string | undefined, snaps: readonly Snap[] | undefined) {
+function render(
+  templateId: string | undefined,
+  snaps: readonly Snap[] | undefined,
+  allowed = true,
+) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
   const wrapper = ({ children }: { children: ReactNode }) =>
     createElement(QueryClientProvider, { client }, children);
-  return renderHook(() => useTemplateRecommendation(templateId, snaps), { wrapper });
+  return renderHook(() => useTemplateRecommendation(templateId, snaps, allowed), { wrapper });
 }
 
 const outing = [makeSnap('a', 0), makeSnap('b', 10), makeSnap('c', 20)];
@@ -121,6 +125,40 @@ describe('useTemplateRecommendation', () => {
     await render(undefined, outing);
 
     expect(mockRequest).not.toHaveBeenCalled();
+  });
+
+  it('does not ask without the user agreeing to analysis', async () => {
+    // A recommendation makes the server send the candidates' frames to an outside
+    // provider, so it waits for the user's yes (specs ANA-5).
+    const { result } = await render('walk', outing, false);
+
+    expect(result.current).toBeUndefined();
+    expect(mockRequest).not.toHaveBeenCalled();
+  });
+
+  it('stops using a cached answer once the consent is withdrawn', async () => {
+    // Withdrawing destroys the recommendation on the server; the copy still in
+    // the query cache must not keep filling the slots.
+    mockRequest.mockResolvedValue('rec-1');
+    mockGet.mockResolvedValue({
+      id: 'rec-1',
+      templateId: 'walk',
+      status: 'done',
+      slots: [{ slotId: 'start', videoId: 'v-c', score: 0.91 }],
+    });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+    const wrapper = ({ children }: { children: ReactNode }) =>
+      createElement(QueryClientProvider, { client }, children);
+
+    const { result, rerender } = await renderHook(
+      ({ allowed }: { allowed: boolean }) => useTemplateRecommendation('walk', outing, allowed),
+      { wrapper, initialProps: { allowed: true } },
+    );
+    await waitFor(() => expect(result.current).toEqual({ start: { snapId: 'c', score: 0.91 } }));
+
+    await rerender({ allowed: false });
+
+    expect(result.current).toBeUndefined();
   });
 
   it('samples down to the server cap, keeping the first and last of the outing', async () => {

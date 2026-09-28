@@ -9,6 +9,7 @@ import { creditQueries } from '@/entities/credit';
 import { useMovies } from '@/entities/movie';
 import { useClearSession, useCurrentUser } from '@/entities/session';
 import { useSnaps } from '@/entities/snap';
+import { useAnalysisConsent } from '@/features/analysis-consent';
 import { useMovieReadyEnabled, useNotificationEnabled } from '@/features/notification-settings';
 import {
   MaxContentWidth,
@@ -59,6 +60,17 @@ export function MePage() {
   const locationAlerts = useNotificationEnabled();
   const themeMode = useThemeMode();
   const creditBalance = useQuery(creditQueries.balance());
+  const analysisConsent = useAnalysisConsent();
+  // A granted consent must stay reachable to be withdrawn even while the server
+  // has analysis switched off; only an ungranted one reads 준비 중 then.
+  const analysisReachable = analysisConsent.available || analysisConsent.granted;
+  const analysisReadOut = !analysisConsent.isLoaded
+    ? undefined
+    : analysisConsent.granted
+      ? '켜짐'
+      : analysisConsent.available
+        ? '꺼짐'
+        : '준비 중';
 
   const days = weekRecord(snaps.map((snap) => snap.capturedAt));
   const recordedDays = recordedDayCount(days);
@@ -133,6 +145,15 @@ export function MePage() {
           subLines={1}
           right={<Chevron />}
           onPress={() => router.push('/settings/theme')}
+        />
+        <RowDivider />
+        <SettingRow
+          icon="scan-outline"
+          title="스냅 분석"
+          sub={analysisReadOut}
+          subLines={1}
+          right={analysisReachable ? <Chevron /> : undefined}
+          onPress={analysisReachable ? () => router.push('/settings/analysis') : undefined}
         />
         <RowDivider />
         {/* 준비 중, and a row with nothing behind it: nothing reads interests yet
