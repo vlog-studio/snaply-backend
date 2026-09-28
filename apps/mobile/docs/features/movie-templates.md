@@ -14,6 +14,8 @@ Users pick the shape of the movie first — 동네 산책, 하루 요약 — and
 │   ├── dropped          지금 찍기 · 되돌리기
 │   └── empty            지금 찍기        → /capture, and back into this row
 ├── 고친 것 되돌리기        shown once anything is dropped, shot, or reordered
+├── snap-analysis offer  스냅을 분석해서 컷에 더 어울리게 채울까요? · 괜찮아요 / 분석해서 채우기
+│                        (until the account agrees or declines) → the consent sheet
 ├── footer               6컷 중 4컷 채웠어요 · total length
 └── 이대로 만들기          → /movie/[id], an editable draft
                           (N컷으로 만들기 while some cuts are empty)
@@ -25,7 +27,7 @@ This is the second way into a movie and it sits beside hand-picking rather than 
 
 `Functional` — every step runs for real: the catalog is served by the backend with the shipped one as a fallback, the local match is pure and unit-tested, shooting for an empty slot round-trips through `/capture`, and `이대로 만들기` creates a real editable draft.
 
-The **second stage — the server's snap recommendation — is built on both sides and dormant.** The app asks for one, merges what comes back, and falls back to the local match when nothing does; the backend refuses the request until `MOVIE_RECOMMENDATION_ENABLED` is switched on, which is gated on a terms revision because it sends snap frames to an external model provider. So what a user sees today is still the local match. See [The two stages](#the-two-stages).
+The **second stage — the server's snap recommendation — is built on both sides and waits on two switches.** It runs only for an account that agreed to snap analysis, because it sends snap frames to an outside model provider (specs ANA-5); the screen asks for that agreement itself ([Asking for snap analysis](#asking-for-snap-analysis)). And the backend offers analysis only while `MOVIE_RECOMMENDATION_ENABLED` is on — until then the question is never asked and every user sees the local match. The app merges whatever comes back and falls back to the local match when nothing does. See [The two stages](#the-two-stages).
 
 ## The two stages
 
@@ -33,7 +35,7 @@ The screen fills itself twice. The first stage is the app's own match and it is 
 
 | | Stage 1 — local match | Stage 2 — server recommendation |
 | --- | --- | --- |
-| Runs | Always, on open and whenever the library changes | Only when the endpoint is enabled and at least two of the outing's snaps have finished uploading |
+| Runs | Always, on open and whenever the library changes | Only for an account that agreed to snap analysis, while the endpoint is enabled, and once at least two of the outing's snaps have finished uploading |
 | Knows | Capture times and coordinates. **It has never looked at a picture** | What an external vision model reported about each candidate: places, objects, actions, topics, and whether the clip is usable at all |
 | Answers | Which snaps were shot on the same outing, laid into the slots in the order it happened | Which of those snaps suits *which slot* |
 | When it fails | There is nothing to fail — it is a pure function of the library | The screen keeps stage 1. Offline, endpoint off, analysis still running, snaps not uploaded: all the same outcome, and none of them is shown to the user |
@@ -59,6 +61,15 @@ Scoring is rule-based and lives on the server, so its weights can be tuned witho
 - A slot the server could fill nothing for comes back empty, and stays empty. **A snap the analysis marked unusable never fills a slot** — a blurred or too-dark clip is worth less than the `지금 찍기` the empty row offers.
 - The answer's own time signal keeps the outing's shape, so a recommendation never scrambles a walk into an order that makes less sense than the clock's.
 - The payload carries slot ids, video ids, and scores. **No summary, no tags, no reason line** — the analysis is an internal signal for choosing snaps, not copy for a screen.
+
+### Asking for snap analysis
+
+Stage 2 makes the server send the outing's frames to an outside provider, so it waits for the user's yes, and the server refuses both the recommendation and the analysis without one (specs ANA-5 · REC-4).
+
+- **Where.** One line and two answers under the slots — 스냅을 분석해서 컷에 더 어울리게 채울까요? with 괜찮아요 / 분석해서 채우기 — shown only while the server has analysis switched on and the account has neither agreed nor declined. It sits below the slots, not above them: by then the local match has already filled the screen, so what the user is asked to trade for is visible. **Not a sheet on entry** — entering the screen is coming to work on a template, and a sheet there would be a request before any result.
+- **What agreeing is.** 분석해서 채우기 opens the consent sheet, which states the whole agreement — what is sent (up to four still images per snap, no sound), to whom (OpenAI, US), what it is used for, how long the provider keeps it, how to turn it off, and that saying no costs nothing — and only its 분석 켜기 records the consent. The rows then refill from the recommendation as soon as it arrives, under the merge rules below.
+- **Declining.** 괜찮아요, or 안 켜기 in the sheet, is remembered for the account on this device, so the next visit does not ask again; the 나 tab's 스냅 분석 switch is the way back in ([Me tab](me.md)). Turning analysis off there counts as declining too.
+- **Withdrawing.** Once the consent is withdrawn the screen stops asking for recommendations and stops using one already in the cache — the server destroyed it.
 
 ### Merging stage 2 without losing the user's work
 
@@ -92,7 +103,8 @@ A row the user moves out of the position its score was computed for **loses its 
 | Template catalog | `Functional` | Served by `GET /movie-templates` and cached for the session; the four templates that ship with the build answer the first render and stand in whenever the request fails. Ids and copy are meant to be the same on both sides, so the two can never disagree about *which* template a screen is showing. A template whose style is a preset this build does not know is skipped by the app — the server does not filter, because it cannot know what a given build understands. |
 | Template cards | `Functional` | The studio lists every template with how far the library gets through it (`6컷 중 4컷 있어요`; a template the library fills completely reads `바로 만들 수 있어요`). A template the library cannot fill still appears — the shortfall is the invitation. **Each card leads with its slots as a strip**: one cell per slot across the card, the user's own snap's frame in every slot the library fills and a dashed cell in every one it cannot, so the shortfall is seen rather than counted and the dashed cells are the shots to go and take. The strip is `TemplateOffer.slots`, laid by the same `spreadAcrossSlots` the template screen proposes, so it shows the cuts the user will find on opening the card (the dormant recommendation stage would re-lay them there). Only the user's footage is drawn — an empty library draws every cell dashed, never a sample — and the strip is hidden from screen readers, since the card's label already carries the count. **Ordered by shortfall, closest to filled first**, with the shorter template and then the catalog breaking a tie: the row is a horizontal scroll that fits two cards and a sliver, so catalog order decided by luck which templates a user ever saw. Card width is set so the third card is cut by the screen edge — the row bleeds through the studio's own padding — because a card the edge cuts is the only signal that more exist. |
 | Stage 1 match | `Functional` | Runs on open and again whenever the library changes, so a snap shot mid-session shows up without a refresh. Pure and unit-tested (`lib/match-template.ts`). |
-| Stage 2 recommendation | `Functional`, dormant | Request, poll, and merge are implemented and unit-tested (`model/use-template-recommendation.ts`). The backend refuses it until the feature flag is on, and every refusal resolves to "keep stage 1" without a message. Skipped entirely in mock mode and when fewer than two of the outing's snaps have uploaded. |
+| Stage 2 recommendation | `Functional`, dormant | Request, poll, and merge are implemented and unit-tested (`model/use-template-recommendation.ts`). Asked only for an account that agreed to snap analysis, and the backend offers analysis only once its feature flag is on; every refusal resolves to "keep stage 1" without a message. Skipped entirely in mock mode and when fewer than two of the outing's snaps have uploaded. |
+| Snap-analysis offer | `Functional` (unverified on a device) | The question and the consent sheet described in [Asking for snap analysis](#asking-for-snap-analysis). The offer, the sheet's wording, the consent actions, and the recommendation's consent gate are unit-tested; the path against a real server with analysis switched on has not been walked on a device. |
 | 지금 찍기 | `Functional` | Opens `/capture` and remembers which row asked. On return, if the library has a newer snap than it did on the way out, that snap goes into that row. Coming back without shooting leaves the row empty. The snap is filed in the library like any other — nothing about capture changes. |
 | ✕ (drop) / 되돌리기 | `Functional` | Drops a proposed snap out of a slot, and puts it back. There is no "pick a different snap" — a wrong cut is cheaper to fix on the movie screen, after the movie exists. The control is an icon, not the word `빼기`: at two per row beside the reorder arrows, three Korean micro-labels outweighed the row's own content. |
 | ⌃ ⌄ (reorder) | `Functional` | Swaps a snap with the one above or below it, so the cuts play in an order other than the one the clock proposed. The **slots** never move — `출발` stays the template's first scene — so a move trades the two snaps' positions. Held as a permutation of the proposal (`model/use-template-fill.ts`), which is what keeps each snap's number with it across a swap. |
@@ -107,7 +119,8 @@ A row the user moves out of the position its score was computed for **loses its 
 
 - `src/entities/movie-template` owns the template model, the read of the server catalog (`api/`), and the shipped fallback (`lib/movie-template-catalog.ts`). It reaches `entities/movie` for `MovieStyle` through `entities/movie/@x/movie-template.ts` — a type-only cross-reference, which is the one case the [boundary rules](../conventions/module-boundaries.md#entity-cross-reference-exception-x) allow it. The wire preset → `MovieStyle` decode lives in its `api` segment; the reverse lives in `features/compose-movie/api`, each in the segment that crosses that boundary.
 - `src/features/fill-template` owns stage 1 (`lib/match-template.ts`), the recommendation request and poll (`api/`, `model/use-template-recommendation.ts`), the merged slot state (`model/use-template-fill.ts`), and the studio's readiness read-out (`model/use-template-offers.ts`). `describeSession` and the `TemplateFill.summary` it feeds have **no renderer** (the reason panel is gone — see [What the NN% means](#what-the-nn-means-and-how-the-screen-says-so)); both are still unit-tested and kept for whatever surface takes the reason line next. Do not treat them as live behavior.
-- `src/pages/movie-template` owns the screen, the slot row, the column heading, and the camera round trip.
+- `src/pages/movie-template` owns the screen, the slot row, the column heading, the snap-analysis offer (`ui/analysis-offer.tsx`), and the camera round trip. It is where the consent and the recommendation meet: it reads `features/analysis-consent` and passes `recommend` into `useTemplateFill`, because the two features may not import each other.
+- `src/features/analysis-consent` owns the consent: its read, the give/withdraw actions, the per-account memory of a declined offer, and the consent sheet the 나 tab opens too ([Me tab](me.md)).
 - `src/pages/studio/ui/template-panel.tsx` owns the cards on the studio.
 - `src/features/compose-movie` owns `startMovieFromTemplate` and every rule about the movie it creates.
 - `src/shared/lib/geo` is the distance helper — business-agnostic geometry, no snaps and no outings in it.
@@ -120,7 +133,8 @@ Rows are seeded by a migration rather than by a seed script, so a fresh environm
 
 ## Known limitations
 
-- **The semantic stage is dormant.** Stage 2 is implemented end to end and switched off at the backend until a terms revision and a third-party-disclosure notice are in place, because it sends snap frames to an external model provider. Until then every user sees stage 1, and a build with no API origin (mock mode) never asks at all.
+- **The semantic stage is dormant.** Stage 2 is implemented end to end and asked for only with the user's consent, but the backend still has analysis switched off (its flag, and the provider key it needs), so the offer never appears and every user sees stage 1. A build with no API origin (mock mode) never asks at all.
+- The rows refill silently when a recommendation arrives; nothing on the screen says the analysis is running in between, even right after the user agreed.
 - **Only uploaded snaps can be recommended.** A snap still on its way to the backend keeps whatever place stage 1 gave it. This is deliberate — waiting for uploads would make the person who just finished shooting wait the longest — but it means a fresh outing gets the local match until its uploads land.
 - **The server knows when a snap was taken, not where.** The upload registers the capture time (SNAP-10) but never the coordinates (SNAP-11), so choosing which outing to recommend for stays the app's job while where a snap was shot stays on the device. One consequence: the server can only rank *within* the outing the app sent it.
 - Snaps captured before location was recorded have no coordinates, so an older library is matched on time alone and scores lower in stage 1. Nothing is wrong with those snaps; the app is just less sure.
