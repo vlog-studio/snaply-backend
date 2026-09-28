@@ -45,9 +45,29 @@ model User {
   adRewards        AdReward[]
   recommendations  MovieRecommendation[]
   movies           Movie[]
+  consents         UserConsent[]
 
   @@index([deletedAt])
   @@map("users")
+}
+
+/// 사용자가 준 동의의 기록. 한 행이 "이 문구 버전에 이 시각 동의했다"이고, 철회하면 revokedAt 이
+/// 채워진다. 행을 지우지 않는다 — 언제 무엇에 동의했는지가 남아야 한다
+/// (docs/decisions/snap-content-analysis.md §6.1, ANA-5).
+model UserConsent {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  /// 동의의 종류. 지금은 스냅 분석(`snap_analysis`) 하나다.
+  kind      String    @db.VarChar(40)
+  /// 사용자에게 보여 준 동의 문구의 버전. 문구가 바뀌면 이전 버전의 동의는 효력이 없다.
+  version   String    @db.VarChar(40)
+  grantedAt DateTime  @default(now()) @map("granted_at") @db.Timestamptz(6)
+  revokedAt DateTime? @map("revoked_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, kind])
+  @@map("user_consents")
 }
 
 // Geofence 포인트 DB

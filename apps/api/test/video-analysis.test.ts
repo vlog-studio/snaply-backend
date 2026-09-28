@@ -7,12 +7,15 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createHarness, type Harness, type TestUser } from './helpers/harness.js';
+import { createConsentedUser } from './helpers/consent.js';
 import { ANALYSIS_VERSION } from '../src/services/video-analysis.service.js';
 
 let h: Harness;
 
 beforeAll(async () => {
-  h = await createHarness();
+  // 분석은 서버 스위치가 켜져 있고 사용자가 동의해야 돈다(ANA-5). 여기 사용자는 모두 동의한다 —
+  // 동의가 없을 때 막히는 것은 analysis-consent.test.ts 가 본다.
+  h = await createHarness({ MOVIE_RECOMMENDATION_ENABLED: 'true' });
 });
 afterAll(async () => {
   await h.close();
@@ -51,7 +54,7 @@ function getAnalysis(user: TestUser, videoId: string) {
 
 describe('POST /videos/:videoId/analysis', () => {
   it('분석 레코드를 정확히 1개 만들고 202로 응답한다', async () => {
-    const user = await h.createUser();
+    const user = await createConsentedUser(h);
     const videoId = await createSnap(user);
 
     const res = await requestAnalysis(user, videoId);
@@ -69,7 +72,7 @@ describe('POST /videos/:videoId/analysis', () => {
   });
 
   it('같은 영상을 여러 번 요청해도 분석은 1건이다', async () => {
-    const user = await h.createUser();
+    const user = await createConsentedUser(h);
     const videoId = await createSnap(user);
 
     const first = await requestAnalysis(user, videoId);
@@ -81,7 +84,7 @@ describe('POST /videos/:videoId/analysis', () => {
   });
 
   it('실패한 분석은 같은 레코드를 queued로 되돌려 재시도한다', async () => {
-    const user = await h.createUser();
+    const user = await createConsentedUser(h);
     const videoId = await createSnap(user);
     const created = await requestAnalysis(user, videoId);
     const analysisId = created.json().data.analysisId;
@@ -109,7 +112,7 @@ describe('POST /videos/:videoId/analysis', () => {
   });
 
   it('다시 해도 같은 결과인 실패는 409로 막는다', async () => {
-    const user = await h.createUser();
+    const user = await createConsentedUser(h);
     const videoId = await createSnap(user);
     const analysisId = (await requestAnalysis(user, videoId)).json().data.analysisId;
 
@@ -126,7 +129,7 @@ describe('POST /videos/:videoId/analysis', () => {
   });
 
   it('이미 완료된 분석은 다시 돌리지 않는다', async () => {
-    const user = await h.createUser();
+    const user = await createConsentedUser(h);
     const videoId = await createSnap(user);
     const analysisId = (await requestAnalysis(user, videoId)).json().data.analysisId;
     await h.prisma.videoAnalysis.update({
@@ -143,7 +146,7 @@ describe('POST /videos/:videoId/analysis', () => {
   });
 
   it('업로드가 확정되지 않은 영상은 400이다', async () => {
-    const user = await h.createUser();
+    const user = await createConsentedUser(h);
     const videoId = await createSnap(user, 'pending');
 
     const res = await requestAnalysis(user, videoId);
@@ -152,8 +155,8 @@ describe('POST /videos/:videoId/analysis', () => {
   });
 
   it('남의 영상은 403이 아니라 404다', async () => {
-    const owner = await h.createUser();
-    const other = await h.createUser();
+    const owner = await createConsentedUser(h);
+    const other = await createConsentedUser(h);
     const videoId = await createSnap(owner);
 
     const res = await requestAnalysis(other, videoId);
@@ -162,7 +165,7 @@ describe('POST /videos/:videoId/analysis', () => {
   });
 
   it('편집 결과물(kind=result)은 분석 대상이 아니다', async () => {
-    const user = await h.createUser();
+    const user = await createConsentedUser(h);
     const result = await h.prisma.video.create({
       data: { userId: user.id, kind: 'result', status: 'done' },
     });
@@ -174,7 +177,7 @@ describe('POST /videos/:videoId/analysis', () => {
 
 describe('GET /videos/:videoId/analysis', () => {
   it('완료된 분석의 결과를 계약대로 내려준다', async () => {
-    const user = await h.createUser();
+    const user = await createConsentedUser(h);
     const videoId = await createSnap(user);
     const analysisId = (await requestAnalysis(user, videoId)).json().data.analysisId;
 
@@ -220,7 +223,7 @@ describe('GET /videos/:videoId/analysis', () => {
   });
 
   it('진행 중이면 result가 null이다', async () => {
-    const user = await h.createUser();
+    const user = await createConsentedUser(h);
     const videoId = await createSnap(user);
     await requestAnalysis(user, videoId);
 
@@ -231,7 +234,7 @@ describe('GET /videos/:videoId/analysis', () => {
   });
 
   it('실패는 200 + 분류 코드로 내려주고 원문 메시지는 감춘다', async () => {
-    const user = await h.createUser();
+    const user = await createConsentedUser(h);
     const videoId = await createSnap(user);
     const analysisId = (await requestAnalysis(user, videoId)).json().data.analysisId;
     await h.prisma.videoAnalysis.update({
@@ -251,7 +254,7 @@ describe('GET /videos/:videoId/analysis', () => {
   });
 
   it('되돌릴 수 없는 실패는 retryable=false 로 알린다', async () => {
-    const user = await h.createUser();
+    const user = await createConsentedUser(h);
     const videoId = await createSnap(user);
     const analysisId = (await requestAnalysis(user, videoId)).json().data.analysisId;
     await h.prisma.videoAnalysis.update({
@@ -264,7 +267,7 @@ describe('GET /videos/:videoId/analysis', () => {
   });
 
   it('분석 기록이 없으면 404다', async () => {
-    const user = await h.createUser();
+    const user = await createConsentedUser(h);
     const videoId = await createSnap(user);
 
     const res = await getAnalysis(user, videoId);
@@ -272,8 +275,8 @@ describe('GET /videos/:videoId/analysis', () => {
   });
 
   it('남의 분석은 404다', async () => {
-    const owner = await h.createUser();
-    const other = await h.createUser();
+    const owner = await createConsentedUser(h);
+    const other = await createConsentedUser(h);
     const videoId = await createSnap(owner);
     await requestAnalysis(owner, videoId);
 
@@ -284,7 +287,7 @@ describe('GET /videos/:videoId/analysis', () => {
 
 describe('분석과 영상 생명주기', () => {
   it('분석 실패가 원본 영상 상태를 바꾸지 않는다', async () => {
-    const user = await h.createUser();
+    const user = await createConsentedUser(h);
     const videoId = await createSnap(user);
     const analysisId = (await requestAnalysis(user, videoId)).json().data.analysisId;
     await h.prisma.videoAnalysis.update({
@@ -297,7 +300,7 @@ describe('분석과 영상 생명주기', () => {
   });
 
   it('영상을 삭제하면 분석 조회도 404가 된다', async () => {
-    const user = await h.createUser();
+    const user = await createConsentedUser(h);
     const videoId = await createSnap(user);
     await requestAnalysis(user, videoId);
 
@@ -313,7 +316,7 @@ describe('분석과 영상 생명주기', () => {
   });
 
   it('영상 레코드가 실제로 지워지면 분석도 함께 사라진다', async () => {
-    const user = await h.createUser();
+    const user = await createConsentedUser(h);
     const videoId = await createSnap(user);
     await requestAnalysis(user, videoId);
 
@@ -323,7 +326,7 @@ describe('분석과 영상 생명주기', () => {
   });
 
   it('기존 Video 응답 계약에는 분석 필드가 추가되지 않는다', async () => {
-    const user = await h.createUser();
+    const user = await createConsentedUser(h);
     const videoId = await createSnap(user);
     await requestAnalysis(user, videoId);
 

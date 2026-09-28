@@ -31,15 +31,5 @@ export const REUSE_WINDOW_MS = 24 * 60 * 60 * 1000;
  */
 export const SCORING_DEADLINE_MS = 3 * 60 * 1000;
 
-/**
- * 추천 경로가 켜져 있는가.
- *
- * **기본은 꺼짐이다.** 이 경로는 생산 스냅의 프레임을 외부 모델 제공자에게 보내는 분석을
- * 호출하므로, 약관 개정·제3자 제공 고지가 끝나기 전에는 켜지 않는다
- * (docs/decisions/snap-content-analysis.md §6). 꺼져 있으면 앱은 로컬 매칭만으로 동작한다.
- *
- * 호출 시점에 읽는다 — 기동 시점에 고정하면 끄고 켜는 데 재배포가 필요해진다.
- */
-export function isRecommendationEnabled(): boolean {
-  return process.env.MOVIE_RECOMMENDATION_ENABLED === 'true';
-}
+// 추천 경로의 서버 스위치는 분석 요청과 같은 것이라 `analysis-consent.service.ts` 의
+// `isSnapAnalysisEnabled` 로 옮겼다. 켜도 분석에 동의한 사용자에게만 돈다(REC-4).

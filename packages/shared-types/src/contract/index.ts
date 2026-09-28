@@ -9,6 +9,7 @@ export * from './define-route.js';
 export * from './common.js';
 export * from './vocab.js';
 export * from './auth.js';
+export * from './analysis-consent.js';
 export * from './videos.js';
 export * from './video-analyses.js';
 export * from './edit-jobs.js';
@@ -21,6 +22,11 @@ export * from './movie-recommendations.js';
 export * from './health.js';
 
 import { deleteMe, getMe, patchMe, registerFcmToken, restoreMe } from './auth.js';
+import {
+  getAnalysisConsent,
+  grantAnalysisConsent,
+  revokeAnalysisConsent,
+} from './analysis-consent.js';
 import {
   abandonAdRewardSession,
   admobSsvCallback,
@@ -74,6 +80,9 @@ export const apiContract = {
   deleteMe,
   restoreMe,
   registerFcmToken,
+  getAnalysisConsent,
+  grantAnalysisConsent,
+  revokeAnalysisConsent,
   getUploadUrl,
   createVideo,
   listVideos,

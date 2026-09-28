@@ -258,7 +258,7 @@ export const ENV_VARS = [
     required: false,
     origin: 'shared',
     description:
-      'true 일 때만 POST /movie-recommendations 가 동작한다. 기본 false — 이 경로는 생산 스냅 프레임을 외부 모델로 보내므로 약관 개정·제3자 제공 고지 완료 전에는 켜지 않는다',
+      'true 일 때만 스냅 분석 경로(POST /videos/{videoId}/analysis · POST /movie-recommendations)가 동작한다. 기본 false. 켜도 분석에 동의(옵트인)한 사용자의 스냅만 외부 모델로 보낸다(specs ANA-5)',
   },
 
   // ── 결제 (RevenueCat + Apple/Google IAP) ─────────────

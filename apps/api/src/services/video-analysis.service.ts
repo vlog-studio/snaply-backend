@@ -4,7 +4,10 @@
  * 분석은 **업로드 시점이 아니라 요청 시점에** 돈다. 스냅은 대량으로 올라오고 실제로 편집에
  * 쓰이는 것은 일부라, 업로드마다 분석하면 버려질 스냅까지 과금된다
  * (docs/decisions/snap-content-analysis.md §3). 그래서 자동 적재 경로를 두지 않고,
- * 이 서비스를 호출하는 쪽(현재는 앱의 명시적 요청, 이후 추천 경로)이 후보를 지정한다.
+ * 이 서비스를 호출하는 쪽(분석 요청 API, 추천 경로)이 후보를 지정한다.
+ *
+ * **분석은 동의한 사용자의 스냅에만 돈다**(ANA-5, 같은 문서 §6.1). 서버 스위치와 동의를 요청을
+ * 받는 이 자리에서 검사한다 — 호출하는 쪽이 몇이든 한 곳에서 막힌다.
  *
  * 결과는 추천 입력이므로 `Video` 응답에는 아무 필드도 추가하지 않는다.
  */
@@ -17,6 +20,7 @@ import { getPrisma } from '../db/client.js';
 import { AppError } from '../lib/errors.js';
 import { captureException } from '../lib/sentry.js';
 import { enqueueVideoAnalysis } from '../queue/video-analysis-queue.js';
+import { requireAnalysisAccess } from './analysis-consent.service.js';
 
 /**
  * 현재 모델·프롬프트 세대. 모델이나 프롬프트를 바꿔 기존 결과와 비교하려면 이 값을 올린다
@@ -155,12 +159,15 @@ async function requireAnalyzableVideo(params: {
  *  - failed(재시도 가능) → 같은 행을 queued 로 되돌리고 재적재
  *  - failed(재시도 불가) → 409. 손상된 영상·정책 거절은 다시 넣어도 같은 결과다
  *  - done → 그대로 반환. 재분석은 버전을 올려야 한다
+ *
+ * 서버 스위치가 꺼져 있으면 503, 동의가 없으면 403 — 영상을 보기도 전에 거절한다.
  */
 export async function requestAnalysis(params: {
   userId: string;
   videoId: string;
 }): Promise<{ analysis: VideoAnalysis; created: boolean }> {
   const prisma = getPrisma();
+  await requireAnalysisAccess(params.userId);
   await requireAnalyzableVideo(params);
 
   const existing = await prisma.videoAnalysis.findUnique({

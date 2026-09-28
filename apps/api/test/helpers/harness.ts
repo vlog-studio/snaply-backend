@@ -78,6 +78,7 @@ const TABLES = [
   'edit_jobs',
   'video_analyses',
   'videos',
+  'user_consents',
   'users',
   'locations',
 ];
