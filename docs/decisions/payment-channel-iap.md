@@ -4,19 +4,20 @@
 **상태**: 결정 — 크레딧 판매 채널을 Apple StoreKit / Google Play Billing(IAP)으로 확정하고 Stripe를 제거한다.
 **관련 문서**: [credit-payment-model.md](credit-payment-model.md)(과금 모델), 완료된 구현 계획은
 [../archive/iap-migration.md](../archive/iap-migration.md), 미결 항목은 [../backlog.md](../backlog.md) A-2·C-1.
-**후속 결정**: 2026-08-14에 보관 축의 구독 상품이 추가됐다 —
-[storage-and-subscription-policy.md](storage-and-subscription-policy.md) §5.
-아래 §결정 1의 "consumable"은 크레딧 팩에 한하며, 스토리지 구독은 **auto-renewable
-subscription**(iOS StoreKit 2 / Android Play Billing)으로 양 스토어에 함께 등록한다.
-채널(IAP + RevenueCat)과 §5의 "원천은 항상 백엔드" 원칙은 그대로 적용된다.
+**후속 결정**: 보관 혜택을 구독으로 팔지는 예정이나 미확정이다
+([specs/credits-and-payment.md](../specs/credits-and-payment.md) CRD-7, [backlog.md](../backlog.md) A-2).
+판다면 그 상품은 **auto-renewable subscription**(iOS StoreKit 2 / Android Play Billing)으로
+양 스토어에 함께 등록하고([storage-and-subscription-policy.md](storage-and-subscription-policy.md) §5),
+아래 §결정 1의 "consumable"은 크레딧 팩에 한한다. 채널(IAP + RevenueCat)과 §5의 "원천은
+항상 백엔드" 원칙은 그대로 적용된다.
 
 ## 결정
 
 1. 크레딧 팩 판매는 앱 내 인앱결제(IAP)로만 한다 — iOS는 StoreKit 2 consumable,
    Android는 Play Billing consumable. 같은 상품을 양 스토어에 동일하게 등록한다.
 2. 두 스토어의 영수증 검증·이벤트 통지는 RevenueCat을 경유해 단일 웹훅으로 받는다.
-3. Stripe는 결제 채널에서 제거한다. [credit-payment-model.md](credit-payment-model.md)의
-   "Stripe를 계속 사용하더라도 Checkout은 일회성 크레딧 구매를 처리한다"는 전환 원칙은
+3. Stripe는 결제 채널에서 제거한다. [credit-payment-model.md](credit-payment-model.md)가 결정 당시
+   두었던 "Stripe를 계속 사용하더라도 Checkout은 일회성 크레딧 구매를 처리한다"는 전환 원칙은
    이 결정으로 무효가 된다.
 4. 국내 PG(토스페이먼츠 등)·MoR(Paddle, Polar 등)·웹 결제는 v1에서 도입하지 않는다.
    웹 서비스가 생기면 병행 채널로 재검토한다.
@@ -77,10 +78,9 @@ App Store Server Notifications V2 + Play RTDN(Pub/Sub)을 직접 받는 방식. 
 
 ## 이번 결정에서 확정하지 않은 것
 
-- 크레딧 묶음별 수량·가격·차감량 — [../backlog.md](../backlog.md) A-2에서 관리
-- 웹 결제 병행 채널 도입 여부와 시점
-- 구독제 재도입 여부 (재도입 시 같은 구조에서 auto-renewable IAP + RevenueCat
-  entitlement로 확장한다)
+팩 수량·가격은 [backlog.md](../backlog.md) A-2 에서만 관리한다. 웹 결제 병행은 결정 4 와 아래
+재검토 트리거를 따르고, 보관 구독을 팔게 되면(CRD-7) 같은 구조 — auto-renewable IAP + RevenueCat
+entitlement — 로 확장한다.
 
 ## 재검토 트리거
 

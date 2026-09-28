@@ -16,7 +16,7 @@
 파생값을 소비하지 않는다 — `pipeline/anchor.py` 의 파생 공식과 같은 구조다. 그래서 크로스랭귀지
 동일성 테스트가 아니라 `tests/fixtures/stage-seed.json` 골든 값이 계약이다.
 
-계획: docs/plans/edit-spec-v3-kickoff.md §4
+결정: docs/decisions/edit-spec-v3.md §5
 """
 
 import hashlib

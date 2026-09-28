@@ -1,6 +1,6 @@
 # State and data placement
 
-This project's standard tools are TanStack Query v5, Zustand, React Hook Form, Zod, and Expo SecureStore. Zustand, Expo SecureStore, TanStack Query, and Zod are wired up and in use: `QueryClientProvider` and the app-wide `queryClient` live in `_app/providers` (see [`query-client.ts`](../../src/_app/providers/query-client.ts) and [`app-providers.tsx`](../../src/_app/providers/app-providers.tsx)), and Zod validates DTOs at the transport boundary. React Hook Form drives every form in the app (the four auth forms), each backed by a Zod schema in its owning feature's `model`. Do not create top-level directories for each tool. Place state according to the product responsibility it represents and its actual usage scope.
+This project's standard tools are TanStack Query v5, Zustand, React Hook Form, Zod, and Expo SecureStore. Zustand, Expo SecureStore, TanStack Query, and Zod are wired up and in use: `QueryClientProvider` and the app-wide `queryClient` live in `_app/providers` (see [`query-client.ts`](../../src/_app/providers/query-client.ts) and [`app-providers.tsx`](../../src/_app/providers/app-providers.tsx)), and Zod validates DTOs at the transport boundary. React Hook Form drives every form in the app, each backed by a Zod schema in its owning feature's `model`. Do not create top-level directories for each tool. Place state according to the product responsibility it represents and its actual usage scope.
 
 ## Classify the state first
 
@@ -10,7 +10,8 @@ This project's standard tools are TanStack Query v5, Zustand, React Hook Form, Z
 | Form input and validation | React Hook Form with Zod | `model` in the feature or page that owns the action |
 | Presentation state for one component | React state | The relevant `ui` file or same slice |
 | Client state shared by multiple components | Zustand | `model` in the lowest common owning slice |
-| Persistent or secure storage technology | SecureStore adapter | `shared/lib/secure-storage` |
+| Persistent storage for small or secret values (preferences, the session) | SecureStore adapter | `shared/lib/secure-storage` |
+| Persistent storage for growing data (snaps, movies) | JSON file store | `shared/lib/local-store` |
 | Product meaning of a session or token | Entity or feature | The actual domain owner, such as `entities/session/model` |
 
 ## TanStack Query
@@ -24,9 +25,7 @@ This project's standard tools are TanStack Query v5, Zustand, React Hook Form, Z
 - If a request retrieves one business entity, put it in `entities/<entity>/api`.
 - If it is a composite endpoint meaningful to only one screen, it may live in `pages/<page>/api`.
 - If no business entity exists yet and only an external API controller boundary is needed, put it in `shared/api/<controller>`.
-- Keep query keys and query functions together in a `queryOptions`-based factory rather than scattering them. The skeleton is [cookbook §4 (query key + options factory)](../conventions/cookbook.md#4-query-key--options-factory).
-
-Reuse query keys through the factory for invalidation. Do not repeat raw key arrays in UI code.
+- Keep query keys and query functions together in a `queryOptions`-based factory rather than scattering them. The skeleton and its rules are [cookbook §4 (query key + options factory)](../conventions/cookbook.md#4-query-key--options-factory).
 
 ### Mutation placement
 
@@ -53,7 +52,7 @@ Do not use Zustand as the default for all global state.
 5. If multiple pages share business state, identify the appropriate entity or feature owner.
 6. Consider `_app/store` only for app-wide technical state.
 
-A store should expose domain actions rather than a bag of values and setters. Components should subscribe through focused selectors instead of subscribing to the entire store.
+How a store exposes itself — domain actions and focused selector hooks, never the whole store — is the [cookbook §7](../conventions/cookbook.md#7-zustand-slice-single-writer--focused-selector-hooks) pattern.
 
 ## React Hook Form and Zod
 
@@ -81,12 +80,13 @@ source of truth for "a request is in flight".
 
 ## SecureStore and device APIs
 
-SecureStore is a technical adapter, so wrap it in a small API under `shared/lib/secure-storage`. The session or authentication domain still owns which keys are stored and when they are removed.
+SecureStore is a technical adapter, so wrap it in a small API under `shared/lib/secure-storage`. What goes through it, and when it is removed, belongs to the owner of the data. For the session that owner is the Supabase client, which persists the session through the adapter and refreshes its tokens itself; the session entity only mirrors the derived user ([Authentication](../features/authentication.md#token-storage)).
 
 ```text
 shared/lib/secure-storage/     # Technical get/set/remove implementation
-entities/session/model/       # Session meaning and state
-features/sign-in/             # Sign-in action and token-storage orchestration
+shared/lib/supabase/           # Supabase client: persists the session through it, refreshes tokens
+entities/session/              # Session meaning and state; mirrors the user, keeps no token copy
+features/sign-in/              # Sign-in action
 ```
 
 Apply the same principle to Camera, Media Library, Location, and Notifications. Native calls and permission access may use narrow shared adapters, but product flows and user-facing error messages stay out of shared.

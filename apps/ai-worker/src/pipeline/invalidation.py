@@ -7,7 +7,7 @@
 추가했을 때 아무도 판단하지 않은 채 그 기본값으로 굳는다 — `preserved` 기본값은 새 레이어를
 조용히 낡게 하고 `invalidated` 기본값은 조용히 낭비한다.
 
-계획: docs/plans/edit-spec-v3-kickoff.md §5
+결정: docs/decisions/edit-spec-v3.md §6
 """
 
 from pipeline import seed as _seed

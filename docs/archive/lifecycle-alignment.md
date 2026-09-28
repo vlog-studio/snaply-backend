@@ -1,5 +1,17 @@
 # 계획 — 영상·프로젝트·vlog 생애주기 정합과 미구현 기능 개발
 
+> **2026-09-27 보관.** 이 계획의 트랙은 모두 끝났다 — §2 의 결정 셋은 2026-09-09 에 닫혔고, 4-A·4-B 와
+> 5-A(Movie 서버 전환)·5-B(결과물 수명)·5-C(스냅 15일 만료)는 2026-09-09~09-27 에 구현됐다
+> ([progress.md](../progress.md)). 아래는 착수 전 제안이라 판단 근거로 인용하지 않는다.
+>
+> 현행 원천: 만료 구조(§6) → [decisions/snap-retention-period.md](../decisions/snap-retention-period.md)
+> §[만료의 동작 구조](../decisions/snap-retention-period.md#만료의-동작-구조) · §2 의 결정 →
+> [snap-retention-period.md](../decisions/snap-retention-period.md) ·
+> [local-copy-after-upload.md](../decisions/local-copy-after-upload.md) ·
+> [movie-cleanup-after-export.md](../decisions/movie-cleanup-after-export.md) · 요구 →
+> [specs/movie.md](../specs/movie.md) · [specs/snap-library.md](../specs/snap-library.md) · 남은 작업 →
+> [backlog.md](../backlog.md).
+
 **작성일**: 2026-09-09
 **상태**: 제안 — 착수 전 계획이며 현행 사실이 아니다. 결정이 필요한 항목은 §2에 모았다.
 **관련**: [meetings/2026-08-31-dev-sync.md](../meetings/2026-08-31-dev-sync.md) §4 ·

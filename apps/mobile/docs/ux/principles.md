@@ -38,7 +38,7 @@ Index:
 
 **Bad Pattern.** A tray screen that simultaneously promotes templates, shows the current tray, lists work in progress, lists finished movies, and pushes a capture prompt — all at equal weight, so nothing states what to do now.
 
-**Better Pattern.** The screen leads with the state of the one goal ("담긴 스냅 6") and its single advancing action ("이 스냅으로 새 무비"). Other capabilities remain on the screen as clearly lower-weight sections, in a fixed order, below the primary block.
+**Better Pattern.** The studio leads with its one advancing action — the `스냅 골라 새 무비` block, which carries the state it acts on (the library's `2개 · 0:06` and its newest frames). Other capabilities remain on the screen as clearly lower-weight sections, in a fixed order, below it: templates, then the movie board ([Studio](../features/studio.md#user-goal)).
 
 **Why.** Reduces Cognitive Load at entry and lets Information Hierarchy carry the meaning. When one goal owns the top of the screen, Predictability improves for every subsequent step because the user has a frame to interpret it in.
 
@@ -51,6 +51,7 @@ Index:
 - **Hub screens** (a tab root, a settings list) whose one goal *is* "choose where to go". Their single message is the choice itself; they must still rank the options.
 - **Dashboards and libraries** whose goal is comparison or browsing. See `Density Where Density Pays`.
 - **Confirmation screens** that must show both the summary and the consequence — that is one message ("this is what will happen"), not two.
+- **Splitting is not the default.** Group questions that share one mental context and are answered from the same fact; split only when an answer changes what comes next, the input needs the full screen (keyboard, camera, map), or the steps belong to different mental contexts. Two to four related, cheap questions on one screen beat four screens — over-splitting is `Over-Split Flow`.
 
 ---
 
@@ -75,7 +76,7 @@ Index:
 - A rough read-aloud of the question and its options takes more than ~3 seconds to answer with confidence.
 
 **Exceptions.**
-- **Expert affordances** deliberately exposed for repeat users (a trim frame count, an explicit aspect ratio) where precision is the point — keep them, but out of the primary path.
+- **Expert affordances** deliberately exposed for repeat users (a trim frame count, an explicit aspect ratio) where precision is the point — keep them, one disclosure away from the primary path. Never remove the precise control to make the simple one look cleaner.
 - **Legally required disclosures and consent**, which must be stated exactly even when the wording is unfamiliar.
 - **Genuinely novel product concepts** with no user-side vocabulary yet; then teach the term once at the point of use, and keep the term stable everywhere afterwards.
 
@@ -101,7 +102,7 @@ Index:
 - A screen entered to perform an action opens in a state where that action is disabled, without stating in one glance what unblocks it.
 
 **Exceptions.**
-- **Value-first screens** where a preview must precede a costly step (see `Value Before Cost`) — the preview *is* the first thing, deliberately.
+- **Value-first screens** where a preview must precede a costly step (see `Value Before Cost`) and the user has not yet seen the payoff — the preview *is* the first thing, deliberately. In every repeat and routine case, lead with the action: the first run differs from the hundredth.
 - **Read-oriented screens** (a movie detail in watch mode, a result view) where consuming content is the action.
 - **Destructive or irreversible actions**, which must not be the easiest thing on the screen.
 
@@ -117,7 +118,7 @@ Index:
 
 **Bad Pattern.** A sheet titled `위치 권한` with buttons `취소` / `확인`. Confirm what?
 
-**Better Pattern.** `이 장소 근처에 오면 알려드릴까요?` with `알림 받기` / `안 받기`.
+**Better Pattern.** `주변 장소 알림을 받을까요?` with `알림 받기` / `안 받기` — the location-alert question in the [Me tab](../features/me.md#current-behavior).
 
 **Why.** Predictability and Error Prevention. The label carries the meaning, so the surrounding copy can shrink — which serves `Show State, Not Instructions` too.
 
@@ -129,9 +130,9 @@ Index:
 
 **Exceptions.**
 - **Numbered or clearly linear steps** where `다음` is the honest description and the following screen was announced by the current one.
-- **Dismissals**: `닫기`, `취소`, `나중에` are outcome labels already.
+- **Dismissals and pure acknowledgements**, which are outcome labels already — the allowed words are listed once, under Allowed generic labels in [`ux-writing.md` → CTA](ux-writing.md#cta).
 - **System dialogs** (OS permission prompts, share sheets) whose labels we do not control — then the *preceding* screen must supply the prediction.
-- **Very tight controls** (icon-only, a chip row) where a full outcome phrase does not fit: keep the short label and put the outcome in the accessibility label and the adjacent heading.
+- **Very tight controls** (icon-only, a chip row) where a full outcome phrase does not fit: shorten the outcome, never genericize it (`무비 만들기` beats `확인`); if nothing fits, keep the short label and put the outcome in the accessibility label and the adjacent heading.
 
 ---
 
@@ -156,9 +157,9 @@ Index:
 - The user cannot see what the default currently is before committing.
 
 **Exceptions.**
-- **Consequential, hard-to-reverse, or paid actions** — no pre-selection; make the user choose (do not pre-check "delete originals").
+- **Consequential, hard-to-reverse, or paid actions** — no pre-selection; make the user choose (do not pre-check "delete originals", a share, or a spend).
 - **Consent and permissions** — never pre-opted-in.
-- **Genuinely bimodal answers** with no majority and materially different results; then ask an `Easy to Answer` question instead of guessing.
+- **Genuinely bimodal answers** with no majority and materially different results — or any value that cannot be defaulted visibly, reversibly, and by inference; then ask an `Easy to Answer` question instead of guessing.
 
 ---
 
@@ -211,7 +212,7 @@ Index:
 - Conversely (violation the other way): current system state, an exit, an error, or a cost is only visible after an extra interaction.
 
 **Exceptions.**
-- **Frequently used controls** — disclosure is a tax paid every session; if usage is high, keep it visible even if it adds density.
+- **Frequently used controls** — disclosure is a tax paid every session; if usage is high, keep it visible even if it adds density. What may be deferred is what fewer than ~10% of sessions use.
 - **Comparison tasks** that need everything side by side.
 - **Anything safety- or money-related**, which is disclosed up front by default.
 - Do not exceed **one** disclosure level on a primary path; nested reveals destroy Discoverability.
@@ -236,7 +237,7 @@ Index:
 - A permission prompt, sign-in wall, or multi-field form appears before the user has seen any concrete output or benefit.
 - The first interaction on a screen is a request rather than a result.
 - A flow's benefit is stated only in prose, where a preview or sample is feasible.
-- A cost (time, price, permission, irreversibility) is revealed only after the user has invested effort. This is a violation in the *other* direction — costs must never be back-loaded as a surprise.
+- A cost (time, price, permission, irreversibility) is revealed only after the user has invested effort. This is a violation in the *other* direction — costs must never be back-loaded as a surprise: disclose them before the commit, next to the CTA that incurs them. Back-loading a cost is a dark pattern (`Hidden Cost`), not a funnel optimization.
 
 **Exceptions.**
 - **Technically gated capability** where nothing can be shown without the permission (a live camera preview needs the camera). Then justify at the point of need, in outcome terms, and keep a working path without it.
@@ -270,6 +271,7 @@ Index:
 - **Symmetric binary choices** of equal standing (`3초` / `5초`) — deliberate equal weight, and correct.
 - **Multi-select grids** where every cell is peer content.
 - **Empty states**, where an illustration may legitimately outweigh sparse content, provided the action stays the clearest control.
+- **One primary is not one button.** Keep as many secondary actions as the screen legitimately needs, visibly subordinate; a frequent one stays visible even at the cost of density, and a decline option is never removed to leave a single CTA — that produces a `Dead End`.
 
 ---
 
@@ -285,7 +287,7 @@ Index:
 
 **Better Pattern.** Import lives as the first cell in the snap grid — inside the surface it affects. Every route reachable by one name. Every full-screen modal has a visible ✕ whose destination is stated by context.
 
-**Why.** Discoverability and orientation. This is measurable: run the TNS-style question on our own screens (see `screen-analysis.md`, Step 10).
+**Why.** Discoverability and orientation. This is measurable: run the TNS-style question on our own screens (the findability item in [`review-checklist.md`](review-checklist.md#b-predictability)).
 
 **Detection Rule.** Any of:
 - Reaching a feature from the relevant tab root takes three or more taps while a one- or two-tap placement exists.
@@ -323,8 +325,8 @@ Index:
 - A new component duplicates an existing one in [`../conventions/cookbook.md`](../conventions/cookbook.md) rather than reusing it.
 
 **Exceptions.**
-- **Platform conventions win over internal consistency** (iOS vs. Android back, share, and picker behavior).
-- **A deliberate app-wide pattern migration** — then migrate all sites in a bounded plan and note the transitional state, rather than leaving a permanent split.
+- **Platform conventions win over internal consistency** (iOS vs. Android back, share, and picker behavior): users' expectations come from the OS before they come from our app, so internal consistency applies to what we invent, not to what the platform already defines.
+- **A deliberate app-wide pattern migration** — then migrate all sites in a bounded plan and note the transitional state, rather than leaving a permanent split. Until that plan exists, consistency wins: a better pattern applied to one screen is a net loss.
 - **Genuinely different semantics** deserve a different component; do not force one pattern onto a decision it fits poorly.
 
 ---
@@ -339,7 +341,7 @@ Index:
 
 **Bad Pattern.** `업로드 큐 처리 중 (2/6)`, `generation job failed: 422`, `Geofence 등록됨`.
 
-**Better Pattern.** `스냅 2개 올렸어요 · 6개 중`, `무비를 만들지 못했어요. 다시 시도해 주세요.`, `이 장소 근처에 오면 알려드려요`.
+**Better Pattern.** `스냅 2개 올렸어요 · 6개 중`, `무비를 만들지 못했어요. 다시 시도해 주세요.`, `찍기 좋은 장소에 도착하면 알려드려요`.
 
 **Why.** Answerability (P3) and trust. It also forces clearer thinking: copy that cannot be written in user terms usually signals a model the user should never have been exposed to.
 
@@ -352,7 +354,7 @@ Index:
 **Exceptions.**
 - **Diagnostics deliberately surfaced for support** (a short error reference under a disclosure) — clearly separated from the human message.
 - **Established real-world domain terms** the user already owns.
-- **Our own coined product terms** (`스냅`, `무비`, `컷`, `스튜디오`), which are allowed and must stay consistent. `트레이` left this list with the tray's removal (2026-08-12) — see [UX writing](ux-writing.md#terminology).
+- **Our own coined product terms** (`스냅`, `무비`, `컷`, `스튜디오` — the full list is in [UX writing](ux-writing.md#terminology)), which are allowed and must stay consistent.
 
 ---
 
@@ -364,9 +366,9 @@ Index:
 
 **User Problem.** Explanatory paragraphs are skipped, go stale, translate badly, and occupy the space where state belongs. A screen that must explain itself usually has a structure problem the copy is patching.
 
-**Bad Pattern.** An empty tray with three lines describing what a tray is and how to fill one.
+**Bad Pattern.** An empty snap library with three lines describing what a snap is and how to make one.
 
-**Better Pattern.** `담긴 스냅 0`, with the action that fills it as the clearest control on the screen.
+**Better Pattern.** The header read-out `0개 · 0:00`, with the `가져오기` cell — the action that fills the library — standing alone in the grid ([Snap library](../features/snaps.md#browsing-and-playback)).
 
 **Why.** Cuts reading cost, keeps Information Hierarchy for state, and prevents copy from becoming a substitute for design. Aligns with Toss's writing principles `weed cutting`, `remove empty sentences`, and `focus on the key message` ([source](https://toss.tech/article/8-writing-principles-of-toss)).
 
@@ -377,7 +379,7 @@ Index:
 - Removing the sentence would not change what a user can do.
 
 **Exceptions.**
-- **One-time education at the point of first use** for a genuinely novel mechanic — brief, dismissible, not repeated.
+- **One-time education at the point of first use** for a genuinely novel mechanic, once structure and labels have failed to make it inferable — one short hint, dismissible, not repeated; never a paragraph or a carousel, and never in place of accessibility labels.
 - **Legal, safety, and consent text**, which must be complete.
 - **Error and empty-with-a-cause states**, which need one sentence of cause plus the fix (see `Errors Are Design Failures First`).
 - **Accessibility**: never remove labels or hints in the name of this principle.
@@ -394,7 +396,7 @@ Index:
 
 **Bad Pattern.** Tapping a snap opens a full-screen editor with unsaved changes and no exit affordance; back on a modal discards work with no notice; a sheet appears on entry before the user has done anything.
 
-**Better Pattern.** The CTA names the destination's outcome; a modal exits with ✕ to a stated place; leaving with unsaved changes asks one clear question with outcome-named buttons (see the studio exit sheet pattern in [`../features/studio.md`](../features/studio.md)).
+**Better Pattern.** The CTA names the destination's outcome; a modal exits with ✕ to a stated place; leaving with unsaved changes asks one clear question with outcome-named buttons (see the movie screen's exit question, `EditExitSheet`, in [`../features/movie.md`](../features/movie.md#user-goal)).
 
 **Why.** Predictability and User Control. Also cheap to get right: it is mostly labeling and honoring platform gestures.
 
@@ -473,7 +475,7 @@ Index:
 
 `Derived Principle` — the counterweight to over-simplification · derives from P1, P4
 
-**Definition.** Screens whose purpose is scanning, comparing, or repeated expert use may be dense. Density is justified when it lowers the user's *total* effort — fewer transitions, less recall, more comparison in one view — and it must still obey hierarchy, grouping, and alignment.
+**Definition.** Screens whose purpose is scanning, comparing, or repeated expert use may be dense. Density is justified when it lowers the user's *total* effort — fewer transitions, less recall, more comparison in one view — and it must still obey hierarchy, grouping, and alignment. In a dense view, hierarchy is carried by grouping, ordering, and headers rather than by size contrast. On a high-frequency surface, weigh by frequency: optimize for the shortest path for someone who already knows what they want — fewer transitions, more visible controls, stable positions. Learnability matters most on first use; efficiency matters more on the hundredth.
 
 **User Problem.** Over-simplified library and list screens force paging, scrolling, and memory work. A grid of six items per row is not "cluttered" if the user's task is finding one snap among two hundred.
 
@@ -490,7 +492,7 @@ Index:
 - Items are homogeneous, so one learned cell pattern applies to all of them.
 
 Density is a *problem* when any hold:
-- Items on screen belong to different goals or object types.
+- Items on screen belong to different goals or object types — split them into sections before reducing density.
 - No grouping or ordering rationale exists.
 - Interactive and non-interactive elements are visually indistinguishable.
 - The primary action competes with content for attention.

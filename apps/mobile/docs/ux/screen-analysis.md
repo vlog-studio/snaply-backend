@@ -1,6 +1,6 @@
 # Screen analysis framework
 
-The mandatory analysis before any UX change proposal. Ten steps, run in order. Steps 0–5 are *observation* — no improvement ideas allowed yet. Only from Step 6 onward may the reviewer name problems, and only from Step 8 may they propose structure.
+The mandatory analysis before any UX change proposal. Eleven steps, Step 0 to Step 10, run in order; every document in this directory cites these numbers. Steps 0–5 are *observation* — no improvement ideas allowed yet. Only from Step 6 onward may the reviewer name problems, and only from Step 8 may they propose structure.
 
 The order exists because the most common review failure is redesigning before understanding: an agent that proposes layout in Step 2 will spend the rest of the analysis rationalizing it.
 
@@ -17,7 +17,7 @@ Collect:
 - Its entry points: how the user got here, and what they were doing immediately before.
 - Platform differences (iOS/Android) and whether the screen is a tab root, a pushed screen, or a full-screen modal.
 
-Output: three to six factual lines. If a claim cannot be verified from code or docs, mark it `assumed` and continue; never present an assumption as an observation.
+Output: three to six factual lines. If a claim cannot be verified from code, docs, or a device, mark it `assumed` and continue; never present an assumption as an observation.
 
 ---
 
@@ -95,7 +95,7 @@ Verdict rules:
 - `user` + answerable + rare → **defer** behind one disclosure.
 - `user` + answerable + common → **keep**.
 
-Then count the `keep` rows on the primary path. More than two on a creation or commit path is a `Decision Dump` candidate.
+Then run [`Reduce Decision Cost`](principles.md#6--reduce-decision-cost)'s Detection Rule on the `keep` rows of the primary path; if it fires and none of its Exceptions applies, `Decision Dump` is a candidate.
 
 ---
 
@@ -126,7 +126,7 @@ For each confirmed finding, choose the principle that will drive the fix (the on
 | `flow` | Change screen sequence, navigation, or where a decision happens | The problem is between screens, not on one |
 | `system` | Shared component or pattern change | The same defect exists on three or more screens |
 
-Prefer the smallest scope that resolves the finding. Escalate scope only with a stated reason: `copy` before `hierarchy` before `structure` before `flow` before `system`. A `flow` or `system` scope change requires the user's confirmation before implementation (see [`agent-protocol.md`](agent-protocol.md)).
+Prefer the smallest scope that resolves the finding. Escalate scope only with a stated reason: `copy` before `hierarchy` before `structure` before `flow` before `system`. Which scopes need the user's confirmation before implementation is set in [`agent-protocol.md` → Escalation and confirmation](agent-protocol.md#escalation-and-confirmation).
 
 Also check the conflicts: if two findings' fixes pull against each other, resolve with [`principle-priority.md`](principle-priority.md) *before* designing.
 
@@ -134,7 +134,7 @@ Also check the conflicts: if two findings' fixes pull against each other, resolv
 
 ## Step 8 — Revised structure
 
-Propose the improved screen as a text wireframe with explicit hierarchy levels, not prose. Required form:
+Propose the improved screen as a text wireframe, not prose. `L1`–`L5` order the blocks by importance to the current step; they are not the weight levels of [`visual-hierarchy.md`](visual-hierarchy.md), which then assign each element's visual weight — exactly one element takes `W1`. Required form:
 
 ```text
 [screen title / context]
@@ -158,35 +158,13 @@ Rules for this step:
 
 ## Step 9 — Explanation
 
-For each change, exactly this shape:
-
-```text
-Before  → <what the screen did>
-Problem → <smell name> + the user cost, in the vocabulary
-Principle → <#, name, evidence label>
-After   → <what it does now>
-Why     → <which cost went down, and how the user's path is shorter or clearer>
-Trade-off → <what got worse, who it affects, and why the exchange is worth it>
-```
-
-"Trade-off: none" is almost always wrong and must be justified. Nearly every improvement moves cost somewhere: to another screen, to an extra tap for a minority path, to more density, to a longer label.
+For each change, write one block in the change-report format of [`agent-protocol.md`](agent-protocol.md#change-report-format). Its rules apply here too — above all, "Trade-off: none" must be justified.
 
 ---
 
 ## Step 10 — Verification
 
-Before calling the analysis done, run these checks. They are cheap and catch most bad proposals.
-
-1. **Findability question (TNS-style, [source](https://toss.tech/article/Toss_Navigation_Score)).** For each capability that moved or was deferred: "Where would a first-time user tap to ___?" If the answer is not the new location, the move failed.
-2. **Three-second question test.** Read each question and its options aloud. If an answer does not form in about three seconds, `Easy to Answer` still fires.
-3. **Squint / grayscale test.** In grayscale at reduced size, is there exactly one obvious entry point, and does reading order match importance?
-4. **Label prediction test.** Cover the screen; from each CTA label alone, state what will happen. Wrong or vague → `Mystery CTA` remains.
-5. **State sweep.** Walk empty / loading / error / offline / partial. Each one names its state and offers one resolving action.
-6. **Exit test.** From every screen and sheet in the change, can the user leave without complying? Is unsaved work protected by exactly one question?
-7. **Density check.** For list, grid, and library surfaces: did the change add scroll length or transitions to the common task? If yes, `Density Where Density Pays` was violated.
-8. **Accessibility floor.** Every control has an accessible label and role; hit targets are adequate; the layout survives the largest supported font scale; nothing relies on color alone.
-9. **Regression check.** Every capability present before is still reachable, and its new path is named in the report.
-10. **Code reality check.** The proposal is implementable within the current architecture, or the extra work is stated. Verify against the slice that owns the screen and [`../conventions/cookbook.md`](../conventions/cookbook.md) rather than assuming.
+Before calling the analysis done, run [`review-checklist.md`](review-checklist.md) against the proposal, on the path its size calls for ([Fast path](review-checklist.md#fast-path)). The checks are cheap and catch most bad proposals — among them the findability question for anything moved or deferred, the check that no capability was lost, and the check that the proposal fits the code.
 
 ---
 
@@ -204,6 +182,6 @@ Before calling the analysis done, run these checks. They are cheap and catch mos
 
 **Step 7.** Scopes: `copy` for the CTA, `hierarchy` for surfacing the cut count and cost next to it, `structure` only if trim precision needs deferring.
 
-**Step 8–9.** Proposed wireframe, exact labels, and the Before → Problem → Principle → After → Why → Trade-off block per change.
+**Step 8–9.** Proposed wireframe, exact labels, and one change-report block per change.
 
-**Step 10.** All ten checks, with the state sweep run against the four real states.
+**Step 10.** The whole review checklist, with its state items run against the four real states.

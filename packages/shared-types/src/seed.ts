@@ -16,7 +16,7 @@
  * 소비하지 않는다 — 파생은 디렉터(워커) 단독이고 골든 픽스처가 그 계약이다.
  * `anchor.ts` 의 파생 공식과 같은 구조다.
  *
- * 계획: `docs/plans/edit-spec-v3-kickoff.md` §4
+ * 결정: `docs/decisions/edit-spec-v3.md` §5
  */
 import vocabulary from './stage-vocabulary.json' with { type: 'json' };
 

@@ -5,6 +5,11 @@
 **범위**: 영상 묶음의 저장 모델과 채택 근거를 기록한다.
 **후속 작업의 원천**: [backlog.md](../backlog.md) A-1(Movie 세부 정책·구현),
 A-4(위치 메타데이터 저장 여부)
+**후속 결정**: 세부 규칙 ①~⑤(순서 기본값·재내보내기·삭제 연동·자동 그룹핑·`POST /edit-jobs` 수명)는
+[movie-export-policy.md](movie-export-policy.md), 내보내기 후 정리는
+[movie-cleanup-after-export.md](movie-cleanup-after-export.md)(둘 다 2026-09-09), 앱 쪽 저장은
+[movie-client-cache.md](movie-client-cache.md)(2026-09-12)가 정했다. 안 3 의 "요금제를 초안 수·월 내보내기
+수에 연결"은 크레딧 과금([credit-payment-model.md](credit-payment-model.md))으로 대체됐다.
 
 현재 영상은 유저에게 평면으로 귀속되고, 편집은 목록에서 고른 영상들을 `POST /edit-jobs`로
 직접 묶어 요청하는 구조다. 기획 목표인 "묶음 단위 관리 + 내보내기(브이로그 생성)"를
@@ -120,8 +125,8 @@ POST /movies → PATCH /movies/:id (클립 추가/순서/구간) → POST /movie
 ## 결정 범위 밖의 후속 작업
 
 `Movie`의 클립 순서·재내보내기·삭제 연동·자동 그룹핑·기존 `POST /edit-jobs`와의 관계는
-[backlog.md](../backlog.md) A-1에서만 관리한다. Movie/영상 개수 제한은 요금 정책이므로 A-2,
-위치 저장과 결정된 `capturedAt`의 서버 전달·저장은 [backlog.md](../backlog.md) A-4가 원천이다.
+[movie-export-policy.md](movie-export-policy.md)가 정했다. 남은 작업은 [backlog.md](../backlog.md) A-1,
+위치 저장 여부는 A-4에서만 관리한다.
 
 이 문서는 후속 작업의 상태를 갱신하지 않는다. 결정을 변경하면 새 결정 기록에서 이 문서를
 대체하고, 실제 작업 상태는 `backlog.md`만 갱신한다.

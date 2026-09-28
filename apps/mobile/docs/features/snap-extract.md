@@ -20,7 +20,7 @@ Users can bring a video they already have — the phone's gallery — into Snapl
 
 ## Status summary
 
-`Partial` — the flow is implemented end-to-end (picker → window → native trim → snap → background upload). Automated tests cover window math, duration fallback, sequential thumbnail extraction, playback boundaries, extraction re-entry and failure handling, native-adapter contracts, and the hand-off into the real snap store. The page-level gesture composition and the **new native module** still require device verification: Android on-device verification is pending, and iOS has not been built at all (the development Mac's Xcode cannot build SDK 57 natively). Web is excluded by design — videos never persist there.
+`Partial` — the flow is implemented end-to-end (picker → window → native trim → snap → background upload). Automated tests cover window math, duration fallback, sequential thumbnail extraction, playback boundaries, extraction re-entry and failure handling, native-adapter contracts, and the hand-off into the real snap store. The page-level gesture composition and the **native module** still require device verification: Android on-device verification is pending, and no iOS build has been made yet (a native iOS build needs an Xcode with Swift 6.2, or EAS Build — see [Local development and testing](../workflows/local-development-and-testing.md#environment-and-legacy-macos-limitation)). Web is excluded by design — videos never persist there.
 
 ## Behavior
 
@@ -33,7 +33,7 @@ Users can bring a video they already have — the phone's gallery — into Snapl
 | Filmstrip | `Functional` | The whole source at 60pt/sec (`ExtractPxPerSec`) with a ruler above (dots every second, labels every fifth — every second under 20s). Thumbnails come from `shared/lib/video-thumbnails` at explicit offsets, resolved strictly one at a time, budgeted at 60 frames per strip (longer sources widen tiles instead). |
 | Window playback | `Functional` | The stage loops the window: `timeUpdate` past the window's end seeks back to its start. Sound starts muted with a toggle. Position-driven logic is gated on "meant to be playing" (Android fires `timeUpdate` while paused). A settled window drag seeks playback to the new start. A thin line glides across the window while playing. |
 | Extraction | `Functional`* | `features/extract-snap`: native trim (`shared/lib/video-trim`) → `persistLocalRecording` → snap metadata → `addSnap`. While one extraction is in flight, duplicate requests are rejected synchronously, including calls made before React commits the pending state. From there the snap is indistinguishable from a captured one — the upload worker finds it pending, the library lists it. Success gives haptics, a `담김 · 스냅 N개` badge, and a counter in the top pill; the screen stays for the next cut. A failed cut shows 스냅을 담지 못했어요. 다시 시도해 주세요. *Functional in JS terms; the native layer is unverified on hardware (see status summary). |
-| Real dimensions | `Functional` | Extracted snaps store the output file's real `width`/`height`/`orientation` (read back natively, rotation applied) — a gallery video is as often landscape or square as portrait. Capture-path snaps are measured the same way, through the same native probe (see [Snap library](snaps.md#data-model)). No `place` is stored: where a gallery video was shot is not known, and where the user stands now is not it. |
+| Real dimensions | `Functional` | Extracted snaps store the output file's real `width`/`height`/`orientation` (read back natively, rotation applied) — a gallery video is as often landscape or square as portrait — and no `place`; both rules are the [Snap library](snaps.md#data-model)'s. |
 
 ## The native trim module
 
@@ -49,13 +49,13 @@ Users can bring a video they already have — the phone's gallery — into Snapl
 - `src/pages/snap-extract` owns the screen: the strip layout math (`model/extract-strip-layout.ts`), source-duration reading, window-loop playback, sequential strip thumbnails, and the window/strip/page UI.
 - `src/features/extract-snap` owns the extraction action (`useExtractSnap`), the window limits (`MinExtractSec`, `MaxExtractSec`, `ExtractStepSec`), and extracted-snap metadata construction.
 - `src/shared/lib/video-trim` adapts the native module (web stub throws); `src/shared/lib/video-picker` adapts the system picker (web stub returns nothing).
-- `src/shared/lib/trim-geometry` is the px↔sec drag arithmetic, **promoted out of `pages/movie/model`** when this screen became its second consumer; the movie timeline imports it from shared now.
-- `src/shared/lib/video-thumbnails` gained the explicit-offset frame (`getVideoThumbnail(uri, { timeMs })`, offset-keyed cache) this strip needs.
+- `src/shared/lib/trim-geometry` is the px↔sec drag arithmetic this screen and the movie timeline share.
+- `src/shared/lib/video-thumbnails` supplies the explicit-offset frame (`getVideoThumbnail(uri, { timeMs })`, offset-keyed cache) this strip needs.
 - `src/app/extract.tsx` is the route adapter (`/extract?source&duration`), keying the page by `source` so a changed source is a fresh mount; the route presents as a `fullScreenModal` beside `/capture` in the root stack.
 
 ## Known limitations
 
-- Not yet verified on hardware; iOS additionally has never been compiled (Xcode constraint). The trim's real duration, passthrough behavior per codec, and long-video strip performance are all device questions.
+- Not yet verified on hardware, and iOS has never been compiled. The trim's real duration, passthrough behavior per codec, and long-video strip performance are all device questions.
 - Extraction length is capped at 5 seconds by product rule; a source shorter than 0.5 seconds is extracted whole (the floor governs cutting a moment down, not refusing one).
 - The picker's cache copy of the source is left to the OS to clean; extracting from a very large video temporarily doubles its cache footprint (copy + cuts).
 - The strip does not auto-scroll while the window's body is dragged against the viewport edge; scroll first, then drag.

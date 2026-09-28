@@ -7,310 +7,14 @@
 
 > **Phase 1~9(초기 개발)의 완료 기록은 [archive/progress-phase-1-9.md](./archive/progress-phase-1-9.md)로
 > 옮겼다** — 당시 기록이라 현행과 다른 부분이 있다(Stripe 구독·월 3편 제한은 제거됨).
+> 그 직후의 연동/수익화 트랙 하드닝(2026-08-03~08-10, 이후 제거된 Stripe 실키 검증 포함)은
+> [archive/progress-integrations-2026-08.md](./archive/progress-integrations-2026-08.md)로 옮겼다.
 > 착수 전 계획서는 [archive/snapvlog-backend-guide.md](./archive/snapvlog-backend-guide.md),
 > Dev B → Dev A 인수인계 기록은 [archive/integrations-handover.md](./archive/integrations-handover.md)(확인 완료).
 > 아래 기록도 각 완료 시점 기준이다. **현재 구조·명령은 README와 ONBOARDING,
 > 현재 스키마·계약은 Prisma와 `packages/shared-types/src/contract/`(Zod 계약, Swagger 의 원천)를 우선한다.**
 
 ---
-
-## 개발 인프라 (로컬 Docker, `.env`는 git 제외)
-
-| 서비스 | 컨테이너 | 포트 | 비고 |
-|---|---|---|---|
-| PostgreSQL | `snaply-postgres-dev` (PostgreSQL 16) | 5432 | `POSTGRES_HOST_PORT`로 호스트 포트 변경 가능 |
-| 인증 | Supabase Auth (클라우드) | — | DB는 로컬 PostgreSQL과 분리 |
-| 오브젝트 스토리지 | `snaply-minio-dev` (MinIO) | 9100 / 9101 | 9000은 타 프로젝트(skillhub-minio) 점유 |
-| 큐 | `snaply-redis-dev` (Redis 7) | 6379 | |
-| API 서버 | `npm run dev:api` (Node 26) | 3000 | 점유 시 `apps/api/.env`의 `API_PORT`로 변경 |
-| 모바일 Metro | `npm run dev:mobile` (Expo SDK 57) | 8081 | Android 기준 dev client |
-| 편집·분석 워커 | `apps/ai-worker/.venv` (Python 3.11) | HTTP 포트 없음 | `npm run worker` / `npm run worker:analysis` |
-
-**개발/운영 전환 원칙**: 스토리지·큐는 endpoint/URL만 교체하면 운영으로 전환된다 (코드 분기 없음).
-- S3: `S3_ENDPOINT` 설정 시 MinIO, 비우면 실제 AWS S3 + CloudFront
-- Redis: `REDIS_URL` 개발 `redis://localhost:6379` → 운영 Upstash `rediss://...`
-
----
-
-## 연동/수익화 트랙 하드닝 (Dev B, 2026-08-03)
-
-**배경**: Phase 6~9는 "완료"였지만 검증이 일회성 스크립트로만 이뤄져 레포에 테스트가 없었고,
-mock이 가려주던 실키 경로 결함이 남아 있었다. 회귀 안전망을 만들고 그 위에서 결함을 제거했다.
-
-### 통합 테스트 하네스 (신규)
-
-- `vitest` + `apps/api/test/` — **실제 로컬 Postgres/Redis/MinIO** 를 그대로 쓰는 통합 테스트. 84개.
-- `apps/api/scripts/auth-stub.ts` — Supabase Auth를 대체하는 **ES256 + JWKS 스텁**.
-  `plugins/auth.ts` 는 한 줄도 안 고치고 `SUPABASE_URL` 만 바꿔 붙인다. 실 Supabase 전환은 env 원복이 전부.
-  수동 테스트용 CLI 겸용: `npm run auth:stub -w apps/api`
-- 개발 DB(`snaply`)와 분리된 `snaply_test` DB를 globalSetup에서 생성·마이그레이션.
-- `docker-compose.dev.yml` 에 로컬 Postgres 추가 (team.md §4 옵션 A) — 공유 Supabase 마이그레이션 충돌 회피.
-
-### Phase 6 — 위치/FCM
-
-- **쿨다운 원자성**: `조회 → 발송 → 기록` 이 원자적이지 않았다. 같은 패턴을 격리 재현하면
-  10개 동시 요청에서 5건이 중복 기록된다(실서비스 경로에서는 재현되지 않았지만 보장은 없고,
-  API 인스턴스가 2개 이상이면 in-process 직렬화가 사라진다).
-  → `pg_advisory_xact_lock` 으로 (user, location) 임계구역을 만들어 **선점 → 발송 → 실패 시 보상 삭제** 로 변경.
-  발송 실패가 쿨다운을 소모하지 않는 기존 성질은 유지.
-
-### Phase 7 — SNS 연동
-
-실키를 넣는 순간 실패했을 결함들:
-
-- **인스타 컨테이너 처리 대기 누락** — 컨테이너 생성 직후 `media_publish` 를 호출하고 있었다.
-  Meta는 `status_code` 가 `FINISHED` 가 될 때까지 폴링해야 한다. → 폴링 추가(기본 10초 간격/5분 한도).
-- **API 계열 불일치** — 인증은 구 Basic Display(`api.instagram.com/oauth/authorize`, 2024-12 종료),
-  게시는 Graph API 로 섞여 있었다. → **Instagram API with Instagram Login** 으로 통일
-  (`www.instagram.com/oauth/authorize` + `graph.instagram.com`, scope `instagram_business_*`).
-- **장기 토큰 교환 누락** — 단기(1시간) 토큰을 그대로 저장하고 있었다. → 60일 장기 토큰 교환 추가.
-- **account_type 하드코딩** — `'BUSINESS'` 고정이라 PERSONAL 차단이 mock에서만 동작했다. → `/me` 실조회.
-- **인스타 토큰 갱신 없음** — `ensureFreshToken` 이 tiktok 만 처리해 60일 뒤 조용히 죽었다.
-  → 플랫폼별 갱신 창(틱톡 5분 / 인스타 7일) + 이미 만료 시 재연동 안내 에러.
-- **공개 URL 가드** — 인스타·틱톡은 URL을 직접 내려받는데 로컬 MinIO 주소가 그대로 넘어갔다.
-  → 사설/로컬 호스트·비 https 를 외부 호출 전에 400으로 차단.
-
-### Phase 8 — 결제
-
-- **STRIPE_MOCK 분리** — Stripe mock 여부가 `SNS_MOCK` 에 묶여 있어 "SNS는 mock, Stripe만 실키" 조합이 불가능했다.
-- **웹훅 전역 rate limit 제외** — Stripe 발신 IP가 소수라 이벤트가 몰리면 429 → 재시도가 쌓인다.
-- **웹훅 순서 보정** — `subscriptions.last_stripe_event_at` 추가(마이그레이션).
-  지연 도착한 과거 이벤트가 최신 상태를 덮어쓰지 않는다. 중복 전달은 재적용해도 결과가 같다(멱등).
-- **current_period_end 위치 대응** — 2025+ API 버전에서 subscription item 하위로 이동. 양쪽 모두 읽는다.
-- **실제 Stripe 서명 형식 검증** — mock 은 단순 `HMAC(body)` 였지만 실제는 `t=<unix>,v1=<HMAC("t.body")>` +
-  타임스탬프 허용 오차(5분)다. 두 형식이 호환되지 않음을 테스트로 고정(`test/billing-realkey.test.ts`).
-  네트워크가 필요 없어 Stripe CLI 의 whsec 을 꽂기 전에 미리 검증 완료.
-- **Checkout 이메일 전달** — Stripe 고객이 이메일 없이 생성되고 있었다. 검증된 JWT에서 email 클레임을 읽어 전달.
-  (`AuthUser` 에 email 추가는 인증 모듈 공동 소유라 Dev A 합의 후 정리 — 현재는 billing 라우트에 국소화)
-
-### 테스트 격리 (실키를 넣자마자 드러난 문제)
-
-`.env` 에 실제 `STRIPE_SECRET_KEY` 를 넣는 순간 결제 테스트 16개가 깨졌다. 원인이 두 겹이었다:
-
-1. Vitest 가 `apps/api/.env` 를 `process.env` 에 주입한다.
-2. `@prisma/client` 를 import 하면 Prisma 가 dotenv 로 `.env` 를 **다시** 읽는다.
-   dotenv 는 기존 값을 덮지 않지만 *지워진* 값은 채우므로, setupFiles 에서 한 번 지우는 것으로는 부족했다.
-
-→ `test/setup/hermetic.ts` 로 외부 크리덴셜 목록을 관리하고, setupFiles 와
-`createHarness()` 의 `loadConfig()` 직전 **두 지점**에서 정리한다.
-기본 상태는 항상 "외부 연동 전부 mock/dry-run" 이고, 실키 경로 테스트만 `createHarness({...})` 로 켠다.
-
-교훈: 테스트가 개발자 개인 `.env` 에 좌우되면 CI 와 로컬이 갈린다. 실키를 받기 전에 이걸 먼저 고정해야 한다.
-
-### Phase 9
-
-- rate limit 검증 추가: 전역(IP), `/edit-jobs`(토큰당 5/분), `/notifications/geofence-enter`(토큰당 10/분),
-  웹훅 예외, 공통 `RATE_LIMITED` 포맷. `RATE_LIMIT_GLOBAL_MAX` 로 조정 가능.
-
-### 연동 추가 하드닝 (2026-08-04, 크리덴셜 없이 가능한 범위)
-
-**틱톡 게시 결과 확인** (기존 "남은 것" 항목 해소)
-- init 성공만으로 `success` 를 기록하던 것을 `post/publish/status/fetch` 폴링으로 교체.
-  `PUBLISH_COMPLETE`/`SEND_TO_USER_INBOX` → `success`, `FAILED` → 사유 포함 실패,
-  **시간 초과(기본 2분) → `pending`** (실패로 단정하지 않음, `uploaded_at` 은 null).
-- `UploadResult.status` 추가 → `sns_uploads.status` 가 실제 상태와 일치한다. FE 는 `pending` 을 "업로드 중" 으로 표시.
-
-**FCM 초기화 결함 수정**
-- `admin.initializeApp()` 을 이름 없이 호출해서, 한 프로세스에서 앱을 두 번 구성하면
-  `app/duplicate-app` 이 던져지고 **buildApp 이 실패해 서버가 아예 뜨지 않았다**.
-  → 이름 붙인 앱(`snaply`) + 기존 앱 재사용으로 멱등하게 변경.
-- FCM 계층 테스트 11개 추가(firebase-admin 대체): dry-run 전환, 정상 발송 payload,
-  **무효 토큰 자동 정리**, 일시 오류 시 토큰 보존, `errorInfo` 없는 에러 형태,
-  깨진 서비스 계정 → dry-run 폴백, geofence 연동(무효 토큰 정리 후 다음 진입이 no_token).
-
-### FCM 실크리덴셜 검증 (2026-08-04, 실기기 없이 통과)
-
-Firebase 서비스 계정(`snaply-66f8c`)을 `.env` 에 넣고 **실제 FCM API** 로 검증했다.
-실기기 토큰이 없어도, 미등록 토큰을 보내면 FCM 이 실제로 응답하므로 크리덴셜 유효성과 정리 경로를 모두 확인할 수 있다.
-
-| 검증 | 결과 |
-|---|---|
-| 서비스 계정 로드 → 발송 모드 전환 | `dryRun=false` |
-| 형식이 틀린 토큰 | `messaging/invalid-argument` → `send_error` (토큰 보존) |
-| 형식만 맞춘 미등록 토큰 | `messaging/registration-token-not-registered` → `token_invalid` |
-| 무효 토큰 자동 정리 | `users.fcm_token` → `null` |
-| HTTP 경로(`POST /notifications/geofence-enter`) | 1차 `send_failed` → 2차 `no_token`, `notification_logs=0` |
-| 실크리덴셜로 서버 기동 | 정상 (`app/duplicate-app` 예외 없음 — 위 수정 덕분) |
-
-발송 실패가 쿨다운을 소모하지 않는 것(Phase 6 의 보상 삭제)도 실크리덴셜 경로에서 확인됐다.
-**남은 것은 실기기 수신 확인뿐이며 FE 앱이 필요하다.**
-
-### 사고 기록 — 테스트가 개발 DB를 TRUNCATE 했다
-
-`vitest` 를 `apps/api` 밖에서 실행하면 `vitest.config.ts` 가 로드되지 않아 `setupFiles` 가 건너뛰어지고,
-`DATABASE_URL` 이 **개발 DB(`snaply`)** 를 가리킨 채 `resetDb()` 의 `TRUNCATE` 가 돌았다.
-그 결과 시드 위치 50개가 날아갔다(`npm run db:seed` 로 복구).
-
-→ `assertTestDatabase()` 추가: `SELECT current_database()` 가 `snaply_test` 가 아니면
-TRUNCATE 전에 예외를 던진다. 회귀 테스트는 `test/harness-safety.test.ts`.
-**테스트는 반드시 `apps/api` 에서 실행할 것** (`npm test -w apps/api` 또는 `npm test` in apps/api).
-
-### SNS 실키 투입 — 크리덴셜 검증 + 결함 2건 (2026-08-04)
-
-인스타/틱톡 앱 등록 후 실키를 넣고, **브라우저 로그인 없이 검증 가능한 범위**를 전부 확인했다.
-
-| 검증 | 방법 | 결과 |
-|---|---|---|
-| mock → 실호출 전환 | `/sns/*/connect` 응답 | `mock://` 대신 실제 authorize URL |
-| 인스타 client_id + redirect_uri | authorize URL 직접 요청 | 200 + 실제 OAuth 로그인 페이지. `Invalid platform app`/`URL Blocked` 등 Meta 에러 문구 0건 |
-| 틱톡 client_key + redirect_uri | authorize URL 직접 요청 | 302 → `tiktok.com/login?...enter_from=dev_<client_key>` (앱 인식됨) |
-| 인스타 **app secret** | 잘못된 code 로 토큰 교환 | `Invalid authorization code` — 시크릿 오류가 아니므로 인증 통과 |
-| 틱톡 **client secret** | 잘못된 code 로 토큰 교환 | `invalid_grant` — 동일하게 인증 통과 |
-
-이 과정에서 실제 결함 2건이 드러났다. 둘 다 **실 OAuth 첫 시도에서 바로 터질 것**이었다.
-
-**(1) 틱톡은 실패를 `HTTP 200` + 에러 본문으로 준다** — `res.ok` 만 확인하고 있어서 실패 응답을
-성공으로 취급했고, `undefined` 토큰을 암호화하려다 `ERR_INVALID_ARG_TYPE` → **500** 이 났다.
-(code 가 만료되기만 해도 발생. 실측으로 확인)
-→ `assertTikTokOk()` 추가. OAuth 형태(`{error, error_description}`)와
-Content Posting 형태(`{error:{code,message}}`) 둘 다 검사하고, `access_token` 부재도 명시적으로 잡는다.
-토큰 교환·갱신·업로드 init·상태 조회 4곳 모두 적용.
-
-**(2) 콜백 실패 시 사용자가 JSON 에러 페이지에 갇혔다** — `handleCallback` 이 던지는 예외가
-전역 핸들러로 가서 JSON 400/500 이 브라우저에 그대로 표시됐다. OAuth 도중이라 앱으로 돌아갈 방법이 없다.
-→ 라우트에서 catch 후 `sns/error?platform=<p>&reason=exchange_failed` 딥링크(현 스킴 `snaplyapp://`)로 302. 에러는 로그로 남긴다.
-
-회귀 테스트 7개 추가(`test/sns-realkey.test.ts`). **남은 것은 브라우저 로그인 1회뿐이다.**
-
-### 틱톡 — API 는 성공, **실물 미확인** (2026-08-10, 진행 중)
-
-⚠️ **주의**: 아래는 "틱톡 API 가 업로드를 수락하고 성공을 반환했다"는 것까지다.
-**사용자 계정에 실제로 도착했는지는 확인되지 않았다** — 받은함 알림이 오지 않았다.
-API 응답만으로 "검증 완료"라고 판단하면 안 되는 사례다.
-
-```
-POST /sns/tiktok/upload → 200 (16.8초)
-  { status:"success", platformPostId:"v_inbox_url~v2.7672...", requiresUserAction:true }
-틱톡 상태 조회 → SEND_TO_USER_INBOX (error.code=ok)
-```
-
-막혔던 관문은 **전부 콘솔 설정**이었고 코드 문제는 없었다:
-Login Kit 제품 미추가 → Sandbox 별도 client_key(`sb` 접두, 문서 미명시) →
-Target users 미등록 → 영상 URL 호스트의 prefix 소유권 미검증.
-
-이 과정에서 코드 쪽으로 확인된 것:
-- 틱톡이 403 으로 준 URL 검증 에러 메시지가 **문서 링크까지 그대로** 로그·응답에 실렸다.
-  인스타에서 "Meta 응답 본문을 버리던" 문제를 고쳐둔 것이 여기서 바로 효과를 봤다.
-- 스코프 기반 엔드포인트 자동 분기(`video.upload` → `/inbox/video/init/`)와
-  `requiresUserAction` 이 실제 응답에서 의도대로 동작했다.
-
-**미해결 — 받은함 알림 미도착**
-
-틱톡 상태 API 는 `SEND_TO_USER_INBOX` / `error.code=ok` 를 계속 반환하는데 앱에는 아무것도 오지 않았다.
-문서상 Sandbox 에서도 받은함 도착이 정상 동작(privacy=SELF_ONLY)이므로 제약이 아니라 설정 문제로 보인다.
-
-**중요한 단서**: `user.info.basic` 스코프가 실제로는 부여되지 않았다.
-```
-GET /v2/user/info/                    → scope_not_authorized
-POST /v2/post/publish/creator_info/query/ → scope_not_authorized
-```
-`video.upload` 는 동작했는데(업로드 수락됨) `user.info.basic` 은 거부된다. 즉 **동의가 부분적으로만
-이루어진 상태**다. 이 때문에 어느 계정에 전달됐는지 우리 쪽에서 확인할 수단이 없다 —
-진단의 가장 큰 사각지대.
-
-다음 확인 순서:
-1. Sandbox → Scopes 에 `user.info.basic` 이 실제로 켜져 있는지
-2. 재인증 시 동의 화면에 **두 권한이 모두** 표시되는지
-3. 부여되면 `/v2/user/info/` 로 **어느 계정에 연동됐는지 확정** 후 그 계정의 받은함 확인
-4. TikTok 앱 받은 편지함은 초안(Drafts)이 아니라 **알림** 탭이다
-
-**Phase 7 상태: 인스타(직접 게시) 실검증 완료 / 틱톡은 API 수락까지만 확인.**
-
-### 인스타그램 실업로드 성공 — Phase 7 end-to-end 완료 (2026-08-04)
-
-실제 앱·실제 프로페셔널 계정(`gagejigi`)으로 릴스 게시까지 통과했다.
-
-**게시된 릴스**: https://www.instagram.com/reel/DbnYK8qiXxg/ (`media_product_type: REELS`)
-
-```
-POST /sns/instagram/upload → 200 (38.9초)
-  { status: "success", platformPostId: "18103750871175163" }
-sns_uploads: status=success, uploaded_at 기록
-Graph 조회: media_product_type=REELS, caption 한글+이모지 정상
-```
-
-검증된 전 구간: OAuth(state HMAC) → 토큰 교환 → 토큰 암호화 저장 → 공개 URL 가드 →
-컨테이너 생성 → Meta 가 우리 터널에서 영상 다운로드 → status 폴링 → 게시 → 이력 기록.
-
-**막혔던 원인 2가지 (둘 다 mock 으로는 절대 안 드러남)**
-
-1. **계정 유형** — 개인 계정이었다. 개인 계정도 OAuth 는 통과해 토큰을 받지만
-   `graph.instagram.com` 의 **모든** 엔드포인트가 `IGApiException 100` 으로 거부한다(`/me` 포함).
-   프로페셔널(BUSINESS/CREATOR) 전환 후 같은 토큰으로 전부 동작했다.
-   → 진단이 어려운 이유: 가짜 토큰으로는 인증(190)이 먼저 걸려 이 구분이 안 된다.
-   `npm run ig:probe -w apps/api` 가 이 판별을 자동화한다.
-
-2. **`user_id` 정밀도 손실** — Instagram user_id 는 2^53 을 넘고 JSON **숫자**로 온다.
-   `JSON.parse` 가 `27899354646370752` → `27899354646370750` 로 값을 바꿨고,
-   그 ID 로 게시하면 `Object with ID ... does not exist` (실측 확인).
-   → 토큰 응답을 텍스트로 받아 정규식으로 문자열 추출 + 게시 경로를 **`/me/media`** 로 변경.
-   저장된 ID 가 망가진 상태에서도 게시가 성공한 것으로 수정 효과가 입증됐다.
-
-**폴링 필수 입증**: 컨테이너 처리에 ~50초가 걸렸다. 생성 직후 `media_publish` 를 호출하던
-원래 코드는 사실상 항상 실패했을 것이다.
-
-### SNS 실업로드 준비 (2026-08-04)
-
-앱 등록 전에 필요한 인프라를 먼저 확보했다. 상세 절차는 [sns-setup.md](./sns-setup.md).
-
-- **공개 콜백 URL** — `cloudflared tunnel --url http://localhost:3000` (다른 프로젝트의 ngrok 컨테이너는 건드리지 않음).
-  터널 경유로 `/health` 200, `/sns/instagram/callback` 302(에러 딥링크) 확인.
-- **공개 영상 URL** — MinIO(:9100) 터널 + 버킷 익명 읽기 정책.
-  개발 버킷은 기본이 비공개라 익명 GET 이 **403** 이었고, 그대로면 플랫폼이 영상을 못 내려받는다.
-  → `scripts/dev-public-bucket.ts` 추가(`npm run dev:public-bucket -w apps/api`).
-  `s3:GetObject` 만 열고 목록·쓰기는 닫는다. **S3_ENDPOINT 가 없으면 실행을 거부**해
-  실제 AWS 버킷을 공개로 바꾸는 사고를 막는다(가드 동작 확인).
-  터널 경유 익명 GET 200 확인.
-- `.env` 에 리디렉션 URI 2개 + `CLOUDFRONT_DOMAIN`(= 공개 미디어 베이스) 설정.
-
-주의: trycloudflare 주소는 터널 재시작 시 바뀐다. 장기 작업이면 고정 도메인이 필요하다.
-
-### Stripe 실키 웹훅 end-to-end 검증 (2026-08-04, 실제로 통과함)
-
-`sk_test_` 키 + Stripe CLI(`stripe listen`)로 **실제 Stripe 이벤트**를 로컬로 흘려 검증했다.
-계정 API 버전은 **2026-07-29.dahlia**.
-
-| 검증 | 결과 |
-|---|---|
-| `stripe trigger customer.subscription.created` (fixture 11개 이벤트) | 전부 `200` — 실제 서명이 실제 whsec 로 검증됨 |
-| 실제 `customer.subscription.updated` → DB 반영 | `plan: free → standard`, `stripeSubscriptionId`, `currentPeriodEnd=2026-09-04` 기록 |
-| 오래된 실제 이벤트(2분 전) 재전송 | `200` 이지만 **무시** — `last_stripe_event_at` 유지. 순서 보정 가드 실동작 확인 |
-| 처리 대상 아닌 이벤트(charge/invoice/payment_intent 등) | 전부 `200` no-op |
-
-확인된 사실 정정: `current_period_end` 는 이 API 버전에서 subscription **최상위와 item 하위 양쪽에** 들어온다.
-즉 `readPeriodEnd()` 의 item 폴백은 (이 버전 기준) 필수가 아니라 방어 코드다. 동작 차이는 없다.
-
-재현 방법:
-```bash
-stripe listen --api-key $STRIPE_SECRET_KEY --forward-to localhost:3000/billing/webhook
-# 출력된 whsec_... 을 .env STRIPE_WEBHOOK_SECRET 에 넣고 API 서버 재시작
-stripe trigger customer.subscription.created --api-key $STRIPE_SECRET_KEY
-```
-※ `stripe listen` 은 localhost:3000 으로 연결을 유지하므로 `lsof -ti:3000 | xargs kill` 하면 같이 죽는다.
-서버만 죽이려면 `lsof -nP -iTCP:3000 -sTCP:LISTEN -t` 를 쓸 것.
-
-### Sentry 실수집 검증 (2026-08-04)
-
-| 검증 | 결과 |
-|---|---|
-| DSN 유효성 — ingest 엔드포인트에 envelope 직접 POST | `200` + `{"id":"8632...48f1"}` |
-| `lib/sentry.ts` 경로 — `initSentry` → `captureException` → `flush` | `flush: true`, 전송 오류 없음 |
-| 실제 500 캡처 — Postgres 중지 후 `GET /auth/me` | `500` (공통 포맷, 내부 정보 미노출) + 전역 핸들러의 5xx 분기 실행 확인 |
-| 4xx 는 안 보냄 | 401/400/404 는 캡처 대상 아님 (설계대로) |
-
-주의: Sentry SDK 는 자기 전송 요청을 http 계측에서 제외하므로, `ingest.us.sentry.io` 로 나간 요청이
-디버그 로그에 안 보이는 것이 정상이다. 캡처 실행 여부는 같은 분기의 `request.log.error` (level:50) 로 확인한다.
-
-**추가로 고친 것 — 종료 시 flush 누락**: Sentry 전송은 비동기 버퍼링인데 `index.ts` 의 shutdown 이
-`process.exit(0)` 를 바로 호출해서, 5xx 발생 직후 재시작·배포되면 그 이벤트가 유실됐다.
-`flushSentry()` 를 추가해 종료 전에 전송을 기다린다. (`SENTRY_DEBUG=true` 로 SDK 전송 로그 확인 가능)
-
-### 후속 항목의 현행 위치
-
-이 시점에 닫히지 않았던 항목(Stripe 상품·가격 생성, 틱톡 받은함, FCM 실기기, 멀티 디바이스 푸시,
-`notification_logs` 보관 정책)은 [backlog.md](./backlog.md) C·B 절로 옮겼다.
-이후 완료된 것 — Sentry 실수집(2026-08-04), 인스타 실업로드(2026-08-04),
-틱톡 게시 결과 폴링(2026-08-04) — 은 아래 각 절에 기록돼 있다.
 
 ## 실검증 라운드 1 — 미디어/편집 트랙 (Dev A, 2026-08-04) ✅
 
@@ -441,6 +145,15 @@ stripe trigger customer.subscription.created --api-key $STRIPE_SECRET_KEY
 
 ---
 
+## Firebase 서비스 계정 키 로테이션 (2026-08-11)
+
+새 키 발급 → `.env` 교체 → 기존 키 삭제. 키가 저장소에 들어온 적은 없다 — 이력 전체를 훑어도
+private key 재료가 걸리는 곳은 [apps/api/test/fcm.test.ts](../apps/api/test/fcm.test.ts) 의 `fake`
+픽스처뿐이고, `.env` 는 추적된 적이 없다. 레포 루트의 `snaply-66f8c-firebase-adminsdk-*.json` 도 이미
+없으며 `.gitignore` 에 `*firebase-adminsdk*.json` 패턴이 있다.
+
+---
+
 ## 풀스택 Compose 공개 스토리지 주소 보간 수정 (2026-08-12)
 
 - `stack:up`이 Compose 보간용 env 파일을 지정하지 않아, `apps/api/.env`에
@@ -470,6 +183,7 @@ stripe trigger customer.subscription.created --api-key $STRIPE_SECRET_KEY
 - `users.deleted_at` 신설(마이그레이션 `20260812000000_add_user_deleted_at`) + 조회 인덱스
 - `DELETE /auth/me` — Stripe 즉시 해지(실패 시 삭제 중단), SNS 연동·FCM 토큰 삭제,
   진행 중 편집 작업 실패 처리 + 큐 제거(최선 노력), soft delete. `purgeAfter` 반환
+  → 대체: 2026-08-14 "크레딧 결제 구현 + Stripe·구독 제거" — Stripe 해지 단계는 없어졌다
 - 삭제 대기 계정의 인증 요청은 `403 ACCOUNT_PENDING_DELETION` (`plugins/auth.ts`)
 - `POST /auth/me/restore` — 유예 내 복구 (`authenticateAllowDeleted` 경유)
 - purge 배치 `npm run accounts:purge -w apps/api` (dry-run 기본, `--yes` 실삭제):
@@ -685,6 +399,7 @@ AdMob SSV 콜백이고, 앱은 세션을 열고 상태를 조회할 뿐이다. �
 **정책값**: `AD_REWARD_ENABLED` 기본 **false**(킬 스위치). 보상 20 / 일일 3 / 쿨다운 300초 /
 세션 TTL 900초는 잠정값이며 env 로 덮어쓴다. 일일 한도 기준 시각은 **KST 자정으로 확정**했다
 (UTC 자정은 한국 사용자에게 오전 9시, 롤링 24시간은 앱이 한 문장으로 설명할 수 없다).
+→ 대체: 2026-08-18 광고 보상 세 항목 — 세션 TTL 300초·일일 5회로 확정
 
 **신규 환경변수**: `AD_REWARD_ENABLED` · `AD_REWARD_CREDITS` · `AD_REWARD_DAILY_LIMIT` ·
 `AD_REWARD_COOLDOWN_SECONDS` · `AD_REWARD_SESSION_TTL_SECONDS` · `ADMOB_SSV_ALLOWED_AD_UNITS` ·
@@ -706,31 +421,16 @@ AdMob SSV 콜백이고, 앱은 세션을 열고 상태를 조회할 뿐이다. �
 ## 광고 보상 세션 수명·포기 (2026-08-18)
 
 앱 팀의 실기기 검증 리포트(2026-08-14, AdMob 미연동이라 모든 세션이 SSV 없이 `pending`)로
-드러난 **대기 시간 역전**을 고쳤다. 지급받은 사용자는 쿨다운 300초만 기다리는데, 콜백이
-유실된 사용자는 진행 중 슬롯이 TTL(900초)로 풀릴 때까지 잠겼다. 결정과 기각한 대안은
-[decisions/ad-reward-credits.md](./decisions/ad-reward-credits.md) §4-1.
+드러난 **대기 시간 역전**을 고쳤다 — 지급받은 사용자는 쿨다운 300초만 기다리는데, 콜백이 유실된
+사용자는 진행 중 슬롯이 TTL(900초)로 풀릴 때까지 잠겼다. 결정과 기각한 대안(앱이 제안한 TTL 120초 등),
+앱 팀 질문에 대한 답(한도·쿨다운의 기준 시각, 세션 남발)은
+[decisions/ad-reward-credits.md](./decisions/ad-reward-credits.md) §4·§4-1.
 
-**정책** (`services/billing/credit-policy.ts`)
-- 세션 TTL 기본값 **900초 → 300초**(= 쿨다운). TTL 은 쿨다운을 넘기지 않는다는 관계를
-  타입 주석과 `.env.example`·env-spec 설명에 함께 남겼다
-- 앱이 제안한 120초는 채택하지 않았다 — 광고 로드·엔드카드가 길어지면 **정상 시청분의 SSV 가
-  만료로 거절**된다. `pending` 은 나중에 지급될 수 있지만 `expired` 는 확정적으로 죽인다
-
-**세션 포기** (`DELETE /billing/ad-rewards/{rewardId}`)
-- 앱이 중도 이탈·노필·로드 실패를 확정적으로 알았을 때 슬롯을 즉시 비운다. 결과가 확정된
-  경우의 대기가 0이 된다
-- 새 상태 `abandoned` 추가. `pending` 과 함께 "아직 지급될 수 있는 상태"이며 **만료 전에 도착한
-  SSV 는 그대로 지급**한다(포기는 슬롯만 비우고 지급 자격은 남긴다). 컬럼은
-  `status VARCHAR(16)` 그대로라 **마이그레이션 없음**
-- 멱등 — 이미 확정된 세션이나 두 번째 포기에도 200 + 현재 상태. 남의 세션은 404
-- 지급을 만들 수 있는 경로가 아니라서 "앱은 지급을 요청할 수 없다"(§3)는 설계는 그대로다
-- 받아들인 트레이드오프: 포기한 세션과 새 세션이 함께 지급되면 쿨다운보다 짧은 간격의 연속
-  지급이 가능하다. 상한은 지급 시점 한도 재확인이 잡고, 그 경우 사용자는 광고를 두 편 다 봤다
-
-**앱 팀 질문에 대한 확인**
-- 한도·쿨다운을 **지급 시각** 기준으로 잡은 것은 의도다(받지 못한 보상을 소진으로 치지 않는다)
-- 세션 남발은 경제적 공격면이 아니다 — 지급에는 Google 서명이 필요하고 한도는 지급 시점에
-  다시 센다. 늘어나는 것은 `ad_rewards` 행뿐이며 정리 배치는 backlog D-5 로 남겼다
+- **세션 TTL 기본값 900초 → 300초**(= 쿨다운, `services/billing/credit-policy.ts`). TTL 이 쿨다운을
+  넘기지 않는다는 관계를 타입 주석과 `.env.example`·env-spec 설명에 함께 남겼다
+- **세션 포기** `DELETE /billing/ad-rewards/{rewardId}` — 새 상태 `abandoned`(`pending` 과 함께 아직 지급될
+  수 있는 상태로, 만료 전에 도착한 SSV 는 그대로 지급). 컬럼은 `status VARCHAR(16)` 그대로라
+  마이그레이션 없음. 멱등(확정된 세션·두 번째 포기에도 200 + 현재 상태), 남의 세션은 404
 
 **검증**
 - `npm test -w apps/api` — 16 파일 **194 테스트 통과** + tsc + storage 테스트. 포기 관련 8개 신규
@@ -742,21 +442,9 @@ AdMob SSV 콜백이고, 앱은 세션을 열고 상태를 조회할 뿐이다. �
 
 ## 광고 보상 정책 값 확정 — 20크레딧 · 일일 5회 (2026-08-18)
 
-`credit-policy.ts` 의 잠정값이던 보상량·한도를 확정했다. 결정과 트레이드오프는
+`credit-policy.ts` 의 잠정값이던 보상량·한도를 확정했다 — 1회 보상 **20크레딧**, 일일 한도 **3 → 5회**
+(`20 × 5 = 100 = MOVIE_EXPORT_COST`, 한도를 다 쓰면 정확히 export 1편). 값의 근거와 받아들인 트레이드오프는
 [decisions/ad-reward-credits.md](./decisions/ad-reward-credits.md) §7.
-
-**확정값**
-- 1회 보상 **20크레딧**, 일일 한도 **3 → 5회**. `20 × 5 = 100 = MOVIE_EXPORT_COST` 라
-  **한도를 다 쓰면 정확히 export 1편**이다 — 의도된 값이며 둘을 따로 바꾸지 않는다
-- 세션 TTL·만료 없음·KST 자정 기준은 이미 확정돼 있었다. 남았던 쿨다운도 같은 날 확정됐다
-  (아래 항목)
-
-**받아들인 것**
-- 회의안 §2가 피하려던 `광고 5편 = 무비 1편` 프레이밍을 사용자가 스스로 발견할 수 있다.
-  UI 원칙(진척도·완주 과제로 표시하지 않음)은 유지하고 api-spec 의 표시 규칙에 명시했다
-- **원가·eCPM 실측 없이 정한 값이다.** 손익분기는 보상량만이 정하고(한도와 무관) 한도는 손실
-  규모·무료 상한(사용자당 월 최대 30편)을 정한다. 파일럿에서 순매출이 20원을 밑돌면
-  **보상량을 먼저 내린다** — 한도 인하는 되돌릴 수 없는 혜택 축소다
 
 **반영 위치**: `credit-policy.ts` 기본값·주석, `env-spec.ts`·`.env.example` 설명,
 [api-spec.md](./api-spec.md) `GET /billing/ad-rewards` 예시와 표시 규칙, backlog A-2·C-6.
@@ -771,17 +459,8 @@ AdMob SSV 콜백이고, 앱은 세션을 열고 상태를 조회할 뿐이다. �
 
 ## 광고 보상 쿨다운 300초 확정 (2026-08-18)
 
-A-2의 마지막 미결 값이었다. 근거는
-[decisions/ad-reward-credits.md](./decisions/ad-reward-credits.md) §7 —
-**값을 고른 것이 아니라 위아래가 모두 막혀 있음을 확인한 것**이다.
-
-- **아래로 못 내린다**: 세션 TTL ≤ 쿨다운(§4-1)이고 TTL 은 300초보다 짧을 수 없으므로,
-  300초 밑으로 내리면 3일 전에 고친 대기 시간 역전이 되살아난다. 포기 엔드포인트로도 못
-  막는다 — SSV 유실은 앱이 "광고를 다 봤다"고 아는 상태라 포기를 호출하지 않는다
-- **위로 올릴 이유가 없다**: 쿨다운은 마지막 **지급 시각** 기준이라
-  (`ad-reward.service.ts` 세션 발급) 값이 그대로 "부족분을 채우는 도중의 대기"다.
-  60크레딧에서 export 까지 300초면 5분, 600초면 10분. 비용 상한은 이미 일일 한도 5가 잡는다
-- 쿨다운 0(한도만으로 제어)은 가장 큰 역전이 되어 기각했다
+A-2의 마지막 미결 값이었다. 값을 고른 것이 아니라 위아래가 모두 막혀 있음을 확인한 것이다 — 근거는
+[decisions/ad-reward-credits.md](./decisions/ad-reward-credits.md) §7 "쿨다운 300초".
 
 **반영**: `credit-policy.ts` 주석(하한·상한의 이유), `env-spec.ts`·`.env.example`,
 [api-spec.md](./api-spec.md), backlog A-2 — **A-2에서 광고 보상 항목이 닫혔다.**
@@ -794,47 +473,12 @@ A-2의 마지막 미결 값이었다. 근거는
 
 ## 스냅 내용 분석 — 방향 확정 + 스파이크 하네스 (2026-08-19)
 
-기능 방향과 착수 범위를 정하고, 기준선을 낼 하네스까지 구현했다. 결정과 기각한 대안은
-[decisions/snap-content-analysis.md](./decisions/snap-content-analysis.md).
-
-**확정된 방향**
-- 분석 결과는 **내부 추천 입력 전용** — 사용자에게 요약·태그를 노출하지 않는다
-- 분석은 **추천 요청 시점의 후보 스냅만**. 계획 문서의 "업로드 즉시 전량"을 채택하지 않았다 —
-  버려질 스냅까지 과금되고, 스냅당 단가 실측이 없는 상태에서 비용을 업로드량에 비례시킬 근거가 없다
-- 엔진은 외부 vision API(프레임 4장 단일 요청, 오디오 미전송), 추천 실행은 **비동기 job**
-- 이번 사이클은 **스파이크만** — 스키마·API·큐는 만들지 않았다
-
-**구현 (`apps/ai-worker/scripts/analysis-spike/`)**
-- `frame_sampler.py` — FFprobe 실측 길이 기준 상대 위치(10/36.7/63.3/90%), **한 번의 ffmpeg
-  호출**로 4장 추출, 8x8 평균 해시로 유사 프레임 제거. 계획 문서 §7 그대로
-- `vision_client.py` — 프레임 전체를 한 요청에 시간순으로, `detail=low`, Structured Outputs
-  strict. 오류를 재시도 가능/불가로 분류(`RATE_LIMITED`·`TIMEOUT`·`AUTH_FAILED`·`SAFETY_REFUSED` …)
-- `result_schema.py` — JSON Schema 강제와 별개로 애플리케이션에서 범위·목록 길이·빈 문자열을
-  다시 검증한다. `visualIssues` 는 코드 enum 으로 고정 — 자유 텍스트를 받으면 집계가 불가능하다
-- `report.py` — 모델별 성공률·지연 p50/p95·평균 토큰·스냅당 단가·`usableForEdit` 비율,
-  사람이 채점할 `labels.csv` 생성과 채점 집계
-- **단가가 비어 있으면 비용을 추측하지 않고 `null`** 로 남긴다. 스냅당 단가가 이 스파이크의
-  산출물이라 임의 값을 채우면 결론이 오염된다
-- `OPENAI_API_KEY` 는 셸 환경에서만 읽는다 — `env-spec.ts`·`.env.example` 선언은 본구현 착수와
-  같은 변경에서 한다(아무도 읽지 않는 변수를 원천 문서에 먼저 남기지 않는다)
-
-**검증**
-- `cd apps/ai-worker && python3 -m unittest tests.test_config tests.test_edit_spec
-  tests.test_render_spec tests.test_editor tests.test_analysis_spike` — **64개 통과**
-  (신규 45개). 프레임 시점 계산·유사 프레임 제거·요청 구성·오류 분류·단가 계산·결과 검증·
-  집계·채점을 ffmpeg·SDK 없이 검증한다
-- 오케스트레이션(`run_spike.py`)은 ffmpeg·모델 호출을 스텁으로 바꿔 스모크 확인 — 성공/
-  `RATE_LIMITED`/`SCHEMA_INVALID` 3경로가 각각 행으로 남고, 단가 없는 모델의 비용이 `null` 로
-  집계되며, 요청 하나에 텍스트 1 + 이미지 4가 담기는 것을 확인했다
-- **실제 모델 호출과 ffmpeg 경로는 아직 돌리지 않았다** — 이 개발 머신에 ffmpeg 가 없고
-  평가셋(팀원 폰 촬영 30~100편)과 API 키가 아직 없다. 남은 일은 backlog A-3
-
-**아직 없는 것**: 품질·단가 기준선 숫자. 그것이 나와야 운영 모델 고정과 비용 한도를 정하고
-본구현을 승인할 수 있다.
-
-> **같은 날 후속**: 스파이크를 실행하지 않고 본구현으로 진행했다. 이 하네스의 모듈은
-> `apps/ai-worker/src/pipeline/video_analysis/` 로 옮겨졌고 스파이크 디렉터리는 제거됐다 —
-> 아래 "스냅 내용 분석 본구현" 항목.
+기능 방향(분석 결과는 내부 추천 입력 전용 · 추천 요청 시점의 후보 스냅만 분석 · 외부 vision API 에 프레임
+4장 · 추천은 비동기 job)을 정했다 — 결정과 기각한 대안은
+[decisions/snap-content-analysis.md](./decisions/snap-content-analysis.md) §1~§4. 기준선을 낼 스파이크 하네스
+(`apps/ai-worker/scripts/analysis-spike/`)도 만들었지만 실행하지 않고 같은 날 본구현으로 넘어갔다 — 모듈은
+`apps/ai-worker/src/pipeline/video_analysis/` 로 옮겨졌고 스파이크 디렉터리와 그 테스트는 제거됐다(결정 문서 §9,
+아래 "스냅 내용 분석 본구현").
 
 ---
 
@@ -901,6 +545,22 @@ A-2의 마지막 미결 값이었다. 근거는
 
 ---
 
+## 약관·개인정보처리방침의 분석 고지 초안 (2026-08-19)
+
+스냅 분석은 생산 스냅의 프레임을 외부 모델로 보내므로, `routes/legal.ts` 의 출시 전 초안에 분석 고지·
+수탁자·국외 이전 절을 넣었다. 테스트(`test/legal.test.ts`)가 전송 범위(프레임 4장·오디오 미전송·영상
+삭제 시 동시 파기)를 문구에 고정한다.
+
+- **보유 기간·학습 이용** — 공개 문서 기준 학습 미이용, 남용 모니터링 로그 최대 30일. Responses API 의
+  `store` 기본값이 true 라 30일 보관 축이 하나 더 생기는 것을 발견해 워커에서 `store: false` 로 껐다
+- **국외 이전 표** — Firebase(리전 지정 불가)·RevenueCat(미국)·Sentry(미국, DSN 이
+  `ingest.us.sentry.io`)를 채웠다. Meta·TikTok 은 우리가 직접 호출하므로 표에 내렸고, Apple·Google 은
+  우리가 직접 보내지 않아 표가 아니라 문장으로 관계만 적었다
+
+남은 법무 검토와 확정 항목은 [backlog.md](./backlog.md).
+
+---
+
 ## 무비 템플릿 카탈로그 서버 이관 (2026-08-19)
 
 템플릿 4개가 앱의 로컬 상수에 있었다. 슬롯의 **매칭 규칙**이 생기는 순간 정의와 규칙이 서로
@@ -956,14 +616,9 @@ A-2의 마지막 미결 값이었다. 근거는
 방향과 기각안은
 [decisions/template-snap-recommendation.md](./decisions/template-snap-recommendation.md).
 
-**새 큐를 만들지 않았다** — 계획( `snap-content-analysis.md` §4)과 다른 지점
-- 비싼 일(분석)은 이미 `video-analysis` 큐가 진다. 추천은 그 결과를 모으는 오케스트레이션이라
-  두 번째 큐의 워커는 첫 번째 큐를 기다리는 것 말고 할 일이 없다
-- **접수 시점에 후보 분석을 적재하고, 채점은 조회(폴링) 시점에** 한다. 아무도 폴링하지 않으면
-  채점도 돌지 않는다 — 낭비가 아니라 절약이다
-- 동시 폴링은 `status='processing'` 조건부 갱신으로 하나만 이긴다. 채점이 순수 함수라 진 쪽이
-  버린 계산의 결과도 같다
-- **마감 시한**(3분)을 둔다. 분석 워커가 죽어도 추천이 영원히 `processing` 에 머물지 않는다
+**새 큐를 만들지 않았다** — 접수 시점에 후보 분석을 적재하고 채점은 조회(폴링) 시점에 한다. 동시 폴링은
+`status='processing'` 조건부 갱신으로 하나만 이기고, 마감 시한(3분)이 지나면 끝난 분석만으로 채점한다.
+계획과 달라진 이유는 결정 문서 §7.1.
 
 **DB** — `movie_recommendations` · `movie_recommendation_items` (`20260819020000_add_movie_recommendations`)
 - `candidate_video_ids` 는 **배열**이다. 앱이 보낸 촬영 시간 순서가 점수화의 시간 사전값이라
@@ -972,26 +627,16 @@ A-2의 마지막 미결 값이었다. 근거는
 - 영상이 삭제되면 `video_id` 만 `SET NULL` — 그 자리는 비고 추천은 남는다
 - 템플릿 FK 는 `RESTRICT`. 템플릿은 지우지 않고 `retired_at` 으로 내린다
 
-**점수화** — `services/recommendation/score-slots.ts`, DB 없이 도는 순수 함수
-- `0.5×keyword + 0.2×visualQuality + 0.2×temporal + 0.1×confidence`, greedy 배정(1스냅 1슬롯)
-- `temporal` 이 현행 시간순 배치를 계승하므로 **키워드가 하나도 맞지 않아도 지금보다
-  나빠지지 않는다**. 이게 규칙 기반으로 시작할 수 있는 근거다
-- `usableForEdit=false` 는 배정에서 빠지고 남는 슬롯은 **비운다**. 못 쓸 스냅으로 채우는 것보다
-  빈 슬롯과 `지금 찍기` 가 정직하다
-- 힌트 jsonb 는 방어적으로 읽는다 — 한 행의 오타가 추천 전체를 무너뜨리지 않는다
+**점수화** — `services/recommendation/score-slots.ts`, DB 없이 도는 순수 함수. 공식·게이트·배정 규칙과
+규칙 기반으로 시작한 근거는 결정 문서 §7. 힌트 jsonb 는 방어적으로 읽는다 — 한 행의 오타가 추천 전체를
+무너뜨리지 않는다
 
-**정책** — `services/recommendation/recommendation-policy.ts`
-- 후보 12개 · 최근 24시간 20회 · 재사용 창 24시간 · 마감 3분. **전부 서버가 집행한다**
-- 달력 하루가 아니라 직전 24시간이다. 자정 리셋은 서버 시간대를 사용자 시간대로 가정하게 된다
-- 크레딧 차감 없음. 채택할지 모르는 제안에 과금하지 않는다
-- `MOVIE_RECOMMENDATION_ENABLED` **기본 false** — 이 경로는 생산 스냅 프레임을 외부 모델로
-  보내므로 약관 개정·제3자 제공 고지 전에는 켜지 않는다. 꺼져 있으면 503 `RECOMMENDATION_DISABLED`
+**정책** — `services/recommendation/recommendation-policy.ts`. 상한(REC-3)과 재사용 창을 서버가 집행하고
+크레딧은 차감하지 않는다(근거는 결정 문서 §4). 한도는 달력 하루가 아니라 직전 24시간이다.
+`MOVIE_RECOMMENDATION_ENABLED` **기본 false** — 꺼져 있으면 503 `RECOMMENDATION_DISABLED`
 
-**전역 에러 핸들러 순서를 바꿨다** (`app.ts`)
-- `AppError` 판정이 rate limit 판정보다 **앞**으로 왔다. 전에는 모든 429 가 `RATE_LIMITED` 로
-  뭉개져, 앱이 "잠시 후 다시"(`RATE_LIMITED`)와 "오늘은 끝"(`RECOMMENDATION_LIMIT`)을 구분할
-  수 없었다. 플러그인 제한은 `AppError` 가 아니므로 그대로 `RATE_LIMITED` 다
-- 라우트별 rate limit 테스트 2건이 이 순서로도 그대로 통과한다
+**전역 에러 핸들러 순서를 바꿨다** (`app.ts`) — `AppError` 판정이 rate limit 판정보다 **앞**으로 왔다
+(이유는 결정 문서 §7.2). 라우트별 rate limit 테스트 2건이 이 순서로도 그대로 통과한다
 
 **검증**
 - `npm test -w apps/api` — 20 파일 **257 테스트 통과**. 신규: `recommendation-score.test.ts` 14개
@@ -1012,38 +657,18 @@ A-2의 마지막 미결 값이었다. 근거는
 ## 앵커 어휘 사전 + 워커 빌드 컨텍스트 루트 통일 (2026-08-20)
 
 editSpec v3 착수의 첫 단위. 계획과 결정 근거는
-[plans/edit-spec-v3-kickoff.md](./plans/edit-spec-v3-kickoff.md) §3.
+[archive/edit-spec-v3-kickoff.md](./archive/edit-spec-v3-kickoff.md) §3.
 
-**사전은 원본 하나** — `packages/shared-types/src/anchor-vocabulary.json`
-- `anchor` 어휘(kind 6 · kind별 ref · scaleRef)를 editSpec v3 와 에셋 매니페스트가 공유한다.
-  코드젠도 수동 동기화도 두지 않았다 — `errors.py` ↔ `domain.ts` 식 주석 동기화는 이 규모에서
-  깨진다
-- TS(`anchor.ts`)와 워커(`pipeline/anchor.py`)가 **같은 파일**을 읽는다. TS 는 타입이 컴파일
-  타임에만 있어 런타임 배열을 따로 들 수밖에 없고, 그 배열과 JSON 의 대조가 정합성 장치다
-- 폴백 체인은 **객체 배열**로 통일했다. `"face:aboveHead"` 문자열은 `offset` 을 담지 못해
-  확장 불가다. 같은 이유로 매니페스트의 `defaultAnchor` 는 두지 않는다 — `anchorAffinity[0]`
-  이 곧 기본값이라 두 값이 어긋날 여지가 없다
-- 초안이 `freezone` 에만 쓰던 `prefer` 를 없애고 모든 kind 가 `ref` 를 쓰게 했다.
-  한 사전을 공유하는데 필드 이름이 갈릴 이유가 없다
+**사전은 원본 하나** — `packages/shared-types/src/anchor-vocabulary.json` 을 TS(`anchor.ts`)와 워커
+(`pipeline/anchor.py`)가 같이 읽고, TS 상수와 JSON 의 대조가 정합성 장치다. 어휘의 형태(폴백 체인은 객체
+배열, `defaultAnchor` 없음, 모든 kind 가 `ref`)는 [decisions/edit-spec-v3.md](./decisions/edit-spec-v3.md) §3.
 
-**빌드 컨텍스트를 루트로** — `docker-compose.yml` · `apps/ai-worker/Dockerfile`
-- 워커 컨텍스트가 `./apps/ai-worker` 라 `packages/` 가 컨텍스트 밖이었다. 사전이 이미지에
-  들어갈 방법이 없어 이 변경이 사전의 **전제**였다
-- API 가 이미 `context: .` 를 쓰고 있어(`apps/api/Dockerfile`) 새 규약이 아니라 워커만
-  예외였던 것을 맞춘 것이다. `ai-worker` · `analysis-worker` 두 서비스가 같은 이미지를 쓰므로
-  양쪽 다 바뀌었다
-- 부수 효과로 `.dockerignore` 의 `apps/ai-worker/assets/bgm/**/*.m4a` 가 **작동하기 시작했다.**
-  루트 상대 경로로 쓰여 있어 지금까지 no-op 이었다 — 음원이 들어오면 이미지에 딸려 들어갔을 줄이다
-- 사전을 `dist/` 가 아니라 `src/` 에서 가져가므로 워커 이미지가 Node 빌드에 의존하지 않는다
-
-**로더는 없으면 죽는다** — `pipeline/anchor.py`
-- 컨테이너(`/app/anchor-vocabulary.json`)와 네이티브 개발(저장소 경로)에서 사전 위치가 다르다.
-  `config.py` 의 `ENV_CANDIDATES` 와 같은 후보 목록 패턴을 쓰되 **실패 동작은 반대**다 —
-  `.env` 는 없어도 되지만(주입이 이긴다) 사전은 없으면 렌더 시점에 터지고 원인이 안 보인다
-- **로더를 `config.py` 에 두지 않았다.** `analysis_worker.py` 도 `config` 를 임포트하므로
-  거기 모듈 레벨 로드를 넣으면 사전 하나 때문에 분석 워커까지 못 뜬다. 편집 파이프라인 모듈에
-  두고 `worker.py` 가 임포트한다
-- 기동 로그에 `vocabulary=v1 derivation=v1` 을 남긴다. 렌더 결과를 되짚을 때 첫 단서다
+**빌드 컨텍스트를 루트로, 로더는 편집 파이프라인에** — `docker-compose.yml` · `apps/ai-worker/Dockerfile` 의
+워커 컨텍스트를 루트로 옮겼다(`packages/` 가 컨텍스트 밖이라 사전이 이미지에 들어갈 수 없었다). 로더
+`pipeline/anchor.py` 는 사전이 없으면 기동에 실패하고, `config.py` 가 아니라 편집 파이프라인에 둬 분석 워커는
+영향받지 않는다. 배치·로딩의 근거는 같은 결정 문서 §7. 부수 효과로 `.dockerignore` 의
+`apps/ai-worker/assets/bgm/**/*.m4a` 제외가 작동하기 시작했다(루트 상대 경로라 그동안 no-op). 기동 로그에
+`vocabulary=v1 derivation=v1` 을 남긴다.
 
 **얼굴 앵커 파생** — MediaPipe 6키포인트에 없는 것을 만든다
 - Face Detection 이 주는 것은 양 눈·코·입·양 귀뿐이다. `forehead` · `cheekL/R` · `chin` ·
@@ -1092,30 +717,13 @@ editSpec v3 착수의 첫 단위. 계획과 결정 근거는
 ## 스테이지별 시드 — 재현과 "다시 생성"의 분리 (2026-08-20)
 
 editSpec v3 착수의 두 번째 단위. 계획은
-[plans/edit-spec-v3-kickoff.md](./plans/edit-spec-v3-kickoff.md) §4.
+[archive/edit-spec-v3-kickoff.md](./archive/edit-spec-v3-kickoff.md) §4.
 
-**시드가 하나면 둘 중 하나가 깨진다**
-
-```json
-"seed": { "root": 1837462, "attempt": { "edit-director": 0, "style-director": 2 } }
-```
-
-- 시드를 스펙에 하나만 고정하면 만료 후 재생성은 같은 산출물을 내지만
-  ([storage-and-subscription-policy.md](./decisions/storage-and-subscription-policy.md) §3의 약속)
-  사용자가 "다시 생성"을 눌러도 같은 영상이 나온다. 명백한 버그로 보인다
-- `root` 는 고정하고 `attempt` 만 올린다. 재현도 "다시 생성"도 성립하고, **다시 생성한 결과
-  자체도 여전히 재현 가능**하다
-- `attempt` 가 **스테이지별**인 이유는 부분 재생성이다. 전역 하나면 "스티커만 다시"가
-  `music`·`timeline` 시드까지 바꿔 무효화 표가 약속한 유지 범위가 무너진다
-
-**해시를 이름으로 박았다** — `sha256("{root}:{stage}:{attempt}")` 상위 8바이트 빅엔디언
-- **파이썬 내장 `hash()` 를 쓰면 안 된다.** `PYTHONHASHSEED` 가 프로세스마다 달라서 같은 스펙이
-  실행할 때마다 다른 영상을 만든다. 재현성이 이 스펙의 존재 이유인데 그게 프로세스 기동 시각에
-  좌우되면 의미가 없다
-- 알고리즘·템플릿·바이트 수·**바이트 순서**까지 사전에 둔다. 두 번째 구현이 같은 값을 내려면
-  넷 다 필요하다
-- `root` 상한을 `Number.MAX_SAFE_INTEGER` 로 강제한다. 2^53 을 넘으면 JavaScript 가 반올림해
-  API 가 쓴 `root` 와 워커가 읽은 `root` 가 달라지고, **에러 없이 다른 영상이 나온다**
+**스테이지별 `attempt`** — `seed: { root, attempt: { <stage>: n } }` 로 재현과 "다시 생성"을 가른다. 스테이지
+시드는 `sha256("{root}:{stage}:{attempt}")` 상위 8바이트 빅엔디언이며 알고리즘·템플릿·바이트 수·바이트 순서까지
+사전에 뒀다. `root` 상한은 `Number.MAX_SAFE_INTEGER` 로 강제한다(넘으면 JavaScript 가 반올림해 API 와 워커의
+`root` 가 에러 없이 달라진다). 전역 `attempt` 와 파이썬 `hash()` 를 쓰지 않는 근거는
+[decisions/edit-spec-v3.md](./decisions/edit-spec-v3.md) §5.
 
 **스테이지 이름을 닫힌 집합으로** — `packages/shared-types/src/stage-vocabulary.json`
 - 열린 문자열이면 `attempt: {"style-directr": 2}` 같은 오타가 조용히 통과한다. 그 디렉터는
@@ -1144,55 +752,26 @@ editSpec v3 착수의 두 번째 단위. 계획은
   정상 기동**(`sys.modules` 에 `pipeline.seed` 없음)한다
 - 기동 로그를 `anchor=v1 derivation=v1 stage=v1` 로 확장했다
 
-**다음**: 무효화 표 재작성(kickoff §5) — A-2·A-5·B-6 를 한 표가 흡수한다.
+**다음**: 무효화 표 재작성(kickoff §5) — kickoff 의 결정 A-2·A-5·B-6 을 한 표가 흡수한다.
 
 ---
 
 ## 재생성 무효화 규칙 — 표가 아니라 데이터로 (2026-08-20)
 
 editSpec v3 착수의 세 번째 단위이자 이 계획의 중심 산출물. 계획은
-[plans/edit-spec-v3-kickoff.md](./plans/edit-spec-v3-kickoff.md) §5.
+[archive/edit-spec-v3-kickoff.md](./archive/edit-spec-v3-kickoff.md) §5.
 
 **표를 문서에 두지 않았다**
 - 무효화 규칙은 구현이 참조하는 계약이다. 문서의 표는 구현과 갈라지고, **갈라진 것을 아무도
-  모른다.** 원본은 `packages/shared-types/src/invalidation-vocabulary.json` 하나이고
-  TS·워커가 같은 파일을 읽는다. 앞 두 커밋의 사전과 같은 구조다
-- 문서에는 요약과 근거만 남겼다. 셀 단위 판단은 사전의 `note` 에 있다
-
-**레이어 상태가 셋이다** — B-6 이 세 번째를 요구했다
-- `invalidated`(다시 계산) · `retimed`(구성 유지, 시각만 재투영) · `preserved`(손대지 않음)
-- 둘로는 "컷 구성은 그대로인데 시각만 바뀐다"를 표현할 수 없다. BGM 을 가드 안에서 교체하면
-  `timeline.cuts` 가 정확히 그 상태가 된다
-
-**액션 10건 × 레이어 9종 = 90개 판단을 전부 적었다**
-- 생략을 허용하고 기본값을 두면 레이어를 새로 추가했을 때 아무도 판단하지 않은 채 굳는다 —
-  `preserved` 기본값은 새 레이어를 조용히 낡게 하고 `invalidated` 기본값은 조용히 낭비한다.
-  **사전에 없는 조합은 기본값이 아니라 예외다**
-
-| 액션 | 무효화 / 재투영 / 유지 | attempt |
-|---|---|---|
-| 만료 후 재생성 | 0 / 0 / 9 | — |
-| 사용자 "다시 생성" | 7 / 0 / 2 | music · edit · style |
-| BGM 교체 (≤ ±20%) | 2 / 5 / 2 | music |
-| BGM 교체 (> ±20%) | 7 / 0 / 2 | music · edit · style |
-| 스티커 팩 교체 | 2 / 0 / 7 | style |
-| 전환 스타일 스왑 | 2 / 0 / 7 | edit |
-| 컷 순서 수동 변경 | 2 / 3 / 4 | — |
-| 컷 삭제 | 4 / 1 / 4 | — |
-| 클립 추가 | 5 / 0 / 4 | edit · style |
-| 출력 프로필·`fitMode` 변경 | 0 / 0 / 9 | — |
-
-**표가 담은 판단 넷**
-- **첫 두 행은 레이어가 아니라 `attempt` 로 갈린다.** 만료 재생성은 `attempt` 를 그대로 둬
-  산출물이 같고, 사용자 재생성은 올려서 달라진다. 인접 배치한 이유이며 `attempt` 열의 존재 이유다
-- **핀 승격은 사용자 재생성에서만.** 더 나은 `analysisVersion` 이 나중에 생겨도 만료 재생성은
-  올리지 않는다 — 올리면 "복원"이 다른 영상을 낸다. A-5 의 세 번째 축이 이 열이다
-- **팩 교체는 재렌더가 아니라 재생성이다.** "재렌더는 레지스트리·번들을 다시 조회하지 않는다"는
-  핀을 바꾸지 않는 재렌더에만 적용된다
-- **수동 컷 편집은 어떤 `attempt` 도 올리지 않는다.** 사용자가 순서를 정했으므로 선택이 없다
+  모른다.** 원본은 [`invalidation-vocabulary.json`](../packages/shared-types/src/invalidation-vocabulary.json)
+  하나이고 TS·워커가 같은 파일을 읽는다. 앞 두 커밋의 사전과 같은 구조다
+- 레이어 상태는 셋(`invalidated` · `retimed` · `preserved`)이고, 액션마다 **모든 레이어**의 상태를
+  적는다 — 사전에 없는 조합은 기본값이 아니라 예외다. 액션·레이어 목록과 셀 단위 판단(`note`)은
+  사전이 원천이므로 여기에 표로 옮기지 않는다. 판단의 근거는
+  [kickoff §5](./archive/edit-spec-v3-kickoff.md)
 
 **검증**
-- 워커: **118 테스트 통과**(신규 `test_invalidation.py` 21개). 90개 판단이 하나도 빠지지 않았는지,
+- 워커: **118 테스트 통과**(신규 `test_invalidation.py` 21개). 액션 × 레이어 판단이 하나도 빠지지 않았는지,
   `attemptBump` 가 스테이지 사전과 맞는지(리더를 지목하면 워커의 `parse_seed` 가 그 스펙을 거부해
   **액션 자체가 실행 불가**가 된다), 만료 재생성이 시드를 하나도 바꾸지 않는지
 - API: 23 파일 **315 테스트 통과**(신규 `invalidation.test.ts` 20개). `lint`·`typecheck` 통과
@@ -1205,7 +784,7 @@ editSpec v3 착수의 세 번째 단위이자 이 계획의 중심 산출물. �
 않으면 기동 시 검증되지 않는다 — 테스트는 전부 초록인데 컨테이너에서 사전을 지워도 워커가 떴다.
 **사전을 추가할 때마다 `worker.py` 임포트와 기동 로그를 같이 늘려야 한다.**
 
-**다음**: 잔여 개정(kickoff §6) — 두 초안 · trend-editing-pipeline.md §3 · api-spec.md · backlog A-7.
+**남은 것**: 두 초안의 잔여 개정(kickoff §6)은 [backlog.md](./backlog.md) A-7 이 맡는다.
 
 ---
 
@@ -1340,7 +919,7 @@ Metro/Jest 해석 확인 필요), `openapi.json` 의 `*Input` 사본 스키마.
 ## 2026-09-09 — 촬영 시각 저장 · 무비 서버 엔티티 (Dev A)
 
 생애주기 결정 세 축이 닫히면서([backlog.md](./backlog.md) A-1) 막혀 있던 구현이 풀렸다.
-착수 계획은 [plans/lifecycle-alignment.md](./plans/lifecycle-alignment.md).
+착수 계획은 [archive/lifecycle-alignment.md](./archive/lifecycle-alignment.md).
 
 ### 1. `capturedAt` 서버 저장 (SNAP-10 `구현됨`)
 
@@ -1428,6 +1007,8 @@ Metro/Jest 해석 확인 필요), `openapi.json` 의 `*Input` 사본 스키마.
 - **HDR 은 `zscale` 톤매핑 대신 `format=yuv420p` 강제 변환**으로 떨어뜨린다. zscale 이 없는
   ffmpeg 빌드가 흔해서다. HDR 원본이 다소 어두워질 수 있지만 재생되지 않는 것보다 낫다 —
   정밀 톤매핑은 A-7 렌더 파이프라인의 몫
+  → 대체: 2026-09-15 "스트레스 실검증과 HDR 색 태그 결함" — `zscale` 이 있으면 톤매핑하고,
+  어느 경로든 색 태그를 bt709 로 적는다
 - 기존 스냅은 마이그레이션에서 `skipped` 로 표시했다. 소급 변환하지 않으며, `pending` 으로
   두면 있지도 않은 밀린 작업처럼 보인다
 
@@ -1452,14 +1033,11 @@ Metro/Jest 해석 확인 필요), `openapi.json` 의 `*Input` 사본 스키마.
 도는 별도 배치 `npm run media:notify-expiring -w apps/api` (dry-run 기본, `--yes` 발송).
 값과 근거는 [decisions/expiry-notice-schedule.md](decisions/expiry-notice-schedule.md).
 
-정리 배치와 **일부러 분리했다.** 조용한 시간대 기본값이 22–08시라 새벽에 함께 보내면 알림이
-발송되지 않고 버려지고, 사용자는 예고 없이 파일을 잃는다. 유예를 두지 않기로 한 결정
-(`EXPIRY_TO_PURGE_DAYS = 0`)의 근거가 이 예고이므로, 예고가 사라지면 삭제 정책의 근거가 사라진다.
+정리 배치와 **일부러 분리했다** — 이유는 결정 문서의 "발송 시각" 절.
 
 `notification_logs` 가 geofence 전용을 벗어났다(`NotificationKind` + nullable `location_id`).
 발송보다 **먼저 행을 선점**하고 실패하면 되돌리며, `@@unique([userId, videoId, noticeDaysBefore])`
-가 중복을 DB 에서 막는다. **dry-run 은 발송으로 치지 않는다** — 그러지 않으면 운영에 서비스
-계정이 빠져도 배치가 "전원 발송 완료" 라고 말하면서 파일을 지운다.
+가 중복을 DB 에서 막는다. **dry-run 은 발송으로 치지 않는다**(이유는 같은 결정 문서 "함께 정한 것").
 
 검증: `npm test -w apps/api` 374건 통과(만료 예고 13건 신규 · SNS 자동 끝내기 3건 신규).
 
@@ -1501,14 +1079,9 @@ Metro/Jest 해석 확인 필요), `openapi.json` 의 `*Input` 사본 스키마.
 ([decisions/movie-ready-notification.md](decisions/movie-ready-notification.md)),
 **편집 워커(Python)가 큐에 넣고 Node 쪽 전용 워커가 꺼내 보낸다.**
 
-워커에 FCM 을 심지 않은 이유는 서비스 계정이 두 서비스로 갈라지고 조용한 시간대·알림 설정
-판정이 두 언어로 중복되기 때문이다. pub/sub 대신 큐인 이유는 pub/sub 이 구독자 없는 순간의
-메시지를 버리고 API 를 여러 개 띄우면 같은 알림을 여러 번 보내기 때문이다. API 프로세스 안이
-아닌 이유는 `buildApp()` 을 테스트가 부르기 때문이다 — 그 안에서 큐를 소비하면 테스트가 실제
-알림 작업을 집어삼킨다.
-
+워커가 FCM 을 직접 부르지 않는 이유, pub/sub 대신 큐인 이유, API 프로세스 밖에 두는 이유는 결정 문서에 있다.
 조용한 시간대 판정은 [`lib/quiet-hours.ts`](../apps/api/src/lib/quiet-hours.ts) 로 뽑아 장소 추천과
-나눠 쓴다. 완성 알림은 조용한 시간대면 **버린다** — 만료 예고와 달리 놓쳐도 잃는 것이 없다.
+나눠 쓴다. 완성 알림은 조용한 시간대면 **버린다**.
 
 검증: `npm test -w apps/api` 387건 통과(완성 알림 7건 신규). **Python 이 넣은 작업을 Node 가
 실제로 꺼내는지** 로컬 Redis 로 확인했다 — 라이브러리가 갈라지면 테스트가 전부 초록인 채
@@ -1614,19 +1187,11 @@ uuid 3건, 컴포즈·러너 갱신). API 394건. **실기기 미검증** — �
 
 ## 2026-09-15 — 알림 설정이 서버에 닿는다 (Dev A)
 
-**사용자가 끈 알림을 서버가 계속 보내고 있었다**(backlog B-6 닫힘). 서버 발송 세 종류가
-`notificationEnabled` 하나로만 판정되는데 `PATCH /auth/me` 가 그 필드를 받지 않았고, 앱 화면의
-스위치는 기기에만 저장됐다. 결정 문서들이 "알림을 끈 사용자에게는 보내지 않는다" 고 적어둔 것이
-실제로는 성립하지 않고 있었다.
-
+**사용자가 끈 알림을 서버가 계속 보내고 있었다**(backlog B-6 의 서버 쪽을 닫았다 — 앱 쪽은 남음) —
+서버 발송 세 종류가 `notificationEnabled` 하나로만 판정되는데 `PATCH /auth/me` 가 그 필드를 받지 않았다.
 이제 `PATCH /auth/me` 가 `notificationEnabled`(전체) · `locationNotificationEnabled` ·
-`movieNotificationEnabled` · `quietStart` · `quietEnd` 를 받는다. 종류별로 나눈 이유는
-**앱에 이미 종류별 스위치가 있었기 때문**이다 — 전체 스위치 하나로 합치는 안이 더 쌌지만 그건
-이미 만든 화면을 걷어내는 작업이고 사용자는 "위치 알림만 끄기" 를 잃는다
-([decisions/notification-preferences.md](decisions/notification-preferences.md)).
-
-**만료 예고에만 종류별 스위치를 두지 않았다.** 다른 알림은 놓쳐도 잃는 것이 없지만 이건 못 받으면
-영상이 사라지고, 유예 기간을 두지 않기로 한 근거가 이 예고였다. 전체를 끈 경우에만 가지 않는다.
+`movieNotificationEnabled` · `quietStart` · `quietEnd` 를 받고, 만료 예고는 전체 스위치만 따른다. 종류별로
+나눈 이유와 만료 예고만 예외인 이유는 [decisions/notification-preferences.md](decisions/notification-preferences.md).
 
 검증: `npm test -w apps/api` 403건 통과(신규 9건 — 저장·부분 수정·기본값·범위 검증과, 종류별
 스위치가 서로 간섭하지 않는 것, 그리고 **무비·위치를 꺼도 만료 예고는 나간다**는 것).
@@ -1706,7 +1271,9 @@ uuid 3건, 컴포즈·러너 갱신). API 394건. **실기기 미검증** — �
 **남은 것**: 돌비비전 실물은 아직 검증하지 못했다(합성 HDR10 으로만 확인). `media:e2e` 에
 `--token` 을 추가해 Supabase 없이 auth 스텁 토큰으로도 돌릴 수 있게 했다.
 
-### iOS 시뮬레이터 모바일 검증 + 첫 로그인 경합 수정 (2026-09-23)
+---
+
+## 2026-09-23 — iOS 시뮬레이터 모바일 검증 + 첫 로그인 경합 수정
 
 iPhone 17 시뮬레이터(Xcode 27, Expo Go 57.0.9)에서 앱을 실제 로컬 API 에 붙여 검증했다.
 로그인 전 화면(로그인·가입·재설정, 유효성 메시지, OS 다크 전환), 4개 탭, 설정 5화면(크레딧·알림·
@@ -1726,7 +1293,9 @@ iPhone 17 시뮬레이터(Xcode 27, Expo Go 57.0.9)에서 앱을 실제 로컬 A
 **남은 것**: 재설정 화면 카피가 "인증 코드"라 말하지만 구현은 딥링크다(모바일, 미수정). 실제 촬영·
 푸시·햅틱은 시뮬레이터에서 검증 대상이 아니며 iOS 실기기는 없다.
 
-### 앱 전반 카피 정리 — UX 검토 P0·P1 (2026-09-24)
+---
+
+## 2026-09-24 — 앱 전반 카피 정리(UX 검토 P0·P1)
 
 시뮬레이터 화면과 전체 문구 인벤토리를 [`ux-writing.md`](../apps/mobile/docs/ux/ux-writing.md) 기준으로
 검토하고, 오너 결정에 따라 동작과 어긋난 문구(P0)와 말투·용어 불일치(P1)를 고쳤다. 화면 구조는 바꾸지 않았다.
@@ -1747,7 +1316,9 @@ iPhone 17 시뮬레이터(Xcode 27, Expo Go 57.0.9)에서 앱을 실제 로컬 A
 검증: `npm run verify:mobile`(1035건), API 전체 412건 통과. iPhone 17 시뮬레이터에서 스튜디오·나·알림·
 소셜 연결 화면의 새 문구를 확인했다. 로그인 화면·촬영·추출·무비 화면은 코드로만 확인했다.
 
-### MinIO 이미지를 소스 빌드 GHCR 미러로 — quay.io 차단 복구 (2026-09-25)
+---
+
+## 2026-09-25 — MinIO 이미지를 소스 빌드 GHCR 미러로(quay.io 차단 복구)
 
 quay.io 의 `minio/minio` 가 익명 pull 에 401 을 돌려주기 시작해 CI 통합 테스트와 Deploy 스모크가
 MinIO 기동 단계에서 깨졌다(backlog E-7 이 예고한 상황). 아카이브된 업스트림 소스의 같은 릴리스
@@ -1760,7 +1331,9 @@ MinIO 기동 단계에서 깨졌다(backlog E-7 이 예고한 상황). 아카이
 buildx 빌드 성공. 개발 MinIO 를 새 이미지로 교체(기존 볼륨 데이터 유지)한 뒤 `npm test -w apps/api`
 412건 통과, 컨테이너 안 curl 헬스체크 200. GitHub Actions 에서의 실행(push · 스모크)은 PR 에서 확인한다.
 
-### Android 에뮬레이터 모바일 검증 + 촬영 화면 라이브러리 갱신 수정 (2026-09-26)
+---
+
+## 2026-09-26 — Android 에뮬레이터 모바일 검증 + 촬영 화면 라이브러리 갱신 수정
 
 Android 35 에뮬레이터(google_apis arm64)에 dev client 디버그 APK 를 올려 로컬 API·MinIO·편집/렌디션
 워커에 붙여 검증했다. 4개 탭, 설정 5화면, 다크 테마, 카메라·마이크·위치·알림 권한 요청, 촬영, 무비 편집
@@ -1778,7 +1351,36 @@ Android 에서 재현되지 않았다.
 (가입 보너스 0 · 광고 보상 꺼짐) dev DB 원장에 `promo` 500 을 넣고 무비 생성을 확인했다. 호스트에
 Python 3.11·ffmpeg 가 없어 워커는 `apps/ai-worker/Dockerfile` 이미지를 dev 인프라에 붙여 돌렸다.
 
-### 나 탭의 `준비 중` 행 정리 — 관심사·소셜 연결 (2026-09-26)
+---
+
+## 2026-09-26 (이어서) — 비어 보이던 화면 채우기 + 나 탭 크레딧 잔액 갱신 수정
+
+Android 에뮬레이터에서 화면을 돌며 콘텐츠가 비어 보이는 화면을 골라, 설명 문구 없이(프로젝트 규칙)
+사용자 자신의 스냅과 상태 표시로 채웠다.
+
+- **스튜디오**: `스냅 골라 새 무비` 블록에 스냅 탭 헤더와 같은 `N개 · m:ss` 와 최신 스냅 5개 프레임을
+  붙였다(스냅 0개면 기존 한 줄). 템플릿 카드는 슬롯 수만큼의 스트립으로 시작한다 — 채워진 슬롯은 내 스냅
+  프레임, 빈 슬롯은 점선. 스트립은 템플릿 화면과 같은 `spreadAcrossSlots` 배치(`TemplateOffer.slots`)다.
+- **무비 화면**: 완성 무비 시청 화면이 검은 9:16 으로 열리던 것을, 첫 재생 전까지 렌더 커버(없으면 첫 컷
+  프레임) 포스터로 채웠다. 편집 화면 스테이지는 처음 건드리기 전까지 첫 컷의 트림 시작 프레임을 보여 준다.
+  원인은 일시정지로 연 플레이어가 `onFirstFrameRender` 를 보내고도 그 프레임이 화면에 안 나오는 것이라
+  (에뮬레이터에서 관찰 — seek·재생 후에는 정상), 포스터를 첫 프레임 이벤트가 아니라 재생/조작 시점에 내린다.
+- **크레딧 화면**: 잔액 아래 줄이 `보유 크레딧 · 무비 N편을 만들 수 있어요`(100 미만·음수·로딩은 기존 문구).
+- **버그**: 무비 생성이 크레딧을 예약해도 나 탭 크레딧 줄이 이전 잔액(500)을 계속 보였다. 생성 시작 경로가
+  크레딧 쿼리를 무효화하지 않았기 때문이다. 진행 중 실행 목록이 바뀔 때마다 잔액을 다시 읽는
+  `useRunCreditRefresh` 를 `MovieGenerationGate` 에 붙였다(예약·실패/취소 환급 모두 서버에서 일어난다).
+- 같은 스냅을 여러 곳에 동시에 그리게 되어, 썸네일 훅이 같은 프레임의 추출을 공유하도록 했고
+  `VideoFrame` 에 시간 지정(`atSec`)을 더했다.
+
+검증: `npm run verify:mobile`(1054건) 통과 — 실행 시작·실패·취소·교체 시 잔액 무효화와 진행률 보고 시
+미무효화, 잔액 문구 경계값, 템플릿 슬롯 배치, 동시 추출 1회·시간별 프레임 분리 단언 추가. 에뮬레이터에서
+스튜디오·템플릿 스트립, 시청 화면 포스터 → 재생 → 끝, 편집 화면 포스터 → 스크럽, 크레딧 문구를 확인했고,
+새 초안 무비를 만든 뒤 크레딧 화면을 열지 않고 나 탭이 400 → 300 으로 바뀌는 것을 확인했다. iOS 와 실기기는
+확인하지 않았다.
+
+---
+
+## 2026-09-26 (이어서) — 나 탭의 `준비 중` 행 정리(관심사·소셜 연결)
 
 **관심사는 고른 값이 어디에도 닿지 않았다.** 앱은 기기에만 저장하고 `PATCH /auth/me` 를 부르지 않았고,
 서버의 위치 알림 판단(`location.service.ts`)은 알림 스위치·조용한 시간·쿨다운만 본다. 촬영
@@ -1794,7 +1396,9 @@ Python 3.11·ffmpeg 가 없어 워커는 `apps/ai-worker/Dockerfile` 이미지�
 검증: `npm run verify:mobile` 통과 — 두 행이 버튼이 아니고 읽는 값이 맞다는 단언 추가. Android 에뮬레이터에서
 두 행을 눌러도 이동하지 않는 것을 확인했다. iOS 와 실기기는 확인하지 않았다.
 
-### 영상 삭제가 자기가 소유한 객체만 지운다 — backlog E-8 (2026-09-27)
+---
+
+## 2026-09-27 — 영상 삭제가 자기가 소유한 객체만 지운다(backlog E-8)
 
 스냅 reconcile 계획(0단계)의 선행 결함 둘을 재현하고 고쳤다. 영상을 지우는 모든 경로(사용자 삭제 ·
 기간 만료 · 남은 객체 회수)가 [`video-assets.ts`](../apps/api/src/services/video-assets.ts) 의 한 규칙으로
@@ -1815,9 +1419,11 @@ Python 3.11·ffmpeg 가 없어 워커는 `apps/ai-worker/Dockerfile` 이미지�
 `kind='source' AND status='ready' AND deleted_at IS NULL` 행마다 `s3_key` 를 HEAD 해 없는 것을 찾는다
 (렌디션은 남아 있을 수 있다). 개발 DB 의 업로드 완료 스냅 5건은 모두 원본이 있다.
 
-### 스냅이 기기와 재설치를 넘어 보인다 — reconcile 1~3단계 (2026-09-27)
+---
 
-[`plans/snap-reconcile.md`](./plans/snap-reconcile.md) 의 1~3단계와
+## 2026-09-27 (이어서) — 스냅이 기기와 재설치를 넘어 보인다(reconcile 1~3단계)
+
+[`archive/snap-reconcile.md`](./archive/snap-reconcile.md) 의 1~3단계와
 [`decisions/snap-sync-across-devices.md`](./decisions/snap-sync-across-devices.md) 의 규칙(SNAP-15·16,
 SNAP-12 범위 조정)을 구현했다.
 
@@ -1845,7 +1451,9 @@ SNAP-12 범위 조정)을 구현했다.
 완성본 모두, 자체 녹화인 Baseline 은 정상) 받은 사본의 화면은 확인하지 못했다. 재설치(로그인을 여기서 할 수
 없다)·두 번째 실기기·iOS 는 backlog A-4 의 실기기 검증 항목에 남는다.
 
-### 스냅 reconcile 실기기 검증 — 휴대폰 · 에뮬레이터 · iOS 시뮬레이터 (2026-09-27)
+---
+
+## 2026-09-27 (이어서) — 스냅 reconcile 실기기 검증(휴대폰 · 에뮬레이터 · iOS 시뮬레이터)
 
 오너의 Galaxy S22 Ultra(무선 adb, 9월 25일 dev 빌드에 새 JS 번들), Android 35 에뮬레이터, iPhone 17 시뮬레이터
 (Expo Go)를 **같은 계정**으로 로컬 API·MinIO·렌디션 워커에 붙여 계획 §5.5 의 시나리오를 돌렸다. 버림용 스냅은

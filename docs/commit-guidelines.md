@@ -22,7 +22,7 @@ scope가 필요하지 않으면 생략한다.
 feat(api): add Supabase login to Swagger
 fix(ai-worker): handle missing video duration
 feat(db): add location seed
-chore(api): add Stripe dependency
+chore(api): add firebase-admin dependency
 docs: document local development setup
 ```
 

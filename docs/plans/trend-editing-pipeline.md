@@ -1,11 +1,13 @@
 # 트렌드 숏폼 편집 파이프라인 구현 계획 — 타임라인 스펙 v3
 
-작성일 2026-08-19 · 상태: **제안 (착수 전)** — 현행 사실이 아니다.
-현행 파이프라인의 사실은 [archive/progress-phase-1-9.md](../archive/progress-phase-1-9.md) Phase 5, 현행 계약은
-[api-spec.md](../api-spec.md)에 있다. 미결 항목은 [backlog.md](../backlog.md) A-7 에만 둔다.
-
-관련: [decisions/storage-and-subscription-policy.md](../decisions/storage-and-subscription-policy.md) §3.2(레시피 재생성)
-· [decisions/movie-model.md](../decisions/movie-model.md) · [decisions/credit-payment-model.md](../decisions/credit-payment-model.md)
+**작성일**: 2026-08-19
+**상태**: 제안 — 일부 착수. v3 공유 어휘 사전 3종·HDR 톤매핑·산출물 계약 테스트(CI ffmpeg)는 구현됐고
+나머지는 착수 전이다. 현행 사실이 아니다.
+**원천**: 편집 파이프라인의 층별 설계·오픈소스 선정·라이선스 요건 제안. 미결 항목은 [backlog.md](../backlog.md) A-7 에만 둔다.
+**관련 문서**: 현행 파이프라인의 사실은 코드(`apps/ai-worker/src/pipeline/`)와 [specs/movie.md](../specs/movie.md)
+MOV-7~MOV-9·MOV-14(같은 구성 → 같은 결과)·MOV-19(다시 만들기), 현행 API 계약은
+[`packages/shared-types/src/contract/`](../../packages/shared-types/src/contract/) ·
+[decisions/movie-model.md](../decisions/movie-model.md) · [decisions/credit-payment-model.md](../decisions/credit-payment-model.md)
 
 ---
 
@@ -34,12 +36,12 @@
 
 ### 2.1 레시피 재생성 결정론 ★ 지금 깨져 있다
 
-[storage-and-subscription-policy.md](../decisions/storage-and-subscription-policy.md) §3.2 는
-만료된 무비를 영구 보관된 `editSpec`+`renderSpec` 으로 **크레딧 없이 무료 재생성**한다고 확정했다.
-그런데 현행 BGM 선택은 디렉터리 스캔 + `random.choice` 다
-([`pipeline/music.py`](../../apps/ai-worker/src/pipeline/music.py)). 즉 **지금도 재생성하면
-BGM 이 바뀐다.** 비트 싱크를 넣으면 컷 지점까지 바뀐다 — 사용자는 "복원"을 눌렀는데 다른
-영상을 받는다.
+[specs/movie.md](../specs/movie.md) MOV-14 는 생성에 쓰인 구성(`editSpec`+`renderSpec`)을 다시
+실행하면 같은 결과가 나오기를 요구한다 — 끝낸 무비를 다시 만드는 것(MOV-19, 크레딧을 내는 새
+생성)도 그 구성에서 출발한다. 그런데 현행 BGM 선택은 디렉터리 스캔 + `random.choice` 다
+([`pipeline/music.py`](../../apps/ai-worker/src/pipeline/music.py)). 즉 **지금도 같은 구성으로
+다시 만들면 BGM 이 바뀐다**([backlog.md](../backlog.md) E-5). 비트 싱크를 넣으면 컷 지점까지
+바뀐다 — 사용자는 자기가 바꾸지 않은 것이 왜 바뀌었는지 알 수 없다.
 
 **v3 는 비결정적 선택을 전부 스펙에 핀으로 박는다**: 선택된 트랙 ID, 비트 그리드 버전,
 난수 시드. 이것이 v3 의 존재 이유 중 하나이며, 표현력 확장보다 우선순위가 높다.
@@ -62,15 +64,14 @@ v3 는 스냅 여부(`snapToBeat`)와 허용 오차를 클립 단위로 명시�
 셈이라, 파이프라인이 무거워지면 **개별 처리 시간보다 큐 대기가 먼저 문제가 된다.** 다만 적정
 동시성은 단계별 CPU·메모리 실측 뒤에 정한다 — 지금 숫자를 찍으면 근거가 없다.
 
-### 2.4 v3 를 어디에 붙일지가 아직 회의 안건이다 ⚠️
+### 2.4 v3 는 Movie export 에 붙는다
 
-`Movie` 엔티티([backlog.md](../backlog.md) A-1)가 없고, **기존 `POST /edit-jobs` 의 수명**이
-A-1의 미결 안건이다. Movie export 내부에서 재사용한 뒤 공개 API 폐기를 판단하는 안이 채택되면
-v3 의 부착 지점은
-`POST /edit-jobs` 가 아니라 Movie export 가 된다.
+`Movie` 엔티티는 있고, 기존 `POST /edit-jobs` 는 **한 버전 공존 후 폐기**로 결정됐다
+([decisions/movie-export-policy.md](../decisions/movie-export-policy.md) ⑤, [backlog.md](../backlog.md) A-1).
+따라서 v3 의 부착 지점은 `POST /edit-jobs` 가 아니라 Movie export(`POST /movies/{id}/export`)다 —
+폐기 전에 `POST /edit-jobs` 에도 붙이면 같은 스펙을 두 곳에 붙이게 된다.
 
-**타임라인 모델 자체(§3)는 부착 지점과 무관하므로 설계는 지금 진행할 수 있다.** 다만 요청
-스키마와 라우트는 §1-5 가 닫힌 뒤에 확정한다 — 먼저 굳히면 같은 스펙을 두 번 만든다.
+**타임라인 모델 자체(§3)는 부착 지점과 무관하므로 설계는 지금 진행할 수 있다.**
 
 ### 2.5 워터마크 결정이 레이어 설계의 입력이다
 
@@ -83,54 +84,27 @@ v3 의 부착 지점은
 
 ## 3. editSpec v3 — 타임라인 모델
 
-```jsonc
-{
-  "version": 3,
-  "stylePreset": "감성",
-  "stickerPackVersion": 3,            // 팩 = 스타일 락 (§8.4). 재현의 핀이기도 하다
-  "seed": 1837462,                    // 모든 무작위 선택의 원천 (§2.1)
-  "audio": {
-    "trackId": "uuid",                // bgm_tracks 참조 — 핀
-    "beatGridVersion": 1,             // 그리드 재계산 시 과거 레시피 보호
-    "startOffsetMs": 0,
-    "duckingDb": -9
-  },
-  "timeline": {
-    "clips": [
-      { "videoId": "…", "startMs": 3500, "endMs": 8000,
-        "snapToBeat": false, "beatCount": null, "speed": 1.0 }
-    ],
-    "transitions": [
-      { "afterClip": 0, "type": "slideleft", "durationMs": 300 }
-    ],
-    "layers": [
-      { "type": "caption", "style": "pop", "trackIndex": 0 },
-      { "type": "sticker", "assetId": "doodle-arrow-01", "tMs": 4200, "durationMs": 1800,
-        "anchor":   { "kind": "face", "ref": "forehead" },
-        "fallback": { "kind": "freezone" },   // 둘 다 실패하면 드롭한다 (§5.2)
-        "scaleRef": "faceWidth", "motion": "pop-in" }
-    ]
-  }
-}
-```
+스펙의 확정 결정(시드·핀·레이어 구성·필드 이름)은 [decisions/edit-spec-v3.md](../decisions/edit-spec-v3.md)가
+원천이고, 스키마 본문은 아직 저장소에 없다([backlog.md](../backlog.md) A-7). 이 절은 타임라인 모델이
+지켜야 할 원칙만 둔다 — 비트 그리드 · 레이어 · 키프레임을 표현하고(§1), 비결정적 선택(트랙 · 비트 그리드
+버전 · 난수 시드)을 전부 스펙에 핀으로 박는다(§2.1).
 
 원칙 넷:
 
 - **레이어는 클립이 아니라 타임라인에 붙는다.** 스티커가 컷을 가로질러 살아남아야 한다.
 - **시각의 권위는 `(cutId, offsetInCutMs)` + `durationMs` 다.** 절대 ms 와 `atBeat` 는 파생값이다.
-  *(2026-08-20 수정. 원안은 "키프레임은 절대 시각(ms)"이었다 — 클립 **인덱스** 기준이면 컷 하나만
-  바뀌어도 전부 어긋난다는 문제의식은 맞지만, 절대 ms 도 컷이 삭제되면 같이 어긋난다. 안정된
-  `cutId` 를 기준으로 두면 두 문제가 함께 닫히고, 지속시간을 따로 두므로 스티커가 컷 경계를
-  넘어 살아남는 위 원칙도 그대로 지켜진다. 앵커 컷이 삭제될 때만 드롭된다.
-  근거: [edit-spec-v3-kickoff.md](./edit-spec-v3-kickoff.md) §1.1 B-7)*
+  클립 인덱스나 절대 ms 를 기준으로 두면 컷이 바뀌거나 지워질 때 전부 어긋난다. 안정된 `cutId` 를
+  기준으로 두고 지속시간을 따로 두므로 스티커가 컷 경계를 넘어 살아남고, 앵커 컷이 삭제될 때만
+  드롭된다([decisions/edit-spec-v3.md](../decisions/edit-spec-v3.md) §1 B-7).
 - **스티커 좌표는 픽셀이 아니라 앵커 의미로 저장한다** — `{ kind: "face", ref: "forehead" }` +
   폴백 + `scaleRef`. 해상도 독립이고, 재현 가능하며, **검출 실패 시의 행동이 스펙에 드러난다**(§5.2).
   자유 배치(`freezone`)에서만 정규화 좌표(0~1)를 쓴다.
 - **워커는 스펙을 신뢰하되 검증한다.** 현행 `parse_render_spec` 이 이미 그 태도다 —
   범위를 벗어난 값은 폴백이 아니라 거부한다.
 
-`beatCount` 는 `movie_template_slots` 와 자연스럽게 맞물린다 — 슬롯이 "몇 비트짜리 자리인가"를
-가지면 추천 결과를 그대로 타임라인으로 펼칠 수 있다. 다만 이는 A-6 앱 연동 이후의 후속이다.
+컷 길이를 비트 단위로 적는 `beatLength`([decisions/edit-spec-v3.md](../decisions/edit-spec-v3.md) §1 B-6)는
+`movie_template_slots` 와 자연스럽게 맞물린다 — 슬롯이 "몇 비트짜리 자리인가"를 가지면 추천 결과를
+그대로 타임라인으로 펼칠 수 있다. 다만 이는 A-6 앱 연동 이후의 후속이다.
 
 ---
 
@@ -151,9 +125,8 @@ librosa(numpy/scipy/numba, 수백 MB)가 들어오지 않고, 워커 콜드스�
 **"어디에"는 MediaPipe, "무엇을"은 LLM** 으로 역할을 쪼갠다. 매 프레임 LLM 을 부르면 비용과
 지연이 감당되지 않는다.
 
-MediaPipe 도입 시 확인할 것: 워커 이미지는 이미 faster-whisper 로 무겁다(compose 검증에서
-빌드를 생략한 전례가 있다 — [archive/progress-phase-1-9.md](../archive/progress-phase-1-9.md) Phase 9). ARM 휠 가용성과 증가분을
-측정한 뒤 넣는다.
+MediaPipe 도입 시 확인할 것: 워커 이미지는 이미 faster-whisper 로 무겁다. ARM 휠 가용성과 이미지
+증가분을 측정한 뒤 넣는다.
 
 ---
 
@@ -168,9 +141,10 @@ MediaPipe 도입 시 확인할 것: 워커 이미지는 이미 faster-whisper �
 **새 라이브러리는 0이고 문자열 생성 로직만 필요하다** — 필터그래프를 직접 조립하는 현행 스타일과
 결이 같다.
 
-**다만 소프트 → 번인은 사용자에게 보이는 변경이다.** [api-spec.md](../api-spec.md) 는
-"영상에 굽지 않으므로 플레이어에서 켜야 보인다"고 FE 에 고지해 두었다. 자막을 끌 수 없게 되고,
-`-c:v copy` 가 깨져 재인코딩이 한 번 는다. **착수 전에 결정 문서가 필요하다**(backlog A-7).
+**다만 소프트 → 번인은 사용자에게 보이는 변경이다.** 지금은 "영상에 굽지 않으므로 플레이어에서
+켜야 보인다"고 안내한다([specs/movie.md](../specs/movie.md) MOV-9, 계약의 `subtitles` 필드 설명).
+자막을 끌 수 없게 되고, `-c:v copy` 가 깨져 재인코딩이 한 번 는다. 선택지와 권장은
+[decisions/subtitle-rendering.md](../decisions/subtitle-rendering.md)(미결)이며 착수는 그 결정 뒤다.
 
 폰트가 준비물이다 — Pretendard 또는 Noto Sans KR(둘 다 OFL)을 이미지에 설치하고 fontconfig
 캐시를 만든다. 한글 글리프가 없으면 전부 두부(□)로 렌더링된다.
@@ -226,15 +200,14 @@ AGPL-3.0 이어서 배제다(§9). 자체 호스팅이 필요해지면 Florence-
 
 ## 6. 소스·출력 층
 
-### 6.1 실기기 영상이 들어올 때 ⚠️ 현재 비어 있다
+### 6.1 실기기 영상이 들어올 때 ⚠️ 일부가 비어 있다
 
-**트렌드 표현보다 앞선 문제다.** 아래 셋은 지금 파이프라인에 처리가 아예 없다.
+**트렌드 표현보다 앞선 문제다.** 아래 셋 중 HDR 톤매핑은 들어갔고, 나머지 둘은 처리나 검증이 없다.
 
-- **HDR 톤매핑** — `tonemap`·`zscale`·`bt2020` 이 코드 어디에도 없다. 아이폰이 기본으로
-  돌비비전 HDR 을 찍는데, BT.2020 PQ 소스를 `format=yuv420p` 로 그냥 떨구면 **허옇게 뜨거나
-  어둡게 죽는다.** [backlog.md](../backlog.md) F 에 "HDR 스트레스 케이스"가 실검증 항목으로 있으나
-  **검증 이전에 필터가 없다.** `zscale=t=linear…:tonemap=hable` 계열을 정규화 단계에 넣되,
-  SDR 소스에는 태우지 않도록 입력 색 특성으로 분기한다
+- **HDR 톤매핑** — 정규화 단계에 있다([`pipeline/hdr.py`](../../apps/ai-worker/src/pipeline/hdr.py)).
+  `zscale`+`tonemap` 이 있는 빌드(워커 이미지)는 톤매핑하고, 없는 빌드는 8bit 로 떨군다. 어느
+  경로든 출력 색 태그를 bt709 로 고치고, SDR 소스는 건드리지 않는다. 합성 HDR10 으로만
+  검증했고 돌비비전 실물은 미검증이다([backlog.md](../backlog.md) F)
 - **회전 메타데이터** — `autorotate`·`transpose` 언급이 없다. FFmpeg 가 입력 단계에서 display
   matrix 를 자동 적용하므로 정상 동작할 가능성이 크지만, `filter_complex` 를 직접 조립하는
   구조라 **검증된 적이 없다.** 세로로 찍은 영상이 눕는 것은 가장 눈에 띄는 버그다(§11)
@@ -285,8 +258,8 @@ AGPL-3.0 이어서 배제다(§9). 자체 호스팅이 필요해지면 Florence-
 배치가 완벽해도 **아트가 촌스러우면 끝이고, 아트가 좋으면 대충 여백에 붙어도 트렌디하다.**
 이 절은 코드 문제가 아니라 **에셋 조달과 운영 루프** 문제다.
 
-**유니코드 이모지는 쓰지 않는다.** 플랫폼 기본 스티커와 구분되지 않아 제품의 이유가 사라진다.
-직접 디자인한 세트가 차별점이다.
+조달 경로(디자이너 커미션 · 스톡 · 유니코드 이모지 · AI 생성)의 선택지와 권장은
+[decisions/sticker-asset-sourcing.md](../decisions/sticker-asset-sourcing.md)(미결)가 원천이다.
 
 ### 8.1 어휘 — 수명 순
 
@@ -306,10 +279,12 @@ AGPL-3.0 이어서 배제다(§9). 자체 호스팅이 필요해지면 Florence-
 ### 8.3 버전드 원격 매니페스트 — 이 절의 실질적 산출물
 
 유행은 도는 것이 확정이므로 **워커 이미지에 굽지 않는다.** S3+CDN 의 버전드 매니페스트로 두고
-레시피에 `stickerPackVersion` 을 남기면 3개월 전 초안도 재현된다 — §2.1 과 같은 이유다.
+레시피에 팩을 핀으로 남기면(재렌더는 스펙에 핀된 `packId`·`assetId` 만 해석한다) 3개월 전 초안도
+재현된다 — §2.1 과 같은 이유다.
 
 매니페스트 필드: 에셋 URL · 앵커 적합성(`face`/`object`/`freezone`) · 무드 태그 · 스케일 범위 ·
-기본 모션. **이 스키마를 뒤로 미룰수록 마이그레이션 비용이 커진다.**
+기본 모션. 필드와 상태에 대한 확정 결정은 [decisions/edit-spec-v3.md](../decisions/edit-spec-v3.md) §2.
+**이 스키마를 뒤로 미룰수록 마이그레이션 비용이 커진다.**
 
 ### 8.4 팩 = 스타일 락
 
@@ -320,10 +295,11 @@ AGPL-3.0 이어서 배제다(§9). 자체 호스팅이 필요해지면 Florence-
 
 ### 8.5 조달과 라이선스 ⚠️
 
-디자이너 커미션 **40~60종 / 3~4스타일**을 권장한다.
+조달 경로·수량 권장과 스톡 라이선스의 함정("최종 사용자가 파생물을 만드는 앱에 포함" 금지)은
+[decisions/sticker-asset-sourcing.md](../decisions/sticker-asset-sourcing.md) 결정 1 이, 검토 기준은
+BGM 과 같이 [decisions/bgm-sourcing.md](../decisions/bgm-sourcing.md) 의 공통 검토 항목이 원천이다.
+이 계획은 폰트만 덧붙인다.
 
-- **스톡 라이선스 다수가 "최종 사용자가 파생물을 만드는 앱에 포함"을 금지한다** — 이 제품 형태에
-  정확히 걸린다. BGM(§7)과 같은 함정이므로 같은 기준으로 검토한다
 - 한글 손글씨 폰트도 개인 사용 한정이 많다. **OFL 또는 명시적 상업·임베딩 허용만** 쓴다.
   번인 자막(§5.1)은 폰트를 영상에 렌더링하므로 **임베딩 허용 여부가 별도 조건**이다
 
@@ -369,21 +345,24 @@ CRF 품질에서 손해를 본다.
 ## 10. 구현 순서
 
 > 이 절은 **의존 순서 제안**이다 — 미결 항목의 상태·완료 조건의 원천은 [backlog.md](../backlog.md)
-> A-7이며, 여기 목록으로 상태를 관리하지 않는다. 0단계 1번의 기반 작업(어휘 사전·시드·무효화
-> 규칙 = [edit-spec-v3-kickoff.md](./edit-spec-v3-kickoff.md) 커밋 1~3)은 2026-08-20 완료됐다.
+> A-7이며, 여기 목록으로 상태를 관리하지 않는다. 0단계 1번의 기반(어휘 사전·시드·무효화 규칙)은
+> 구현돼 있고, 확정 결정은 [decisions/edit-spec-v3.md](../decisions/edit-spec-v3.md)에 있다.
 
 ### 0단계 — 선행 (병행 불가)
 
 1. **editSpec v3 설계 확정** — `layers`/`keyframes`/`audio` 핀. 여기에 §2.1 결정론이 걸려 있다
 2. **`bgm_tracks` 스키마 + 음원 15~20트랙 확보** — 이게 없으면 아래가 전부 미검증 코드가 된다
-3. **번인 자막 전환 결정 문서** — 소프트 자막 폐기는 FE 에 고지된 계약 변경이다(§5.1)
-4. **스티커 팩 매니페스트 스키마**(§8.3) + 커미션 여부·스타일 방향 결정 —
+   (조달: [decisions/bgm-sourcing.md](../decisions/bgm-sourcing.md), 미결)
+3. **번인 자막 전환 결정** — 소프트 자막 폐기는 사용자에게 안내된 동작의 변경이다(§5.1,
+   [decisions/subtitle-rendering.md](../decisions/subtitle-rendering.md), 미결)
+4. **스티커 팩 매니페스트 스키마**(§8.3) + 조달 경로·스타일 방향 결정
+   ([decisions/sticker-asset-sourcing.md](../decisions/sticker-asset-sourcing.md), 미결) —
    뒤로 갈수록 마이그레이션 비용이 커진다
 
 ### 1단계 — 체감 효과 최대, 의존성 최소
 
-5. **HDR 톤매핑 · 회전 검증 · 클립별 레벨 정규화 · 컷 마이크로 페이드**(§6.1·§6.2) —
-   실기기 영상을 받는 순간 드러난다. **트렌드 표현보다 앞이다**
+5. **회전 검증 · 클립별 레벨 정규화 · 컷 마이크로 페이드**(§6.1·§6.2) —
+   실기기 영상을 받는 순간 드러난다. **트렌드 표현보다 앞이다** (HDR 톤매핑은 들어가 있다)
 6. `+faststart` · CRF · `loudnorm` · `sidechaincompress` — 반나절
 7. **ASS 애니메이션 자막 + 한글 폰트** — 새 라이브러리 0, 체감 효과 1위
 8. **VAD 기반 무음 자동 컷** — 이미 있는 whisper 로 가능. "AI 자동 편집"이 여기서 처음 사실이 된다
@@ -416,9 +395,10 @@ CRF 품질에서 손해를 본다.
   자막·스티커 위치 회귀를 잡는 유일한 방법이다. **첫 케이스는 회전이다**(§6.1) — 세로 소스가
   눕지 않는지. HDR 소스의 톤매핑 결과도 같은 방식으로 고정한다
 
-⚠️ 둘 다 **CI 에 ffmpeg 설치가 필요하다.** 현행 파이썬 테스트는 "ffmpeg·SDK 없이 돈다"가
-설계 원칙이라([progress.md](../progress.md)) CI 구조가 바뀐다. 기존 문자열 테스트는 그대로 두고
-새 계층을 분리해 붙인다.
+진짜 ffmpeg 을 돌리는 계층은 이미 있다 — [`tests/test_ffmpeg_contract.py`](../../apps/ai-worker/tests/test_ffmpeg_contract.py)
+가 편집 산출물(세로 규격·H.264/yuv420p·HDR 색 태그)과 배포 렌디션(faststart·실측 길이·회전)을
+검사하고, CI 는 `REQUIRE_FFMPEG=1` 로 건너뛰기를 막는다. 위 두 종류는 이 계층에 더한다.
+ffmpeg 이 없는 로컬에서는 이 계층만 건너뛰고 기존 문자열 테스트는 그대로 돈다.
 
 **자동 판정이 어려운 둘은 지표로 본다.**
 
@@ -431,8 +411,9 @@ CRF 품질에서 손해를 본다.
 
 ## 12. 이 계획에서 다루지 않는 것
 
-- `Movie` 엔티티 도입 — [backlog.md](../backlog.md) A-1. 부착 지점은 §2.4 의 안건이 정한다
-- 음원·스티커 에셋 조달 계약 자체 — 라이선스 **요건**만 정의한다(§7·§8.5·§9)
+- 음원·스티커 에셋 조달 자체 — 선택지와 권장은 [bgm-sourcing.md](../decisions/bgm-sourcing.md)·
+  [sticker-asset-sourcing.md](../decisions/sticker-asset-sourcing.md)(미결)이고, 이 계획은 라이선스
+  **요건**과 스키마만 정의한다(§7·§8.5·§9)
 - 스티커 팩의 아트 디렉션 — 유형과 운영 루프까지만 정의한다(§8.1·§8.6)
 - 앱 편집 UI — 서버가 v3 를 받을 수 있게 되는 것까지가 범위다
 - GPU 렌더 인프라 — 배포 플랫폼 확정(backlog B-1) 이후 판단한다

@@ -2,7 +2,7 @@
  * 앱이 스냅을 기기 사이에 맞추는 데 쓰는 영상 API — 목록·등록·상태 조회.
  *
  * 앱의 reconcile 은 목록을 끝 페이지까지 읽어 "서버에 무엇이 있는가"를 알고, 목록에서 사라진
- * 스냅은 `POST /videos/lookup` 으로 이유를 묻는다(docs/plans/snap-reconcile.md §4.1). 그래서
+ * 스냅은 `POST /videos/lookup` 으로 이유를 묻는다(docs/decisions/snap-sync-across-devices.md §동기화 설계). 그래서
  * 여기서 고정하는 것은 셋이다:
  *   ① 목록은 페이지를 넘겨도 빠지거나 겹치는 항목이 없다 — 빠지면 앱이 그 스냅을 "없다"고 본다
  *   ② 목록 항목만으로 다른 기기가 스냅을 그릴 수 있다 — 치수·만료 시각·앱이 붙인 이름

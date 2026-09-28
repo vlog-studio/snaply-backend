@@ -10,7 +10,7 @@
 이 모듈은 `config.py` 가 아니다. `config.py` 는 analysis_worker 도 임포트하므로 거기에 사전
 로드를 넣으면 편집 파이프라인만 쓰는 사전 하나 때문에 분석 워커까지 못 뜬다.
 
-배치·로딩 규약: docs/plans/edit-spec-v3-kickoff.md §3.4
+배치·로딩 규약: docs/decisions/edit-spec-v3.md §7
 """
 
 import json

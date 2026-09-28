@@ -2,7 +2,8 @@
 
 개발자 2명이 통합 모노레포를 기능 도메인 단위로 나누어 구현·검증하기 위한 가이드다.
 **소유권과 협업 규칙의 원천 문서다.** 진행 기록은 [progress.md](./progress.md), 미결 작업은
-[backlog.md](./backlog.md), API 명세는 [api-spec.md](./api-spec.md)를 본다.
+[backlog.md](./backlog.md), API 계약은 [packages/shared-types/src/contract/](../packages/shared-types/src/contract/)
+(계약만으로 알 수 없는 동작은 [api-spec.md](./api-spec.md))를 본다.
 
 > 분담 축은 **기능 도메인(수직)** 이다. 모바일·API·워커를 별도 팀처럼 나누지 않고, 한 기능의
 > 사용자 흐름과 서버 처리까지 같은 트랙이 책임진다. 실제 담당자가 바뀌어도 아래 경계와 공유
@@ -56,11 +57,11 @@
 
 **채택: 로컬 PostgreSQL로 개발 환경을 격리한다.**
 
-- `npm run infra:up`이 띄우는 `snaply-postgres-dev`를 개발과 통합 테스트에 사용한다.
-- 호스트 5432가 점유되면 `apps/api/.env`의 `POSTGRES_HOST_PORT`, `DATABASE_URL`, `DIRECT_URL`을
-  함께 바꾼다. 5433은 전체 스택용 compose가 사용하므로 피한다.
+- `npm run infra:up`이 띄우는 `snaply-postgres-dev`를 개발과 통합 테스트에 사용한다
+  (포트 충돌 대처는 [ONBOARDING.md](../ONBOARDING.md) §5).
 - 스키마 변경은 마이그레이션과 함께 커밋하고, pull 뒤 `npm run db:generate`를 실행한다.
-- 운영 DB 반영은 머지 순서대로 한 명이 `prisma migrate deploy`를 실행한다.
+- 운영 DB 반영은 손으로 하지 않는다 — main 머지 때 배포 잡이 컨테이너 교체 전에 마이그레이션을
+  적용한다([deployment.md](./deployment.md) §2).
 - API 통합 테스트는 `snaply_test`를 자동 생성한다. 루트 또는 API workspace 스크립트 외의
   `npx vitest` 직접 실행은 금지한다.
 

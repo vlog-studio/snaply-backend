@@ -19,7 +19,7 @@ Toss publishes eight writing principles ([source](https://toss.tech/article/8-wr
 
 Toss's published guidance for apps inside Toss adds: 해요체 throughout, active voice over passive, positive phrasing (`할 수 있어요` over `안 돼요`), casual politeness without heavy honorifics (`~시`, `~께`), and verb forms instead of stacked nouns ([source](https://developers-apps-in-toss.toss.im/design/consumer-ux-guide)).
 
-Project addition (`Derived Principle`): **no explanatory UI copy.** Screens do not narrate themselves. Delete the sentence and strengthen the label, the state read-out, or the structure instead.
+Project addition: **no explanatory UI copy** — defined, with its exceptions, by [`Show State, Not Instructions`](principles.md#13--show-state-not-instructions). In copy terms: delete the sentence and strengthen the label, the state read-out, or the structure instead.
 
 ---
 
@@ -57,7 +57,7 @@ Project addition (`Derived Principle`): **no explanatory UI copy.** Screens do n
 
 | Bad | Better | What changed |
 | --- | --- | --- |
-| 어떤 알림 전략을 사용하시겠어요? | 이 장소 근처에 오면 알려드릴까요? | System concept → the user's own situation |
+| 어떤 알림 전략을 사용하시겠어요? | 주변 장소 알림을 받을까요? | System concept → the user's own situation |
 | 생성 모드를 선택하세요 | 무비를 몇 초로 만들까요? | Pipeline choice → a length the user wants |
 | 동기화 방식을 고르세요 | 와이파이에서만 올릴까요? | Internal mechanism → a condition the user knows |
 | 정렬 기준을 설정하세요 | 최신순으로 볼까요? | Configuration → an outcome |
@@ -71,13 +71,13 @@ Project addition (`Derived Principle`): **no explanatory UI copy.** Screens do n
 
 ## Explanations
 
-**Rule.** Lead with what the user gets, not how the feature works. Then stop.
+**Rule.** Where a sentence is allowed at all — one that names an outcome, or one of the exceptions in [`Show State, Not Instructions`](principles.md#13--show-state-not-instructions) — lead with what the user gets, not how the feature works. Then stop.
 
 | Bad | Better |
 | --- | --- |
 | AI 모델이 스냅을 분석해 자동으로 편집 구간을 결정합니다 | 찍은 스냅으로 짧은 영상을 만들어요 |
 | 백그라운드 업로드 큐가 처리 중입니다 | 스냅 2개 올리는 중 |
-| Geofence가 등록되었습니다 | 이 장소 근처에 오면 알려드려요 |
+| Geofence가 등록되었습니다 | 찍기 좋은 장소에 도착하면 알려드려요 |
 
 **Length.** One line. If two lines are needed, the structure is probably wrong — check whether a label, a count, or an ordering change removes the need for the sentence.
 
@@ -126,10 +126,10 @@ One short line of state, plus the action that fills it. Nothing else.
 
 | Surface | Copy |
 | --- | --- |
-| No snaps yet | `아직 스냅이 없어요` + `첫 스냅 찍기` |
-| No filter results | `조건에 맞는 스냅이 없어요` + `필터 지우기` |
-| No movies | `아직 무비가 없어요` + `이 스냅으로 새 무비` |
-| Load failed | `불러오지 못했어요` + `다시 시도` |
+| No snaps yet (Snap tab) | The header read-out `0개 · 0:00`, with the `가져오기` cell standing alone as the action ([Snap library](../features/snaps.md#browsing-and-playback)) |
+| No movies (Movie tab) | `아직 만든 무비가 없어요` + `스냅 골라 새 무비` ([Studio and movies](../features/studio.md#the-board)) |
+| Load failed | `스냅을 불러오지 못했어요` + `다시 시도` |
+| No filter results | `조건에 맞는 스냅이 없어요` + `필터 지우기` — the shape to use; no surface filters today |
 
 Distinguish the three kinds — nothing yet, nothing matched, failed to load. One shared "empty" string for all three is a bug.
 
@@ -152,9 +152,9 @@ Fixed product vocabulary. Use exactly these words; never introduce a synonym.
 | 삭제 | Removing something: `…삭제할까요?` / `삭제` / `삭제하는 중…` | 지우기, 지울까요 |
 | 정리 | Removing a finished movie's server copy once the user saved it (`무비 정리`, `정리하기`) | 끝내기, 서버에서 삭제 |
 
-`트레이` left the vocabulary with the tray's removal (2026-08-12): picks now go straight into a movie (`이 스냅으로 새 무비`, `스냅 더 넣기`), and no surface may name a destination other than a movie. Do not reintroduce it.
+`트레이` is not a product term: picks go straight into a movie (`이 스냅으로 새 무비`, `스냅 더 넣기`), and no surface may name a destination other than a movie ([why there is no basket](../features/studio.md#why-there-is-no-basket-between-a-pick-and-a-movie)).
 
-`담김` stayed, because it names the confirmation that a snap was taken, which no other word covers: the `담김 · 스냅 N개` badge after a capture or an extraction, and the picker cell's `담김` badge for a snap the target movie already holds. Use it for that confirmation only — never for a place things are collected into, which is what the tray was.
+`담김` names the confirmation that a snap was taken, which no other word covers: the `담김 · 스냅 N개` badge after a capture or an extraction, and the picker cell's `담김` badge for a snap the target movie already holds. Use it for that confirmation only — never for a place things are collected into, which is what the tray was.
 
 The camera's own controls say `찍기` (owner decision, 2026-09-24): the shutter's `꾹 눌러 찍기`, the review stage's `다시 찍기`, and the template's `지금 찍기` — the everyday word a first-time user already has for pointing a camera. Never `촬영` or `담기` on a camera control. Cutting a snap out of a gallery video is not shooting, so the extract screen's `이 구간을 스냅으로 담기` keeps `담기`.
 
@@ -178,13 +178,4 @@ When a new concept needs a name: pick a Korean word a first-time user would use,
 
 ## Pre-merge copy checklist
 
-- [ ] Every CTA names its outcome, or is a justified generic exception.
-- [ ] Every question is answerable in ~3 seconds from facts the user holds.
-- [ ] No sentence teaches the UI; state read-outs carry the meaning instead.
-- [ ] No internal vocabulary, codes, IDs, or enum values are visible.
-- [ ] Every error has a state and a fix, and blames no one.
-- [ ] Empty states distinguish nothing-yet / nothing-matched / failed.
-- [ ] Terminology matches the table above exactly.
-- [ ] Every string is 해요체, active, and positive.
-- [ ] Labels fit one line at the largest supported font scale; accessibility labels carry the full phrase.
-- [ ] Read aloud: it sounds like a person, not a system.
+Run the copy path of [`review-checklist.md`](review-checklist.md#fast-path) — the items marked `copy`, which check every rule above.

@@ -375,9 +375,9 @@ export function useComposeMovie() {
         }
         // The status and code are logged, not just the message: everything that
         // is not one of the above lands in one refusal the user is told is a
-        // connection problem, and a 401, a 429 (the endpoint allows five runs a
-        // minute), and a genuinely unreachable server are indistinguishable on
-        // screen.
+        // connection problem, and a 401, a 429 (the API's global per-IP limit —
+        // the export route has no per-user one), and a genuinely unreachable
+        // server are indistinguishable on screen.
         if (__DEV__) {
           const detail =
             error instanceof ApiError

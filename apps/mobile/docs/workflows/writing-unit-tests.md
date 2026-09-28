@@ -84,7 +84,7 @@ Co-location keeps FSD ownership explicit and lets a slice move as one unit. A te
 - **Korean strings as escapes.** Assertions against Korean user-facing copy are written with `\uXXXX` escape sequences so the source stays ASCII-only and diffs stay stable. Match the existing tests:
 
   ```ts
-  const buttonTitle = '촬영 시작'; // 촬영 시작
+  const buttonTitle = '\uCD2C\uC601 \uC2DC\uC791'; // 촬영 시작
   ```
 
   Prefer asserting a message the module owns over re-typing long strings; when a literal is unavoidable, escape it.
@@ -115,10 +115,4 @@ The copy-followable skeleton for each module kind lives in the
 
 ## Before you finish
 
-Run the canonical automated gate and confirm it passes:
-
-```bash
-npm run verify
-```
-
-Its check list is defined once, in `package.json`. While iterating, `npm test` (an alias of `npm run test:ci` — both run `jest --ci --runInBand --no-watchman`) runs the suite once without the other gates; for a single file, pass its path (`npm test -- src/shared/lib/datetime/datetime.test.ts`). There is no watch-mode script; run `npx jest --watch` directly if you want one. A new user-visible behavior is not complete until it is covered by a test at the appropriate level and the affected document under `docs/features` is updated in the same change (see [`feature-development.md`](feature-development.md)).
+Run the automated gate and confirm it passes ([AGENTS.md § Verification](../../AGENTS.md#verification)). While iterating, run Jest on its own with the test scripts in `package.json`; for a single file, pass its path (`npm test -- src/shared/lib/datetime/datetime.test.ts`). A new user-visible behavior is not complete until it is covered by a test at the appropriate level and its feature document is updated in the same change ([maintenance contract](../features/README.md#documentation-maintenance-contract)).

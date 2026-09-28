@@ -24,7 +24,7 @@ import { VIDEO_ASSET_SELECT, ownedObjectKeys, type VideoAssets } from './video-a
  *
  * ② **삭제는 에셋 단위다.** 원본·썸네일·편집본·렌디션을 각각 지울 수 있게 두고, 지금 정책인
  *    "전부 지움"을 그 위에 얹는다. 요금제가 "원본은 지우되 썸네일은 유지" 같은 조합을
- *    요구해도 삭제 코드를 다시 뜯지 않기 위해서다(docs/plans/lifecycle-alignment.md §6-1).
+ *    요구해도 삭제 코드를 다시 뜯지 않기 위해서다(docs/decisions/snap-retention-period.md §만료의 동작 구조).
  */
 
 export interface ExpiryCandidate {

@@ -9,7 +9,7 @@
  *   ④ 무비 결과물이 만료돼도 **무비는 남는다** — 사라지는 것은 파일이고 레시피가 아니다
  *
  * 결정: docs/decisions/snap-retention-period.md · movie-cleanup-after-export.md
- * 설계: docs/plans/lifecycle-alignment.md §6
+ * 설계: docs/decisions/snap-retention-period.md §만료의 동작 구조
  *
  * 삭제 경로는 실제 MinIO 에 DeleteObject 를 보낸다. 없는 **키** 삭제는 no-op 이지만 없는 **버킷**은
  * NoSuchBucket 이라, 이 파일이 버킷을 만드는 다른 테스트보다 먼저 돌면(신선한 MinIO · 실행 순서

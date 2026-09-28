@@ -11,7 +11,7 @@
 크로스랭귀지 계약이 없고, 대신 `tests/fixtures/anchor-derivation.json` 픽스처가 계약이다.
 앱이 프리뷰 배치를 하기로 하면 그 픽스처가 그대로 계약이 된다.
 
-배치·로딩 규약: docs/plans/edit-spec-v3-kickoff.md §3.4
+배치·로딩 규약: docs/decisions/edit-spec-v3.md §7
 """
 
 import math

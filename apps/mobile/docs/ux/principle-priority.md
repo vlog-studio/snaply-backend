@@ -29,51 +29,21 @@ Apply in order. Stop at the first level that decides the case.
 
 ## Standing resolutions
 
-Recurring conflicts, pre-decided so reviews do not re-argue them.
+Recurring conflicts, pre-decided so reviews do not re-argue them. Each resolution is written once, in the principle that yields or bends:
 
-### One Thing per Page vs. Reduce Decision Cost
-
-Splitting reduces per-screen load but adds transitions. **Group questions that share one mental context and are answered from the same fact; split when an answer branches the flow or the input needs the whole screen.** Two to four related, cheap questions on one screen beats four screens. Over-splitting is `Over-Split Flow`.
-
-### Progressive Disclosure vs. Obvious Navigation
-
-Hiding lowers load but costs Discoverability. **Never exceed one disclosure level on a primary path.** Defer by expected frequency: below ~10% of sessions may be deferred; a frequent control stays visible even at the cost of density. Verify with the TNS-style findability question ([source](https://toss.tech/article/Toss_Navigation_Score)) — if a first-time user would not find the new location, the deferral failed.
-
-### Smart Default vs. User Control
-
-Defaults remove decisions but can remove agency. **A default is legitimate only when it is visible, reversible, and inferable.** Fails any of the three → ask an answerable question instead. Never default a permission, a spend, a deletion, or a share.
-
-### Value Before Cost vs. transparency
-
-Showing value first must never mean hiding the bill. **Value first in *sequence*; cost fully disclosed before the commit**, adjacent to the CTA that incurs it. Back-loading a cost is `Hidden Cost` and is treated as a dark pattern, not a funnel optimization.
-
-### Show State, Not Instructions vs. genuine novelty
-
-Cutting copy can strand a truly new mechanic. **Structure and labels first; if a mechanic still cannot be inferred, one short hint at the point of first use, dismissible, shown once.** Never a paragraph, never a carousel, never at the expense of accessibility labels.
-
-### Density vs. Clear Visual Hierarchy
-
-Dense screens can flatten. **Density is allowed for homogeneous find/compare content; hierarchy is then carried by grouping, ordering, and headers rather than by size contrast.** If item kinds differ, split the sections before reducing density.
-
-### Action First vs. Value Before Cost
-
-A screen cannot both lead with the action and lead with the preview. **Lead with the preview when a costly step follows and the user has not yet seen the payoff; lead with the action in every repeat and routine case.** First run differs from the hundredth.
-
-### Consistent Interaction Pattern vs. platform convention
-
-**Platform convention wins.** Users' expectations come from the OS before they come from our app. Internal consistency applies to what we invent, not to what the platform already defines.
-
-### Consistent Interaction Pattern vs. a better new pattern
-
-**Consistency wins until the migration is planned.** A better pattern applied to one screen is a net loss; adopt it app-wide in a bounded plan, or not yet.
-
-### Outcome-Oriented CTA vs. space
-
-**Shorten the outcome, never genericize it.** `무비 만들기` beats `확인`. If nothing fits, use the short label and carry the full outcome in the accessibility label and the adjacent heading.
-
-### Easy to Answer vs. expert precision
-
-**Both, at different depths.** The primary path asks the answerable question; precision controls live one disclosure away for the users who want them. Never remove the precise control to make the simple one look cleaner (G1, G4).
+| Conflict | Resolved in |
+| --- | --- |
+| One Thing per Page vs. Reduce Decision Cost | [#1 Exceptions](principles.md#1--one-thing-per-page) — when to split, and when to group |
+| Progressive Disclosure vs. Obvious Navigation | [#7 Exceptions](principles.md#7--progressive-disclosure) — one disclosure level; frequent controls stay visible |
+| Smart Default vs. User Control | [#5 Exceptions](principles.md#5--smart-default) — only a visible, reversible, inferable default |
+| Value Before Cost vs. transparency | [#8 Detection Rule](principles.md#8--value-before-cost) — value first in sequence, cost before the commit |
+| Show State, Not Instructions vs. genuine novelty | [#13 Exceptions](principles.md#13--show-state-not-instructions) — the one-time hint |
+| Density vs. Clear Visual Hierarchy | [#17](principles.md#17--density-where-density-pays) — grouping carries the hierarchy |
+| Action First vs. Value Before Cost | [#3 Exceptions](principles.md#3--action-first) — the preview leads only before the payoff is seen |
+| Consistent Interaction Pattern vs. platform convention | [#11 Exceptions](principles.md#11--consistent-interaction-pattern) — the platform wins |
+| Consistent Interaction Pattern vs. a better new pattern | [#11 Exceptions](principles.md#11--consistent-interaction-pattern) — consistency until the migration is planned |
+| Outcome-Oriented CTA vs. space | [#4 Exceptions](principles.md#4--outcome-oriented-cta) — shorten the outcome, never genericize it |
+| Easy to Answer vs. expert precision | [#2 Exceptions](principles.md#2--easy-to-answer) — both, at different depths |
 
 ---
 

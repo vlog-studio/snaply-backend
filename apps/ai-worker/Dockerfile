@@ -1,6 +1,6 @@
 # 빌드 컨텍스트는 **저장소 루트**다 (apps/api/Dockerfile 과 같다).
 # 워커가 packages/shared-types 의 앵커 사전을 읽어야 하는데, 컨텍스트가 apps/ai-worker 면
-# 그 파일이 컨텍스트 밖이라 이미지에 들어갈 수가 없다 — docs/plans/edit-spec-v3-kickoff.md §3.1
+# 그 파일이 컨텍스트 밖이라 이미지에 들어갈 수가 없다 — docs/decisions/edit-spec-v3.md §7
 #
 # COPY 경로를 `. .` 로 넓히지 말 것. 문서 한 줄만 고쳐도 이미지가 통째로 재빌드된다.
 FROM python:3.11-slim

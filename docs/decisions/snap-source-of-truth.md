@@ -1,17 +1,23 @@
 # 스냅 관리 정책 전환 — 서버 원천(source of truth) 및 스토리지 용량 정책
 
 **작성일**: 2026-08-11
-**상태**: 결정 — 스냅 원천을 서버로 전환하고 Free 원본 스냅 용량을 5GB로 제한한다.
+**상태**: 과거 결정 — 일부 대체됨. 스냅 원천을 서버로 전환한다는 방향은 유효하고 현행 요구는
+[specs/snap-library.md](../specs/snap-library.md) SNAP-14 다. §1·§6 의 스토리지 용량 정책(Free 5GB 한도)은
+아래 후속 결정이 대체했다.
 **범위**: 정책 결정과 근거를 기록한다. §4·§5의 스키마와 이행 순서, §6.4의 집행 방식은
 결정 당시 구현 초안이며 작업 상태를 관리하지 않는다.
 **후속 작업의 원천**: [backlog.md](../backlog.md) A-4(스냅 세부 정책),
 A-2(유료 플랜 한도), E-3(GC 배치)
 **후속 결정**: 2026-08-14에 Free 한도가 5GB → **2GB**로 축소됐다 —
 [storage-and-subscription-policy.md](./storage-and-subscription-policy.md). 그 결정이 §6.1의
-한도 값, §6.2에서 2GB를 기각했던 판단, §6.3의 원가 계산을 대체한다. §6.1의 **산정 범위(원본
-스냅만)와 초과 시 동작(업로드 차단 + 로컬 보관)은 유효하다.**
+한도 값, §6.2에서 2GB를 기각했던 판단, §6.3의 원가 계산을 대체했다. 2026-09-09에는 용량 한도 자체가
+기간 기준(업로드 후 15일)으로 바뀌었다 — [snap-retention-period.md](./snap-retention-period.md). 그래서 §1·§6의
+용량 정책(한도 단위·산정 범위·초과 시 동작·§6.4 집행 설계)은 현행이 아니며, 용량 한도를 남길지는
+미결이다([backlog.md](../backlog.md) A-2). 2026-09-27 의 기기 간 동기화 설계는 §4 의 `snap.id` UUID 전환과
+§1 의 `clientId` 유일 제약을 쓰지 않는다 — 이유는 [snap-sync-across-devices.md](./snap-sync-across-devices.md)
+§[동기화 설계](./snap-sync-across-devices.md#동기화-설계).
 
-관련: [plan-limits.md](./plan-limits.md), [api-spec.md](../api-spec.md)
+관련: [plan-limits.md](../archive/plan-limits.md), [api-spec.md](../api-spec.md)
 
 ---
 
@@ -29,7 +35,7 @@ A-2(유료 플랜 한도), E-3(GC 배치)
 | 한도 초과 시 | **신규 업로드 차단 + 로컬 보관** ("백업 안 됨" 상태 명시, 해제 시 자동 재개) |
 
 무비(편집 결과물) 생성은 스토리지 한도와 별개로 **크레딧 기반 결제**로 과금할 예정(미구현,
-기획 중). 따라서 [plan-limits.md](./plan-limits.md) §2의 "월 3편" 모델은 크레딧 기획이
+기획 중). 따라서 [plan-limits.md](../archive/plan-limits.md) §2의 "월 3편" 모델은 크레딧 기획이
 확정되면 대체될 수 있다.
 
 ## 2. 배경 — 왜 서버 원천인가

@@ -6,7 +6,8 @@
 
 문서 지도는 [README.md](./README.md), 작업 분담은 [docs/team.md](./docs/team.md),
 미결 작업은 [docs/backlog.md](./docs/backlog.md), 진행 기록은 [docs/progress.md](./docs/progress.md),
-API 명세는 [docs/api-spec.md](./docs/api-spec.md).
+API 계약은 [packages/shared-types/src/contract/](./packages/shared-types/src/contract/)(Swagger `/docs`),
+계약만으로 알 수 없는 동작은 [docs/api-spec.md](./docs/api-spec.md).
 
 ---
 
@@ -33,15 +34,23 @@ Android 실기기를 쓴다면 같은 Wi-Fi와 USB 또는 무선 디버깅 연�
 
 ```
 apps/mobile/          Expo SDK 57 + React Native 앱 (Expo Router)
-apps/api/             Fastify + TypeScript API 서버 (:3000)
+apps/api/             Fastify + TypeScript API 서버 (:3000) + 알림 발송 워커
 apps/ai-worker/       Python 워커 — BullMQ 큐 구독, FFmpeg/faster-whisper (HTTP 포트 없음)
-                      편집 워커(worker.py)와 스냅 분석 워커(analysis_worker.py) 두 프로세스
-packages/shared-types/ 앱·API가 공유하는 요청/응답 타입
+packages/shared-types/ API 계약(Zod 스키마)과 앱·API·워커가 공유하는 타입·어휘
 
 인프라: 로컬 PostgreSQL(DB, :5432) · Supabase(Auth) · MinIO(S3 호환, :9100) · Redis(:6379)
 ```
-> 워커는 `edit-jobs` Redis 큐를 구독하는 백그라운드 프로세스(`src/worker.py`)이고 HTTP 포트를 열지 않는다.
-> `src/main.py`의 FastAPI(:8000)는 Phase 1 뼈대의 잔재로, compose·npm 스크립트 어디에서도 실행하지 않는다.
+
+API 서버 밖에서 도는 상주 프로세스는 넷이다. 모두 Redis 큐를 구독하고 HTTP 포트를 열지 않는다.
+
+| 프로세스 | 큐 | 하는 일 |
+|---|---|---|
+| 편집 워커 `apps/ai-worker/src/worker.py` | `edit-jobs` | 무비 렌더(컷·스타일·BGM·자막) |
+| 스냅 분석 워커 `apps/ai-worker/src/analysis_worker.py` | `video-analysis` | 스냅 내용 분석(OpenAI) |
+| 배포 렌디션 워커 `apps/ai-worker/src/rendition_worker.py` | `renditions` | 업로드된 스냅의 H.264/SDR 재생용 사본 |
+| 알림 발송 워커 `apps/api/src/notification-worker.ts` | `notifications` | 편집 워커가 넣은 알림 요청을 FCM으로 발송 |
+
+> `apps/ai-worker/src/main.py`의 FastAPI(:8000)는 Phase 1 뼈대의 잔재로, compose·npm 스크립트 어디에서도 실행하지 않는다.
 개발/운영 전환은 endpoint/URL만 교체(코드 분기 없음): S3_ENDPOINT 비우면 실제 AWS S3, REDIS_URL만 바꾸면 Upstash.
 
 ---
@@ -79,7 +88,8 @@ npm --version
 npx expo install --check
 ```
 
-Node는 `.nvmrc`의 26, npm은 `package.json`의 11.19.1을 기준으로 한다.
+Node는 `.nvmrc`의 26, npm은 `package.json`의 11.19.1을 기준으로 한다. 다른 버전으로 `npm install`하면
+lockfile이 흔들린다.
 
 ### 3-3. 서버 환경변수 만들기
 
@@ -177,6 +187,9 @@ curl http://localhost:3000/health
 스냅샷 `apps/api/openapi.json`을 다시 생성해 같은 커밋에 넣는다. 서버가 떠 있을 필요는 없고,
 빠뜨리면 `test/openapi-snapshot.test.ts`가 실패한다.
 
+응답은 계약 스키마로 직렬화된다. 계약과 어긋난 값(타입·enum·필수 필드)은 **500**이 되고, 계약에 없는
+필드는 조용히 빠진다 — 앱에 새 필드를 보내려면 계약부터 고친다.
+
 `SUPABASE_PUBLISHABLE_KEY`가 있으면 Swagger `Authorize`의 `devLogin`에 개발 계정 이메일과
 비밀번호를 넣어 Bearer token을 받을 수 있다. 키가 없으면 `bearerAuth`에 JWT를 직접 넣는다.
 
@@ -201,22 +214,27 @@ API와 모바일을 함께 쓸 때는 PC와 실기기가 같은 네트워크에 
 `npm run ios -w snaply-app`을 사용한다. 구형 Xcode 제약과 상세 기기 절차는
 [`apps/mobile/docs/workflows/local-development-and-testing.md`](apps/mobile/docs/workflows/local-development-and-testing.md)를 본다.
 
-### 3-8. AI worker 실행 — 선택, 터미널 3
+Claude Code로 모바일을 작업할 때는 `apps/mobile`에서 세션을 연다 — 모바일 전용 스킬(`hygiene-sweep`)과
+`apps/mobile/.claude/settings.json`의 플러그인은 그래야 적용된다.
 
-실제 편집 job까지 처리할 때만 설치하고 실행한다.
+### 3-8. 워커 실행 — 선택, 터미널 3~
 
-```bash
-npm run worker:install
-npm run worker
-```
-
-스냅 내용 분석 worker는 별도 프로세스이며 `apps/api/.env`의 `OPENAI_API_KEY`가 필요하다.
+실제 편집·분석·재생용 변환·완성 알림까지 처리할 때만 띄운다(§2의 네 프로세스). Python 워커 셋은
+같은 venv를 쓴다.
 
 ```bash
-npm run worker:analysis
+npm run worker:install                     # 최초 1회 — apps/ai-worker/.venv
+npm run worker                             # 편집 워커
+npm run worker:rendition                   # 배포 렌디션 워커
+npm run worker:analysis                    # 스냅 분석 워커
+npm run worker:notifications -w apps/api   # 알림 발송 워커
 ```
 
-worker는 기본적으로 `apps/api/.env`를 읽는다. pgbouncer URL이 asyncpg와 충돌하는 특수한
+- 렌디션 워커가 없으면 업로드한 스냅이 다른 플랫폼에서 재생되지 않을 수 있다(편집은 원본으로 돈다).
+- 분석 워커는 `apps/api/.env`의 `OPENAI_API_KEY`가 없으면 기동 단계에서 종료된다.
+- 알림 워커는 `FIREBASE_SERVICE_ACCOUNT_KEY`가 없으면 FCM을 dry-run(로그만)으로 보낸다.
+
+워커는 기본적으로 `apps/api/.env`를 읽는다. pgbouncer URL이 asyncpg와 충돌하는 특수한
 경우에만 `apps/ai-worker/.env`에 `DATABASE_URL=<DIRECT_URL 값>` 한 줄을 두어 덮어쓴다.
 
 ### 3-9. 자동 검증
@@ -230,6 +248,9 @@ npm run typecheck -- --filter=@vlog-studio/api
 npm run lint -- --filter=@vlog-studio/api
 npm test -w apps/api
 ```
+
+루트 `npm test`는 turbo로 모바일 jest까지 돌고, CI는 바꾼 경로와 상관없이 모든 PR에서 `verify:mobile`도
+실행한다 — 백엔드만 고친 PR도 모바일 검증이 깨지면 실패하므로 위 명령으로 먼저 확인한다.
 
 API 테스트는 `infra:up`으로 띄운 로컬 PostgreSQL·Redis를 사용하고 `snaply_test` DB를 자동
 생성한다. `apps/api` 밖에서 `npx vitest`를 직접 실행하지 않는다. AI worker 테스트는 다음과 같다.
@@ -253,9 +274,9 @@ cd ../..
 | `npm run stack:up` / `stack:migrate` | API만 기동 / migration 수동 재실행 |
 | `npm run dev:api` | API 서버(watch) |
 | `npm run dev:mobile` | Android dev client용 Metro |
-| `npm run verify:mobile` | 모바일 포맷·린트·타입·API 타입·Jest 검증 |
-| `npm run worker` / `worker:install` | AI 편집 워커 (`edit-jobs` 큐) / venv 설치 |
-| `npm run worker:analysis` | 스냅 분석 워커 (`video-analysis` 큐, `OPENAI_API_KEY` 필요) |
+| `npm run verify:mobile` | 모바일 자동 검증 게이트 — 검사 목록은 `apps/mobile/package.json`의 `verify` |
+| `npm run worker` / `worker:rendition` / `worker:analysis` / `worker:install` | 편집 / 배포 렌디션 / 스냅 분석 워커 / venv 설치 (§3-8) |
+| `npm run worker:notifications -w apps/api` | 알림 발송 워커 (§3-8) |
 | `npm run build` / `typecheck` / `lint` | 전체 빌드/검사 |
 | `npm run db:generate` / `db:migrate` / `db:seed` / `db:studio` | Prisma 클라이언트 생성 / 마이그레이션 / 시드 / Studio |
 | `npm run media:e2e` / `media:cleanup` | 업로드→편집→결과 e2e / 테스트 데이터 정리 |
@@ -291,8 +312,9 @@ npm run stack:down
   보간 값도 같은 파일에서 읽는다. 휴대폰 테스트 시 이 값을 `http://<PC의 LAN IP>:9200`으로 둔다.
 - API만 필요하면 `npm run stack:up`을 사용한다. 이 경우에도 필요한 인프라와 migration은 자동으로
   따라오지만 AI 워커는 기동하지 않는다.
-- 확인은 `/health` 만 보지 말 것 — `SUPABASE_URL` 이 비면 `/health` 는 200 인데 인증은 전부 실패한다.
-  인증이 필요한 엔드포인트를 하나 찔러 봐야 한다.
+- 확인은 `/health` 만 보지 말 것 — `SUPABASE_URL` 이 비면 API 가 기동을 거부하지만, 값이 틀리면
+  (다른 프로젝트·닿지 않는 주소) `/health` 는 200 인데 인증은 전부 실패한다. 인증이 필요한
+  엔드포인트를 하나 찔러 봐야 한다.
 
 ### 인증 없이 로컬에서 API 찔러보기
 
@@ -310,76 +332,36 @@ curl -H "Authorization: Bearer <출력된 토큰>" http://localhost:3000/auth/me
 ## 5. 트러블슈팅
 
 - **포트 충돌(MinIO 9000)**: 다른 프로젝트가 9000을 쓰는 경우가 있어 snaply는 **9100/9101**을 쓴다. `.env`의 `S3_ENDPOINT`도 9100.
+- **포트 충돌(PostgreSQL 5432)**: 호스트 5432가 점유됐다면 `apps/api/.env`의 `POSTGRES_HOST_PORT`와 `DATABASE_URL`·`DIRECT_URL`의 포트를 함께 바꾼다(한쪽만 바꾸면 연결이 실패한다). 5433은 전체 스택(`npm run stack`)의 postgres가 쓰므로 피한다.
 - **포트 충돌(API 3000)**: 다른 로컬 프로젝트가 3000을 쓰면 자기 `.env`의 `API_PORT`만 바꾼다(예: 3002). compose는 `API_HOST_PORT` 환경변수로 호스트 포트 변경 가능. 컨테이너/운영 내부 포트는 그대로 3000.
 - **휴대폰에서 MinIO 접근 실패**: `S3_PUBLIC_ENDPOINT`를 `http://<PC의 LAN IP>:9100`으로 설정하고 OS/WSL 방화벽에서 MinIO API 포트를 허용한다. 관리 콘솔 포트(9101)는 필요한 관리자 대역에만 연다.
 - **휴대폰에서 API 연결 실패**: `apps/mobile/.env`의 `EXPO_PUBLIC_API_BASE_URL`에 `localhost`가 아니라 개발 PC의 LAN IP를 쓰고, API가 `0.0.0.0`에 bind됐는지와 방화벽의 3000 포트를 확인한다.
-- **Android Expo Go 부팅 실패**: 정상적인 제한이다. `expo-notifications`가 포함돼 있으므로 `npm run android:device -w snaply-app`으로 dev build를 설치한다.
-- **`db: not_configured`**: `DATABASE_URL` 미설정. `apps/api/.env`에 로컬 PostgreSQL 값(`postgresql://postgres:postgres@localhost:5432/snaply`)이 있는지 확인.
+- **Android Expo Go 부팅 실패**: 정상적인 제한이다 — Android는 dev build가 기준이다(§3-7).
+- **API가 `환경 변수 DATABASE_URL가 설정되지 않았습니다`로 뜨지 않음**: `apps/api/.env`에 로컬 PostgreSQL 값(`postgresql://postgres:postgres@localhost:5432/snaply`)이 있는지 확인. 값은 있는데 붙지 못하면 서버는 뜨고 `/health`의 `db`가 `error`다.
 - **워커 DB 연결 실패**: `DATABASE_URL`에 pgbouncer 파라미터가 있으면 asyncpg가 실패 → DIRECT_URL(5432) 사용.
 - **Supabase 무료 프로젝트 일시정지**: 1주일 미사용 시 자동 정지. 대시보드에서 재개.
 - **테스트 데이터 정리**: 공유 Supabase를 쓸 땐 통합 테스트 후 자기 데이터 정리(닉네임/이메일 접두사로 구분).
-- **⚠️ 테스트는 반드시 `apps/api` 기준으로 실행**: `npm test -w apps/api`.
-  다른 디렉토리에서 `npx vitest` 를 돌리면 `apps/api/vitest.config.ts` 가 로드되지 않아 `setupFiles` 가
-  적용되지 않고, `DATABASE_URL` 이 **개발 DB** 를 가리킨 채 테스트의 `TRUNCATE` 가 돌 수 있다.
-  (실제로 이 경로로 개발 DB 시드가 날아간 적이 있다. 지금은 `assertTestDatabase()` 가 막지만 애초에 그러지 말 것.)
+- **⚠️ 테스트는 반드시 `npm test -w apps/api`로**: 다른 경로의 `npx vitest`는 개발 DB를 `TRUNCATE`할 수 있다 — 이유와 사고 이력은 [AGENTS.md](./AGENTS.md) §테스트.
 - **크리덴셜 파일**: Firebase 서비스 계정 JSON 같은 키 파일은 `.gitignore` 에 패턴으로 막혀 있지만
   (`*firebase-adminsdk*.json`, `*.pem` 등), 레포 안에 두지 말고 `.env` 에 base64 로 넣는 것을 권장한다.
 
-### 모노레포 통합(2026-08-31) 전후 주의사항
+### 모노레포 통합(2026-08-31) 이전에 분기한 브랜치
 
-앱 저장소는 `d13f921 chore: unify app and backend monorepos`에서 이 저장소로 합쳐졌다. 그 이전에
-만든 브랜치·로컬 환경·에이전트 세션은 아래 차이를 한꺼번에 만난다. 내 브랜치가 통합 전 분기인지는
-다음으로 확인한다(종료 코드 0이면 통합 후 분기).
+앱 저장소는 `d13f921 chore: unify app and backend monorepos`에서 이 저장소로 합쳐졌다. 내 브랜치가
+통합 전 분기인지는 다음으로 확인한다(종료 코드 0이면 통합 후 분기).
 
 ```bash
 git merge-base --is-ancestor d13f921 <branch>
 ```
 
-**환경 — 통합 후 툴체인이 바뀌었다**
-
-| 항목 | 통합 전 | 통합 후 |
-|---|---|---|
-| Node | `>=20` | `>=22.13` (`.nvmrc`는 26) |
-| npm | 10.8.2 | 11.19.1 |
-| 루트 `npm test` | API만 | turbo가 모바일 jest까지 실행 |
-| CI | API 잡만 | 모든 PR에서 `verify:mobile`도 실행(경로 필터 없음) |
-
-- 루트에서 `nvm use && npm ci`를 다시 한다. 구 Node/npm으로 `npm install`하면 lockfile이 흔들린다.
-  pull 뒤 `npm run db:generate`도 잊지 않는다.
-- 백엔드만 고친 PR도 모바일 verify가 깨지면 CI가 실패한다. 로컬 확인은 §3-9의 범위 좁힌 명령을 쓴다.
-- 환경변수 파일이 `apps/api/.env` 하나에서 `apps/mobile/.env`(`EXPO_PUBLIC_*`)까지 둘이 됐다.
-  서버 시크릿을 모바일 `.env`에 복사하면 앱 번들에 노출되므로 금지. `APP_DEEPLINK_SCHEME` 기본값은
-  `snaplyapp://`로 바뀌었다.
-
-**API 계약 — 통합 후 Zod 계약이 스키마의 원천이다** (`855cf05`, [결정 문서](./docs/decisions/api-contract-schema-first.md))
-
-- `apps/api/src/schemas/responses.ts`, `packages/shared-types/src/api.ts`, `domain.ts`는 **삭제**됐다.
-  통합 전 브랜치가 이 파일들을 고쳤다면 rebase 시 삭제 충돌이 난다. 내용은
-  `packages/shared-types/src/contract/*.ts`로 옮긴다.
-- 라우트를 추가·수정하면 계약 파일 수정 → `npm run openapi:write -w apps/api` → `apps/api/openapi.json`
-  커밋 순서가 필수다. 스냅샷 테스트가 있어 빠뜨리면 테스트가 실패한다.
-- 응답 직렬화가 strict다. 계약에 없는 필드를 내려보내면 조용히 빠지지 않고 **500**이 난다.
-- 같은 날 Fastify 5로 올라갔다. WebSocket 핸들러는 소켓을 직접 받고, `setErrorHandler`의 에러 타입은
-  `FastifyError`로 고정하며, `decorateRequest`는 `null` 초기값을 받지 않는다.
-
-**이력 — 모바일 쪽 git 이력은 squash됐다**
-
-- `apps/mobile` 아래 파일은 `git log`·`git blame`이 통합 커밋(08-31) 이전으로 내려가지 않는다.
-  그 이전 맥락은 옛 앱 저장소에서 찾는다.
 - 통합 전에 분기한 원격 브랜치는 커밋이 다른 해시로 main에 들어가 있을 수 있다. 그대로 rebase하면
   같은 내용끼리 충돌하니 `git cherry -v main <branch>`로 미병합 커밋(`+`)만 골라 cherry-pick한다.
-
-**에이전트(Claude Code) 세션**
-
-- [`AGENTS.md`](./AGENTS.md)가 통합 후 크게 바뀌었다. 문서 갱신 의무가 표로 재편됐고,
-  [`docs/constitution.md`](./docs/constitution.md)와 [`docs/specs/`](./docs/specs/README.md)가 새로 생겨
-  사용자 가시 동작은 **스펙을 구현보다 먼저** 고친다. 통합 전 컨텍스트를 이어가던 세션은 새로 열어
-  지침을 다시 읽힌다.
-- [`apps/mobile/AGENTS.md`](./apps/mobile/AGENTS.md)는 영어로 쓰인 별도 지침이며 루트 헌법·스펙이 그 위에
-  있다. 모바일 전용 스킬(`apps/mobile:hygiene-sweep`)과 `apps/mobile/.claude/settings.json`의 플러그인은
-  `apps/mobile`에서 세션을 열어야 온전히 적용된다.
-- `packages/shared-types`는 이제 API 계약까지 담는다. 계약을 바꾸면 API 테스트·`openapi.json` 재생성·
-  모바일 verify를 함께 돌린다([docs/team.md](./docs/team.md) §2).
+- 그 브랜치가 고친 `apps/api/src/schemas/responses.ts`·`packages/shared-types/src/api.ts`·`domain.ts`는
+  삭제됐다(`855cf05`). 내용은 `packages/shared-types/src/contract/*.ts`로 옮겨 적는다. 같은 시기에 Fastify 5로
+  올라갔다 — WebSocket 핸들러는 소켓을 직접 받고, `setErrorHandler`의 에러 타입은 `FastifyError`이며,
+  `decorateRequest`는 `null` 초기값을 받지 않는다.
+- `apps/mobile` 아래 파일은 `git log`·`git blame`이 통합 커밋 이전으로 내려가지 않는다(이력이 squash됐다).
+  그 이전 맥락은 옛 앱 저장소에서 찾는다.
 
 ---
 

@@ -51,8 +51,7 @@ export type GenerationRunnerOptions = {
  * Follows every generation job in flight to its result.
  *
  * Mounted once for the whole app (`MovieGenerationGate`), not by the movie screen,
- * because a job has to keep going after the user leaves the screen — which is
- * exactly what they are told will happen (concept §6 step ③).
+ * because a job has to keep going after the user leaves the screen.
  *
  * **The work is the backend's (2026-08-07).** This used to be a clock: a job's
  * start time was on the movie and a local table of step durations decided how far

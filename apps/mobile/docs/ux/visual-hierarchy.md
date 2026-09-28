@@ -147,12 +147,4 @@ Preference order for creating weight difference: **position → size → contras
 
 ## Screen-level checks
 
-Run these on any screen you touch:
-
-- **One W1.** Exactly one element claims the top of the ladder.
-- **Grayscale test.** In grayscale at reduced scale, W1 is still obvious and W3–W5 are still distinguishable.
-- **Reading order.** Top-to-bottom order matches importance to the current step; W2 sits adjacent to W1, not at the bottom.
-- **Interactive invariance.** One consistent treatment for pressable, one for disabled, across the whole screen — and disabled always has a discoverable reason.
-- **Graphic budget.** At most one major graphic, and it never outranks the deciding state.
-- **Density coherence.** Items of one kind share one weight; a promoted item gets a section, not a bigger card.
-- **Safe areas and scale.** Pinned elements respect safe areas and the keyboard; the hierarchy survives the largest supported font scale.
+The checks for these rules — one W1, the grayscale test, reading order, interactive invariance, the graphic budget, density coherence, safe areas and scale — are items in [`review-checklist.md`](review-checklist.md) (sections A, D, E, and G). Run them on any screen you touch.

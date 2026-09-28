@@ -32,15 +32,6 @@ Imitate the closest existing implementation instead of inventing a new shape.
 | Sheet enter/exit inside a `Modal` | `src/shared/ui/bottom-sheet/bottom-sheet.tsx` | Two independent shared values over `animationType="none"`: the panel slides on `translateY` while the backdrop only fades, because the Modal's own `slide` animates the whole window and drags the dimming layer up with the panel. The travel distance is the panel's own `onLayout` height, so the panel holds `opacity: 0` until the first layout pass and the slide starts from the layout callback; the measurement is cleared when the close completes so the next open re-measures. Mount outlives `visible` — the Modal unmounts from the close animation's completion callback (`runOnJS`), while opening (and a reduced-motion close) adjust mount state during render rather than in an effect, which the compiler lint rejects |
 | Splash exit | `src/_app/routes/animated-splash-overlay.tsx` | The one `Keyframe`/`entering` usage in the app (see the Expo Go caveat below before adding another) |
 
-> The drag-reorder grid (`cut-sheet-grid.tsx` + `reorder-layout.ts`) was removed with
-> the roll sheet in the studio rebuild, and nothing in the app drags to reorder today:
-> the movie timeline moves a cut with ◀ ▶ and animates the result as a FLIP reflow
-> (above). The rules it taught are kept below because they are the rules for *any*
-> drag inside a scrollable; if a drag-reorder strip is ever wanted back, recover the
-> implementation from git history
-> (`git show f3324b1:src/pages/roll-detail/ui/cut-sheet-grid.tsx`) rather than
-> reinventing it.
-
 ## Rules
 
 ### Respect reduced motion
@@ -55,25 +46,30 @@ documents (for example the tab switch in
 ### Prefer runtime shared-value animations over `entering`/`exiting` presets
 
 Reanimated entering presets (`FadeInDown`, `ZoomIn`, …) never start on iOS in Expo
-Go, leaving views stuck at opacity 0 (recorded in `fade-in-view.tsx`). Drive mount
-animations from a shared value in an effect instead. `AnimatedSplashOverlay`'s
-`Keyframe` is the lone exception; verify on iOS before adding another.
+Go (Android runs them), leaving views stuck at opacity 0 (recorded in
+`fade-in-view.tsx`). Drive mount animations from a shared value in an effect instead.
+`AnimatedSplashOverlay`'s `Keyframe` is the lone exception: its completion callback
+unmounts the splash, so re-verify splash dismissal on the iOS Simulator whenever that
+file or Reanimated changes — a Keyframe that does not start leaves the splash on
+screen. Verify on iOS before adding another.
 
 ### Keep per-frame state on the UI thread
 
-State that changes every frame (drag position, progress, the visual order of a
-drag grid) lives in shared values, mutated by worklets. Mirror it to React state
-via `runOnJS` only at meaningful boundaries (a slot swap, a completion) — for
-labels, badges, or commit payloads — never per frame. The commit itself stays a
-plain store/feature call made from the JS side (the grid reports the order; the page
-commits it).
+State that changes every frame (drag position, progress) lives in shared values,
+mutated by worklets. Mirror it to React state via `runOnJS` only at meaningful
+boundaries (a step change, a completion) — for labels, badges, or commit payloads —
+never per frame. The commit itself stays a plain store/feature call made from the JS
+side (`timeline-cut.tsx`'s trim handle reports its window on a step change and when
+it settles; the page commits it).
 
 ### Extract decision math into the `model` segment, worklet-marked, unit-tested
 
 Geometry and ordering rules a gesture evaluates ("which slot is the finger over",
-"what does the order become") are pure functions in the slice's `model/` with a
-`'worklet'` directive (`reorder-layout.ts` did this). The directive is inert under Jest, so
-the same functions get table-driven unit tests. Animation timing itself is not
+"which second does the handle sit on") are pure functions in the slice's `model/`
+with a `'worklet'` directive — or in `shared/lib` once a second surface uses them, as
+[`shared/lib/trim-geometry`](../../src/shared/lib/trim-geometry/trim-geometry.ts) does
+for both trim surfaces. The directive is inert under Jest, so the same functions get
+table-driven unit tests. Animation timing itself is not
 unit-testable — verify it on device and test the math instead.
 
 ### Work around the React Compiler lint, structurally
@@ -85,8 +81,8 @@ any other callback declared there (a `useCallback` animation starter, an `onLayo
 handler — `bottom-sheet.tsx` hit both). `'use no
 memo'` does **not** silence it. The accepted fix is structural: build the gesture in
 a plain module-level factory that takes the shared values as arguments
-(`buildDragGesture` did this; `bottom-sheet.tsx`'s `drivePanelIn`/`driveClose` are
-the same fix for plain animation starters). Writes inside `useEffect`,
+(`timeline-cut.tsx`'s `buildTrimGesture`; `bottom-sheet.tsx`'s `drivePanelIn`/`driveClose`
+are the same fix for plain animation starters). Writes inside `useEffect`,
 `useAnimatedReaction`, and `useAnimatedStyle` are fine. The neighbouring
 `react-hooks` rule against synchronous `setState` in an effect bites the same
 components: a mount flag that must flip in the same commit as the animation start
@@ -99,14 +95,14 @@ Which of the two shapes below applies is decided by one question: **can the
 gesture be told apart from the scroll by direction?**
 
 *A gesture on a different axis, or one that may wait to begin* —
-`.activateAfterLongPress(...)`:
+`.activateAfterLongPress(...)` (no screen uses this shape today):
 
 - Use `.activateAfterLongPress(...)` so the scroll gesture keeps working; on
   activation give haptic feedback (`Haptics.impactAsync(Medium)` — the established
   lift/collect cue) and lock the scroll (`scrollEnabled={!dragActive}` via a
   `runOnJS` state flip) until the gesture settles.
-- Match the long-press delay to the sibling `Pressable`'s `delayLongPress` (260ms
-  today) so gesture entries feel like one family.
+- Match the long-press delay to the sibling `Pressable`'s `delayLongPress` so
+  gesture entries feel like one family.
 
 *A gesture that wants the scroll's own axis and must respond to the first pixel*
 — lock the scroll on touch-down (`timeline-cut.tsx`'s `buildTrimGesture` is the
@@ -134,8 +130,7 @@ and the inline build keeps worklet captures fresh.
 
 Swapping component trees to change interaction modes causes a visible blink: a
 remounted `expo-image` cannot paint its first frame even from the memory cache, and
-a self-measuring (`onLayout`) container renders empty for a frame. The rules learned
-from the roll sheet:
+a self-measuring (`onLayout`) container renders empty for a frame. The rules:
 
 - One component tree for all modes; toggle behavior with props (`Pressable`
   `disabled`, `Gesture.enabled(...)`), not by swapping components.
@@ -172,9 +167,8 @@ The house style is fast and settled — film equipment, not rubber:
   look welded together.
 - Positional reflow (a reordered item gliding to its new slot):
   near-critically-damped springs — `{ damping: 44, stiffness: 300 }`, live in the
-  app as `timeline-cut.tsx`'s `ReorderSpring` (carried over from the removed
-  `cut-sheet-grid.tsx`); items glide into place with no visible bounce. Start
-  from these values and tune on device.
+  app as `timeline-cut.tsx`'s `ReorderSpring`; items glide into place with no
+  visible bounce. Start from these values and tune on device.
 - Following playback with a continuous position (the timeline strip under its
   playhead): aim one report interval ahead and take exactly that long to get
   there, with `Easing.linear` — each report arrives as the previous glide lands,

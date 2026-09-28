@@ -3,8 +3,9 @@
 **작성일**: 2026-09-05 (2026-09-09 결정)
 **상태**: 결정 — 다섯 질문 모두 문서의 권장안대로 확정했다(①C ②A ③A ④A ⑤B).
 서버 `Movie` 엔티티 설계에 그대로 반영한다.
+§결정 기록 앞의 요약·설명·선택지·권장은 결정 요청(2026-09-05) 당시의 기록이며, 확정 내용은 §결정 기록이다.
 **출처**: [backlog.md](../backlog.md) A-1 "남은 판단 ①~⑤" · [meetings/2026-08-31-dev-sync.md](../meetings/2026-08-31-dev-sync.md) §3·§4
-**관련 문서**: [movie-model.md](movie-model.md) · [specs/movie.md](../specs/movie.md) · [plans/2026-08-31-dev-sync-follow-up.md](../plans/2026-08-31-dev-sync-follow-up.md) T3
+**관련 문서**: [movie-model.md](movie-model.md) · [specs/movie.md](../specs/movie.md) · 후속 계획(보관) [archive/2026-08-31-dev-sync-follow-up.md](../archive/2026-08-31-dev-sync-follow-up.md) T3
 
 ## 한 줄 요약
 

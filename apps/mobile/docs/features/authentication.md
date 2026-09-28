@@ -13,7 +13,7 @@ Users sign in to Snaply with an email and password, or with Google, before reach
 | Create an account | `Functional` | `/sign-up` collects email + password (with confirmation), calls `supabase.auth.signUp` with `emailRedirectTo` set to the app deep link, and — because email confirmation is enabled — shows a check-your-email notice ("${email} 주소로 인증 링크를 보냈어요. 이 기기에서 메일의 링크를 누르면 인증이 끝나고 바로 로그인돼요."). Tapping the link in the email opens the app (`snaplyapp://auth/callback?code=…`); the global deep-link handler runs `exchangeCodeForSession`, which signs the user in. The confirmation email can be re-sent. |
 | Reset a forgotten password | `Functional` | `/reset-password` ("가입한 이메일 주소로 재설정 링크를 보내드려요." with the CTA 재설정 링크 받기) sends a recovery link via `resetPasswordForEmail` (`redirectTo` = `snaplyapp://auth/reset`) and shows a check-your-email notice. Tapping the link opens the app; the handler exchanges the code for a recovery session and sets `isRecovering`, which the guard uses to force the `/update-password` screen where `updateUser` saves the new password. |
 | Sign in with Google | `Functional` | The sign-in screen renders `SocialLoginList` (Google only) below the email form. Tapping it runs the PKCE OAuth flow (`signInWithOAuth` → in-app browser consent → `exchangeCodeForSession`); the resulting user is mirrored into the session and the guard reveals the app. Requires the Google provider configured in Supabase (see below). |
-| Sign in with Apple | `Deferred` | The path is in place but no button is: `SocialProvider` includes `'apple'`, `supabaseAuthProvider.signIn('apple')` runs the same PKCE flow as Google, and the icon ships (`ui/provider-icons/apple.svg`). What is absent is the button's presentation metadata — `socialProviders` lists Google only, and the unused Apple entry was removed rather than kept dormant. Re-enable by adding a `SocialProviderMeta` for Apple to `socialProviders` and completing Apple provider setup below. |
+| Sign in with Apple | `Deferred` | The path is in place but no button is: `SocialProvider` includes `'apple'`, `supabaseAuthProvider.signIn('apple')` runs the same PKCE flow as Google, and the icon ships (`ui/provider-icons/apple.svg`). What is absent is the button's presentation metadata — `socialProviders` lists Google only, with no dormant Apple entry. Re-enable by adding a `SocialProviderMeta` for Apple to `socialProviders` and completing Apple provider setup below. |
 | Development sign-in without a backend | `Functional` | In development builds (`__DEV__`) where Supabase credentials are absent (`isSupabaseConfigured` is false), email sign-in uses an offline mock instead of dead-ending on the placeholder host. Sign-up/reset mocks create no session (they cannot simulate an email deep link), so those flows only complete against a real Supabase project. Any production build always uses Supabase. |
 | Pending and error feedback | `Functional` | The submit button shows a pending label and inputs disable while a request resolves — from the action hook's `isPending`, not the form's own submitting flag. Field-level validation errors render under each input and clear as the value is corrected; server failures render a Korean message near the button. |
 | Stay signed in across restarts | `Functional` | Supabase persists its session through the chunked SecureStore adapter and restores it on launch; the splash overlay stays up until the initial session is read back. Tokens refresh automatically while the app is foregrounded. |
@@ -58,6 +58,15 @@ let the handler tell confirmation from recovery without relying on the auth even
 precedence over the authenticated group, so a recovery deep link — which signs
 the user in — cannot reach the app until the new password is set.
 
+`src/_app/routes/root-layout.tsx` composes the groups with `Stack.Protected`, and
+**declaration order there is also fallback priority**: guarded groups first,
+most-specific state first — pending-deletion (`isAuthenticated && isPendingDeletion
+&& !isRecovering`), then recovery, then authenticated (which excludes both states),
+then signed-out — and the two unguarded `auth/*` landings last, so they never
+become the fallback while still always resolving for an email link. That order is
+why a recovery link cannot reach the app until the new password is set, and why an
+account inside its deletion grace period only ever sees the restore screen.
+
 ## Ownership and state
 
 | Concern | Owner |
@@ -85,7 +94,7 @@ the user in — cannot reach the app until the new password is set.
 | Handing the local library (snaps, movies, upload state) and the query cache to the signed-in account | `src/_app/providers/library-scope-gate.tsx`, over `src/shared/lib/scoped-store` |
 | The deleted-account ledger and the purge of a deleted account's local library once its grace period ends | `src/features/delete-account` (`model/deleted-account-ledger.ts`, `model/purge-local-library.ts`, `ui/deleted-library-purge-gate.tsx`) |
 
-**Supabase owns the session.** The `supabase` client persists the session (access token, refresh token, user) via the chunked SecureStore adapter and refreshes tokens automatically while the app is active. The zustand session store no longer persists its own copy; instead `initSession` (run once from the root layout) subscribes through `entities/session/api/session-gateway`, mirrors the derived `User` into the store, and flips `hasHydrated` on the first event. `initSession` is the single writer for backend-driven changes (restore on launch, refresh, sign-out); the sign-in action additionally writes the user directly for immediate feedback (and to support the offline mock provider). The store still exposes the same focused selector hooks (`useCurrentUser`, `useIsAuthenticated`, `useSessionHydrated`, `useSetSession`, `useClearSession`) through the slice Public API.
+**Supabase owns the session.** The `supabase` client persists the session (access token, refresh token, user) via the chunked SecureStore adapter and refreshes tokens automatically while the app is active. The zustand session store persists no copy of its own; `initSession` (run once from the root layout) subscribes through `entities/session/api/session-gateway`, mirrors the derived `User` into the store, and flips `hasHydrated` on the first event. `initSession` is the single writer for backend-driven changes (restore on launch, refresh, sign-out); the sign-in action additionally writes the user directly for immediate feedback (and to support the offline mock provider). The store still exposes the same focused selector hooks (`useCurrentUser`, `useIsAuthenticated`, `useSessionHydrated`, `useSetSession`, `useClearSession`) through the slice Public API.
 
 **Signing in changes whose data the app holds.** Snaps, movies, and upload state are local files, so they are stored per user and re-bound whenever the session user changes — `_app/providers/library-scope-gate.tsx` does that, and clears the TanStack Query cache with it, because query keys name a request and not an account. Signing out binds the empty scope: the previous account's data leaves memory at once but stays on the device, since a local library has no copy anywhere else. What is on disk and what still is not cleaned up is documented in [Snap library](snaps.md#file-model-and-storage-boundary).
 
@@ -111,21 +120,9 @@ That injection is wired: `src/shared/api/auth-header.ts` reads the token from `s
 
 ## Configuration
 
-Environment (`.env`, see `.env.example`):
+The app reads `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY` (`.env`, see `.env.example`) — client-safe values (the anon key is public, gated by Row Level Security); without them a dev build boots on the offline mock and real sign-in cannot complete. It passes two redirect targets, built in `shared/lib/supabase/auth-redirect.ts`, and the Supabase project must allow **both**: `snaplyapp://auth/callback` (sign-up confirmation, and the OAuth return — the `emailRedirectTo` target) and `snaplyapp://auth/reset` (password recovery — the `redirectTo` target). The deep links are also why the default **Confirm signup** and **Reset password** email templates work unedited: editing default-sender templates is restricted on new free-tier projects, whereas Redirect URL configuration is not.
 
-- `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY` — client-safe values from the Supabase project (anon key is public, gated by Row Level Security). Without them the app still boots for mock/offline development but real sign-in cannot complete.
-
-Supabase dashboard (one-time setup for email/password):
-
-- Auth → Sign In / Providers → Email: keep **Email** enabled, **Confirm email** on, and user sign-up allowed.
-- Auth → URL Configuration → Redirect URLs: allow **both** `snaplyapp://auth/callback` (sign-up confirmation) and `snaplyapp://auth/reset` (password recovery). These are the `emailRedirectTo` / `redirectTo` targets the app passes.
-- The default **Confirm signup** and **Reset password** email templates (which use `{{ .ConfirmationURL }}`) work as-is — **no template editing required**. This is the reason for the deep-link approach: editing default-sender templates is restricted on new free-tier projects, whereas Redirect URL configuration is not.
-
-Social provider setup:
-
-- Auth → Providers: enable **Google** (OAuth client id/secret from Google Cloud Console) — **required** for the Google button to complete sign-in. Enable **Apple** (Service ID, Team ID, Key ID, private key from Apple Developer) only when re-enabling Apple.
-- The `snaplyapp://auth/callback` redirect above is reused by the OAuth flow.
-- Google/Apple consoles: register the Supabase callback `https://<project-ref>.supabase.co/auth/v1/callback`.
+The console steps — the Supabase project and keys, the Email provider, the redirect allowlist, the Google provider and its Google Cloud client, and Apple for when it is re-enabled — are the human guide [`docs/guides/supabase-auth-setup.md`](../guides/supabase-auth-setup.md).
 
 ## Token storage
 

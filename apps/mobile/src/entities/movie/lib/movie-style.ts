@@ -43,10 +43,10 @@ const StyleOptions: Record<MovieStyle, Omit<MovieStyleOption, 'id'>> = {
 const StyleOrder: readonly MovieStyle[] = ['daily', 'emotional', 'travel'];
 
 /**
- * The three styles a movie can be generated with (concept §6 step ②).
+ * The three styles a movie can be generated with.
  *
  * A local constant until the backend serves `GET /styles`, but no longer a local
- * *invention*: the entries are the presets `POST /edit-jobs` accepts.
+ * *invention*: the entries are the presets the movie API accepts (`STYLE_PRESETS`).
  */
 export const MovieStyleCatalog: readonly MovieStyleOption[] = StyleOrder.map((id) => ({
   id,

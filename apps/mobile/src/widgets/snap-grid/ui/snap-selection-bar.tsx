@@ -42,7 +42,7 @@ export type SnapSelectionBarProps = {
  * target's remaining room, and what can be done with them.
  *
  * It reports the room rather than a bare count because the ten-snap cap is the
- * product's one hard constraint (concept §5) and the moment it bites is here —
+ * product's one hard constraint (MOV-5) and the moment it bites is here —
  * the user has to see why an eleventh pick is refused.
  */
 export function SnapSelectionBar({

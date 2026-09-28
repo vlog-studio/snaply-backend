@@ -40,10 +40,10 @@ export type GenerateFooterProps = {
 };
 
 /**
- * Handing the movie to the AI — the fixed bar under the timeline (concept §6
- * step ③). The first run, a retry after a failure, and a remake after an edit
- * are the same act on the same button; what changes is the label and, for a
- * failure, the stored reason above it.
+ * Handing the movie to the AI — the fixed bar under the timeline (root
+ * docs/decisions/product-concept.md §6). The first run, a retry after a failure,
+ * and a remake after an edit are the same act on the same button; what changes
+ * is the label and, for a failure, the stored reason above it.
  *
  * The action row is a fixed-height slot: while a cut is selected it hands its
  * place to the cut inspector instead of stacking above or below it, so taking

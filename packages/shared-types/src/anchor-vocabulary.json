@@ -1,5 +1,5 @@
 {
-  "_note": "앵커 어휘의 단일 원본. TypeScript(anchor.ts)와 워커(pipeline/anchor.py)가 같은 파일을 읽는다. 손으로 고치면 양쪽 정합성 테스트가 잡는다 — docs/plans/edit-spec-v3-kickoff.md",
+  "_note": "앵커 어휘의 단일 원본. TypeScript(anchor.ts)와 워커(pipeline/anchor.py)가 같은 파일을 읽는다. 손으로 고치면 양쪽 정합성 테스트가 잡는다 — docs/decisions/edit-spec-v3.md §3",
 
   "vocabularyVersion": 1,
   "derivationVersion": 1,

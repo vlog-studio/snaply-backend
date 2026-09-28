@@ -45,11 +45,11 @@ How to use it: run the Detection Rules in [`principles.md`](principles.md) while
 
 ## Mystery CTA
 
-- **Symptom.** `확인`, `완료`, `계속`, `다음`, `적용` on a screen where the result is not implied by context; icon-only buttons for consequential actions.
+- **Symptom.** A generic label (the list in `Outcome-Oriented CTA`'s Detection Rule) on a screen where the result is not implied by context; icon-only buttons for consequential actions.
 - **Cause.** Copy written from the implementation's viewpoint ("submit the form") rather than the outcome's.
 - **User cost.** Predictability loss; tap-to-discover behavior; undo work; anxiety before irreversible steps.
 - **Principles.** `Outcome-Oriented CTA`, `Predictable Transitions`.
-- **Remediation.** Rewrite the label as the outcome in the user's words. If the outcome is too long to fit, shorten the outcome, not its meaning; put the full phrase in the accessibility label. Reserve generic labels for honest linear steps and dismissals.
+- **Remediation.** Rewrite the label as the outcome in the user's words, built as [`ux-writing.md` → CTA](ux-writing.md#cta) describes. A generic label stays only under one of `Outcome-Oriented CTA`'s Exceptions.
 
 ## System-Centric Question
 
@@ -73,7 +73,7 @@ How to use it: run the Detection Rules in [`principles.md`](principles.md) while
 - **Cause.** Every configurable value became a control; no one distinguished user decisions from product policy.
 - **User cost.** Cumulative Decision Cost, analysis paralysis, and abandonment right before the payoff.
 - **Principles.** `Reduce Decision Cost`, `Smart Default`.
-- **Remediation.** Classify each option: policy (remove it), inferable (default it, visibly), rare (disclose it), genuinely user's (keep, phrase answerably). Order what remains by likelihood. Aim for at most two visible decisions on a primary creation path.
+- **Remediation.** Classify each option: policy (remove it), inferable (default it, visibly), rare (disclose it), genuinely user's (keep, phrase answerably). Order what remains by likelihood, until `Reduce Decision Cost`'s Detection Rule — with its Exceptions applied — no longer fires.
 
 ## Navigation Maze
 
@@ -185,7 +185,7 @@ How to use it: run the Detection Rules in [`principles.md`](principles.md) while
 - **Cause.** Mechanical application of `One Thing per Page`.
 - **User cost.** Transition and orientation cost per step; loss of the whole-decision view; higher perceived length even though each step is easy.
 - **Principles.** `One Thing per Page` (over-applied), `Reduce Decision Cost`.
-- **Remediation.** Group questions that share one mental context and are answered from the same fact. Split only when a question's answer changes what comes next, or when the input needs the full screen (keyboard, camera, map).
+- **Remediation.** Regroup by the splitting rule in [`One Thing per Page`](principles.md#1--one-thing-per-page)'s Exceptions: group what shares one mental context, and split only where an answer changes what comes next.
 
 ## Truncated Feature
 
@@ -193,7 +193,7 @@ How to use it: run the Detection Rules in [`principles.md`](principles.md) while
 - **Cause.** Element removal used as a proxy for cognitive relief.
 - **User cost.** Task failure for the affected users — the most expensive outcome in this catalog, since it removes value rather than noise.
 - **Principles.** `Density Where Density Pays`, `Preserve User Control and Exit`.
-- **Remediation.** Restore the capability; relocate or defer instead of removing. Any removal requires a stated reason plus evidence of low use, and must be listed as a trade-off in the change report.
+- **Remediation.** Restore the capability. Prefer, in order: default it → reorder it → subordinate it → defer it behind one interaction → move it to the surface that owns it → remove it. Removing an element needs a stated reason — no user decision depends on it, or evidence of negligible use; removing a capability also needs evidence of low use and the user's explicit approval ([`agent-protocol.md` → Escalation and confirmation](agent-protocol.md#escalation-and-confirmation)). Every removal is listed in the change report as a trade-off.
 
 ## Leaky Vocabulary
 
@@ -236,7 +236,7 @@ When reporting smells, keep this shape so findings stay comparable across review
 ```text
 [smell name] — <where on the screen> — <which Detection Rule fired>
   Principle: <principle #, name>
-  Cost: <Cognitive Load | Decision Cost | Interaction Cost | Discoverability | Predictability | User Control | Error Prevention>
+  Cost: <a term from README.md → Vocabulary>
   Confidence: high | medium — <why, or which exception might apply>
 ```
 

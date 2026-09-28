@@ -66,10 +66,10 @@ Always design the declined path as a real path, not a degraded dead end.
 
 ## 6 — Location permission
 
-- **Knows.** That location is used to attach *where* a snap was taken and to notify near saved places; whether background access is involved.
+- **Knows.** That location is used to attach *where* a snap was taken and to notify them on arriving near a place worth shooting; whether background access is involved.
 - **First.** The feature that needs it, in the moment it is used — not on first launch.
 - **Default.** Foreground first. Ask for background/always only when the user enables a feature that genuinely needs it (geofenced alerts), never bundled with the foreground ask.
-- **CTA.** `위치 사용하기` / `안 쓰기`; for the background upgrade, `이 장소 알림 받기`.
+- **CTA.** The foreground ask is the OS prompt itself, at the first capture that records a place — a refusal only files the snap without one. The background upgrade asks our own question first — `주변 장소 알림을 받을까요?` with `알림 받기` / `안 받기` — and only a yes runs the OS prompts ([Me tab](../features/me.md#current-behavior)).
 - **Disclosure.** Explain the always-on implication only at the background step, in one line. Snaps captured without location save fine, silently.
 
 See [`../features/location-and-push-notifications.md`](../features/location-and-push-notifications.md) for the current gating; keep the copy aligned with what the code actually registers.
@@ -77,7 +77,7 @@ See [`../features/location-and-push-notifications.md`](../features/location-and-
 ## 7 — Notification permission
 
 - **Knows.** What we will send and roughly when — tied to something they just did.
-- **First.** The pending outcome: a generation running, a place saved.
+- **First.** The pending outcome: a generation running.
 - **Default.** Ask after the first action whose completion the user would want to hear about; never on launch.
 - **CTA.** `다 만들어지면 알려주기` / `괜찮아요`.
 - **Disclosure.** Category-level preferences live in `나`, not in the prompt. One ask; if declined, offer it again only at a materially different moment (and at most rarely).
@@ -125,7 +125,7 @@ Reserve layout so nothing shifts when content arrives.
 - **Knows.** That it started, roughly how long it takes, that they can leave, and how they will find the result.
 - **First.** Progress with meaning (a ring, a stage name in user words), plus the object being produced.
 - **Default.** Continue in the background when the user leaves; offer completion notification (asked as in §7). Do not cancel on navigation.
-- **CTA.** `나가도 계속 만들어요` as state, `그만두기` as a quiet secondary. On completion, the next action: `무비 보기`.
+- **CTA.** None to leave with: leaving is safe, and the screen shows it by keeping the run and its progress, never by a sentence promising it ([the movie screen](../features/movie.md#user-goal)). Stopping is a quiet secondary that confirms in place: `만들기 취소`, then `계속 만들기` / `만들기 취소`. On completion the result itself is the next thing on screen — the finished movie plays where the user is.
 - **Disclosure.** Technical stages are collapsed into at most three user-meaningful ones; never expose queue positions or job ids (`Leaky Vocabulary`).
 
 State the cost before starting, not during (`Hidden Cost`).
@@ -143,7 +143,7 @@ Background work must never steal focus, block a CTA, or interrupt the current sc
 ## 14 — Success
 
 - **Knows.** That it worked, what now exists, and what they can do next.
-- **First.** The result itself. Show the movie, the snap, the saved place — the artifact is the confirmation.
+- **First.** The result itself. Show the movie or the snap — the artifact is the confirmation.
 - **Default.** Land the user on the result; do not require a dismissal step to see it.
 - **CTA.** The most likely next action (`공유하기`, `무비 보기`), plus a quiet way back to where they were.
 - **Disclosure.** No celebration screen that must be dismissed before the result is reachable. A toast is enough for small successes; silence is enough when the state change is visible.
@@ -216,6 +216,6 @@ Never mix sort and filter into one unlabeled control.
 - **First.** The result-to-be — the cut list, the style, the length — as a reviewable summary.
 - **Default.** All inputs defaulted so the action is one tap for the common case; never pre-commit; never auto-start on screen entry.
 - **CTA.** Outcome plus cost adjacency: `무비 만들기` with the cost stated next to it, not after the tap.
-- **Disclosure.** Fine-grained control is available before the commit and stays available after the result (per this project's decision that edits follow generation — see [`../features/movie.md`](../features/movie.md)).
+- **Disclosure.** Fine-grained control is available before the commit and stays available after the result: a movie is editable whenever no run owns it ([the movie screen](../features/movie.md#user-goal)).
 
 Cost is always disclosed *before* the commit. `Value first, cost later` orders the reveal; it never hides the bill.

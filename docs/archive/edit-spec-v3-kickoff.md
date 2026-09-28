@@ -1,10 +1,16 @@
 # editSpec v3 착수 계획 — 스펙 · 에셋 매니페스트 · 어휘 사전
 
+> **보관 (2026-09-27)** — 수명이 끝난 착수 계획이다. 커밋 1~3(어휘 사전·시드·무효화 규칙)은
+> 2026-08-20 에 구현됐고, 확정 결정과 그 근거(§1, §3~§6 의 규칙)는
+> [decisions/edit-spec-v3.md](../decisions/edit-spec-v3.md)로, 남은 개정(§6 커밋 4)과 미결은
+> [backlog.md](../backlog.md) A-7 로 옮겼다. 본문은 작성 시점 그대로이며, 이동으로 깨진 상대 링크
+> (`./trend-editing-pipeline.md` → `../plans/trend-editing-pipeline.md`)만 고쳤다. 판단 근거로 인용하지 말 것.
+
 **작성일**: 2026-08-20 · **상태**: 부분 구현 — **커밋 1~3(어휘 사전·시드·무효화 규칙)은 완료됐다**
 ([progress.md](../progress.md) 2026-08-20, [backlog.md](../backlog.md) A-7). **남은 것은 §6 커밋 4
 (두 초안의 잔여 개정)뿐이며**, 그 절 외의 내용은 완료된 작업의 기록이지 작업 지시가 아니다.
 
-상위 계획은 [trend-editing-pipeline.md](./trend-editing-pipeline.md), 미결 결정은
+상위 계획은 [trend-editing-pipeline.md](../plans/trend-editing-pipeline.md), 미결 결정은
 [backlog.md](../backlog.md) A-7 에만 둔다. 현행 계약은 [api-spec.md](../api-spec.md),
 현행 파이프라인의 사실은 [archive/progress-phase-1-9.md](../archive/progress-phase-1-9.md) Phase 5 에 있다.
 
@@ -46,7 +52,7 @@
 | B-4 | `audio.bgm` 은 믹스 파라미터만. 트랙은 `music` 참조 | 작성자가 다른 두 스테이지가 같은 사실을 쓴다 |
 | B-5 | `transitions[].sfxId` 제거 | 효과음은 style-director 도메인. `audio.sfx[].sourceRef` 로 역참조가 이미 된다 |
 | B-6 | `beatLength` 권위, 길이는 파생. 재투영이 원래 길이 ±20% 를 벗어나면 edit-director 재실행 | 컷 길이를 음악 단위로 정했으므로 BPM 변화가 길이를 바꾸는 것이 옳다 |
-| B-7 | 앵커는 `(cutId, offsetInCutMs)`, 지속은 `durationMs`. 절대 ms · `atBeat` 는 파생 | 시각 표현 3중을 정리한다. **[trend-editing-pipeline.md](./trend-editing-pipeline.md) §3 의 "키프레임은 절대 시각(ms)" 문장을 같은 커밋에서 함께 고친다** |
+| B-7 | 앵커는 `(cutId, offsetInCutMs)`, 지속은 `durationMs`. 절대 ms · `atBeat` 는 파생 | 시각 표현 3중을 정리한다. **[trend-editing-pipeline.md](../plans/trend-editing-pipeline.md) §3 의 "키프레임은 절대 시각(ms)" 문장을 같은 커밋에서 함께 고친다** |
 | B-8 | `reason` 을 닫힌 코드 집합으로 (`{ code, detail }`) | 자유 문자열이면 `removedCutIds` → `reason` 집계가 문자열 파싱이 된다 |
 | B-9 | `userEdits.locked` 대상을 열거형으로 | `"timeline.cuts.order"` 는 실재하지 않는 경로다 |
 | B-10 | `source.clips[].uri` → `videoId` | 워커는 [worker.py:86](../../apps/ai-worker/src/worker.py#L86) `fetch_source_keys` 로 키를 해석한다. URI 를 구우면 스토리지 이전 시 과거 스펙이 죽고 소유권 검증을 우회한다 |
@@ -312,7 +318,7 @@ B-6 의 "재투영"이 세 번째 상태를 요구했다. 무효화/유지 두 �
   클램프 금지 결정이 조용히 무너진다. 걸릴 자리가 둘이다 — 초안의 JSON Schema 예시와,
   v3 를 받게 될 API 의 스펙 검증(`parseEditSpec` 확장). **양쪽 다 `resolved.xy` 에 범위 제약을
   두지 않는다**고 적는다
-- ~~**[trend-editing-pipeline.md](./trend-editing-pipeline.md) §3** — "레이어는 타임라인에 붙는다 /
+- ~~**[trend-editing-pipeline.md](../plans/trend-editing-pipeline.md) §3** — "레이어는 타임라인에 붙는다 /
   키프레임은 절대 시각(ms)" 문장을 B-7 결정에 맞춰 수정~~ **✅ 2026-08-20 완료** — trend 문서 §3이
   이미 `(cutId, offsetInCutMs)` 권위로 고쳐져 있다. 다시 고치지 말 것.
 - **[api-spec.md](../api-spec.md)** — `EditJob` 응답에 `editSpec` 이 포함되므로 v3 확정 시 같은

@@ -1,14 +1,20 @@
 # 플랜 제한 집행 보류 결정
 
+> **보관 (2026-09-27)** — 정기 구독 시절의 플랜 차등 집행을 보류했던 결정이다. 2026-08-12
+> [decisions/credit-payment-model.md](../decisions/credit-payment-model.md)가 대체했고, 월 3편 제한을
+> 되살리지 않는 근거는 그 문서 §기각한 대안으로, 기술적 보호 제한(§1)의 값과 이유는 코드와
+> [api-spec.md](../api-spec.md)(Rate limit · 영상 · AI 편집 절)로 옮겼다. 본문은 작성 시점 그대로이며, 이동으로 깨진
+> 상대 링크(`./<결정 문서>` → `../decisions/<결정 문서>`)만 고쳤다. 판단 근거로 인용하지 말 것.
+
 **작성일**: 2026-08-05 (2026-08-11 갱신)
 **상태**: 대체됨 — 플랜 차등 집행 보류 후 정기 구독을 제거했다.
 **범위**: 플랜 차등 집행 보류와 기존 월 3편 제한을 복원하지 않는 근거를 기록한다.
-**원천**: 아니다 — 현행 결제 정책의 원천은 [credit-payment-model.md](./credit-payment-model.md),
+**원천**: 아니다 — 현행 결제 정책의 원천은 [credit-payment-model.md](../decisions/credit-payment-model.md),
 미결 상태는 [backlog.md](../backlog.md) A-2다. 단, **§1의 기능적/기술적 제한 표는 지금도 유효한
 현행 사실**이며 각 값의 원천은 표의 "위치" 열이 가리키는 코드다.
 **후속 작업의 원천**: [backlog.md](../backlog.md) A-2
 
-> 2026-08-12 [credit-payment-model.md](./credit-payment-model.md)가 이 결정을 대체했다.
+> 2026-08-12 [credit-payment-model.md](../decisions/credit-payment-model.md)가 이 결정을 대체했다.
 > 아래 내용은 구독형 플랜을 보류했던 시점의 근거로만 보존한다. 현행 결제 정책으로 사용하지 않는다.
 
 플랜별 제한이 확정되지 않은 상태에서 부분 구현이 서로 어긋나는 문제를 막기 위해
@@ -25,8 +31,8 @@
 2. 기존 월 3편 제한은 제거하고 기계적으로 복원하지 않는다.
 3. 편집 횟수·해상도·워터마크 등 플랜 차등은 새 수익화 정책이 확정될 때까지 집행하지 않는다.
 4. Free 스토리지 한도 정책은 별도 결정을 따른다. *(결정 당시 5GB —
-   [snap-source-of-truth.md](./snap-source-of-truth.md). 2026-08-14
-   [storage-and-subscription-policy.md](./storage-and-subscription-policy.md)에서 2GB로 축소)*
+   [snap-source-of-truth.md](../decisions/snap-source-of-truth.md). 2026-08-14
+   [storage-and-subscription-policy.md](../decisions/storage-and-subscription-policy.md)에서 2GB로 축소)*
 5. 새 플랜 정책의 결정·구현 상태는 이 문서가 아니라 [backlog.md](../backlog.md) A-2에서만 관리한다.
 
 ### 결정 시점의 집행 상태 (2026-08-11)
@@ -36,7 +42,7 @@
 | 기능적/기술적 제한 (§1) | **집행 중** — 플랜과 무관 |
 | 편집 횟수 제한 | **집행하지 않음** — 월 3편 모델 제거(§3) |
 | 해상도 차등 · 워터마크 | **미구현** |
-| 스토리지 용량 한도 (당시 Free 5GB — 현행 2GB) | **정책 결정됨, 미구현** — 현행 한도는 [storage-and-subscription-policy.md](./storage-and-subscription-policy.md) |
+| 스토리지 용량 한도 (당시 Free 5GB — 현행 2GB) | **정책 결정됨, 미구현** — 현행 한도는 [storage-and-subscription-policy.md](../decisions/storage-and-subscription-policy.md) |
 | `GET /billing/plans` 의 `features` 문구 | FE 표시용 문구일 뿐 **백엔드가 집행하지 않음**. 현재 실동작과 불일치 |
 
 즉 **지금 유료 플랜을 결제해도 무료 플랜과 기능 차이가 없다.** 이 상태를 전제로 개발·검증한다.
@@ -61,7 +67,7 @@
 
 아래 표는 **초기 기획안이며 채택된 정책이 아니다**. 월 3편 모델은 제거했고,
 스토리지 용량 한도(당시 Free 5GB, 현행 2GB)는 별도 결정
-([storage-and-subscription-policy.md](./storage-and-subscription-policy.md))을 따른다.
+([storage-and-subscription-policy.md](../decisions/storage-and-subscription-policy.md))을 따른다.
 이를 현재 또는 향후 플랜 계약으로 사용하지 않는다.
 
 초기 기획안(착수 시점 계획서 §Phase 8, `billing.service.ts`의 `features` 문구):

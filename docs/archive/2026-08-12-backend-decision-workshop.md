@@ -7,7 +7,7 @@
 > **용도**: 회의에서 함께 읽고 선택한 뒤, 확정 내용·담당자·기한을 한 문서에 기록한다.
 > **미결 작업 원천**: [backlog.md](../backlog.md)
 > **관련 결정**: [movie-model.md](../decisions/movie-model.md) ·
-> [plan-limits.md](../decisions/plan-limits.md) ·
+> [plan-limits.md](plan-limits.md) ·
 > [credit-payment-model.md](../decisions/credit-payment-model.md) ·
 > [snap-source-of-truth.md](../decisions/snap-source-of-truth.md)
 > **관련 제안**: [video-analysis-implementation-plan.md](../archive/video-analysis-implementation-plan.md)
@@ -71,7 +71,7 @@
 - [ ] 인스타그램을 다시 연동해 `token_expires_at`이 채워지는지 확인했다. 담당: B
 - [ ] 인스타그램 테스트 릴스를 정리했다. 틱톡 받은함 증거물 3건은 삭제하지 않았다. 담당: B
 - [ ] B가 최신 `main`을 받고 `npm run db:generate`를 실행했다.
-- [ ] A·B가 [plan-limits.md](../decisions/plan-limits.md)의 현행 상태를 읽었다.
+- [ ] A·B가 [plan-limits.md](plan-limits.md)의 현행 상태를 읽었다.
 - [ ] 참석자가 [backlog.md](../backlog.md)의 A-1, A-2, B-1~B-4를 읽었다.
 
 ---
@@ -172,7 +172,7 @@ B를 선택한 경우 폐기 판단 조건:
 - Free 원본 스냅 저장 한도 5GB와 기술 보호 제한은 결제 모델과 별도로 유지한다.
 
 근거: [credit-payment-model.md](../decisions/credit-payment-model.md) ·
-[plan-limits.md](../decisions/plan-limits.md) ·
+[plan-limits.md](plan-limits.md) ·
 [snap-source-of-truth.md](../decisions/snap-source-of-truth.md) §6
 
 ### 2-1. Movie export 차감 단위와 상태 전이

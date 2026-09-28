@@ -31,8 +31,8 @@ With multiple devices attached, a bare `adb shell` fails with "more than one dev
 
 Anything that touches the API needs three more things, and getting one wrong makes the verification silently prove nothing rather than fail loudly (learned over the movie-generation integration, 2026-08-10):
 
-- **`EXPO_PUBLIC_API_BASE_URL` in the app's `.env` must be the LAN IP of the machine running the backend**, not `localhost` — the phone resolves `localhost` to itself. An **empty** value is the trap: it switches `USE_MOCK_API` on, so every request is answered by a mock and the run looks like it succeeded while nothing reached a server.
-- **The backend's public storage endpoint must be the same LAN IP.** It is what goes into presigned URLs, so with `localhost` the phone can neither upload a snap nor download a rendered file, while the backend's own logs look healthy.
+- **The backend must be reachable from the phone.** Set `EXPO_PUBLIC_API_BASE_URL` and the backend's public storage endpoint (it goes into presigned URLs) as [ONBOARDING §3-3](../../../../ONBOARDING.md#3-3-서버-환경변수-만들기) and [§3-4](../../../../ONBOARDING.md#3-4-모바일-환경변수-만들기) describe. On the phone `localhost` is the phone itself, so it can neither upload a snap nor download a rendered file, while the backend's own logs look healthy.
+- **An empty `EXPO_PUBLIC_API_BASE_URL` is the trap:** it switches `USE_MOCK_API` on, so every request is answered by a mock and the run looks like it succeeded while nothing reached a server.
 - **Object storage and the database can drift apart.** The dev database may be remote (Supabase) while object storage is a local container: wiping the storage volume leaves rows pointing at objects that no longer exist, and the app's own sync store keeps calling those snaps uploaded. The symptom is a server-side `HeadObject … 404`, not an app error. Re-shooting the snaps is the recovery; the app has no way to re-upload a snap it believes is already up.
 
 The app's own error copy is deliberately coarse — one refusal covers every transport failure — so read the failure's real cause from the Metro log or the backend's log rather than from the screen.
@@ -138,7 +138,7 @@ For a value that no other layer exposes, add a temporary `console.log`, let Fast
 adb -s "$DEVICE" shell dumpsys package "$PKG" | grep -E "granted=(true|false)"
 ```
 
-Runtime permission state materially changes app behavior, so check it before concluding that a permission-dependent feature is broken. As of 2026-07-27 on the owner's device: `ACCESS_FINE_LOCATION` granted; `CAMERA`, `RECORD_AUDIO`, and `POST_NOTIFICATIONS` **not** granted.
+Runtime permission state materially changes app behavior, so check it before concluding that a permission-dependent feature is broken.
 
 Granting via `adb shell pm grant "$PKG" android.permission.CAMERA` works, but it modifies the owner's device state — ask first, and prefer exercising the app's own permission prompt when the prompt itself is part of what is being verified.
 
@@ -147,14 +147,11 @@ Granting via `adb shell pm grant "$PKG" android.permission.CAMERA` works, but it
 Know these before promising a verification result:
 
 - **No root.** `run-as` covers this app's debug build only. Other apps' data is unreachable, and Samsung Secure Folder profiles reject shell access outright (`SecurityException: Shell does not have permission to access user 150`).
-- **Camera input cannot be injected.** Recording a real clip requires the owner to hold the device. The agent can verify everything downstream of capture — stored clip, thumbnail, roll state, UI — but not the capture gesture itself.
-- **Metro is owner-run.** Do not start it in the background and do not kill port 8081. See the verification policy.
-- **FCM push display is unverified.** Geofence gating and local-notification setup are confirmed on device; end-to-end push display stays deferred until a backend notification API exists.
+- **Camera input cannot be injected.** Recording a real clip requires the owner to hold the device. The agent can verify everything downstream of capture — stored clip, thumbnail, library state, UI — but not the capture gesture itself.
+- **FCM push display is unverified.** Geofence gating and local-notification setup are confirmed on device; no geofence-enter-to-displayed-notification run has been recorded yet (status: [`location-and-push-notifications.md`](../features/location-and-push-notifications.md)).
 - **Release-variant behavior differs.** These tools assume the debug dev build. `run-as` and `ReactNativeJS` logging are unavailable on the release APK from `npm run android:device:release`.
 - **A JS-only loop.** Native module changes, config-plugin changes, and `app.json` branding changes need a rebuild (`npm run android:device`), not Fast Refresh — see [`app-branding-and-native-config.md`](app-branding-and-native-config.md).
 
-## Pending: iOS physical-device verification
+## iOS physical devices
 
-**Not written — the owner has no iOS device as of 2026-07-27.** Write the counterpart document when one becomes available; do not infer an iOS device procedure from this document in the meantime.
-
-Until then, iOS verification falls back to the simulator paths in [`local-development-and-testing.md`](local-development-and-testing.md) (Expo Go, or EAS Build when native modules are involved, with idb for touch automation), subject to the local-Xcode limitation described there. When reporting results, state explicitly that a change was verified on Android only.
+This toolkit is Android-only. Its iOS counterpart is not written yet; until it is, follow the fallback in [`AGENTS.md`](../../AGENTS.md#planned-documentation).

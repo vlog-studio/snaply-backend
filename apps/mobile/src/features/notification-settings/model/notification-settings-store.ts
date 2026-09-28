@@ -6,13 +6,14 @@ import { secureStorage } from '@/shared/lib/secure-storage';
 /**
  * Owns the user's notification preferences.
  *
- * Most of them are the location-alert settings, which map to the backend user
- * profile fields (`notification_enabled`, `quiet_start`, `quiet_end`) and are
- * persisted locally for now; once the app writes them through `PATCH /auth/me`,
- * those become a server-backed query/mutation and their local copies are
- * dropped. `movieReady` has no backend field yet — generation runs on the device,
- * so the device is also what announces it — but it is a notification preference
- * and belongs beside the others rather than in a store of its own.
+ * The location-alert switch, the quiet hours, and `movieReady` have backend
+ * counterparts (`locationNotificationEnabled`, `quietStart`/`quietEnd`,
+ * `movieNotificationEnabled`, under the `notificationEnabled` master switch) that
+ * `PATCH /auth/me` accepts and the server's pushes are judged by. The app still
+ * persists them locally only (root backlog B-6), so a switch here does not yet
+ * reach those pushes; once the app writes them, they become a server-backed
+ * query/mutation and the local copies are dropped. `movieReady` also gates the
+ * app's own failure notice.
  *
  * Quiet hours are stored as integer hours (0–23), matching the backend.
  *

@@ -39,13 +39,13 @@ const RecentSnapCount = 5;
  * Three blocks, read top to bottom as start → work: the way into a new movie,
  * the templates that will go looking for material on their own, and the movies
  * themselves — unfinished first. Reopening the app lands here so the user
- * resumes rather than restarts (concept §3).
+ * resumes rather than restarts (root docs/decisions/product-concept.md §3).
  *
  * The 새 무비 row and the templates are two entrances to the same place: one is
  * "make a movie out of these", the other is "make me something like this". Both
  * show the user's own material rather than describing it: the row carries the
  * library's size and its newest snaps, the template cards their filled and empty
- * slots — the workbench has the material on it (concept §3). The
+ * slots — the workbench has the material on it (same decision, §3). The
  * row replaced the 담기 트레이 panel (2026-08-12): picks now become a draft
  * movie directly, and a draft is the basket the tray was — persistent, refill-
  * able through the movie screen, and plural — so the studio's job here shrank

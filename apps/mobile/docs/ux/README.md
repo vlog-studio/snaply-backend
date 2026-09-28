@@ -11,17 +11,22 @@ Design tokens (color, type scale, spacing, radius, motion curves) are **out of s
 | 1 | [`philosophy.md`](philosophy.md) | The four root ideas every other rule derives from |
 | 2 | [`principles.md`](principles.md) | 17 applicable principles, each with a machine-checkable Detection Rule |
 | 3 | [`ux-smells.md`](ux-smells.md) | Named defects to classify a screen's problems quickly |
-| 4 | [`screen-analysis.md`](screen-analysis.md) | The 10-step analysis a review must run before proposing anything |
+| 4 | [`screen-analysis.md`](screen-analysis.md) | The Step 0–10 analysis a review must run before proposing anything |
 | 5 | [`visual-hierarchy.md`](visual-hierarchy.md) | Semantic role, weight, and misuse of every screen element |
 | 6 | [`interaction-patterns.md`](interaction-patterns.md) | Canonical answers for 22 recurring situations |
 | 7 | [`ux-writing.md`](ux-writing.md) | Copy rules for CTAs, questions, explanations, errors |
 | 8 | [`examples.md`](examples.md) | 13 before/after screens with the reasoning shown |
-| 9 | [`agent-protocol.md`](agent-protocol.md) | The exact procedure and output format for an agent doing UX work |
-| 10 | [`guardrails.md`](guardrails.md) | Failure modes an agent must not commit |
+| 9 | [`agent-protocol.md`](agent-protocol.md) | How an agent runs that analysis: request modes, implementation rules, the change-report format, and when to ask |
+| 10 | [`guardrails.md`](guardrails.md) | Failure modes an agent must not commit, each linked to the rule it breaks |
 | 11 | [`principle-priority.md`](principle-priority.md) | How to resolve principles that conflict |
-| 12 | [`review-checklist.md`](review-checklist.md) | The gate for a PR or screen review |
+| 12 | [`review-checklist.md`](review-checklist.md) | The one checklist — the gate for a PR or a screen review |
 
-Minimum context for any UX task: `principles.md`, `ux-smells.md`, `agent-protocol.md`, `guardrails.md`. Add the rest as the task requires.
+What to read and run, by task:
+
+| Task | Read | Run |
+| --- | --- | --- |
+| Copy only — a label, a question, a message, an empty state's line | [`ux-writing.md`](ux-writing.md) | The copy path of the [review checklist](review-checklist.md#fast-path) |
+| Anything else — a review, a smell scan, a proposal, or a change | `principles.md`, `ux-smells.md`, `agent-protocol.md`, `guardrails.md`; the rest as the task requires | [`screen-analysis.md`](screen-analysis.md), then the review checklist path the change's size calls for |
 
 ## Evidence labels
 
@@ -36,7 +41,7 @@ Every principle, pattern, and rule in this directory carries one label. The labe
 
 ### Verified `Toss Principle` sources
 
-These are the Toss-published items this directory relies on. Everything else labeled `Toss Principle` must add its own source.
+These are the Toss-published items this directory relies on. A new Toss source is added to this table before anything cites it as `Toss Principle`.
 
 | Item as published | Source |
 | --- | --- |
@@ -73,16 +78,13 @@ Use these terms in reviews instead of aesthetic adjectives ("clean", "pretty", "
 
 ## Product context this system assumes
 
-Snaply is an AI short-form vlog studio: a user captures short snaps, gathers picks into a draft movie, and generates the finished movie from it (the intermediate 담기 트레이 was removed 2026-08-12). Four tabs (`스튜디오`, `스냅`, `무비`, `나`) plus a center capture button; full-screen modals for `/capture` and `/extract`. See [`../features/README.md`](../features/README.md) for the current route map and implementation status, which is the factual baseline any UX review must read before claiming a screen is broken.
+Snaply is an AI short-form vlog studio: a user captures short snaps, gathers picks into a draft movie, and generates the finished movie from it. Four tabs (`스튜디오`, `스냅`, `무비`, `나`) plus a center capture button; full-screen modals for `/capture` and `/extract`. See [`../features/README.md`](../features/README.md) for the current route map and implementation status, which is the factual baseline any UX review must read before claiming a screen is broken.
 
-Two project decisions already settled, which this system encodes rather than re-litigates:
-
-- **No explanatory UI copy.** Screens do not narrate themselves. State, short read-outs, and accessibility hints stay; instruction lines and empty-state paragraphs are cut. See `principles.md` → `Show State, Not Instructions`.
-- **Korean product copy in 해요체.** Product strings are Korean. Code identifiers, file paths, and this documentation stay English.
+Two project decisions are settled, and this system encodes them rather than re-litigating them: **no explanatory UI copy** — defined, with its exceptions, in [`principles.md` → `Show State, Not Instructions`](principles.md#13--show-state-not-instructions) — and **Korean product copy in 해요체** ([`ux-writing.md`](ux-writing.md#tone)).
 
 ## Maintaining this directory
 
 - Treat these documents as code. A UX rule that the app knowingly violates is either a documented exception or a bug — never a silent divergence.
-- When a review produces a genuinely new rule, add it with a `Derived Principle` label, a Detection Rule, and at least one Exception. A rule with no exception is a bug in the rule.
+- When a review produces a genuinely new rule, add it to `principles.md` with a `Derived Principle` label, a Detection Rule, and at least one Exception. A rule with no exception is a bug in the rule.
 - When a `Toss Principle` claim cannot be traced to a URL, downgrade its label instead of deleting the rule.
 - Add new before/after cases to `examples.md` as they occur in real PRs; the catalog's value comes from being drawn from this app.

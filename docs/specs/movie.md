@@ -2,19 +2,16 @@
 
 **작성일**: 2026-09-02
 **상태**: 현행 — 무비 요구사항의 원천
-**관련 문서**: [decisions/movie-model.md](../decisions/movie-model.md) · [decisions/storage-and-subscription-policy.md](../decisions/storage-and-subscription-policy.md) §3 · [apps/mobile/docs/features/movie.md](../../apps/mobile/docs/features/movie.md) · 표기 규칙은 [README.md](README.md)
+**관련 문서**: [decisions/movie-model.md](../decisions/movie-model.md) · [decisions/movie-cleanup-after-export.md](../decisions/movie-cleanup-after-export.md) · [apps/mobile/docs/features/movie.md](../../apps/mobile/docs/features/movie.md) · 표기 규칙은 [README.md](README.md)
 
 ## 무비 모델
 
 - **MOV-1** `구현됨` — 무비는 **스냅 컷 목록 + 스타일**이다. 스냅은 평면으로 보관되고 무비가
   참조한다 — 같은 스냅을 여러 무비가, 같은 스냅을 한 무비 안에서 다른 구간으로 여러 번 쓸 수 있다.
-- **MOV-2** `구현됨`(실기기 미검증) — 무비는 **서버가 소유**한다. 서버 `Movie` 엔티티와 API(생성·조회·수정·삭제·
-  내보내기·끝내기)는 2026-09-09 에, 앱 전환은 2026-09-12 에 구현됐다 — 앱은 서버 무비의 캐시와
-  아웃박스를 기기에 두고, 무비 id 는 앱이 정한 uuid 를 서버가 그대로 받는다
-  ([decisions/movie-client-cache.md](../decisions/movie-client-cache.md)). 기기를 바꾸거나 앱을 지워도
-  무비는 돌아온다 — 다만 스냅 라이브러리 동기화(SNAP-14 3단계) 전에는 컷의 원본이 기기에 없다.
-  실기기 검증은 [backlog.md](../backlog.md) A-1. 무비는 스냅을 **참조**할 뿐이라 한 스냅을 여러
-  무비가 다르게 쓰고, 무비를 지워도 스냅은 남는다.
+- **MOV-2** `구현됨`(실기기 미검증 — [backlog.md](../backlog.md) A-1) — 무비는 **서버가 소유**한다. 기기를
+  바꾸거나 앱을 지워도 무비는 돌아온다. 앱이 서버 무비를 기기에 두는 방식은
+  [decisions/movie-client-cache.md](../decisions/movie-client-cache.md). 무비는 스냅을 **참조**할 뿐이라
+  한 스냅을 여러 무비가 다르게 쓰고, 무비를 지워도 스냅은 남는다.
 - **MOV-3** `구현됨` — 무비를 시작하는 경로는 두 가지고 같은 화면에서 만난다:
   스냅을 직접 골라 시작하거나, 템플릿으로 시작한다([template-and-recommendation.md](template-and-recommendation.md)).
 
@@ -53,7 +50,7 @@
   15일이면 만료되고(SNAP-9) 컷이 하나라도 만료되면 그 구성은 다시 실행할 수 없다(MOV-20).
   예외를 두지 않기로 한 근거는
   [decisions/movie-snap-expiry-exemption.md](../decisions/movie-snap-expiry-exemption.md).
-  재현성을 깨는 또 하나는 BGM 무작위 선택이다([backlog.md](../backlog.md) E-5, A-1 착수 시 함께 닫는다).
+  재현성을 깨는 또 하나는 BGM 무작위 선택이다([backlog.md](../backlog.md) E-5 — A-7 의 `bgm_tracks` 와 함께 닫는다).
 - **MOV-20** `구현됨` — 만료·삭제된 스냅을 쓰는 컷이 있으면 **생성이 400 으로 막힌다.** 무비 자체는
   열리고 그 컷은 `unavailable` 로 보이며, 사용자가 그 컷을 빼면 다시 생성할 수 있다.
 
@@ -63,15 +60,15 @@
   **공유**는 렌더된 파일을 받아 시스템 공유 시트로 넘긴다.
   이 감상 화면은 **완성 시점부터 끝내기(MOV-17) 전까지**만 존재한다 — 끝낸 무비를 열면
   결과물이 없으므로 편집 화면으로 연다.
-- **MOV-16** `결정·미구현` — **끝내지 않은** 결과물의 서버 보관 상한은 **30일**이다. 사용자가
+- **MOV-16** `구현됨` — **끝내지 않은** 결과물의 서버 보관 상한은 **30일**이다. 사용자가
   끝내지 않고 방치한 경우에도 파일이 무한히 남지 않게 하는 상한이며, 끝내면 그보다 먼저
   사라진다(MOV-17). 만료 안내를 어떤 알림으로 줄지는 미결이다([backlog.md](../backlog.md) A-1).
   ※ 종전의 "만료된 무비를 크레딧 없이 무료 재생성"은 **폐기됐다** — 다시 만들기는 항상 새 생성이다(MOV-19).
-- **MOV-17** `구현됨`(앱 2026-09-12, 실기기 미검증) — 사용자가 결과물을 **다운로드하거나 SNS 에 게시해 "끝내면"**,
+- **MOV-17** `구현됨`(실기기 미검증 — [backlog.md](../backlog.md) A-1) — 사용자가 결과물을 **다운로드하거나 SNS 에 게시해 "끝내면"**,
   서버의 결과물 파일을 삭제한다. **끝낸 브이로그는 다시 볼 수 없다** — 다시 보기 기능은 제공하지
   않는다. 남는 것은 프로젝트(구성)이며, 편집 화면에서 고쳐 다시 만들 수 있다
   ([decisions/movie-cleanup-after-export.md](../decisions/movie-cleanup-after-export.md), 2026-09-09 결정).
-  화면에서는 이 동작을 `정리하기`라고 부른다("서버"는 사용자 용어가 아니다, 2026-09-24).
+  화면에서는 이 동작을 `정리하기`라고 부른다 — "서버"는 사용자 용어가 아니다.
 - **MOV-18** `구현됨` — **끝났다는 판정은 추측하지 않는다.** 앱은 공유 시트가 올라온 뒤에도 "저장했나요?"
   확인을 받아서만 끝내기를 부른다. 시스템 공유 시트는 사용자가 실제로
   저장했는지 알려주지 않으므로(시트를 닫기만 해도 성공과 구분되지 않는다), 다운로드 경로의 끝내기는

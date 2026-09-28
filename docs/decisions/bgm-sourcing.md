@@ -4,7 +4,7 @@
 **상태**: 미결 — 결정 대기. 회의(2026-08-31)는 "AI 생성 음원의 법적 정책을 먼저 확인한 뒤 결정"으로 남겼다.
 **출처**: [meetings/2026-08-31-dev-sync.md](../meetings/2026-08-31-dev-sync.md) §2
 **관련 문서**: [backlog.md](../backlog.md) A-7 "BGM 조달 경로와 예산" · E-5 · [specs/movie.md](../specs/movie.md) MOV-7 · MOV-14 ·
-[storage-and-subscription-policy.md](storage-and-subscription-policy.md) §3 · [plans/2026-08-31-dev-sync-follow-up.md](../plans/2026-08-31-dev-sync-follow-up.md) T4
+[movie-cleanup-after-export.md](movie-cleanup-after-export.md) · 착수 순서는 [README.md](README.md) §결정 대기
 
 ## 한 줄 요약
 
@@ -19,9 +19,9 @@
 - 유튜브·틱톡·인스타는 **Content ID** 같은 자동 음원 식별 시스템으로 저작권 주장을 붙인다.
   정당한 라이선스가 있어도 시스템이 모르면 클레임이 걸리므로, 면제(화이트리스트) 절차가 있는
   서비스인지가 중요하다.
-- 우리는 만료된 무비를 나중에 **무료로 다시 만들어 주기**로 했다(MOV-16). 라이선스가 끝난 뒤의 재렌더가
-  "기존 콘텐츠 사용"인지 "신규 제작"인지 계약마다 다르다. 이 조건은
-  [movie-cleanup-after-export.md](movie-cleanup-after-export.md)에서 재생성을 유지할 때만 필요하다.
+- 끝낸 무비도 프로젝트는 남아 나중에 **다시 만들 수 있다**(MOV-19 — 크레딧을 내는 새 생성,
+  [movie-cleanup-after-export.md](movie-cleanup-after-export.md)). 라이선스가 끝난 뒤의 재렌더가
+  "기존 콘텐츠 사용"인지 "신규 제작"인지 계약마다 다르다.
 
 ## 이 결정이 영향을 주는 곳
 

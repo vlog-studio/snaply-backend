@@ -104,27 +104,15 @@ Open every candidate. For each, decide:
   note it once, as confirmation the intent is still documented.
 - **Noise** — a scanner artifact. Drop it silently.
 
-Two signals worth hunting for directly, because they are high-yield and scanners miss them:
-
-- **A comment that admits duplication.** Phrases like "same shape as", "mirrors", "kept in sync
-  with", "copied from" mean a past author noticed and did not extract. That is a finding with a
-  built-in justification.
-- **A shared helper that one call site bypasses.** If a repo has `useThing` and one component
-  reimplements it inline, the inline copy usually also *lacks a fix* the shared version has.
-  Diff their behavior — the duplication is often the smaller half of the finding.
+Hunt directly for the two signals scanners miss — a comment that admits duplication, and a
+shared helper that one call site reimplements — as `references/judgment.md` describes.
 
 ### Phase 3 — Documentation drift
 
-Code-vs-doc drift is the half most sweeps skip. Three cheap, high-yield checks:
-
-1. **Docs contradicting each other.** Two documents describing the same route or flow
-   differently means at least one is stale, and you find it without reading any code. This is
-   the single highest-yield drift check.
-2. **Last-touched dates.** `git log -1 --format='%ad %s' --date=short -- <doc>` against the
-   commits that changed the code it describes. A doc that stopped moving three feature commits
-   ago is stale by default.
-3. **Inventory completeness.** If a doc enumerates modules, routes, or ownership, diff the list
-   against the filesystem. Missing entries are the most common drift and the easiest to fix.
+Code-vs-doc drift is the half most sweeps skip. Check it in three directions — docs against
+each other (the highest-yield check: two documents describing the same flow differently means
+one is stale), docs against code, and inventories against the filesystem — using the ranked
+checks in `references/judgment.md`.
 
 ### Phase 4 — Report, then stop
 
@@ -142,9 +130,8 @@ For each fix:
   layering doc says shared code goes.
 - **Extract on the second real consumer, not the first.** Most repos say this explicitly; it is
   also just true. Two call sites is evidence, one is speculation.
-- **Keep business vocabulary out of shared code.** When two screens share chrome but differ in
-  wording, the shared piece takes primitives and each caller keeps its own strings. If the
-  extraction forces both callers to say the same thing, it was the wrong seam.
+- **Keep business vocabulary out of shared code** — apply the seam test in
+  `references/judgment.md` before extracting.
 - **Prove behavior is preserved, not just that text moved.** Every simplification is a claim.
   Check each one: is a swapped key equivalent? Is that hardcoded hex the same value as the token
   you replaced it with? Does the template literal build the same string the JSX children did?

@@ -156,8 +156,8 @@ const { data, isPending, error } = useQuery(locationQueries.nearby(origin));
 - Keep these responsibilities in separate files. Do not fetch-and-map inside a
   component, and do not let the transport client import a domain type.
 - The consumer receives the mapped **domain** type and passes the query `signal`
-  through the factory (§4). `QueryClient` is owned by `_app/providers`; never construct
-  one in a feature/page.
+  through the factory (§4); it uses the app's one `QueryClient`
+  ([state and data](../frameworks/state-and-data.md#queryclient)).
 - Place the query in `entities/<entity>/api` for a single entity, or `pages/<page>/api`
   for a screen-only composite (see [state and data](../frameworks/state-and-data.md#query-and-key-placement)).
 
@@ -204,13 +204,12 @@ export function mapLocation(dto: LocationDto): Location {
 - The mapper is the only place the wire shape exists. DTO field names must not appear
   anywhere else in the app.
 - Do not export the DTO type from the slice Public API — it is an internal wire detail.
-- Declare only the fields the app maps. Zod strips the rest, so a response field the app
-  ignores (`distanceMeters` here) costs nothing and does not belong in the schema.
-- Narrow a field to an enum only when the backend contract guarantees the set. A
-  server-side free-text field validated as a union fails the **whole** response the first
-  time an unseen value appears — and a caller that swallows the error (the geofence setup
-  does) turns that into a silent outage. Test the mapper: it is a pure function on a
-  contract that drifts.
+- Declare only the fields the app maps, and keep a field the server may extend wider
+  than an enum ([Zod validation policy](../workflows/api-contract-integration.md#zod-validation-policy)). Zod strips
+  undeclared fields, so a response field the app ignores (`distanceMeters` here) costs
+  nothing; a free-text field validated as a union fails the **whole** response, and a
+  caller that swallows the error (the geofence setup does) turns that into a silent
+  outage. Test the mapper: it is a pure function on a contract that drifts.
 
 ---
 
@@ -229,7 +228,7 @@ export const locationQueries = {
   all: () => ['location'] as const,
   nearby: (params: GetLocationsParams) =>
     queryOptions({
-      queryKey: [...locationQueries.all(), 'nearby', params.latitude, params.longitude] as const,
+      queryKey: [...locationQueries.all(), 'nearby', params.latitude, params.longitude, params.radiusMeters ?? null] as const,
       queryFn: ({ signal }) => getLocations(params, signal),
     }),
 };
@@ -274,10 +273,11 @@ result: (jobId: string) =>
 
 ## 5. Mock-or-real request routing (`USE_MOCK_API`)
 
-**When:** any request to a backend endpoint that does not exist yet (the current
-default: the app runs against in-code mocks until an origin is configured).
+**When:** every request to the backend. Mock mode is on while no API origin is
+configured (or with `EXPO_PUBLIC_USE_MOCK_API=true`), so each request function carries
+both branches.
 
-**Canonical (three identical instances):**
+**Canonical:**
 [`get-locations.ts`](../../src/entities/location/api/get-locations.ts),
 [`register-fcm-token.ts`](../../src/features/register-push-token/api/register-fcm-token.ts),
 [`report-geofence-enter.ts`](../../src/features/geofence-monitor/api/report-geofence-enter.ts).
@@ -317,7 +317,8 @@ await apiRequest('/auth/fcm-token', { method: 'POST', body: { fcmToken }, schema
 - The mock and real branches must have an **identical return type** so callers never
   branch on the mode.
 - Never log sensitive values (FCM tokens, credentials); log only that the call ran.
-- Leave a comment describing how the mock is replaced once the real endpoint exists.
+- Leave a comment where the mock deliberately differs from the real endpoint (the
+  location mock returns the whole seed set; the server filters by radius).
 
 ---
 
@@ -348,10 +349,8 @@ try {
 ```
 
 **Rules**
-- Transport/protocol error normalization lives only in `shared/api`.
-- Business errors (missing entity, mapping) belong to the entity/page `api`; action
-  failure and retry belong to the feature; screen-wide error UI belongs to the page
-  (see [state and data](../frameworks/state-and-data.md#error-and-loading-states)).
+- Transport/protocol error normalization lives only in `shared/api`; every other error
+  is placed by layer as [state and data](../frameworks/state-and-data.md#error-and-loading-states) lists it.
 
 ---
 
@@ -572,16 +571,20 @@ export function useLocalX() {
     return () => { isMounted.current = false; };
   }, []);
 
-  const removeX = async (item: X) => {
+  const saveX = async (source: string) => {
     try {
-      await deleteX(item.uri);
-      if (isMounted.current) setItems((cur) => cur.filter((i) => i.id !== item.id)); // optimistic
+      const item = await persistX(source);
+      if (isMounted.current) setItems((cur) => [item, ...cur]); // update in place, no reload
+      return item;
     } catch {
-      if (isMounted.current) setErrorMessage('삭제하지 못했어요.');
+      if (isMounted.current) setErrorMessage('저장하지 못했어요.');
+      return undefined;
     }
   };
 
-  return { items, isLoading, errorMessage, clearError: () => setErrorMessage(undefined), removeX };
+  const reloadX = async () => { /* list again, same guards */ };
+
+  return { items, isLoading, errorMessage, clearError: () => setErrorMessage(undefined), reloadX, saveX };
 }
 ```
 
@@ -591,12 +594,12 @@ export function useLocalX() {
   `clearError`, and the mutating actions.
 - Update the list optimistically on success; set a Korean `errorMessage` on failure.
   Keep the file-system/native calls in a shared adapter (§12), not in the hook.
-- Keep only the mutations that stay inside this resource. The canonical hook lists and
-  saves recording files but no longer deletes them: deleting an original also has to
-  reach snap metadata and every movie referencing it, so it became its own
-  feature ([`use-delete-snaps.ts`](../../src/features/delete-snap/model/use-delete-snaps.ts))
-  that composes both entities. When a mutation spans entities, it outgrew this pattern — the
-  caller then reloads the list from the ids that action reports.
+- Keep only the mutations that stay inside this resource. Deleting an original also
+  has to reach snap metadata and every movie referencing it, so it is its own feature
+  ([`use-delete-snaps.ts`](../../src/features/delete-snap/model/use-delete-snaps.ts))
+  composing both entities rather than an action of this hook. A mutation that spans
+  entities has outgrown this pattern; the caller reloads the list after that action
+  reports what it deleted.
 
 ---
 
@@ -605,30 +608,37 @@ export function useLocalX() {
 **When:** using a native/device capability (Location, Notifications, Camera, files).
 
 **Canonical:** raw native in [`shared/lib/location`](../../src/shared/lib/location) vs.
-product flow in [`geofence-monitor.ts`](../../src/features/geofence-monitor/model/geofence-monitor.ts);
+product flow in [`geofence-monitor.ts`](../../src/features/geofence-monitor/model/geofence-monitor.ts)
+(check-only gate, replace existing monitoring) and
+[`use-location-alerts.ts`](../../src/features/notification-settings/model/use-location-alerts.ts)
+(the prompts, from the user's own switch);
 same split for [`recording-files`](../../src/shared/lib/recording-files),
 [`notifications`](../../src/shared/lib/notifications), and
 [`haptics`](../../src/shared/lib/haptics) — the last one absorbs the project's iOS-only
 guard so no caller repeats `process.env.EXPO_OS === 'ios'`.
 
 ```ts
-// shared/lib/location — narrow native primitive, no product rules, no copy
-export function requestBackgroundLocationPermission(): Promise<PermissionResult> { /* native call */ }
+// shared/lib/location — narrow native primitives, no product rules, no copy
+export function getBackgroundLocationPermission() { /* check only — never prompts */ }
+export function requestBackgroundLocationPermission() { /* shows the OS prompt */ }
 
-// features/geofence-monitor/model — product flow: ordering, Korean copy, replace-logic
-export async function ensureGeofencePermissions(): Promise<LocationPermissionResult> {
-  const foreground = await requestForegroundLocationPermission();
-  if (!foreground.granted) return { granted: false, reason: 'foreground-denied', /* Korean message */ };
-  const background = await requestBackgroundLocationPermission();
-  if (!background.granted) return { granted: false, reason: 'background-denied', /* Korean message */ };
-  return { granted: true };
+// features/geofence-monitor/model — the gate checks; it never prompts
+export async function hasGeofencePermissions(): Promise<boolean> {
+  const foreground = await getForegroundLocationPermission();
+  if (!foreground.granted) return false;
+  return (await getBackgroundLocationPermission()).granted;
 }
+
+// features/notification-settings/model — the user's switch asks, in the order the OS needs
+const foreground = await requestForegroundLocationPermission();
+const granted = foreground.granted ? (await requestBackgroundLocationPermission()).granted : false;
 ```
 
 **Rules**
 - `shared/lib/*` owns narrow native calls and permission primitives only — no product
   rules, no user-facing copy.
-- The feature owns the product flow: permission *ordering* (foreground → background),
+- The feature owns the product flow: *when* to ask and in what order (foreground →
+  background, from the user's own action — a gate that runs at app start only checks),
   Korean copy, "replace existing monitoring" logic, cooldowns.
 - See [state and data](../frameworks/state-and-data.md#securestore-and-device-apis).
 
@@ -651,10 +661,9 @@ shared/lib/notifications/
 └── index.ts            # re-exports; consumers import only this
 ```
 
-**Rules**
-- Every platform file exports the **same contract**; consumers import the module's
-  Public API and let Metro pick `.ios` / `.android` / `.native` / `.web`.
-- Never import a platform file directly by extension.
+**Rules** — [platform-specific modules](module-boundaries.md#platform-specific-modules):
+one export contract across the files, consumers import the module's Public API, and Metro
+picks the platform file.
 
 ### 13a. Global-scope background task definition
 
@@ -739,9 +748,8 @@ export function XPage() {
   `Fonts.mono` is the system monospace for the `edge`/`code` roles). `ThemedText`
   applies it once for every variant, so only text outside `ThemedText` names a family —
   and it names `Fonts.sans`, never a single face like `'PretendardGOV-Bold'`. Pair it
-  with `fontWeight` from the four embedded weights **400 / 500 / 700 / 800**; 600 is not
-  embedded and resolves down to 500 (see
-  [app branding and native config](../workflows/app-branding-and-native-config.md#app-font)).
+  with a `fontWeight` that is embedded — which weights are, and why not `600`, is in
+  [app branding and native config](../workflows/app-branding-and-native-config.md#app-font).
 - **A micro-label picks its role by the script it holds, not by what it means.** `edge`
   and `note` are one tier — both are `Typography.micro` — and differ only in family:
   `edge` is the mono stamp for **Latin and digits** (`REC`, a bare count, `70%`, a
@@ -787,12 +795,10 @@ export function XPage() {
 skeletons; [writing unit tests](../workflows/writing-unit-tests.md) owns what to test,
 where a test file lives, and the naming/assertion conventions.
 
-Shared rules across all of §15:
-- Co-locate the test next to the unit (`*.test.ts` / `*.test.tsx`).
-- When an isolated test must mock another slice, mock its **Public API**
-  (`jest.mock('@/entities/session')`), never a deep internal path. Do not treat this as a
-  requirement to mock every slice dependency.
-- `render` and `renderHook` are asynchronous in RNTL v14 — always `await` them.
+Every recipe below follows that document's
+[tooling notes](../workflows/writing-unit-tests.md#tooling) (`render` and `renderHook` are awaited),
+[placement](../workflows/writing-unit-tests.md#where-a-test-lives), and
+[mocking policy](../workflows/writing-unit-tests.md#mocking-policy).
 
 ### 15a. Pure function (table-driven)
 
@@ -808,9 +814,7 @@ it.each([undefined, '', '3', '05'])('falls back to three seconds for %s', (value
 });
 ```
 
-**Rules**
-- Use `it.each` for a family of inputs exercising the same rule, instead of
-  copy-pasting near-identical `it` blocks.
+**Rules** — [table-driven cases](../workflows/writing-unit-tests.md#conventions).
 
 ### 15b. Component interaction (RNTL)
 
@@ -825,9 +829,8 @@ fireEvent.press(screen.getByRole('button', { name: title }));
 expect(onPress).toHaveBeenCalledTimes(1);
 ```
 
-**Rules**
-- Query by accessibility role and name (`screen.getByRole('button', { name })`).
-- Assert behavior, not styling — style values are verified on-device.
+**Rules** — query by role and name, and assert behavior rather than styling
+([conventions](../workflows/writing-unit-tests.md#conventions)).
 
 ### 15c. Hook test with an explicit boundary
 
@@ -874,13 +877,9 @@ await waitFor(() => expect(result.current.isLoading).toBe(false));
 - Wrap state updates in `await act(async …)`; wait for async transitions with `waitFor`.
 - Test the observable contract across branches — for an action hook: success, cancel
   (silent), failure (error surfaced).
-- Prefer a real `QueryClient` and provider to mocking `useQueryClient`, `useQuery`, or
-  `useMutation`. Set `gcTime: Infinity`, disable retries, and seed cache data when the test
-  must not perform HTTP.
-- Use real internal utilities and error classes. In particular, never create a simplified
-  stand-in for `ApiError`; constructor and `instanceof` behavior are part of the contract.
-- Add an integration-style case when several isolated mocks could agree with one another while
-  the actual modules are disconnected.
+- With a real `QueryClient` and provider
+  ([mocking policy](../workflows/writing-unit-tests.md#mocking-policy)), set `gcTime: Infinity`,
+  disable retries, and seed cache data when the test must not perform HTTP.
 
 ### 15d. Zustand store
 
@@ -900,13 +899,13 @@ jest.mock('@/shared/lib/local-store', () => ({
 ```
 
 Mock whichever backend the store persists through — `local-store` for the growing
-clip/roll data, `secure-storage` for small preference stores.
+snap and movie data, `secure-storage` for small preference stores.
 
 **Rules**
 - Drive the store through `renderHook` + `act` on its exported hooks.
-- Reset the store to its default in `beforeEach`/`afterEach` so ordering never matters.
-  A store exported for its co-located test only (`useClipStore`) is reset directly with
-  `setState`; nothing outside the slice may import it.
+- Reset the store between tests ([conventions](../workflows/writing-unit-tests.md#conventions)). A store exported for
+  its co-located test only (`useSnapStore`) is reset directly with `setState`; nothing
+  outside the slice may import it.
 
 ### 15e. Mocking native modules and `react-native`
 
@@ -985,8 +984,8 @@ const submit = handleSubmit((values) => signIn(values.email, values.password));
 - `handleSubmit` returns a promise-returning function: call it as
   `onPress={() => void submit()}` rather than passing it directly, so the press event
   is not mistaken for a form event.
-- Read `isPending` from the action hook, not `formState.isSubmitting` — one source of
-  truth for a request in flight.
+- Read `isPending` from the action hook, not `formState.isSubmitting`
+  ([state and data](../frameworks/state-and-data.md#react-hook-form-and-zod)).
 - Do not forward `field.ref`. It serves focus management no screen here uses, and
   reading it during render trips the `react-hooks/refs` lint rule.
 
@@ -1019,9 +1018,9 @@ async function press(name: string): Promise<void> {
 
 1. **One reason to change per file** — transport ≠ mapping ≠ query key ≠ product flow.
 2. **Cross boundaries only through Public APIs** — named exports in `index.ts`, no
-   `export *`, no deep imports.
-3. **Every stopgap documents its replacement** — mock routing, local persistence, and
-   in-memory cooldowns all comment how the real backend supersedes them.
+   `export *`, no deep imports ([module boundaries](module-boundaries.md)).
+3. **Every stand-in says what it stands in for** — mock routing, local persistence, and
+   in-memory cooldowns all comment on what the real backend does instead.
 4. **User-facing copy (Korean) lives in features/pages; raw native lives in shared.**
 
 ## Sources
