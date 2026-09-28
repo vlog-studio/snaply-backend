@@ -40,6 +40,21 @@
 - `POST /auth/me/restore` 🔒 — 유예 내 복구. FCM 토큰·SNS 연동은 되살아나지 않는다(재등록 필요). 크레딧 잔액은 보존된다. 삭제 대기 상태가 아니면 400.
 - `POST /auth/fcm-token` 🔒 — 항상 덮어쓴다(기기 하나만 등록됨 — [backlog B-2](./backlog.md)).
 
+### 스냅 분석 동의 (`contract/analysis-consent.ts`)
+
+분석은 **옵트인**이다 — 동의한 사용자의 스냅만 외부 모델로 보낸다([ANA-5](./specs/template-and-recommendation.md),
+배경 [decisions/snap-content-analysis.md](./decisions/snap-content-analysis.md) §6.1). 동의는 서버가 집행하므로
+앱이 묻는 화면을 건너뛰어도 분석·추천 요청은 `403 ANALYSIS_CONSENT_REQUIRED` 로 거절된다.
+
+- `GET /auth/me/analysis-consent` 🔒 — `{ available, currentVersion, granted, grantedAt }`.
+  - `available: false` 는 서버 스위치가 꺼져 있다는 뜻이다. 동의해도 분석이 돌지 않으므로 **묻지 않는다.**
+  - `granted` 는 **현재 문구 버전**(`currentVersion`, 원천은 계약의 `SNAP_ANALYSIS_CONSENT_VERSION`)에 동의했는가다.
+    문구가 바뀌어 버전이 오르면 이전 동의는 `granted: false` 가 되고, 앱은 바뀐 문구로 다시 묻는다.
+- `POST /auth/me/analysis-consent` 🔒 — 본문 `{ version }` 은 사용자에게 **보여 준** 문구의 버전이다. 멱등하다.
+  `currentVersion` 과 다르면 `409 CONSENT_VERSION_MISMATCH` — 상태를 다시 읽어 바뀐 문구로 다시 묻는다.
+- `DELETE /auth/me/analysis-consent` 🔒 — 철회. 그 뒤로 분석하지 않고 **이 사용자의 분석 결과와 추천 기록을 파기**한다
+  (스냅은 그대로). 동의가 없어도 200 이다.
+
 ---
 
 ## 영상 (`contract/videos.ts`)
@@ -66,7 +81,9 @@
 
 - `POST /videos/{videoId}/analysis` 🔒 — **비동기**. `202` 로 접수만 알리고 상태는 `GET` 으로 폴링한다.
   **멱등하다.** 진행 중이면 같은 `analysisId`, `failed` 이고 `error.retryable: true` 면 같은 레코드를 `queued` 로 되돌려 재시도(별도 retry API 없음), `done` 이면 그대로 반환, 되돌릴 수 없는 실패(손상된 영상·정책 거절)는 **409**.
-  에러: 업로드 미확정(`status != ready`) 400 · 타 유저·`kind=result`·없는 영상 404 · 큐 접근 불가 `503 QUEUE_UNAVAILABLE`(잠시 후 재요청).
+  **분석에 동의한 사용자만 요청할 수 있다**([동의](#스냅-분석-동의-contractanalysis-consentts)) — 영상을 보기 전에 검사한다.
+  에러: 동의 없음 `403 ANALYSIS_CONSENT_REQUIRED` · 서버 스위치(`MOVIE_RECOMMENDATION_ENABLED`) 꺼짐 `503 ANALYSIS_DISABLED` ·
+  업로드 미확정(`status != ready`) 400 · 타 유저·`kind=result`·없는 영상 404 · 큐 접근 불가 `503 QUEUE_UNAVAILABLE`(잠시 후 재요청).
 - `GET /videos/{videoId}/analysis` 🔒 — 최신 버전 1건. 요청한 적 없으면 404. `failed` 여도 조회는 200 이다.
   - `result` 는 `done` 일 때만, `error` 는 `failed` 일 때만 채워진다. 모델의 원문 오류 메시지는 노출하지 않는다.
   - `error.code` 는 계약에 **문자열로 열려 있다**(알려진 값은 `vocab.ts` 의 `VIDEO_ANALYSIS_ERROR_CODES`). `retryable: false` 면 다시 요청해도 같은 결과다.
@@ -184,6 +201,8 @@ FE 가 알아야 할 동작:
 알지만 촬영 위치를 모른다(SNAP-10·SNAP-11). **크레딧을 차감하지 않는다** — 비용은 후보 수 상한(계약의
 `MAX_RECOMMENDATION_CANDIDATES`)과 최근 24시간 추천 횟수 상한([REC-3](./specs/template-and-recommendation.md))으로 막는다.
 **`MOVIE_RECOMMENDATION_ENABLED=true` 일 때만 동작한다.** 꺼져 있으면 `503 RECOMMENDATION_DISABLED`.
+켜져 있어도 **분석에 동의한 사용자만** 쓸 수 있다 — 동의가 없으면 `403 ANALYSIS_CONSENT_REQUIRED` 이고 추천을 만들지
+않는다([동의](#스냅-분석-동의-contractanalysis-consentts)). 앱은 동의 전에는 요청하지 않고 로컬 매칭만 쓴다.
 
 - `POST /movie-recommendations` 🔒 (10req/분) — **비동기**. `202` 로 접수한다.
   - `candidates` 는 **촬영 시간 오름차순**이어야 한다(점수화의 시간 사전값).

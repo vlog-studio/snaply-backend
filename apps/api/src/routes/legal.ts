@@ -9,9 +9,10 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
  * ⚠️ 아래 문서는 **출시 전 초안**이다. 실제 수집 항목을 코드 기준으로 정확히 기술했지만
  * 법률 검토를 받지 않았다. 앱 심사 제출·서비스 출시 전에 반드시 법무 검토를 거쳐 교체할 것.
  *
- * 특히 **영상 내용 분석(2026-08-19 추가)** 은 아래가 확정돼야 문장이 사실이 된다. 확정 전에는
- * `MOVIE_RECOMMENDATION_ENABLED` 를 켜지 않는다 —
- * docs/decisions/template-snap-recommendation.md · backlog A-3·D-2.
+ * 특히 **영상 내용 분석(2026-08-19 추가)** 은 아래가 확정돼야 문장이 사실이 된다. 2026-09-29 부터는
+ * 확정 전에도 **분석에 동의한 사용자에게만** 켤 수 있다(옵트인 — docs/decisions/snap-content-analysis.md
+ * §6.1, specs ANA-5). 그래서 "동의한 경우에만"·철회 문장은 지금 이미 사실이어야 한다 — legal.test.ts 가
+ * 본다. 법무 검토 자체는 여전히 필요하다(동의 문구 포함, backlog A-3·D-2).
  *
  *  1. **사업자·모델 확정.** 지금 문서는 OpenAI 를 전제로 썼고, `OPENAI_VISION_MODEL` 기본값은
  *     아직 잠정값이다. 사업자가 바뀌면 수탁자 표와 국외 이전 표의 이름·국가가 함께 바뀐다.
@@ -41,12 +42,13 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
  *     Sentry 보관 기간은 요금제에 따라 30일(무료)/90일(유료)이므로 요금제 확정 시 숫자를 좁힐 것.
  *     참고: 데이터 레지던시(한국 포함)는 Enterprise 승인 고객 대상이라, 신청 전에는 OpenAI 가 미국이다.
  *  4. **별도 동의 필요 여부.** 약관·방침 고지로 충분한지, 개별 동의를 받아야 하는지는 법무 판단이다.
- *     "개별 동의 필요" 로 결론이 나면 옵트인 UI 와 미동의 사용자용 폴백이 새로 필요해진다.
+ *     2026-09-29 결론을 기다리지 않고 옵트인을 먼저 들였다. "고지로 충분" 으로 나오면 동의의 기본값을
+ *     그때 다시 정하고, "필요" 로 나오면 동의 문구만 검토 결과에 맞춘다.
  */
 
 const SERVICE = 'Snaply';
 const CONTACT = process.env.LEGAL_CONTACT_EMAIL ?? 'support@snaply.app';
-const UPDATED = '2026-08-19';
+const UPDATED = '2026-09-29';
 
 /**
  * 플랫폼의 URL 소유권 검증용 메타 태그.
@@ -201,7 +203,9 @@ export async function legalRoutes(app: FastifyInstance): Promise<void> {
 
          <h2>5. 영상 내용 분석과 자동 추천</h2>
          <p>무비를 만들 때 어떤 영상을 넣을지 제안하기 위해, 사용자가 후보로 지정한 영상에서
-         대표 장면 이미지를 뽑아 외부 AI 사업자에게 보내 내용을 분석합니다. 업로드한 모든
+         대표 장면 이미지를 뽑아 외부 AI 사업자에게 보내 내용을 분석합니다. 분석은
+         <strong>사용자가 동의한 경우에만</strong> 이루어지며, 동의하지 않아도 추천 없이 같은 기능을
+         쓸 수 있습니다. 동의는 앱에서 언제든 철회할 수 있습니다. 업로드한 모든
          영상을 분석하지는 않으며, 분석은 사용자가 제작을 시작한 시점의 후보에만 이루어집니다.
          전송 범위와 보관에 관한 자세한 내용은 개인정보처리방침에 있습니다.</p>
          <p>분석 결과는 추천을 만들기 위한 내부 근거로만 사용하며 화면에 표시하지 않습니다.
@@ -249,8 +253,12 @@ export async function legalRoutes(app: FastifyInstance): Promise<void> {
 
          <h2>2. 영상 내용 분석</h2>
          <p>무비를 만들 때 어떤 영상을 넣을지 제안하기 위해, 후보 영상의 내용을 외부 AI 사업자의
-         분석 서비스로 확인합니다.</p>
+         분석 서비스로 확인합니다. <strong>사용자가 동의한 경우에만 분석하며</strong>, 동의하지 않아도
+         서비스는 분석 없이 이용할 수 있습니다.</p>
          <ul>
+           <li><strong>동의</strong> — 분석을 쓰는 기능을 처음 쓸 때 동의 여부를 묻습니다. 동의는 앱의
+               나 탭에서 언제든 철회할 수 있고, 철회하면 그 뒤로 분석하지 않으며 이미 만든 분석
+               결과와 추천 기록을 삭제합니다.</li>
            <li><strong>언제</strong> — 사용자가 제작을 시작해 후보 영상이 정해진 시점에만 분석합니다.
                업로드하는 모든 영상을 분석하지 않습니다.</li>
            <li><strong>무엇을</strong> — 영상에서 뽑은 <strong>정지 이미지 최대 4장</strong>만

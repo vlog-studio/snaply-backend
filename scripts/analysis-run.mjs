@@ -66,6 +66,10 @@ const { PrismaClient } = await import(
   new URL('../node_modules/@prisma/client/default.js', import.meta.url).href
 );
 const { Queue } = await import('bullmq');
+// 동의 문구 버전은 앱·서버와 같은 원천을 읽는다 — 여기에 사본을 두면 버전이 오를 때 이 스크립트만 낡는다.
+const { SNAP_ANALYSIS_CONSENT_VERSION } = await import(
+  new URL('../packages/shared-types/dist/index.js', import.meta.url).href
+);
 const prisma = new PrismaClient({ datasourceUrl: DATABASE_URL });
 
 /** 비밀번호를 가린 접속 주소. 어디를 보고 있는지 매번 찍는다 — 짝이 어긋나면 여기서 보인다. */
@@ -203,6 +207,24 @@ async function main() {
       return;
     }
     printResult(row, video);
+    return;
+  }
+
+  // API 를 거치지 않는 도구라도 동의 없는 스냅은 보내지 않는다(specs ANA-5). --host 로 원격 스택을
+  // 겨냥할 수 있어서, 여기서 막지 않으면 동의하지 않은 사용자의 프레임이 이 경로로 나간다.
+  const consent = await prisma.userConsent.findFirst({
+    where: {
+      userId: video.userId,
+      kind: 'snap_analysis',
+      version: SNAP_ANALYSIS_CONSENT_VERSION,
+      revokedAt: null,
+    },
+    select: { id: true },
+  });
+  if (!consent) {
+    console.error('이 스냅의 주인이 스냅 분석에 동의하지 않았습니다(specs ANA-5).');
+    console.error('  → 그 계정으로 앱에서 분석에 동의한 뒤 다시 실행하세요.');
+    process.exitCode = 1;
     return;
   }
 

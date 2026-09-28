@@ -3,12 +3,14 @@
  *
  * 이 기능의 비용은 후보 수에 비례하므로, 여기서 못 박는 것 대부분이 성능이 아니라 **과금**이다 —
  * 같은 요청이 재분석을 돌리지 않는다(멱등), 후보 수와 일일 횟수에 상한이 있다,
- * 약관 전에는 경로 자체가 꺼져 있다.
+ * 경로는 서버 스위치로 꺼져 있고 켜도 분석에 동의한 사용자에게만 돈다(REC-4 — 동의 없을 때의
+ * 거절은 analysis-consent.test.ts 가 본다).
  *
  * 결정: docs/decisions/template-snap-recommendation.md
  */
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { createHarness, type Harness, type TestUser } from './helpers/harness.js';
+import { createConsentedUser } from './helpers/consent.js';
 import { ANALYSIS_VERSION } from '../src/services/video-analysis.service.js';
 import {
   DAILY_RECOMMENDATION_LIMIT,
@@ -92,7 +94,7 @@ function fetchResult(user: TestUser, id: string) {
 
 describe('POST /movie-recommendations', () => {
   it('접수하고 202 로 응답한다', async () => {
-    const user = await h.createUser();
+    const user = await createConsentedUser(h);
     const candidates = [await createSnap(user), await createSnap(user)];
 
     const res = await request(user, { templateId: 'cafe', candidates });
@@ -103,7 +105,7 @@ describe('POST /movie-recommendations', () => {
   });
 
   it('같은 후보 집합의 재요청은 새 추천을 만들지 않는다', async () => {
-    const user = await h.createUser();
+    const user = await createConsentedUser(h);
     const candidates = [await createSnap(user), await createSnap(user)];
 
     const first = await request(user, { templateId: 'cafe', candidates });
@@ -115,7 +117,7 @@ describe('POST /movie-recommendations', () => {
   });
 
   it('후보 순서만 다른 재요청도 같은 추천을 받는다', async () => {
-    const user = await h.createUser();
+    const user = await createConsentedUser(h);
     const candidates = [await createSnap(user), await createSnap(user)];
 
     const first = await request(user, { templateId: 'cafe', candidates });
@@ -125,7 +127,7 @@ describe('POST /movie-recommendations', () => {
   });
 
   it('템플릿이 다르면 다른 추천이다', async () => {
-    const user = await h.createUser();
+    const user = await createConsentedUser(h);
     const candidates = [await createSnap(user), await createSnap(user)];
 
     const cafe = await request(user, { templateId: 'cafe', candidates });
@@ -135,7 +137,7 @@ describe('POST /movie-recommendations', () => {
   });
 
   it('후보 수 상한을 넘기면 몇 개까지인지 알려준다', async () => {
-    const user = await h.createUser();
+    const user = await createConsentedUser(h);
     const candidates: string[] = [];
     for (let i = 0; i <= MAX_CANDIDATES; i += 1) candidates.push(await createSnap(user));
 
@@ -147,8 +149,8 @@ describe('POST /movie-recommendations', () => {
   });
 
   it('남의 스냅이 섞여 있으면 403 이다', async () => {
-    const user = await h.createUser();
-    const other = await h.createUser();
+    const user = await createConsentedUser(h);
+    const other = await createConsentedUser(h);
 
     const res = await request(user, {
       templateId: 'walk',
@@ -159,7 +161,7 @@ describe('POST /movie-recommendations', () => {
   });
 
   it('업로드가 확정되지 않은 스냅은 후보가 될 수 없다', async () => {
-    const user = await h.createUser();
+    const user = await createConsentedUser(h);
     const pending = await h.prisma.video.create({
       data: { userId: user.id, kind: 'source', status: 'pending', s3Key: 'uploads/x.mp4' },
     });
@@ -170,7 +172,7 @@ describe('POST /movie-recommendations', () => {
   });
 
   it('없는 템플릿은 404 다', async () => {
-    const user = await h.createUser();
+    const user = await createConsentedUser(h);
 
     const res = await request(user, { templateId: 'nope', candidates: [await createSnap(user)] });
 
@@ -178,7 +180,7 @@ describe('POST /movie-recommendations', () => {
   });
 
   it('내린 템플릿으로는 추천을 만들 수 없다', async () => {
-    const user = await h.createUser();
+    const user = await createConsentedUser(h);
     const candidates = [await createSnap(user)];
 
     await h.prisma.movieTemplate.update({ where: { id: 'trip' }, data: { retiredAt: new Date() } });
@@ -191,7 +193,7 @@ describe('POST /movie-recommendations', () => {
   });
 
   it('일일 한도를 넘기면 429 다', async () => {
-    const user = await h.createUser();
+    const user = await createConsentedUser(h);
     await h.prisma.movieRecommendation.createMany({
       data: Array.from({ length: DAILY_RECOMMENDATION_LIMIT }, (_, i) => ({
         userId: user.id,
@@ -208,7 +210,7 @@ describe('POST /movie-recommendations', () => {
   });
 
   it('한도에 걸려도 이미 만든 추천의 재조회는 막지 않는다', async () => {
-    const user = await h.createUser();
+    const user = await createConsentedUser(h);
     const candidates = [await createSnap(user)];
     const first = await request(user, { templateId: 'cafe', candidates });
 
@@ -228,7 +230,7 @@ describe('POST /movie-recommendations', () => {
   });
 
   it('플래그가 꺼져 있으면 503 이고 아무것도 만들지 않는다', async () => {
-    const user = await h.createUser();
+    const user = await createConsentedUser(h);
     const candidates = [await createSnap(user)];
 
     process.env.MOVIE_RECOMMENDATION_ENABLED = 'false';
@@ -245,7 +247,7 @@ describe('POST /movie-recommendations', () => {
 
 describe('GET /movie-recommendations/:id', () => {
   it('분석이 끝나지 않았으면 processing 이고 슬롯이 비어 있다', async () => {
-    const user = await h.createUser();
+    const user = await createConsentedUser(h);
     // 분석 결과를 만들지 않았으므로 워커가 처리하기 전 상태다.
     const candidates = [await createSnap(user), await createSnap(user)];
     const { id } = (await request(user, { templateId: 'cafe', candidates })).json().data;
@@ -257,7 +259,7 @@ describe('GET /movie-recommendations/:id', () => {
   });
 
   it('분석이 다 끝났으면 슬롯을 템플릿 순서대로 채운다', async () => {
-    const user = await h.createUser();
+    const user = await createConsentedUser(h);
     const front = await createSnap(user, { objects: ['간판'], places: ['카페 외관'] });
     const menu = await createSnap(user, { objects: ['메뉴판'] });
     const drink = await createSnap(user, { objects: ['커피', '케이크'] });
@@ -286,7 +288,7 @@ describe('GET /movie-recommendations/:id', () => {
   });
 
   it('편집에 못 쓰는 스냅은 슬롯을 채우지 않고 이유가 남는다', async () => {
-    const user = await h.createUser();
+    const user = await createConsentedUser(h);
     const shaky = await createSnap(user, { usableForEdit: false, visualQualityScore: 0.1 });
     const good = await createSnap(user, { objects: ['커피'] });
     const { id } = (await request(user, { templateId: 'cafe', candidates: [shaky, good] })).json()
@@ -301,7 +303,7 @@ describe('GET /movie-recommendations/:id', () => {
   });
 
   it('분석이 실패한 후보가 있어도 나머지로 채운다', async () => {
-    const user = await h.createUser();
+    const user = await createConsentedUser(h);
     const broken = await createSnap(user, { status: 'failed', errorCode: 'SAFETY_REFUSED' });
     const good = await createSnap(user, { objects: ['간판'] });
     const { id } = (await request(user, { templateId: 'cafe', candidates: [broken, good] })).json()
@@ -315,7 +317,7 @@ describe('GET /movie-recommendations/:id', () => {
   });
 
   it('마감 시한을 넘기면 끝난 분석만으로 닫는다', async () => {
-    const user = await h.createUser();
+    const user = await createConsentedUser(h);
     const stuck = await createSnap(user, { status: 'processing' });
     const done = await createSnap(user, { objects: ['커피'] });
     const { id } = (await request(user, { templateId: 'cafe', candidates: [stuck, done] })).json()
@@ -336,7 +338,7 @@ describe('GET /movie-recommendations/:id', () => {
   });
 
   it('한 번 굳은 결과는 다시 채점하지 않는다', async () => {
-    const user = await h.createUser();
+    const user = await createConsentedUser(h);
     const snap = await createSnap(user, { objects: ['커피'] });
     const { id } = (await request(user, { templateId: 'cafe', candidates: [snap] })).json().data;
 
@@ -348,8 +350,8 @@ describe('GET /movie-recommendations/:id', () => {
   });
 
   it('남의 추천은 볼 수 없다', async () => {
-    const user = await h.createUser();
-    const other = await h.createUser();
+    const user = await createConsentedUser(h);
+    const other = await createConsentedUser(h);
     const { id } = (
       await request(user, { templateId: 'cafe', candidates: [await createSnap(user)] })
     ).json().data;
@@ -358,7 +360,7 @@ describe('GET /movie-recommendations/:id', () => {
   });
 
   it('스냅이 삭제되면 그 자리만 비고 추천은 남는다', async () => {
-    const user = await h.createUser();
+    const user = await createConsentedUser(h);
     const snap = await createSnap(user, { objects: ['커피'] });
     const { id } = (await request(user, { templateId: 'cafe', candidates: [snap] })).json().data;
     expect((await fetchResult(user, id)).json().data.status).toBe('done');

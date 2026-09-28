@@ -19,13 +19,13 @@ import type { Prisma } from '@prisma/client';
 import { getPrisma } from '../db/client.js';
 import { AppError } from '../lib/errors.js';
 import { captureException } from '../lib/sentry.js';
+import { isSnapAnalysisEnabled, requireAnalysisConsent } from './analysis-consent.service.js';
 import { ANALYSIS_VERSION, requestAnalysis } from './video-analysis.service.js';
 import {
   DAILY_RECOMMENDATION_LIMIT,
   MAX_CANDIDATES,
   REUSE_WINDOW_MS,
   SCORING_DEADLINE_MS,
-  isRecommendationEnabled,
 } from './recommendation/recommendation-policy.js';
 import {
   assignSlots,
@@ -86,7 +86,7 @@ function candidateHashOf(templateId: string, videoIds: readonly string[]): strin
 }
 
 function requireEnabled(): void {
-  if (!isRecommendationEnabled()) {
+  if (!isSnapAnalysisEnabled()) {
     throw new AppError(
       503,
       'RECOMMENDATION_DISABLED',
@@ -105,6 +105,9 @@ function dedupeInOrder(videoIds: readonly string[]): string[] {
  *
  * **멱등하다.** 같은 (유저·템플릿·후보 집합)이 재사용 창 안에서 다시 오면 새로 만들지 않고
  * 기존 추천을 돌려준다. 사용자가 템플릿 화면을 다시 열 때마다 재분석하면 그게 그대로 비용이다.
+ *
+ * 분석에 동의하지 않은 사용자는 403 이다(REC-4). 후보마다의 분석 요청도 같은 검사를 하지만,
+ * 거기서 걸리면 후보가 조용히 빠질 뿐이라 추천이 빈 채로 만들어진다 — 그래서 여기서 먼저 막는다.
  */
 export async function requestRecommendation(params: {
   userId: string;
@@ -112,6 +115,7 @@ export async function requestRecommendation(params: {
   candidateVideoIds: readonly string[];
 }): Promise<{ recommendation: MovieRecommendation; created: boolean }> {
   requireEnabled();
+  await requireAnalysisConsent(params.userId);
   const prisma = getPrisma();
   const candidates = dedupeInOrder(params.candidateVideoIds);
 
