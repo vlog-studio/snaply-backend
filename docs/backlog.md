@@ -194,6 +194,8 @@ MOV-16~19 다. 만료의 동작 구조(2단계 삭제 · 만료 스냅 식별 ·
       잠정값이다. A-3 의 단가 실측이 나오면 `services/recommendation/recommendation-policy.ts` 의 숫자만 바꾼다
 - [ ] **추천이 쓰이는 곳 결정** — 지금은 템플릿 슬롯에만 쓰인다. 선택지와 권장은
       [plans/snap-analysis-recommendation-rollout.md](./plans/snap-analysis-recommendation-rollout.md) §4.3.
+      **2026-09-28**: 고른 스냅으로 AI 편집 초안을 만드는 쓰임(§4.3 (b)를 넓힌 것)이 오너 결정으로 열렸다 — A-11.
+      남은 것은 그 밖의 쓰임((c) 스튜디오의 선제 제안 등)이다.
       2026-08-31 개발자 회의의 "AI 추천 프로젝트"([meetings/2026-08-31-dev-sync.md](./meetings/2026-08-31-dev-sync.md) §5)가
       이 항목의 확장인지 별개 기능인지도 여기서 함께 정한다. A-3 의 실측 뒤에 정한다
 
@@ -259,6 +261,15 @@ v3 는 **Movie export 에 붙인다** — `POST /edit-jobs` 는 한 버전 공�
       조달 단계에서 **"신규 배포 중단 / 기존 저작물 유지" 분리 조항**을 협상 항목으로 올린다.
       이 조항이 확보되면 팩 상태를 셋(`experimental → active → deprecated`)으로 줄이고
       `retired` 를 법적 차단 전용으로 좁힌다([edit-spec-v3.md](./decisions/edit-spec-v3.md) §2 C-2)
+- [ ] **전환·컷 역할 어휘를 사전 파일로** — v3 초안은 `transitions[].kind`·`cuts[].role`·`accents[].kind` 의
+      자리만 두고 값을 닫지 않았다. 첫 소비처는 A-11 이고, v1 제안(전환 5종·역할 7개)은
+      [plans/edit-recipe-tools.md](./plans/edit-recipe-tools.md) §2·§3 이다
+- [ ] **무효화 사전에 `cut-trim`·`transition-edit`** — 사용자가 초안의 구간과 전환 하나를 고칠 수 있게
+      됐다(MOV-22). 액션 × 레이어를 빠짐없이 판단해 넣는다([auto-edit-draft.md](./decisions/auto-edit-draft.md) §2.5)
+- [ ] **컷 타이밍의 기준을 컷마다** — 결정 B-6(`beatLength` 가 기준)은 사용자가 자른 컷과 음악 없는 무비를
+      다루지 못한다. 사용자가 자른 컷은 ms, AI 가 정한 컷은 음악이 있을 때 비트가 기준이다
+      ([auto-edit-draft.md](./decisions/auto-edit-draft.md) §2.4). 사용자 수정을 값별 주인으로 표현할지,
+      v3 초안의 `userEdits` 로 표현할지도 함께 정한다(같은 문서 §2.2)
 
 **완료 조건**: 위 선행 결정·조달 확정 → `editSpec` v3 확정(계약 `editSpecSchema` 와 `openapi.json` 을 같은
 변경에서 갱신) → `bgm_tracks` + 오프라인 비트 그리드 →
@@ -322,6 +333,35 @@ e2e 실검증.
 - [ ] **무비 길이 상한** — 지금은 컷 10개 × 스냅 최대 5초 = 최대 50초다. 트림으로 줄일지, 목표 길이를 먼저
       정할지 정하지 않았다(editSpec v3 는 목표 길이를 `intent.targetDurationMs` 로 받는다 — A-7).
       **완료 조건**: 상한 또는 목표 길이를 정해 스펙에 적는다
+
+### A-11. AI 편집 초안 — 결정 완료, 구현 전
+
+고른 스냅 여러 개로 AI 가 고칠 수 있는 무비 초안을 만든다(MOV-21·MOV-22). 범위와 규칙은
+[decisions/auto-edit-draft.md](./decisions/auto-edit-draft.md), 툴 목록과 착수 순서의 제안은
+[plans/edit-recipe-tools.md](./plans/edit-recipe-tools.md).
+
+**막힌 이유**: 초안에 담을 툴의 어휘(전환·컷 역할)와 사용자 수정의 무효화 규칙이 없고(A-7), 무비 계약에
+경계별 전환과 값별 주인이 없다.
+
+- [ ] **넘길 수 있는 스냅 수와 비용 상한** — 지금 고르기 화면은 `최대 10개`(= 컷 상한 MOV-5)라 AI 가 고를
+      여지가 없다. 넘길 수 있는 수 · 초안 1회의 vision 분석 수(템플릿 추천의 1회 12개와 별개) · 최근 24시간
+      초안 수를 정한다. 단가 실측(A-3) 전에는 잠정값으로 둔다
+- [ ] **무비 계약: 경계별 전환과 값별 주인(`ai`·`user`)** — `Movie.arranger` 의 규칙을 구간·전환으로 넓힌다
+      (결정 §2.2). `packages/shared-types` 계약 · `openapi.json` · [api-spec.md](./api-spec.md)를 같은 변경에서 고친다
+- [ ] **경계별 전환의 렌더** — v2 에 필드를 더하지 않는다(구버전 워커가 조용히 무시한다 —
+      [decisions/edit-spec-v3.md](./decisions/edit-spec-v3.md) §4). v3 의 컷·전환 부분을 `edit-v3` 큐로 먼저 낸다
+- [ ] **앱: 경계별 전환 선택과 미리보기** — 편집 화면의 두 플레이어 무대에서 불투명도·스케일·오버레이로
+      v1 전환이 보이는지부터 확인한다(계획 §2.1)
+- [ ] **로컬 신호 reader** — 스냅 사이 중복 · 스냅 안의 좋은 구간 · 밝기·흐림 · 발화 구간(VAD). 분석
+      활성화와 무관하게 쓴다(계획 §4)
+- [ ] **초안 생성 API 와 선택 단계(edit-director)** — 초안을 만들 때 돈다(결정 §2.1). 업로드가 끝나지 않은
+      스냅의 취급, 초안을 바로 보여줄지 편집이 끝날 때까지 기다릴지(결정 §2.7), "다시 편집"을 둘지를 함께 정한다
+- [ ] **빠진 스냅을 알릴지** — 이유(화질 등)를 보여주면 분석 결과를 노출하지 않는다는 원칙(ANA-2)과 부딪힐 수 있다
+
+**완료 조건**: 위 항목이 끝나고, 고른 스냅으로 받은 초안에서 구간과 전환을 고친 뒤 생성한 결과물이 편집
+화면에서 본 것과 같음을 실기기에서 확인한다. 그러면 MOV-21·MOV-22 가 `구현됨` 이 된다.
+
+**의존**: A-7(어휘 · 무효화 액션 · 컷 타이밍 · v3 큐). 분석을 쓰는 부분은 A-3 · D-2 · C-7(REC-4 와 같은 조건).
 
 ---
 
