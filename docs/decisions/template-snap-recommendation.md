@@ -188,3 +188,6 @@ score = 0.50 × keyword + 0.20 × visualQuality.score
 활성화의 선행 조건 중 법무 검토의 리드타임이 가장 길다. 그래서 추천 경로는
 `MOVIE_RECOMMENDATION_ENABLED` **기본 꺼짐**으로 배포된다 — 켜지 않으면 분석이 돌지 않고, 앱은
 로컬 매칭을 그대로 유지한다(REC-4).
+
+**2026-09-29**: 켜는 조건이 법무 검토 완료에서 **사용자 동의(옵트인)**로 바뀌었다. 스위치는 그대로 두고,
+스위치가 켜져도 분석에 동의한 사용자에게만 추천이 돈다([snap-content-analysis.md](snap-content-analysis.md) §6.1).
