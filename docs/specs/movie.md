@@ -2,7 +2,7 @@
 
 **작성일**: 2026-09-02
 **상태**: 현행 — 무비 요구사항의 원천
-**관련 문서**: [decisions/movie-model.md](../decisions/movie-model.md) · [decisions/movie-cleanup-after-export.md](../decisions/movie-cleanup-after-export.md) · [apps/mobile/docs/features/movie.md](../../apps/mobile/docs/features/movie.md) · 표기 규칙은 [README.md](README.md)
+**관련 문서**: [decisions/movie-model.md](../decisions/movie-model.md) · [decisions/movie-cleanup-after-export.md](../decisions/movie-cleanup-after-export.md) · [decisions/auto-edit-draft.md](../decisions/auto-edit-draft.md) · [apps/mobile/docs/features/movie.md](../../apps/mobile/docs/features/movie.md) · 표기 규칙은 [README.md](README.md)
 
 ## 무비 모델
 
@@ -14,6 +14,7 @@
   한 스냅을 여러 무비가 다르게 쓰고, 무비를 지워도 스냅은 남는다.
 - **MOV-3** `구현됨` — 무비를 시작하는 경로는 두 가지고 같은 화면에서 만난다:
   스냅을 직접 골라 시작하거나, 템플릿으로 시작한다([template-and-recommendation.md](template-and-recommendation.md)).
+  고른 스냅으로 AI 편집 초안을 받는 세 번째 경로는 MOV-21 이다(`결정·미구현`).
 
 ## 초안 편집
 
@@ -24,7 +25,20 @@
   프로젝트가 아니다.
 - **MOV-5** `구현됨` — 무비 하나의 컷은 **최소 1개, 최대 10개**다.
 - **MOV-6** `구현됨` — 스타일 프리셋은 `감성`·`여행`·`일상` 세 가지다. 프리셋은 색보정과
-  전환 방식을 정한다.
+  전환 방식을 정한다. 경계마다 전환을 바꾸는 것은 MOV-22 다(`결정·미구현`).
+
+## AI 편집 초안
+
+- **MOV-21** `결정·미구현` — 사용자가 넘긴 **스냅 여러 개**(촬영했거나 가져온 스냅)로 AI 가
+  **고칠 수 있는 무비 초안**을 만든다. AI 는 쓸 스냅을 고르고(못 쓰는 것·중복은 뺀다), 순서를 정하고,
+  컷마다 구간을 자르고, 컷 사이 전환을 고른다. 결과는 렌더된 영상이 아니라 일반 무비 초안이며,
+  사용자는 보고 고친 뒤 생성한다(MOV-7). 초안을 받는 데는 **크레딧을 쓰지 않는다.** 컷 수는 MOV-5 를
+  따르고, 넘길 수 있는 스냅 수의 상한은 아직 정하지 않았다. 스냅 내용 분석이 꺼져 있어도 초안은
+  만들어진다 — 분석은 초안을 낫게 할 뿐 조건이 아니다(REC-4). 근거는
+  [decisions/auto-edit-draft.md](../decisions/auto-edit-draft.md).
+- **MOV-22** `결정·미구현` — 초안에서 AI 가 정한 값은 **전부** 사용자가 고칠 수 있다. 지금의 편집(MOV-4)에
+  더해 **컷 사이 전환을 경계마다** 바꿀 수 있고, 경계마다 고를 수 있는 전환은 편집 화면에서 미리 볼 수
+  있어야 한다. 사용자가 고친 값(순서·구간·전환)은 AI 가 초안을 다시 만들어도 덮지 않는다.
 
 ## 생성 (AI 편집)
 
