@@ -2,7 +2,9 @@
 
 로컬 개발용 .env 는 저장소에 하나만 둔다 — `apps/api/.env`. 워커가 자기 사본을 따로 갖고 있으면
 DATABASE_URL/REDIS_URL/S3 값이 API 와 갈라져도 아무도 모른다.
-`apps/ai-worker/.env` 가 있으면 그쪽을 우선하되, 없으면 API 쪽 파일을 읽는다.
+`apps/ai-worker/.env` 는 사본이 아니라 워커만 다르게 써야 하는 줄을 두는 곳이다(asyncpg 가 pgbouncer
+URL 을 못 쓸 때의 DATABASE_URL 한 줄). 두 파일을 모두 읽고, 같은 키는 워커 쪽이 이긴다 — 워커 파일만
+읽으면 거기 없는 키(OPENAI_API_KEY·S3 등)가 통째로 사라진다.
 
 운영에서는 두 파일 다 없고 값은 주입으로 들어온다. `setdefault` 라서 주입값이 항상 이긴다.
 """
@@ -36,15 +38,16 @@ def _parse_value(raw: str) -> str:
 
 
 def _load_dotenv() -> None:
-    env_path = next((path for path in ENV_CANDIDATES if path.exists()), None)
-    if env_path is None:
-        return
-    for line in env_path.read_text(encoding="utf-8").splitlines():
-        line = line.strip()
-        if not line or line.startswith("#") or "=" not in line:
+    # 앞의 파일이 이긴다 — setdefault 라서 먼저 읽은 값이 남는다.
+    for env_path in ENV_CANDIDATES:
+        if not env_path.exists():
             continue
-        key, _, value = line.partition("=")
-        os.environ.setdefault(key.strip(), _parse_value(value))
+        for line in env_path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            os.environ.setdefault(key.strip(), _parse_value(value))
 
 
 _load_dotenv()
