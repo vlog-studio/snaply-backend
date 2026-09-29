@@ -1542,3 +1542,16 @@ AI 편집 초안은 경계마다 고를 수 있는 전환을 편집 화면에서
   뜨면 그렇게 끝난다.
 - 확인하지 못한 것: 분석이 끝난 추천으로 행이 다시 채워지는 것(분석 워커 없음 — A-3 의 실제 모델 실행과 함께), iOS
   (시뮬레이터에서 로그인 입력이 되지 않아 중단), 실기기.
+
+## 2026-09-29 (이어서) — 워커가 `apps/ai-worker/.env` 와 `apps/api/.env` 를 겹쳐 읽는다
+
+[AGENTS.md](../AGENTS.md) 와 [ONBOARDING.md](../ONBOARDING.md) §3-8 은 `apps/ai-worker/.env` 에 `DATABASE_URL` 한 줄만
+두어 덮어쓰라고 안내하지만, `config.py` 는 워커 파일이 있으면 **그 파일만** 읽었다. 안내대로 하면 `REDIS_URL`·S3·
+`OPENAI_API_KEY` 가 모두 빠져 분석 워커가 기동 단계에서 종료된다. 회사 OpenAI 키(C-7)를 넣기 전에 키를 읽는 곳을
+확인하다 발견했다. 로컬에 워커 파일이 없어 실제로 걸린 적은 없다.
+
+- 두 파일을 모두 읽고 같은 키만 워커 파일이 이긴다. 주입값이 둘 다 이기는 것은 그대로다(`setdefault`).
+- 결정 문서 [env-management.md](./decisions/env-management.md) 의 옛 설명에 정정 배너를 붙였다.
+- **검증**: `tests/test_config.py` 에 3개 추가. 워커 파일이 한 키만 덮어쓰는 경우는 고치기 전 코드에서 실패(`REDIS_URL`
+  이 `None`)하는 것을 먼저 확인했다. CI 와 같은 Python 3.11 · `REQUIRE_FFMPEG=1 python -m unittest discover -s tests` 로
+  144개 통과(`snaply-ai-worker:local` 이미지, 네트워크 차단).

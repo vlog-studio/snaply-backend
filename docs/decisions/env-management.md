@@ -118,6 +118,10 @@ compose 규격상 `environment` 가 `env_file` 보다 우선한다. 그래서 �
 만든다. 대신 [`config.py`](../../apps/ai-worker/src/config.py) 가 `apps/ai-worker/.env` → 없으면
 `apps/api/.env` 순으로 찾게 했다. `os.environ.setdefault` 라 주입 우선순위는 그대로다.
 
+> **정정 (2026-09-29)**: 위 구현은 워커 파일이 있으면 `apps/api/.env` 를 아예 읽지 않았다. 그래서
+> [ONBOARDING.md](../../ONBOARDING.md) §3-8 대로 `DATABASE_URL` 한 줄만 둔 워커 파일이 나머지 키(`OPENAI_API_KEY`·S3 등)를
+> 모두 가렸다. 지금은 두 파일을 모두 읽고 같은 키만 워커 파일이 이긴다([progress.md](../progress.md) 2026-09-29).
+
 ## 파서가 서로 다르다 — `.env` 주석 형식 규칙
 
 같은 파일을 세 파서가 읽는데 인라인 주석 처리가 달랐다. `KEY=   # 설명` (빈 값 + 주석)을 넣고
