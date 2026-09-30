@@ -67,6 +67,16 @@ npm run android:device               # expo run:android --device — 연결된 �
 
 빌드 중 `packageDebug` 단계에서 `IncrementalSplitterRunnable` 오류가 나면 일시적인 문제이므로 같은 명령을 다시 실행하면 됩니다.
 
+이미 빌드된 APK가 있으면 다시 빌드하지 않고 설치만 할 수 있습니다. 무선 연결 기기를 찾고(에뮬레이터 제외, 같은 폰이 두 번 잡혀도 하나로 처리), 설치 후 `adb reverse`(8081·API·MinIO 포트)와 앱 실행까지 해 줍니다:
+
+```bash
+npm run android:device:install                                # 기존 개발 APK 설치
+npm run android:device:install -- --build                     # Gradle로 다시 빌드한 뒤 설치
+npm run android:device:install -- --connect 192.168.0.42:40913 # 연결부터
+```
+
+기기가 여러 대면 `ANDROID_SERIAL=<serial>`을 앞에 붙입니다. 네이티브 의존성이 APK 빌드 이후 바뀌었으면 경고가 나오니 `--build`로 다시 빌드하세요. 옵션 전체는 `bash scripts/install-android-device.sh --help`.
+
 개발 빌드가 설치된 뒤에는 Metro만 붙이면 됩니다:
 
 ```bash
