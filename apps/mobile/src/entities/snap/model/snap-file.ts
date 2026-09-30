@@ -11,6 +11,7 @@ import {
 
 import { getServerSnapSource } from '../api/get-server-snap-source';
 import type { Snap } from './snap';
+import { useSnapSyncStore } from './snap-sync-store';
 
 /**
  * Which server snaps are being fetched, or failed to be, this session. Not
@@ -34,6 +35,16 @@ function setFileState(snapId: string, state: SnapFileState | undefined): void {
 
 const inFlight = new Map<string, Promise<void>>();
 
+/**
+ * The server video a snap's copy is fetched from. A snap brought in from the
+ * server's list is named by it; one shot here and deleted from this device only
+ * keeps its file name as its id, and its upload record names the video.
+ */
+function serverVideoIdOf(snap: Snap): string {
+  const entry = useSnapSyncStore.getState().entries[snap.id];
+  return entry?.status === 'uploaded' || entry?.status === 'expired' ? entry.videoId : snap.id;
+}
+
 /** Whether the snap's video can be played from this device right now. */
 export function isSnapFileLocal(snap: Snap): boolean {
   return snap.origin !== 'server' || serverSnapFileExists(snap.uri);
@@ -54,7 +65,7 @@ export function fetchSnapFile(snap: Snap): Promise<void> {
   if (pending) return pending;
   setFileState(snap.id, 'fetching');
   const request = (async () => {
-    const source = await getServerSnapSource(snap.id);
+    const source = await getServerSnapSource(serverVideoIdOf(snap));
     if (!source) throw new Error(`No playable copy for ${snap.id}`);
     await downloadServerSnapFile(source, snap.uri);
   })()

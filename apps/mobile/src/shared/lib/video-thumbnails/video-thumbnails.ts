@@ -124,6 +124,25 @@ export async function saveVideoThumbnail(
   }
 }
 
+/**
+ * Hands a video's cached first frame over to another path — for a video whose
+ * file is about to live somewhere else (a snap deleted from this device only
+ * keeps its cover while its file becomes the fetched copy of the server's).
+ * Leaves a frame already cached for `toUri` in place, and does nothing when
+ * `fromUri` has none; losing a frame only means drawing it again.
+ */
+export async function moveVideoThumbnail(fromUri: string, toUri: string): Promise<void> {
+  const source = thumbnailFileForUri(fromUri);
+  if (!source.exists) return;
+  const target = thumbnailFileForUri(toUri);
+  if (target.exists) {
+    source.delete();
+    return;
+  }
+  ensureThumbnailsDirectory();
+  await source.move(target);
+}
+
 /** Removes a cached thumbnail when its source video is deleted. */
 export function deleteVideoThumbnail(uri: string): void {
   const cached = thumbnailFileForUri(uri);

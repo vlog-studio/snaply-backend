@@ -1,8 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useRemoveSnapsEverywhere } from '@/entities/movie';
-import { deleteSnapFile, useForgetSnapSync, useRemoveSnaps } from '@/entities/snap';
-import { deleteVideoThumbnail } from '@/shared/lib/video-thumbnails';
+import {
+  deleteSnapFile,
+  getSnapSyncEntries,
+  useForgetSnapSync,
+  useMarkSnapsRemovedFromDevice,
+  useRemoveSnaps,
+  type RemovedFromDevice,
+  type Snap,
+} from '@/entities/snap';
+import { serverSnapFileUri } from '@/shared/lib/server-snap-files';
+import { deleteVideoThumbnail, moveVideoThumbnail } from '@/shared/lib/video-thumbnails';
+
+import { canDeleteFromDevice } from './can-delete-from-device';
 
 const PartialFailureMessage = '일부 스냅을 삭제하지 못했어요. 다시 시도해 주세요.';
 const TotalFailureMessage = '스냅을 삭제하지 못했어요. 다시 시도해 주세요.';
@@ -15,7 +26,15 @@ const TotalFailureMessage = '스냅을 삭제하지 못했어요. 다시 시도�
 export type DeletableSnap = { id: string; uri: string };
 
 /**
- * Deletes originals from the library, permanently and completely.
+ * What deleting from this device only needs on top: where the file comes from.
+ * A recording the capture library lists has no `origin` — it is this device's own.
+ */
+export type DeviceDeletableSnap = DeletableSnap & Pick<Snap, 'origin'>;
+
+/**
+ * Deletes originals — everywhere, or from this device only.
+ *
+ * **Everywhere** (`deleteSnaps`) removes a snap permanently and completely.
  *
  * A snap exists in five places — the video file, its cached thumbnail, its snap
  * metadata, the references movies hold to it, and its sync state (plus a remote
@@ -33,12 +52,21 @@ export type DeletableSnap = { id: string; uri: string };
  *
  * Taking a snap out of one movie while keeping the original is the cut list's
  * list, not this; this one takes the snap out of everything.
+ *
+ * **From this device only** (`deleteFromDevice`, SNAP-19) deletes the original
+ * file and nothing else, for a snap the server still keeps
+ * ({@link canDeleteFromDevice}). The snap stays in the library, in its movies,
+ * and on the account's other devices; from then on it plays from the server's
+ * copy like a snap from another device, until that copy expires. Same order as
+ * above — the file first, then one commit for what succeeded — and its cover
+ * moves along to the path the copy will be fetched to.
  */
 export function useDeleteSnaps() {
   const isMounted = useRef(true);
   const removeSnaps = useRemoveSnaps();
   const removeSnapsEverywhere = useRemoveSnapsEverywhere();
   const forgetSnapSync = useForgetSnapSync();
+  const markRemovedFromDevice = useMarkSnapsRemovedFromDevice();
   const [deletingIds, setDeletingIds] = useState<ReadonlySet<string>>(() => new Set());
   const [errorMessage, setErrorMessage] = useState<string>();
 
@@ -103,8 +131,61 @@ export function useDeleteSnaps() {
     [removeSnaps, removeSnapsEverywhere, forgetSnapSync],
   );
 
+  /**
+   * Returns the ids whose file is gone from this device. A snap that cannot be
+   * deleted from this device only is left alone, not deleted everywhere — the
+   * caller asked to keep the server's copy.
+   */
+  const deleteFromDevice = useCallback(
+    async (targets: readonly DeviceDeletableSnap[]): Promise<string[]> => {
+      const eligible = targets.filter((snap) =>
+        canDeleteFromDevice(snap, getSnapSyncEntries()[snap.id]),
+      );
+      if (eligible.length === 0) return [];
+
+      setDeletingIds(new Set(eligible.map((snap) => snap.id)));
+
+      const changes: RemovedFromDevice[] = [];
+      let hadFailure = false;
+
+      for (const snap of eligible) {
+        // Asked again at the moment of deleting: an expiry the reconcile learned
+        // while an earlier file was going would leave nothing to play this from.
+        const entry = getSnapSyncEntries()[snap.id];
+        if (!canDeleteFromDevice(snap, entry) || entry?.status !== 'uploaded') continue;
+        const copyUri = serverSnapFileUri(entry.videoId);
+        try {
+          await deleteSnapFile(snap.uri);
+        } catch {
+          hadFailure = true;
+          continue;
+        }
+        try {
+          await moveVideoThumbnail(snap.uri, copyUri);
+        } catch {
+          // A derived cache: the reconcile fetches the server's cover for a snap
+          // like this, so a cover that did not move is only drawn again.
+        }
+        changes.push({ id: snap.id, uri: copyUri });
+      }
+
+      // Run even when the component has unmounted — the files are already gone.
+      if (changes.length > 0) markRemovedFromDevice(changes);
+
+      if (isMounted.current) {
+        setDeletingIds(new Set());
+        if (!hadFailure) setErrorMessage(undefined);
+        else setErrorMessage(changes.length > 0 ? PartialFailureMessage : TotalFailureMessage);
+      }
+
+      return changes.map((change) => change.id);
+    },
+    [markRemovedFromDevice],
+  );
+
   return {
     deleteSnaps,
+    deleteFromDevice,
     deletingIds,
     errorMessage,
     clearError: () => setErrorMessage(undefined),

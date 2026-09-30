@@ -11,7 +11,11 @@ type RecordingLibraryProps = {
   deletingId?: string;
   isLoading: boolean;
   onClose: () => void;
+  /** Deleting everywhere (SNAP-16). */
   onDelete: (recording: LocalRecording) => Promise<void>;
+  /** Whether the server still keeps this recording's snap (SNAP-19). */
+  canDeleteFromDevice: (recording: LocalRecording) => boolean;
+  onDeleteFromDevice: (recording: LocalRecording) => Promise<void>;
   onSelect: (recording: LocalRecording) => void;
   recordings: LocalRecording[];
   visible: boolean;
@@ -22,6 +26,8 @@ export function RecordingLibrary({
   isLoading,
   onClose,
   onDelete,
+  canDeleteFromDevice,
+  onDeleteFromDevice,
   onSelect,
   recordings,
   visible,
@@ -29,7 +35,26 @@ export function RecordingLibrary({
   const insets = useSafeAreaInsets();
   const theme = useTheme();
 
+  // A recording whose snap the server still keeps gets the same question as the
+  // snap tab: from this device only, or everywhere. The system alert holds both
+  // answers — a sheet here would open over this modal.
   const confirmDelete = (recording: LocalRecording) => {
+    if (canDeleteFromDevice(recording)) {
+      Alert.alert(
+        '스냅을 삭제할까요?',
+        '이 기기에서만 삭제하면 보관 기간 동안 스냅 탭에 남아요. 모든 기기에서 삭제하면 되돌릴 수 없어요.',
+        [
+          { text: '취소', style: 'cancel' },
+          { text: '이 기기에서만 삭제', onPress: () => void onDeleteFromDevice(recording) },
+          {
+            text: '모든 기기에서 삭제',
+            style: 'destructive',
+            onPress: () => void onDelete(recording),
+          },
+        ],
+      );
+      return;
+    }
     Alert.alert('스냅을 삭제할까요?', '삭제한 스냅은 되돌릴 수 없어요.', [
       { text: '취소', style: 'cancel' },
       {

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
-import { useDeleteSnaps } from '@/features/delete-snap';
+import { useSnapSyncEntries } from '@/entities/snap';
+import { canDeleteFromDevice, useDeleteSnaps } from '@/features/delete-snap';
 import { useLocalRecordings } from '@/features/manage-recordings';
 import type { LocalRecording } from '@/shared/lib/recording-files';
 
@@ -11,7 +12,9 @@ import type { LocalRecording } from '@/shared/lib/recording-files';
  * Deletion goes through the delete-snap feature because an original may already
  * be a cut inside a movie — removing the file alone would
  * leave those dangling. The list is read from disk, so it is reloaded once the
- * file is actually gone.
+ * file is actually gone. A recording whose snap the server still keeps can
+ * instead be deleted from this device only (SNAP-19): its file leaves this list,
+ * and the snap stays in the snap tab, playing from the kept copy.
  */
 export function useRecordingLibrary() {
   const {
@@ -23,10 +26,12 @@ export function useRecordingLibrary() {
   } = useLocalRecordings();
   const {
     deleteSnaps,
+    deleteFromDevice,
     deletingIds,
     errorMessage: deleteError,
     clearError: clearDeleteError,
   } = useDeleteSnaps();
+  const syncEntries = useSnapSyncEntries();
   // Deletion in the library is one snap at a time.
   const [deletingId] = deletingIds;
 
@@ -40,6 +45,14 @@ export function useRecordingLibrary() {
   const remove = async (recording: LocalRecording): Promise<boolean> => {
     const deletedIds = await deleteSnaps([recording]);
     if (deletedIds.length === 0) return false;
+    await reloadRecordings();
+    return selected?.id === recording.id;
+  };
+
+  /** Same contract as {@link remove}, deleting the file from this device only. */
+  const removeFromDevice = async (recording: LocalRecording): Promise<boolean> => {
+    const removedIds = await deleteFromDevice([recording]);
+    if (removedIds.length === 0) return false;
     await reloadRecordings();
     return selected?.id === recording.id;
   };
@@ -61,6 +74,10 @@ export function useRecordingLibrary() {
     },
     clearSelection: () => setSelected(undefined),
     remove,
+    /** The recording's snap is kept on the server, so there is a choice of where to delete. */
+    canRemoveFromDevice: (recording: LocalRecording) =>
+      canDeleteFromDevice(recording, syncEntries[recording.id]),
+    removeFromDevice,
     clearError: () => {
       clearListError();
       clearDeleteError();

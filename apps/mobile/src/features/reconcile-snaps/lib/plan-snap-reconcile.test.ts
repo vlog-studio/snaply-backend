@@ -27,6 +27,11 @@ function snapFromElsewhere(videoId: string): Snap {
   return { ...ownSnap(videoId), uri: uriOf(videoId), origin: 'server' };
 }
 
+/** Shot here, then deleted from this device only (SNAP-19): its id is still its file name. */
+function removedFromDevice(id: string, videoId: string, capturedAt = 1_000): Snap {
+  return { ...ownSnap(id, capturedAt), uri: uriOf(videoId), origin: 'server' };
+}
+
 function serverSnap(videoId: string, overrides: Partial<ServerSnap> = {}): ServerSnap {
   return {
     videoId,
@@ -154,6 +159,53 @@ describe('planSnapReconcile — snaps coming in', () => {
 
     expect(plan.merge).toEqual([]);
     expect(plan.entries['snaply-1.mp4']).toMatchObject({ videoId: 'v1' });
+  });
+});
+
+describe('planSnapReconcile — a snap deleted from this device only', () => {
+  it('stays the one snap it was, with the expiry refreshed and its cover kept fetchable', () => {
+    const snap = removedFromDevice('snaply-1.mp4', 'v1');
+    const plan = planSnapReconcile(
+      local([snap], { 'snaply-1.mp4': { status: 'uploaded', videoId: 'v1' } }),
+      remote([serverSnap('v1', { durationSec: 3.9, width: 1080, height: 1920 })]),
+      uriOf,
+    );
+
+    // No second snap under the video id, and nothing measured off the server's
+    // copy written over what was read from the original.
+    expect(plan.merge).toEqual([]);
+    expect(plan.entries['snaply-1.mp4']).toEqual({
+      status: 'uploaded',
+      videoId: 'v1',
+      expiresAt: 9_000_000,
+    });
+    expect(plan.thumbnails).toEqual([{ uri: uriOf('v1'), url: 'https://s3.test/v1.jpg' }]);
+  });
+
+  it('is recognised by the name it registered when the upload record was lost', () => {
+    const plan = planSnapReconcile(
+      local([removedFromDevice('snaply-1.mp4', 'v1', 5_000)]),
+      remote([serverSnap('v1', { clientId: 'snaply-1.mp4' })]),
+      uriOf,
+    );
+
+    expect(plan.merge).toEqual([]);
+    expect(plan.entries).toEqual({
+      'snaply-1.mp4': { status: 'uploaded', videoId: 'v1', expiresAt: 9_000_000 },
+    });
+  });
+
+  it('once expired, gives up its fetched copy and stays as expired', () => {
+    const snap = removedFromDevice('snaply-1.mp4', 'v1');
+    const plan = planSnapReconcile(
+      local([snap], { 'snaply-1.mp4': { status: 'uploaded', videoId: 'v1' } }),
+      remote([], [['v1', { state: 'removed', reason: 'expired' }]]),
+      uriOf,
+    );
+
+    expect(plan.entries['snaply-1.mp4']).toEqual({ status: 'expired', videoId: 'v1' });
+    expect(plan.evicted).toEqual([uriOf('v1')]);
+    expect(plan.removed).toEqual([]);
   });
 });
 

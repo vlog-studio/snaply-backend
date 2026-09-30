@@ -54,9 +54,19 @@ type SnapState = {
    */
   mergeServerSnaps: (snaps: readonly Snap[]) => void;
   removeSnaps: (ids: readonly string[]) => void;
+  /**
+   * Marks snaps whose original was just deleted from this device while their
+   * server copy stays (SNAP-19): each keeps its id and everything it records,
+   * and from now on plays from the copy fetched to `uri`, like a snap from
+   * another device. The id is what movies name a cut by, so they are untouched.
+   */
+  markRemovedFromDevice: (changes: readonly RemovedFromDevice[]) => void;
   recordMeasurement: (id: string, measurement: SnapMeasurement) => void;
   setHasHydrated: (value: boolean) => void;
 };
+
+/** A snap whose file here is gone, and the path its server copy will be fetched to. */
+export type RemovedFromDevice = { id: string; uri: string };
 
 /**
  * The snap with the measurement written over it, or the same object when there
@@ -134,6 +144,19 @@ export const useSnapStore = create<SnapState>()(
           const removed = new Set(ids);
           if (removed.size === 0) return state;
           return { snaps: state.snaps.filter((snap) => !removed.has(snap.id)) };
+        }),
+      markRemovedFromDevice: (changes) =>
+        set((state) => {
+          if (changes.length === 0) return state;
+          const uriById = new Map(changes.map((change) => [change.id, change.uri]));
+          let changed = false;
+          const snaps = state.snaps.map((snap) => {
+            const uri = uriById.get(snap.id);
+            if (uri === undefined || (snap.origin === 'server' && snap.uri === uri)) return snap;
+            changed = true;
+            return { ...snap, origin: 'server' as const, uri };
+          });
+          return changed ? { snaps } : state;
         }),
       recordMeasurement: (id, measurement) =>
         set((state) => {
@@ -235,6 +258,11 @@ export function removeSnaps(ids: readonly string[]): void {
  */
 export function useRemoveSnaps(): (ids: readonly string[]) => void {
   return useSnapStore((state) => state.removeSnaps);
+}
+
+/** See the store's `markRemovedFromDevice`. One write for the whole batch. */
+export function useMarkSnapsRemovedFromDevice(): (changes: readonly RemovedFromDevice[]) => void {
+  return useSnapStore((state) => state.markRemovedFromDevice);
 }
 
 /**
