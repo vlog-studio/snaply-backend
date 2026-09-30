@@ -46,6 +46,7 @@
 | [notification-preferences.md](notification-preferences.md) | 알림 설정은 서버에 종류별로 둔다. 스냅 만료 예고에는 종류별 스위치가 없다 | 서버 완료(2026-09-15), 앱 연결 대기(B-6) |
 | [local-copy-after-upload.md](local-copy-after-upload.md) | 로컬은 최종적으로 캐시. 삭제를 켜는 것은 렌디션·동기화 검증 후로 연기 | 결정만, 전환 전. reconcile 은 Android 실기기에서 검증됐고 렌디션은 iPhone HEVC 원본의 실기기 확인이 남음. 켤 때 15일 만료와 함께 판단(A-4) |
 | [snap-sync-across-devices.md](snap-sync-across-devices.md) | 기기 간 동기화 — 삭제는 모든 기기로 전파(원본 포함), 만료 스냅은 촬영한 기기에 남되 무비에 못 담음, 새 기기는 만료분을 되살리지 않음 | 완료(2026-09-27, Android 실기기 검증) — iPhone 실기기는 iOS 출시 전(A-4) |
+| [snap-album-save-and-device-delete.md](snap-album-save-and-device-delete.md) | 스냅의 사용자 사본은 기기 앨범 — 하나씩 저장 + 자동 저장(기본 꺼짐). 보관 중인 스냅은 삭제할 때 "이 기기에서만"(목록에 남고 파일만 지움)과 "모든 기기에서"를 고른다 | 미구현 |
 | [movie-cleanup-after-export.md](movie-cleanup-after-export.md) | 끝내면 결과물 파일만 삭제, 프로젝트는 보존. 다시 만들기는 유료 | 완료(서버 2026-09-09 · 앱 끝내기 2026-09-12, 실기기 미검증) |
 | [movie-export-policy.md](movie-export-policy.md) | 무비 세부 규칙 5개 — 촬영순 기본·결과물 교체·스냅 보존·앱 그룹핑·edit-jobs 한 버전 후 폐기 | ①~④ 완료, ⑤ `POST /edit-jobs` 폐기는 다음 릴리스(A-1) |
 | [movie-client-cache.md](movie-client-cache.md) | 앱의 무비 스토어는 서버 캐시 + 아웃박스, 무비 id 는 앱이 정한 uuid, `Movie.jobId` 노출 | 완료(2026-09-12), 실기기 미검증(A-1) |
