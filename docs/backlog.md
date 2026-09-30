@@ -180,8 +180,15 @@ MOV-16~19 다. 만료의 동작 구조(2단계 삭제 · 만료 스냅 식별 ·
       ([snap-sync-across-devices.md](./decisions/snap-sync-across-devices.md) ①) 한 번의 실수 삭제가 모든
       기기에서 되돌릴 수 없게 된다
 - [ ] **전환을 켤 때 함께 볼 것**: 로컬이 캐시가 되는 순간 서버 만료(SNAP-9, 15일)가 곧 영상의
-      소멸이 된다. 보관 기간·구독 연장과 **같은 자리에서** 판단한다. 두지 않았던 "이 기기에서만 제거"도
-      이때 다시 본다([snap-sync-across-devices.md](./decisions/snap-sync-across-devices.md) "두지 않은 것")
+      소멸이 된다. 보관 기간·구독 연장과 **같은 자리에서** 판단한다. 사용자가 고르는 "이 기기에서만 삭제"는
+      2026-09-29 에 들였고(SNAP-19, [snap-album-save-and-device-delete.md](./decisions/snap-album-save-and-device-delete.md)),
+      여기 남은 것은 앱이 **스스로** 기기의 파일을 지우는 전환이다. 그때는 자동 앨범 저장(SNAP-18)의 기본값(꺼짐)도
+      다시 본다 — 앨범의 사본이 사용자의 유일한 영구 사본이 된다
+- [ ] **만료 전에 앨범 저장을 권하기** — 저장공간 검토(2026-09-29)에서 남은 권장안이다. 다른 기기에서 온 스냅과
+      이 기기에서만 삭제한 스냅은 보관 기간이 끝나면 받을 파일이 없어 만료 전에만 저장할 수 있다. 곧 끝나는 스냅
+      모아보기와 일괄 저장, 그리고 D-3 · D-1 예고 푸시(지금 문구는 "남기려면 무비로 만들어 주세요")를 거기로 잇는 안이다.
+      재생 화면에서도 남은 기간을 보이는 것(SNAP-13 `부분`)과 함께 정한다
+      ([snap-album-save-and-device-delete.md](./decisions/snap-album-save-and-device-delete.md) ①의 B)
 
 ### A-6. 템플릿 기반 스냅 자동 추천 — 앱·백엔드 완료, 생산 활성화 대기
 

@@ -1,7 +1,7 @@
 # 기기 간 스냅 동기화 — 삭제 전파와 만료 스냅의 표시
 
 **작성일**: 2026-09-27
-**상태**: 결정 — 세 가지 모두 계획의 권장안을 채택했다. 2026-09-27 구현하고 세 가지 모두 기기에서 확인했다([progress.md](../progress.md)). iPhone 실기기 확인은 iOS 출시 전([backlog.md](../backlog.md) A-4)
+**상태**: 결정 — 세 가지 모두 계획의 권장안을 채택했다. 2026-09-27 구현하고 세 가지 모두 기기에서 확인했다([progress.md](../progress.md)). iPhone 실기기 확인은 iOS 출시 전([backlog.md](../backlog.md) A-4). [두지 않은 것](#두지-않은-것)의 "이 기기에서만 제거"는 2026-09-29 [snap-album-save-and-device-delete.md](./snap-album-save-and-device-delete.md)가 사용자가 고르는 삭제로 들였다
 **관련**: [snap-source-of-truth.md](./snap-source-of-truth.md) §3.2 ·
 [local-copy-after-upload.md](./local-copy-after-upload.md) · [snap-retention-period.md](./snap-retention-period.md) ·
 [movie-snap-expiry-exemption.md](./movie-snap-expiry-exemption.md) ·
@@ -85,6 +85,9 @@
   보냈으므로, 여기서 무비까지 고쳐 보내면 그 기기의 더 새 편집을 덮을 수 있다. 무비는 무비 동기화가 서버 것을 받아 온다.
 
 ### 두지 않은 것
+
+> **2026-09-29** — 아래 첫 항목은 [snap-album-save-and-device-delete.md](./snap-album-save-and-device-delete.md)가 들였다.
+> 보관 중인 스냅을 삭제할 때 사용자가 이 기기에서만 삭제를 고를 수 있다(SNAP-19).
 
 - **"이 기기에서만 제거"** — 로컬이 원천인 동안, 촬영한 기기에서 제거하는 것은 원본을 지우는 것과 같다.
   SNAP-14 전환 때 다시 본다.
