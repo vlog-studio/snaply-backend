@@ -31,6 +31,19 @@ export type VideoPlayerModalProps = {
    * doing nothing for a while. The optional action is offered under the text.
    */
   placeholder?: { text: string; actionLabel?: string; onAction?: () => void };
+  /**
+   * One control along the top edge, across from the close button — the
+   * caller's own action on the video on screen (the snap tab's 앨범에 저장).
+   * Its label doubles as the read-out while the action runs, so the caller
+   * rewrites it rather than stacking a status line under it; without `onPress`,
+   * or with `disabled`, it only reads.
+   */
+  action?: {
+    label: string;
+    accessibilityLabel?: string;
+    onPress?: () => void;
+    disabled?: boolean;
+  };
 };
 
 /**
@@ -54,8 +67,10 @@ export function VideoPlayerModal({
   edgeLabel,
   caption,
   placeholder,
+  action,
 }: VideoPlayerModalProps) {
   const insets = useSafeAreaInsets();
+  const actionDisabled = action ? action.disabled === true || !action.onPress : true;
 
   return (
     <Modal
@@ -97,6 +112,23 @@ export function VideoPlayerModal({
             ×
           </ThemedText>
         </Pressable>
+        {action ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={action.accessibilityLabel ?? action.label}
+            accessibilityState={{ disabled: actionDisabled }}
+            disabled={actionDisabled}
+            onPress={action.onPress}
+            style={({ pressed }) => [
+              styles.action,
+              { top: insets.top + Spacing.three, opacity: pressed && !actionDisabled ? 0.7 : 1 },
+            ]}
+          >
+            <ThemedText selectable={false} type="smallBold" style={styles.actionText}>
+              {action.label}
+            </ThemedText>
+          </Pressable>
+        ) : null}
         {uri && (edgeLabel !== undefined || caption !== undefined) ? (
           <View style={[styles.meta, { bottom: insets.bottom + Spacing.four }]}>
             {edgeLabel !== undefined ? <ThemedText type="note">{edgeLabel}</ThemedText> : null}
@@ -126,6 +158,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   closeText: { color: '#FFFFFF', fontSize: 30, lineHeight: 32 },
+  // Same height and wash as the close control, so the two read as one top edge.
+  action: {
+    position: 'absolute',
+    right: Spacing.four,
+    minHeight: 46,
+    borderRadius: Radius.pill,
+    backgroundColor: 'rgba(0,0,0,0.56)',
+    paddingHorizontal: Spacing.four,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionText: { color: '#FFFFFF' },
   meta: {
     position: 'absolute',
     left: Spacing.five,

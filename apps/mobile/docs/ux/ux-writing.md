@@ -149,6 +149,7 @@ Fixed product vocabulary. Use exactly these words; never introduce a synonym.
 | 스튜디오 | The tab where a movie is started | 홈, 메인 |
 | 가져오기 | Importing from the gallery | 업로드, 임포트, 추출 |
 | 올리기 | Sending a snap to the server (`올리는 중`, `다시 올리기`) | 업로드 |
+| 앨범 | The device's own photo gallery, where a snap's copy is the user's to keep (`앨범에 저장`, `앨범에 저장했어요`, `찍은 스냅을 앨범에도 저장`). The OS permission is named for the OS's own app (`사진 권한`, `사진 추가`) | 갤러리, 사진첩, 카메라 롤, 내려받기, 다운로드 |
 | 삭제 | Removing something: `…삭제할까요?` / `삭제` / `삭제하는 중…` | 지우기, 지울까요 |
 | 정리 | Removing a finished movie's server copy once the user saved it (`무비 정리`, `정리하기`) | 끝내기, 서버에서 삭제 |
 | 스냅 분석 | The opt-in look at a snap's still images that lets a template's 컷 be filled with better-fitting snaps; what the 나 tab switch and the template screen's offer turn on (`스냅 분석을 켤까요?`, `분석 켜기`, `분석해서 채우기`) | AI 분석, 영상 분석, 인공지능, 인식 |

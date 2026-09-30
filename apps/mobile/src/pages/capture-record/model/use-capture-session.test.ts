@@ -15,6 +15,13 @@ jest.mock('@/features/capture-moment', () => ({
   }),
 }));
 
+const mockSaveCapturedSnapToAlbum = jest.fn();
+
+jest.mock('@/features/save-snap-to-album', () => ({
+  saveCapturedSnapToAlbum: (snap: unknown) => mockSaveCapturedSnapToAlbum(snap),
+  AlbumSaveProblem: { blocked: 'album blocked', failed: 'album failed' },
+}));
+
 // Haptics are device behavior, not a rule this hook owns.
 jest.mock('@/shared/lib/haptics', () => ({
   impactFeedback: jest.fn(),
@@ -62,6 +69,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   jest.useFakeTimers();
   mockCaptureMoment.mockResolvedValue(snap);
+  mockSaveCapturedSnapToAlbum.mockResolvedValue(undefined);
 });
 
 afterEach(() => {
@@ -111,6 +119,49 @@ describe('useCaptureSession', () => {
     // showing the pre-capture count.
     expect(onCaptureCollected).toHaveBeenCalledTimes(1);
     expect(result.current.stage).toBe('idle');
+    expect(result.current.errorMessage).toBeUndefined();
+  });
+
+  it('hands the saved snap to the automatic album save, without waiting on it', async () => {
+    mockSaveCapturedSnapToAlbum.mockReturnValue(new Promise(() => {}));
+    const { record, finish } = pendingRecording();
+    const { rendered } = renderSession(createDevice({ record }));
+    const { result } = await rendered;
+
+    await act(async () => result.current.beginHold());
+    await act(async () => {
+      jest.advanceTimersByTime(1000);
+    });
+    await act(async () => {
+      result.current.endHold();
+      finish('file:///tmp/clip.mov');
+    });
+
+    expect(mockSaveCapturedSnapToAlbum).toHaveBeenCalledWith(snap);
+    // Still on its way to the album, and the viewfinder is already ready again.
+    expect(result.current.stage).toBe('idle');
+  });
+
+  it('says so when the album copy could not be made, while the capture stays saved', async () => {
+    mockSaveCapturedSnapToAlbum.mockResolvedValue('blocked');
+    const { record, finish } = pendingRecording();
+    const { onCaptureCollected, rendered } = renderSession(createDevice({ record }));
+    const { result } = await rendered;
+
+    await act(async () => result.current.beginHold());
+    await act(async () => {
+      jest.advanceTimersByTime(1000);
+    });
+    await act(async () => {
+      result.current.endHold();
+      finish('file:///tmp/clip.mov');
+    });
+
+    expect(onCaptureCollected).toHaveBeenCalledTimes(1);
+    expect(result.current.lastCollected).toEqual({ nonce: 1, uri: snap.uri });
+    expect(result.current.errorMessage).toBe('album blocked');
+
+    await act(async () => result.current.clearError());
     expect(result.current.errorMessage).toBeUndefined();
   });
 

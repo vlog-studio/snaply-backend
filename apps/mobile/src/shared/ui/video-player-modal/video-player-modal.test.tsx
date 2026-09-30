@@ -81,4 +81,39 @@ describe('VideoPlayerModal', () => {
     expect(videoPreviewMock).not.toHaveBeenCalled();
     expect(screen.queryByText(edgeLabel)).toBeNull();
   });
+
+  it('offers the caller action across from the close control', async () => {
+    const onPress = jest.fn();
+    await render(
+      withSafeArea(
+        <VideoPlayerModal
+          uri={uri}
+          onClose={jest.fn()}
+          closeLabel={closeLabel}
+          action={{ label: 'save', onPress }}
+        />,
+      ),
+    );
+
+    fireEvent.press(screen.getByRole('button', { name: 'save' }));
+
+    expect(onPress).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ['disabled', { label: 'saving', disabled: true, onPress: jest.fn() }],
+    ['without a handler', { label: 'saved' }],
+  ])('only reads while %s', async (_label, action) => {
+    await render(
+      withSafeArea(
+        <VideoPlayerModal uri={uri} onClose={jest.fn()} closeLabel={closeLabel} action={action} />,
+      ),
+    );
+
+    const control = screen.getByRole('button', { name: action.label });
+    fireEvent.press(control);
+
+    expect(control).toBeDisabled();
+    if ('onPress' in action) expect(action.onPress).not.toHaveBeenCalled();
+  });
 });

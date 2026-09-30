@@ -1,4 +1,5 @@
 export { MePage } from './ui/me-page';
+export { MeAlbumPage } from './ui/me-album-page';
 export { MeAnalysisPage } from './ui/me-analysis-page';
 export { MeCreditsPage } from './ui/me-credits-page';
 export { MeDeleteAccountPage } from './ui/me-delete-account-page';

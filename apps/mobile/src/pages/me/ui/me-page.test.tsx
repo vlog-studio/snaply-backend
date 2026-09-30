@@ -47,6 +47,11 @@ jest.mock('@/features/notification-settings', () => ({
   useNotificationEnabled: () => false,
 }));
 
+let mockAlbumAutoSave = false;
+jest.mock('@/features/save-snap-to-album', () => ({
+  useAlbumAutoSaveEnabled: () => mockAlbumAutoSave,
+}));
+
 const interestsTitle = '\uAD00\uC2EC\uC0AC'; // 관심사
 const comingSoon = '\uC900\uBE44 \uC911'; // 준비 중
 const socialTitle = '\uC18C\uC15C \uC5F0\uACB0'; // 소셜 연결
@@ -84,7 +89,7 @@ describe('MePage', () => {
   // Nothing reads interests yet, so a picker would promise personalization
   // that never happens (spec ACC-5, backlog A-9): the row states 준비 중 and is
   // not a way into anything.
-  it('shows 관심사 as a 준비 중 placeholder that opens nothing', async () => {
+  it('shows \uAD00\uC2EC\uC0AC as a \uC900\uBE44 \uC911 placeholder that opens nothing', async () => {
     await renderPage();
 
     expect(screen.getByText(interestsTitle)).toBeTruthy();
@@ -94,7 +99,7 @@ describe('MePage', () => {
 
   // The planned connections stay visible, but no screen sits behind them: the
   // row names the platforms itself, and nothing offers to connect.
-  it('shows 소셜 연결 as a placeholder naming both platforms, opening nothing', async () => {
+  it('shows \uC18C\uC15C \uC5F0\uACB0 as a placeholder naming both platforms, opening nothing', async () => {
     await renderPage();
 
     expect(screen.getByText(socialTitle)).toBeTruthy();
@@ -109,9 +114,21 @@ describe('MePage', () => {
     expect(mockPush).not.toHaveBeenCalled();
   });
 
+  // The automatic album copy is off until the user turns it on (SNAP-18); the
+  // row reads it and opens the screen where it is changed.
+  it('reads \uC568\uBC94 \uC800\uC7A5 as its automatic copy and opens its screen', async () => {
+    mockAlbumAutoSave = true;
+    await renderPage();
+
+    expect(screen.getByText('\uC790\uB3D9 \uC800\uC7A5 \uCF1C\uC9D0')).toBeTruthy(); // 자동 저장 켜짐
+    await fireEvent.press(screen.getByRole('button', { name: '\uC568\uBC94 \uC800\uC7A5' })); // 앨범 저장
+    expect(mockPush).toHaveBeenCalledWith('/settings/album');
+    mockAlbumAutoSave = false;
+  });
+
   // Analysis is opt-in (specs ANA-5); the row reads the account's answer and
   // opens the screen where it is changed.
-  it('reads 스냅 분석 as off and opens its screen', async () => {
+  it('reads \uC2A4\uB0C5 \uBD84\uC11D as off and opens its screen', async () => {
     await renderPage();
 
     expect(screen.getByText(analysisOff)).toBeTruthy();
@@ -134,7 +151,7 @@ describe('MePage', () => {
     expect(screen.getByRole('button', { name: analysisTitle })).toBeTruthy();
   });
 
-  it('reads 스냅 분석 as 준비 중, opening nothing, when there is nothing to turn on', async () => {
+  it('reads \uC2A4\uB0C5 \uBD84\uC11D as \uC900\uBE44 \uC911, opening nothing, when there is nothing to turn on', async () => {
     mockAnalysisConsent.mockReturnValue({
       available: false,
       granted: false,
