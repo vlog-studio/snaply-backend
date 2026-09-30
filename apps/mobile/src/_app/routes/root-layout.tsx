@@ -145,6 +145,7 @@ function RootStack() {
         <Stack.Screen name="settings/credits" options={{ title: '크레딧' }} />
         <Stack.Screen name="settings/notifications" options={{ title: '알림' }} />
         <Stack.Screen name="settings/analysis" options={{ title: '스냅 분석' }} />
+        <Stack.Screen name="settings/album" options={{ title: '앨범 저장' }} />
         <Stack.Screen name="settings/theme" options={{ title: '화면 테마' }} />
         <Stack.Screen name="settings/delete-account" options={{ title: '계정 삭제' }} />
       </Stack.Protected>

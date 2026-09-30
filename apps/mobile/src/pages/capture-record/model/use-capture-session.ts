@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { normalizeCaptureDuration, type CaptureDuration } from '@/entities/capture-session';
 import { useCaptureMoment } from '@/features/capture-moment';
+import { AlbumSaveProblem, saveCapturedSnapToAlbum } from '@/features/save-snap-to-album';
 import { impactFeedback, selectionFeedback, successFeedback } from '@/shared/lib/haptics';
 
 import { shouldCollectHold } from './hold-gesture';
@@ -56,6 +57,9 @@ export function useCaptureSession({
   const [stage, setStage] = useState<RecordingStage>('idle');
   const [remaining, setRemaining] = useState<number>(duration);
   const [captureError, setCaptureError] = useState<string>();
+  // A copy the automatic album save could not make (SNAP-18). The snap itself is
+  // saved, so this ranks below every capture error.
+  const [albumError, setAlbumError] = useState<string>();
   // The most recently captured snap, handed up so the screen can fly the frame
   // into the snap counter. `nonce` makes each capture a distinct event even when
   // the same file id recurs.
@@ -75,6 +79,7 @@ export function useCaptureSession({
 
   const clearError = () => {
     setCaptureError(undefined);
+    setAlbumError(undefined);
     clearMomentError();
   };
 
@@ -133,6 +138,13 @@ export function useCaptureSession({
       }
 
       if (isAborted.current) return;
+      // The album copy runs on its own: the next hold must not wait for it, and
+      // a copy that could not be made is said, never turned into a failed capture.
+      void saveCapturedSnapToAlbum(snap).then((outcome) => {
+        if (outcome && outcome !== 'saved' && !isAborted.current) {
+          setAlbumError(AlbumSaveProblem[outcome]);
+        }
+      });
       onCaptureCollected?.();
       // Continuous capture: stay in the viewfinder, ready for the next hold, so
       // the user is never yanked away mid-session.
@@ -184,7 +196,7 @@ export function useCaptureSession({
     duration,
     selectDuration,
     lastCollected,
-    errorMessage: captureError ?? momentError ?? undefined,
+    errorMessage: captureError ?? momentError ?? albumError ?? undefined,
     beginHold,
     endHold,
     /** Back to a fresh viewfinder without touching what was already saved. */

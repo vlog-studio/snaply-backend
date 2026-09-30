@@ -40,6 +40,7 @@ Snaply opens into a four-tab application — 스튜디오 (`/`), 스냅 (`/snaps
 | `/settings/credits` | Root-stack screen with the stack's titled header (크레딧); the balance and rewarded-ad screen | `pages/me` |
 | `/settings/notifications` | Root-stack screen with the stack's titled header (알림); every notification preference | `pages/me` |
 | `/settings/analysis` | Root-stack screen with the stack's titled header (스냅 분석); the consent to snap analysis | `pages/me` |
+| `/settings/album` | Root-stack screen with the stack's titled header (앨범 저장); the automatic album copy switch | `pages/me` |
 | `/settings/theme` | Root-stack screen with the stack's titled header (화면 테마); the theme-mode radio | `pages/me` |
 | `/settings/delete-account` | Root-stack screen with the stack's titled header (계정 삭제); the deletion consequence read-out and confirm button | `pages/me` |
 | `/account-restore` | Headerless full-screen block (back gesture disabled), forced by its own guard group while the account is pending deletion; restore or sign out | `pages/account-restore` |

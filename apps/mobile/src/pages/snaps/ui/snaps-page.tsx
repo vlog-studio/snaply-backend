@@ -1,9 +1,10 @@
 import { useIsFocused, useRouter, useScrollToTop } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { BackHandler, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { BackHandler, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { MovieSnapLimit } from '@/entities/movie';
 import {
+  isSnapFileLocal,
   useExpiredSnapIds,
   useFailedUploadCount,
   useRetryFailedUploads,
@@ -12,6 +13,7 @@ import {
 } from '@/entities/snap';
 import { useComposeMovie } from '@/features/compose-movie';
 import { useDeleteSnaps } from '@/features/delete-snap';
+import { useSaveSnapToAlbum } from '@/features/save-snap-to-album';
 import { formatDuration, formatSeconds } from '@/shared/lib/datetime';
 import { movieHref } from '@/shared/routes';
 import { pickVideoFromLibrary } from '@/shared/lib/video-picker';
@@ -28,6 +30,7 @@ import { ThemedText } from '@/shared/ui/themed-text';
 import { VideoPlayerModal } from '@/shared/ui/video-player-modal';
 import { SnapDayGrid, SnapSelectionBar, useSnapDays, useSnapPicking } from '@/widgets/snap-grid';
 
+import { playerAlbumAction } from '../model/player-album-action';
 import { useMovieDeleteImpact } from '../model/use-movie-delete-impact';
 import { SnapDeleteDialog } from './snap-delete-dialog';
 
@@ -69,6 +72,7 @@ export function SnapsPage({ startSelecting = false }: SnapsPageProps) {
   const { days, totalCount, totalDurationSec, isHydrated } = useSnapDays();
   const { startMovieFromSnaps } = useComposeMovie();
   const { deleteSnaps, deletingIds, errorMessage, clearError } = useDeleteSnaps();
+  const albumSave = useSaveSnapToAlbum();
   const setTabBarHidden = useSetTabBarHidden();
   const isFocused = useIsFocused();
   const failedUploadCount = useFailedUploadCount();
@@ -101,19 +105,47 @@ export function SnapsPage({ startSelecting = false }: SnapsPageProps) {
   const impact = useMovieDeleteImpact(deleteOpen ? picked : EmptySelection);
   const expiredIds = useExpiredSnapIds();
 
-  // A snap shot on another device plays from a copy fetched on first play; the
-  // player opens at once and says so while the copy is on its way.
-  const playingSnaps = useMemo(() => (playing ? [playing] : []), [playing]);
+  // A snap whose file is only the server's copy plays from that copy, fetched on
+  // first play; the player opens at once and says so while it is on its way.
+  // Once the copy has expired there is nothing left to fetch, so the player says
+  // that instead of retrying a download that cannot succeed.
+  const playingExpired = playing !== undefined && expiredIds.has(playing.id);
+  const playingGone = playing !== undefined && playingExpired && !isSnapFileLocal(playing);
+  const playingSnaps = useMemo(
+    () => (playing && !playingGone ? [playing] : []),
+    [playing, playingGone],
+  );
   const playingFile = useSnapFiles(playingSnaps);
   const playingUri =
-    playing && !playingFile.fetching && !playingFile.failed ? playing.uri : undefined;
+    playing && !playingGone && !playingFile.fetching && !playingFile.failed
+      ? playing.uri
+      : undefined;
   const playingPlaceholder = !playing
     ? undefined
-    : playingFile.failed
-      ? { text: '스냅을 불러오지 못했어요', actionLabel: '다시 시도', onAction: playingFile.retry }
-      : playingFile.fetching
-        ? { text: '불러오는 중…' }
-        : undefined;
+    : playingGone
+      ? { text: '보관 기간이 끝나 볼 수 없어요' }
+      : playingFile.failed
+        ? {
+            text: '스냅을 불러오지 못했어요',
+            actionLabel: '다시 시도',
+            onAction: playingFile.retry,
+          }
+        : playingFile.fetching
+          ? { text: '불러오는 중…' }
+          : undefined;
+  // The user's own copy (SNAP-17): offered for every snap that still has a file
+  // somewhere — here, or the server's to fetch.
+  const playingAlbum =
+    playing && !playingGone
+      ? playerAlbumAction(albumSave.stateOf(playing.id), {
+          save: () => void albumSave.save(playing),
+          openSettings: () => void Linking.openSettings(),
+        })
+      : undefined;
+  const closePlayer = () => {
+    setPlaying(undefined);
+    albumSave.reset();
+  };
 
   // Arriving with `?select=1` (the studio sending the user to pick for a new
   // movie) opens selection mode. The tab stays mounted across visits, so the initial
@@ -354,8 +386,9 @@ export function SnapsPage({ startSelecting = false }: SnapsPageProps) {
         placeholder={playingPlaceholder}
         closeLabel="스냅 닫기"
         edgeLabel={playing ? formatSeconds(playing.durationSec) : undefined}
-        caption={playing && expiredIds.has(playing.id) ? '보관 기간이 끝났어요' : undefined}
-        onClose={() => setPlaying(undefined)}
+        caption={playingAlbum?.problem ?? (playingExpired ? '보관 기간이 끝났어요' : undefined)}
+        action={playingAlbum?.action}
+        onClose={closePlayer}
       />
 
       <SnapDeleteDialog

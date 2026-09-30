@@ -11,6 +11,7 @@ import { useClearSession, useCurrentUser } from '@/entities/session';
 import { useSnaps } from '@/entities/snap';
 import { useAnalysisConsent } from '@/features/analysis-consent';
 import { useMovieReadyEnabled, useNotificationEnabled } from '@/features/notification-settings';
+import { useAlbumAutoSaveEnabled } from '@/features/save-snap-to-album';
 import {
   MaxContentWidth,
   Radius,
@@ -58,6 +59,7 @@ export function MePage() {
   const movies = useMovies();
   const movieReadyAlerts = useMovieReadyEnabled();
   const locationAlerts = useNotificationEnabled();
+  const albumAutoSave = useAlbumAutoSaveEnabled();
   const themeMode = useThemeMode();
   const creditBalance = useQuery(creditQueries.balance());
   const analysisConsent = useAnalysisConsent();
@@ -154,6 +156,17 @@ export function MePage() {
           subLines={1}
           right={analysisReachable ? <Chevron /> : undefined}
           onPress={analysisReachable ? () => router.push('/settings/analysis') : undefined}
+        />
+        <RowDivider />
+        {/* Saving one snap is the player's; the row reads the automatic copy,
+            the one preference behind it. */}
+        <SettingRow
+          icon="images-outline"
+          title="앨범 저장"
+          sub={albumAutoSave ? '자동 저장 켜짐' : '자동 저장 꺼짐'}
+          subLines={1}
+          right={<Chevron />}
+          onPress={() => router.push('/settings/album')}
         />
         <RowDivider />
         {/* 준비 중, and a row with nothing behind it: nothing reads interests yet
