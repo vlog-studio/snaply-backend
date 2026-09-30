@@ -21,7 +21,8 @@
       "predictiveBackGestureEnabled": false,
       "package": "com.anonymous.snaplyapp",
       "googleServicesFile": "./google-services.json",
-      "permissions": ["android.permission.CAMERA", "android.permission.RECORD_AUDIO"]
+      "permissions": ["android.permission.CAMERA", "android.permission.RECORD_AUDIO"],
+      "blockedPermissions": ["android.permission.READ_MEDIA_VISUAL_USER_SELECTED"]
     },
     "web": {
       "output": "static",
@@ -93,6 +94,15 @@
       ],
       "expo-video",
       "expo-sharing",
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Snaply가 스냅을 사진 앱에 저장할 수 있도록 사진 접근을 허용해 주세요.",
+          "savePhotosPermission": "Snaply가 스냅을 사진 앱에 저장할 수 있도록 사진 추가를 허용해 주세요.",
+          "isAccessMediaLocationEnabled": false,
+          "granularPermissions": []
+        }
+      ],
       "expo-secure-store",
       "expo-image",
       "expo-status-bar",
