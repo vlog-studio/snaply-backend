@@ -173,6 +173,11 @@ RLS 정책은 Supabase를 새로 만든 담당자만 최초 한 번 Supabase SQL
 npm run dev:api
 ```
 
+처음 한 번(`db:seed` 포함) 이후에는 3-5와 이 단계를 `npm run dev:up` 하나로 대신할 수 있다.
+Docker Desktop이 꺼져 있으면 켜고, 인프라가 준비될 때까지 기다린 뒤 마이그레이션을 적용하고,
+무선 adb로 붙은 폰이 있으면 `adb reverse`까지 다시 건 다음 API를 띄운다
+([`scripts/dev-up.sh`](scripts/dev-up.sh)). 워커는 띄우지 않는다(§3-8).
+
 다른 터미널에서 확인한다.
 
 ```bash
@@ -272,6 +277,7 @@ cd ../..
 | `npm run infra:up` / `infra:down` / `infra:logs` | 개발 인프라 기동/중지/로그 |
 | `npm run stack` / `stack:down` | 전체 컨테이너 스택 빌드·migration·기동 / 중지 |
 | `npm run stack:up` / `stack:migrate` | API만 기동 / migration 수동 재실행 |
+| `npm run dev:up` | Docker Desktop 기동 → 인프라 → `db:generate`·`db:migrate` → 폰 `adb reverse` → API까지 한 번에(Ctrl+C는 API만 종료) |
 | `npm run dev:api` | API 서버(watch) |
 | `npm run dev:mobile` | Android dev client용 Metro |
 | `npm run verify:mobile` | 모바일 자동 검증 게이트 — 검사 목록은 `apps/mobile/package.json`의 `verify` |
