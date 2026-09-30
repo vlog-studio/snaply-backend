@@ -1,7 +1,7 @@
 import * as FileSystem from 'expo-file-system';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 
-import { getVideoThumbnail } from './video-thumbnails';
+import { getVideoThumbnail, moveVideoThumbnail } from './video-thumbnails';
 
 jest.mock('expo-file-system', () => {
   const files = new Set<string>();
@@ -100,5 +100,54 @@ describe('getVideoThumbnail', () => {
     await expect(
       getVideoThumbnail('file:///cache/source.mp4', { timeMs: 1200 }),
     ).resolves.toBeUndefined();
+  });
+});
+
+describe('moveVideoThumbnail', () => {
+  const recordingFrame = 'file:///cache/video-thumbnails/snaply-1.jpg';
+  const serverCopyFrame = 'file:///cache/video-thumbnails/video-1.jpg';
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    files.clear();
+  });
+
+  it('hands the cached cover to the path the video will live at', async () => {
+    files.add(recordingFrame);
+
+    await moveVideoThumbnail(
+      'file:///documents/recordings/snaply-1.mp4',
+      'file:///cache/server-snaps/video-1.mp4',
+    );
+
+    expect(files.has(recordingFrame)).toBe(false);
+    expect(files.has(serverCopyFrame)).toBe(true);
+    // The moved cover is what a lookup for the new path finds, without extracting.
+    await expect(getVideoThumbnail('file:///cache/server-snaps/video-1.mp4')).resolves.toBe(
+      serverCopyFrame,
+    );
+    expect(mockGetThumbnail).not.toHaveBeenCalled();
+  });
+
+  it('keeps a cover already cached for the new path and drops the old one', async () => {
+    files.add(recordingFrame);
+    files.add(serverCopyFrame);
+
+    await moveVideoThumbnail(
+      'file:///documents/recordings/snaply-1.mp4',
+      'file:///cache/server-snaps/video-1.mp4',
+    );
+
+    expect(files.has(serverCopyFrame)).toBe(true);
+    expect(files.has(recordingFrame)).toBe(false);
+  });
+
+  it('does nothing when there is no cover to hand over', async () => {
+    await moveVideoThumbnail(
+      'file:///documents/recordings/snaply-1.mp4',
+      'file:///cache/server-snaps/video-1.mp4',
+    );
+
+    expect(files.size).toBe(0);
   });
 });

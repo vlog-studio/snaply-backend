@@ -16,6 +16,8 @@ export async function saveVideoThumbnail(
   return undefined;
 }
 
+export async function moveVideoThumbnail(_fromUri: string, _toUri: string): Promise<void> {}
+
 export function deleteVideoThumbnail(_uri: string): void {}
 
 export type { VideoThumbnailOptions };

@@ -156,7 +156,10 @@ export function planSnapReconcile(
       plan.entries[known] = uploadedEntry(remoteSnap);
       const held = snapsById.get(known);
       if (held?.origin === 'server') {
-        plan.merge.push(snapFromServer(remoteSnap, uriOf));
+        // A snap brought in from the server takes what the server measured. One
+        // shot here and deleted from this device only (its id is still its file
+        // name) keeps what was read off its original.
+        if (held.id === remoteSnap.videoId) plan.merge.push(snapFromServer(remoteSnap, uriOf));
         // A cover the OS reclaimed with the cache comes back; one still cached costs a lookup.
         if (remoteSnap.thumbnailUrl) {
           plan.thumbnails.push({ uri: held.uri, url: remoteSnap.thumbnailUrl });
@@ -167,14 +170,13 @@ export function planSnapReconcile(
 
     // The device that shot it may have lost the record of the upload — an app
     // killed between the server's answer and the store write, or a store file
-    // that did not survive. Its own name for the snap finds it again, and the
-    // capture time guards against another device's snap of the same name.
+    // that did not survive. Its own name for the snap finds it again, whether its
+    // file is still here or was deleted from this device only, and the capture
+    // time guards against another device's snap of the same name. A snap from
+    // elsewhere is never found this way: it is named by a video id, never by a
+    // file name.
     const own = remoteSnap.clientId ? snapsById.get(remoteSnap.clientId) : undefined;
-    if (
-      own &&
-      own.origin !== 'server' &&
-      Math.abs(own.capturedAt - remoteSnap.capturedAt) <= SameCaptureToleranceMs
-    ) {
+    if (own && Math.abs(own.capturedAt - remoteSnap.capturedAt) <= SameCaptureToleranceMs) {
       // Already uploaded under another row: a duplicate upload of the same
       // snap, which is not a second snap either.
       if (local.entries[own.id]?.status !== 'uploaded') {

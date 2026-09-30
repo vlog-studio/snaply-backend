@@ -4,6 +4,7 @@ import type { Snap } from './snap';
 import {
   mergeServerSnaps,
   useAddSnap,
+  useMarkSnapsRemovedFromDevice,
   useRecordSnapMeasurement,
   useRemoveSnaps,
   useSnaps,
@@ -206,6 +207,52 @@ describe('snap store', () => {
       await act(async () => result.current('snap-gone', { durationSec: 2 }));
 
       expect(useSnapStore.getState().snaps).toBe(before);
+    });
+  });
+
+  describe('markRemovedFromDevice', () => {
+    it('turns a deleted original into a fetched server copy, keeping the snap as it was', async () => {
+      const own = makeSnap({
+        id: 'snaply-1.mp4',
+        durationSec: 2.4,
+        durationMeasured: true,
+        place: { latitude: 37.5, longitude: 127 },
+      });
+      useSnapStore.setState({ snaps: [own, makeSnap({ id: 'snaply-2.mp4' })] });
+
+      const { result } = await renderHook(() => useMarkSnapsRemovedFromDevice());
+      await act(async () =>
+        result.current([{ id: 'snaply-1.mp4', uri: 'file:///cache/server-snaps/v1.mp4' }]),
+      );
+
+      const [changed, untouched] = useSnapStore.getState().snaps;
+      expect(changed).toEqual({
+        ...own,
+        origin: 'server',
+        uri: 'file:///cache/server-snaps/v1.mp4',
+      });
+      // The id stays, so the movies naming this snap need nothing rewritten.
+      expect(changed.id).toBe('snaply-1.mp4');
+      expect(untouched.origin).toBeUndefined();
+    });
+
+    it('does not write when every snap is already where it says', async () => {
+      const snaps = [
+        makeSnap({
+          id: 'snaply-1.mp4',
+          origin: 'server',
+          uri: 'file:///cache/server-snaps/v1.mp4',
+        }),
+      ];
+      useSnapStore.setState({ snaps });
+
+      const { result } = await renderHook(() => useMarkSnapsRemovedFromDevice());
+      await act(async () =>
+        result.current([{ id: 'snaply-1.mp4', uri: 'file:///cache/server-snaps/v1.mp4' }]),
+      );
+      await act(async () => result.current([{ id: 'gone', uri: 'file:///cache/x.mp4' }]));
+
+      expect(useSnapStore.getState().snaps).toBe(snaps);
     });
   });
 

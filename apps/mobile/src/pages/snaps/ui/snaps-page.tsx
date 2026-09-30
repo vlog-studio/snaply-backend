@@ -9,10 +9,12 @@ import {
   useFailedUploadCount,
   useRetryFailedUploads,
   useSnapFiles,
+  useSnapSyncEntries,
   type Snap,
+  type SnapSyncEntry,
 } from '@/entities/snap';
 import { useComposeMovie } from '@/features/compose-movie';
-import { useDeleteSnaps } from '@/features/delete-snap';
+import { canDeleteFromDevice, useDeleteSnaps } from '@/features/delete-snap';
 import { useSaveSnapToAlbum } from '@/features/save-snap-to-album';
 import { formatDuration, formatSeconds } from '@/shared/lib/datetime';
 import { movieHref } from '@/shared/routes';
@@ -32,7 +34,7 @@ import { SnapDayGrid, SnapSelectionBar, useSnapDays, useSnapPicking } from '@/wi
 
 import { playerAlbumAction } from '../model/player-album-action';
 import { useMovieDeleteImpact } from '../model/use-movie-delete-impact';
-import { SnapDeleteDialog } from './snap-delete-dialog';
+import { SnapDeleteDialog, type DeviceOnlyDelete } from './snap-delete-dialog';
 
 export type SnapsPageProps = {
   /** `?select=1` — the studio sends the user here to pick for a new movie. */
@@ -71,8 +73,9 @@ export function SnapsPage({ startSelecting = false }: SnapsPageProps) {
   const tabBarHeight = useTabBarHeight();
   const { days, totalCount, totalDurationSec, isHydrated } = useSnapDays();
   const { startMovieFromSnaps } = useComposeMovie();
-  const { deleteSnaps, deletingIds, errorMessage, clearError } = useDeleteSnaps();
+  const { deleteSnaps, deleteFromDevice, deletingIds, errorMessage, clearError } = useDeleteSnaps();
   const albumSave = useSaveSnapToAlbum();
+  const syncEntries = useSnapSyncEntries();
   const setTabBarHidden = useSetTabBarHidden();
   const isFocused = useIsFocused();
   const failedUploadCount = useFailedUploadCount();
@@ -87,6 +90,7 @@ export function SnapsPage({ startSelecting = false }: SnapsPageProps) {
   const [selecting, setSelecting] = useState(startSelecting);
   const [playing, setPlaying] = useState<Snap>();
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteOpenedAt, setDeleteOpenedAt] = useState(0);
   const [importError, setImportError] = useState<string>();
   // The bar reports its real height (it varies with the safe-area inset, the
   // font scale, and the notice line); the estimate only covers the frames
@@ -146,6 +150,24 @@ export function SnapsPage({ startSelecting = false }: SnapsPageProps) {
     setPlaying(undefined);
     albumSave.reset();
   };
+
+  // The picks the server still keeps can be deleted from this device only
+  // (SNAP-19); the sheet asks where to delete only when there are some.
+  const pickedSnaps = useMemo(() => {
+    const byId = new Map(days.flatMap((day) => day.snaps).map((snap) => [snap.id, snap]));
+    return picked.flatMap((snapId) => byId.get(snapId) ?? []);
+  }, [days, picked]);
+  // Judged at the moment the sheet opened: a kept copy can run out while the
+  // page stays mounted, and the delete itself asks again when it runs.
+  const deviceOnlySnaps = useMemo(
+    () =>
+      pickedSnaps.filter((snap) => canDeleteFromDevice(snap, syncEntries[snap.id], deleteOpenedAt)),
+    [pickedSnaps, syncEntries, deleteOpenedAt],
+  );
+  const deviceOnly: DeviceOnlyDelete | undefined =
+    deviceOnlySnaps.length > 0
+      ? { count: deviceOnlySnaps.length, keptUntil: keptUntilOf(deviceOnlySnaps, syncEntries) }
+      : undefined;
 
   // Arriving with `?select=1` (the studio sending the user to pick for a new
   // movie) opens selection mode. The tab stays mounted across visits, so the initial
@@ -255,6 +277,18 @@ export function SnapsPage({ startSelecting = false }: SnapsPageProps) {
       // ones that did go, so a retry only targets what is left.
       drop(deletedIds);
     }
+  };
+
+  const confirmDeleteFromDevice = async () => {
+    const targets = deviceOnlySnaps;
+    const removedIds = await deleteFromDevice(targets);
+    // Every file that could go is gone; the snaps stay in the library either way.
+    drop(removedIds);
+    if (removedIds.length < targets.length) return; // The sheet stays open with its error.
+    setDeleteOpen(false);
+    const untouched = picked.length - removedIds.length;
+    if (untouched === 0) exitSelection();
+    else announce(`스냅 ${untouched}개는 이 기기에서만 삭제할 수 없어 그대로 뒀어요.`);
   };
 
   const closeDelete = () => {
@@ -376,7 +410,10 @@ export function SnapsPage({ startSelecting = false }: SnapsPageProps) {
           notice={notice}
           onClear={clear}
           onConfirm={confirmPicks}
-          onDelete={() => setDeleteOpen(true)}
+          onDelete={() => {
+            setDeleteOpenedAt(Date.now());
+            setDeleteOpen(true);
+          }}
           onHeight={setSelectionBarHeight}
         />
       ) : null}
@@ -395,10 +432,12 @@ export function SnapsPage({ startSelecting = false }: SnapsPageProps) {
         visible={deleteOpen}
         count={picked.length}
         impact={impact}
+        deviceOnly={deviceOnly}
         isDeleting={deletingIds.size > 0}
         errorMessage={errorMessage}
         onCancel={closeDelete}
         onConfirm={confirmDelete}
+        onConfirmDeviceOnly={() => void confirmDeleteFromDevice()}
       />
     </View>
   );
@@ -406,6 +445,16 @@ export function SnapsPage({ startSelecting = false }: SnapsPageProps) {
 
 /** Stable reference, so the impact hook does not recompute on every render. */
 const EmptySelection: string[] = [];
+
+/** When a lone snap's kept copy ends, for the sheet to name; several get no date. */
+function keptUntilOf(
+  snaps: readonly Snap[],
+  entries: Readonly<Record<string, SnapSyncEntry>>,
+): number | undefined {
+  if (snaps.length !== 1) return undefined;
+  const entry = entries[snaps[0].id];
+  return entry?.status === 'uploaded' ? entry.expiresAt : undefined;
+}
 
 /** A movie is made from the server's copies, and this snap's is gone (SNAP-12). */
 const ExpiredSnapRefusal = '보관 기간이 끝난 스냅은 무비에 넣을 수 없어요.';

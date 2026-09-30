@@ -58,6 +58,7 @@ function CaptureRecordScreen() {
     openLibrary,
     selectRecording,
     deleteRecording,
+    deleteRecordingFromDevice,
     permissions,
     camera,
     session,
@@ -205,6 +206,8 @@ function CaptureRecordScreen() {
           isLoading={library.isLoading}
           onClose={library.close}
           onDelete={deleteRecording}
+          canDeleteFromDevice={library.canRemoveFromDevice}
+          onDeleteFromDevice={deleteRecordingFromDevice}
           onSelect={selectRecording}
           recordings={library.recordings}
           visible={library.isVisible}
@@ -450,6 +453,8 @@ function CaptureRecordScreen() {
         isLoading={library.isLoading}
         onClose={library.close}
         onDelete={deleteRecording}
+        canDeleteFromDevice={library.canRemoveFromDevice}
+        onDeleteFromDevice={deleteRecordingFromDevice}
         onSelect={selectRecording}
         recordings={library.recordings}
         visible={library.isVisible}

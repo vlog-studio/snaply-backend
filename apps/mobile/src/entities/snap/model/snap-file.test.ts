@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import type { Snap } from './snap';
 import { fetchSnapFile, useSnapFiles } from './snap-file';
+import { useSnapSyncStore } from './snap-sync-store';
 
 /**
  * The HTTP transport and the file system are the edges: the address comes from
@@ -18,6 +19,13 @@ jest.mock('@/shared/api', () => ({
     template.replace('{id}', params.id),
 }));
 jest.mock('@/shared/lib/recording-files', () => ({ deleteLocalRecording: jest.fn() }));
+jest.mock('@/shared/lib/local-store', () => ({
+  localStore: {
+    getItem: jest.fn().mockResolvedValue(null),
+    setItem: jest.fn().mockResolvedValue(undefined),
+    removeItem: jest.fn().mockResolvedValue(undefined),
+  },
+}));
 jest.mock('@/shared/lib/server-snap-files', () => ({
   serverSnapFileExists: (uri: string) => mockOnDisk.has(uri),
   downloadServerSnapFile: (url: string, uri: string) => mockDownload(url, uri),
@@ -45,6 +53,7 @@ describe('snap files', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockOnDisk.clear();
+    useSnapSyncStore.setState({ entries: {}, deleteTombstones: [], deleteAttempts: {} });
     mockApiRequest.mockResolvedValue({
       playbackUrl: 'https://s3.test/rendition.mp4',
       originalUrls: [],
@@ -73,6 +82,19 @@ describe('snap files', () => {
     await fetchSnapFile(snap);
 
     expect(mockDownload).toHaveBeenCalledWith('https://s3.test/o.mov', snap.uri);
+  });
+
+  it('asks for the uploaded video of a snap deleted from this device only', async () => {
+    // It keeps its file name as its id; the upload record names the server's video.
+    const snap: Snap = { ...serverSnap(), id: 'snaply-1.mp4' };
+    useSnapSyncStore.setState({
+      entries: { 'snaply-1.mp4': { status: 'uploaded', videoId: 'video-77' } },
+    });
+
+    await fetchSnapFile(snap);
+
+    expect(mockApiRequest).toHaveBeenCalledWith('/videos/video-77', expect.anything());
+    expect(mockDownload).toHaveBeenCalledWith('https://s3.test/rendition.mp4', snap.uri);
   });
 
   it('never fetches a snap shot on this device', async () => {

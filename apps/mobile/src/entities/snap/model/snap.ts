@@ -49,24 +49,27 @@ export type SnapPlace = {
  */
 export type Snap = {
   /**
-   * The recording's file name for a snap shot on this device; the server's
-   * video id for one that came from elsewhere (`origin: 'server'`). The two
-   * never collide — file names are `snaply-<ms>.<ext>`, video ids are UUIDs.
+   * The recording's file name for a snap shot on this device — kept when that
+   * file is later deleted from this device only; the server's video id for one
+   * that came from elsewhere. The two never collide — file names are
+   * `snaply-<ms>.<ext>`, video ids are UUIDs.
    */
   id: string;
   /**
    * File URI of the source video. For this device's own snaps, the recording as
-   * `recording-files` stored it. For a snap from another device, the path its
-   * copy is fetched to (`shared/lib/server-snap-files`) — which may not be
-   * there yet: that video is fetched when it is first played.
+   * `recording-files` stored it. For a snap whose file is only a copy of the
+   * server's (`origin: 'server'`), the path that copy is fetched to
+   * (`shared/lib/server-snap-files`) — which may not be there yet: that video is
+   * fetched when it is first played.
    */
   uri: string;
   /**
-   * Where the snap came from. Absent for a snap shot or extracted on this
-   * device, whose file is the original and the source of truth (SNAP-14).
-   * `server` for one shot on another device or before a reinstall and brought
-   * in from the server's list (SNAP-15): its file is only a cache of the
-   * server's playable copy, and it is never uploaded.
+   * Where the snap's file comes from. Absent for a snap shot or extracted on
+   * this device while its file here is the original and the source of truth
+   * (SNAP-14). `server` when the file here is only a cache of the server's
+   * playable copy, and the snap is never uploaded: a snap shot on another device
+   * or before a reinstall, brought in from the server's list (SNAP-15), or one
+   * shot here whose original was deleted from this device only (SNAP-19).
    */
   origin?: 'server';
   /**

@@ -24,12 +24,24 @@ jest.mock('@/features/manage-recordings', () => ({
   }),
 }));
 
+const mockDeleteFromDevice = jest.fn();
+let mockKeptIds = new Set<string>();
+
 jest.mock('@/features/delete-snap', () => ({
   useDeleteSnaps: () => ({
     deleteSnaps: mockDeleteSnaps,
+    deleteFromDevice: mockDeleteFromDevice,
     deletingIds: mockDeletingIds,
     errorMessage: mockDeleteError,
     clearError: mockClearDeleteError,
+  }),
+  canDeleteFromDevice: (_recording: unknown, entry: { videoId?: string } | undefined) =>
+    entry !== undefined && mockKeptIds.has(entry.videoId ?? ''),
+}));
+
+jest.mock('@/entities/snap', () => ({
+  useSnapSyncEntries: () => ({
+    'snaply-1.mp4': { status: 'uploaded', videoId: 'video-1' },
   }),
 }));
 
@@ -51,6 +63,8 @@ beforeEach(() => {
   mockDeleteError = undefined;
   mockDeletingIds = [];
   mockDeleteSnaps.mockResolvedValue(['snaply-1.mp4']);
+  mockDeleteFromDevice.mockResolvedValue(['snaply-1.mp4']);
+  mockKeptIds = new Set(['video-1']);
 });
 
 describe('useRecordingLibrary', () => {
@@ -148,5 +162,42 @@ describe('useRecordingLibrary', () => {
     const { result } = await renderHook(() => useRecordingLibrary());
 
     expect(result.current.deletingId).toBe('snaply-1.mp4');
+  });
+
+  it('offers deleting from this device only for a recording the server keeps', async () => {
+    const { result } = await renderHook(() => useRecordingLibrary());
+
+    expect(result.current.canRemoveFromDevice(createRecording())).toBe(true);
+    mockKeptIds = new Set();
+    expect(result.current.canRemoveFromDevice(createRecording())).toBe(false);
+  });
+
+  it('deletes from this device only, re-reads the list, and says whether the preview went', async () => {
+    const recording = createRecording();
+    const { result } = await renderHook(() => useRecordingLibrary());
+    await act(async () => result.current.select(recording));
+
+    let removedSelected = false;
+    await act(async () => {
+      removedSelected = await result.current.removeFromDevice(recording);
+    });
+
+    expect(mockDeleteFromDevice).toHaveBeenCalledWith([recording]);
+    expect(mockDeleteSnaps).not.toHaveBeenCalled();
+    expect(mockReloadRecordings).toHaveBeenCalled();
+    expect(removedSelected).toBe(true);
+  });
+
+  it('keeps the list as it was when nothing could be deleted from this device', async () => {
+    mockDeleteFromDevice.mockResolvedValue([]);
+    const { result } = await renderHook(() => useRecordingLibrary());
+
+    let removedSelected = true;
+    await act(async () => {
+      removedSelected = await result.current.removeFromDevice(createRecording());
+    });
+
+    expect(removedSelected).toBe(false);
+    expect(mockReloadRecordings).not.toHaveBeenCalled();
   });
 });

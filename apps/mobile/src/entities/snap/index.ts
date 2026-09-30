@@ -16,11 +16,13 @@ export {
   readScopedSnaps,
   removeSnaps,
   useAddSnap,
+  useMarkSnapsRemovedFromDevice,
   useRecordSnapMeasurement,
   useRemoveSnaps,
   useSnaps,
   useSnapsForMovies,
   useSnapsHydrated,
+  type RemovedFromDevice,
 } from './model/snap-store';
 export {
   addSnapDeleteTombstone,

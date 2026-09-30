@@ -81,6 +81,11 @@ export function useCaptureRecorder() {
     if (removedSelected) retake();
   };
 
+  const deleteRecordingFromDevice = async (recording: LocalRecording) => {
+    const removedSelected = await library.removeFromDevice(recording);
+    if (removedSelected) retake();
+  };
+
   return {
     stage,
     showCamera: stage !== 'review' && !library.isVisible,
@@ -97,6 +102,7 @@ export function useCaptureRecorder() {
     openLibrary,
     selectRecording,
     deleteRecording,
+    deleteRecordingFromDevice,
     permissions,
     camera,
     session,
