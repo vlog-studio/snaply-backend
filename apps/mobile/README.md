@@ -76,6 +76,8 @@ src/
 | `npx expo start --go` | Expo Go용 Metro 서버 실행(iOS 시뮬레이터 전용 — Android Expo Go는 부팅 불가) |
 | `npm run android` / `npm run android:device` | Android 개발 빌드를 에뮬레이터/실기기에 빌드·실행 |
 | `npm run ios` | iOS 개발 빌드를 시뮬레이터에 빌드·실행(Swift 6.2를 지원하는 Xcode 필요) |
+| `npm run android:device:install` | 이미 빌드된 개발 APK를 무선(또는 USB) 연결 실기기에 설치하고 `adb reverse`·실행까지 처리. `-- --build`로 재빌드, `-- --connect <ip:port>`로 연결부터 |
+| `npm run android:device:reverse` | 설치 없이 `adb reverse`(8081·API·MinIO)만 다시 적용 — 무선 adb가 재연결돼 reverse가 풀렸을 때 |
 | `npm run android:device:release` | 릴리스 APK를 빌드해 실기기에 설치 |
 | `npm run web` | 웹 환경 실행(기준 개발 환경 아님) |
 | `npm run contract:build` | 공유 계약 패키지(`packages/shared-types`) 빌드 — `verify`가 먼저 실행하며, 계약 변경을 pull한 뒤 `typecheck`만 돌릴 때 한 번 필요 |
