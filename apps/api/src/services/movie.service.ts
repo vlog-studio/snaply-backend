@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import {
   DEFAULT_FIT_MODE,
   DEFAULT_OUTPUT_PROFILE,
@@ -21,7 +23,7 @@ import { AppError } from '../lib/errors.js';
 import { captureException } from '../lib/sentry.js';
 import { createEditJob } from './edit-job.service.js';
 import { deleteObject } from './storage.service.js';
-import { pickTransition } from './transition-director.js';
+import { pickTransitions } from './transition-director.js';
 
 const DEFAULT_TITLE = '새 무비';
 const DEFAULT_STYLE: StylePreset = '일상';
@@ -238,13 +240,46 @@ function toUserTransition(input: { kind: TransitionKind; durationMs?: number }):
 }
 
 /**
- * 저장할 행. 마지막 컷을 뺀 모든 컷이 다음 컷으로의 전환을 갖는다 — 사용자가 고른 것은 그대로,
- * 나머지는 지금 AI 가 고른다(`ai` 경계는 컷·스타일이 바뀔 때마다 다시 고른다는 규칙이 여기서 나온다).
+ * AI 가 경계마다 고른 전환(컷 순서대로, `clips.length - 1` 개). 촬영 시각을 보므로 스냅을 한 번 읽는다 —
+ * 없으면 업로드 시각으로 대신한다(SNAP-10, `resolveClips` 의 정렬과 같은 기준).
  */
-function clipCreateData(clips: ResolvedClip[], stylePreset: StylePreset) {
+async function directTransitions(params: {
+  movieId: string;
+  stylePreset: StylePreset;
+  clips: ResolvedClip[];
+}): Promise<Transition[]> {
+  if (params.clips.length < 2) return [];
+  const snaps = await getPrisma().video.findMany({
+    where: { id: { in: [...new Set(params.clips.map((clip) => clip.videoId))] } },
+    select: { id: true, capturedAt: true, createdAt: true },
+  });
+  const timeOf = new Map(
+    snaps.map((snap) => [snap.id, (snap.capturedAt ?? snap.createdAt).getTime()]),
+  );
+  return pickTransitions({
+    movieId: params.movieId,
+    stylePreset: params.stylePreset,
+    boundaries: params.clips.slice(0, -1).map((clip, index) => {
+      const next = params.clips[index + 1]!;
+      return {
+        fromVideoId: clip.videoId,
+        toVideoId: next.videoId,
+        fromCapturedAt: timeOf.get(clip.videoId) ?? 0,
+        toCapturedAt: timeOf.get(next.videoId) ?? 0,
+      };
+    }),
+  });
+}
+
+/**
+ * 저장할 행. 마지막 컷을 뺀 모든 컷이 다음 컷으로의 전환을 갖는다 — 사용자가 고른 것은 그대로,
+ * 나머지는 AI 가 지금 고른 것(`aiTransitions`)이다. `ai` 경계는 컷·스타일이 바뀔 때마다 다시 고른다는
+ * 규칙이 여기서 나온다.
+ */
+function clipCreateData(clips: ResolvedClip[], aiTransitions: Transition[]) {
   return clips.map((clip, index) => {
     const isLast = index === clips.length - 1;
-    const chosen = isLast ? null : (clip.userTransition ?? pickTransition({ stylePreset }));
+    const chosen = isLast ? null : (clip.userTransition ?? aiTransitions[index] ?? { kind: 'hardcut' as const });
     return {
       videoId: clip.videoId,
       order: index,
@@ -393,16 +428,19 @@ export async function createMovie(params: {
   const arranger = params.arranger ?? 'user';
   const stylePreset = params.stylePreset ?? DEFAULT_STYLE;
   const clips = params.clips ? await resolveClips({ ...params, clips: params.clips, arranger }) : [];
+  // id 를 먼저 정한다 — AI 의 전환 시드가 무비 id 에서 나온다.
+  const movieId = params.id ?? randomUUID();
+  const aiTransitions = await directTransitions({ movieId, stylePreset, clips });
 
   const created = await getPrisma().movie.create({
     data: {
-      ...(params.id ? { id: params.id } : {}),
+      id: movieId,
       userId: params.userId,
       title: params.title ?? DEFAULT_TITLE,
       stylePreset,
       captions: params.captions ?? false,
       arranger,
-      clips: { create: clipCreateData(clips, stylePreset) },
+      clips: { create: clipCreateData(clips, aiTransitions) },
     },
     select: SELECT,
   });
@@ -473,6 +511,8 @@ export async function updateMovie(params: {
       : stylePreset !== current.stylePreset
         ? resolvedFromRows(current.clips)
         : undefined;
+  const aiTransitions =
+    clips === undefined ? [] : await directTransitions({ movieId: current.id, stylePreset, clips });
 
   const updated = await getPrisma().movie.update({
     where: { id: current.id },
@@ -483,7 +523,7 @@ export async function updateMovie(params: {
       ...(params.arranger !== undefined ? { arranger: params.arranger } : {}),
       // 컷은 통째로 교체한다. 부분 갱신은 순서를 다시 계산해야 해서 두 표현이 어긋나기 쉽다.
       ...(clips !== undefined
-        ? { clips: { deleteMany: {}, create: clipCreateData(clips, stylePreset) } }
+        ? { clips: { deleteMany: {}, create: clipCreateData(clips, aiTransitions) } }
         : {}),
     },
     select: SELECT,
