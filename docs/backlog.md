@@ -363,9 +363,9 @@ e2e 실검증.
 [decisions/auto-edit-draft.md](./decisions/auto-edit-draft.md), 툴 목록과 착수 순서의 제안은
 [plans/edit-recipe-tools.md](./plans/edit-recipe-tools.md).
 
-**막힌 이유**: 경계별 전환이 렌더·편집 화면에 아직 없고, 초안 선택에 쓸 컷 역할 어휘와 구간의 주인이 없다(A-7).
-전환 어휘 · 무효화 액션(`cut-trim`·`transition-edit`) · 무비 계약의 경계별 전환과 그 주인은 2026-10-01 에
-들어왔다([progress.md](./progress.md)).
+**막힌 이유**: 경계별 전환이 편집 화면에 아직 없고, 초안 선택에 쓸 컷 역할 어휘와 구간의 주인이 없다(A-7).
+전환 어휘 · 무효화 액션(`cut-trim`·`transition-edit`) · 무비 계약의 경계별 전환과 그 주인 · 경계별 렌더(editSpec v3,
+`edit-v3` 큐)는 2026-10-01 에 들어왔다([progress.md](./progress.md)).
 
 - [ ] **넘길 수 있는 스냅 수와 비용 상한** — 지금 고르기 화면은 `최대 10개`(= 컷 상한 MOV-5)라 AI 가 고를
       여지가 없다. 넘길 수 있는 수 · 초안 1회의 vision 분석 수(템플릿 추천의 1회 12개와 별개) · 최근 24시간
@@ -376,8 +376,6 @@ e2e 실검증.
 - [ ] **AI 가 경계 전환을 고르는 규칙** — 지금 `ai` 경계는 스타일 기본값이다(`services/transition-director.ts`:
       `감성` = `crossfade` 800ms, 나머지 `hardcut`). 컷 쌍·촬영 시각 간격·위치·스타일 가중치·시드로 고르게 바꾸고,
       그때 MOV-6 의 "프리셋이 전환 방식을 정한다"를 "프리셋이 AI 가 고르는 전환의 경향을 정한다"로 고친다
-- [ ] **경계별 전환의 렌더** — v2 에 필드를 더하지 않는다(구버전 워커가 조용히 무시한다 —
-      [decisions/edit-spec-v3.md](./decisions/edit-spec-v3.md) §4). v3 의 컷·전환 부분을 `edit-v3` 큐로 먼저 낸다
 - [ ] **앱: 경계별 전환 선택과 미리보기** — 무대와 같은 구조의 임시 화면으로 v1 전환이 그려지는 것을
       확인했다(iOS 시뮬레이터는 전부, Android 에뮬레이터는 `crossfade` 만 실패 — [progress.md](./progress.md)
       2026-09-28). Android 실기기의 `crossfade` 는 페이드하는 플레이어를 감싼 뷰에 그 동안만
