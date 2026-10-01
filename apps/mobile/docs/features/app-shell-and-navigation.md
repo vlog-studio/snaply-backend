@@ -29,7 +29,7 @@ Snaply opens into a four-tab application — 스튜디오 (`/`), 스냅 (`/snaps
 | Route | Presentation | Owner |
 | --- | --- | --- |
 | `/` | 스튜디오 tab | `pages/studio` |
-| `/snaps` | 스냅 tab; accepts `?select=1` to open in selection mode for a new movie, `?select=draft` for the edit draft | `pages/snaps` |
+| `/snaps` | 스냅 tab; accepts `?select=1` to open in selection mode for a new movie, `?select=draft` for the edit draft, each with an `?at=` token that tells one request from the next | `pages/snaps` |
 | `/movies` | 무비 tab | `pages/movies` |
 | `/me` | 나 tab | `pages/me` |
 | `/capture` | Headerless root-stack full-screen modal (opened by the center capture button); the viewfinder | `pages/capture-record` |
