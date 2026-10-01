@@ -44,7 +44,7 @@ They do not consume each other. The template half is documented in [Movie templa
 
 ## The edit draft (자동 편집)
 
-`Partial` — walked on the Android emulator against the real local API and workers (2026-10-01): picking, a draft cut from real signals, the movie it opens, a window dragged and handed to the user, a left-out snap offered back and re-added, the offline failure with 다시 시도, and the daily cap offering the hand-made movie (root `docs/progress.md`). Not yet on a phone, and nothing has been made into a run from a draft — whether the render matches the stage is the phone's to show, since the emulator draws server copies black.
+`Partial` — walked on the Android emulator against the real local API and workers (2026-10-01): picking, a draft cut from real signals, the movie it opens, a window dragged and handed to the user, a left-out snap offered back and re-added, the offline failure with 다시 시도, and the daily cap offering the hand-made movie (root `docs/progress.md`). On the owner's Galaxy S22 Ultra (2026-10-01) a draft of six snaps had one boundary changed to 겹쳐 녹이기 and one window trimmed, and was made into a run: the render is the edited composition (11.77s for 11.7s of cuts, every cut showing its own window, the crossfade a real blend on the spare frames the draft left, the dip black), and a screen recording of the stage lines up with it frame for frame (root `docs/progress.md`). The filtering thresholds are still provisional.
 
 | Step | Actual behavior |
 | --- | --- |
