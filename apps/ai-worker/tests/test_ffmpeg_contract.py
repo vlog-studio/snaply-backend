@@ -139,6 +139,16 @@ def pixel(path: str, at: float, x: int = 540, y: int = 300) -> tuple[int, int, i
     return out[0], out[1], out[2]
 
 
+def darkest_near(path: str, at: float, span: float = 0.1) -> int:
+    """`at` 앞뒤 `span` 초 안 프레임 중 가장 어두운 것의 가장 밝은 채널.
+
+    한 시점만 집으면 ffmpeg 버전마다 `-ss` 가 앞뒤 프레임으로 갈려(로컬 7.1 은 경계 프레임, CI 의
+    Ubuntu 빌드는 1~2프레임 뒤) 짧은 dip 의 바닥을 놓친다. 바닥이 그 근처에 있는지만 본다.
+    """
+    steps = int(span * 2 * 30) + 1
+    return min(max(pixel(path, at - span + i / 30)) for i in range(steps))
+
+
 def duration_of(path: str) -> float:
     return float(probe(path)["format"]["duration"])
 
@@ -165,14 +175,14 @@ class TimelineContract(unittest.TestCase):
 
             # 겹침형이 여분 프레임을 쓰므로 길이는 컷 길이의 합(2+2+2)이다.
             self.assertAlmostEqual(duration_of(out), 6.0, delta=0.1)
-            red, mid, blue, dark, green = (pixel(out, t) for t in (1.0, 2.0, 3.0, 4.0, 5.0))
+            red, mid, blue, green = (pixel(out, t) for t in (1.0, 2.0, 3.0, 5.0))
             self.assertGreater(red[0], 200)
             self.assertTrue(red[2] < 40)
             # 경계(2.0초)에서는 두 컷이 반씩 섞인다.
             self.assertTrue(60 < mid[0] < 200 and 60 < mid[2] < 200, mid)
             self.assertGreater(blue[2], 200)
-            # dip 경계(4.0초)는 검정에 가깝다.
-            self.assertLess(max(dark), 40, dark)
+            # dip 경계(4.0초) 근처에서 검정에 가깝게 내려간다.
+            self.assertLess(darkest_near(out, 4.0), 40)
             self.assertGreater(green[1], 90)
 
     def test_crossfade_without_spare_frames_falls_back_to_a_dip(self) -> None:
@@ -181,10 +191,10 @@ class TimelineContract(unittest.TestCase):
             out = self.render(work, [Transition("crossfade", 400), Transition("hardcut")], last_to_end=True)
 
             self.assertAlmostEqual(duration_of(out), 6.0, delta=0.1)
-            before, at_boundary, after = pixel(out, 1.5), pixel(out, 2.0), pixel(out, 2.5)
+            before, after = pixel(out, 1.5), pixel(out, 2.5)
             self.assertGreater(before[0], 200)
             # 섞이지 않고 어두워진다 — 두 컷이 겹친 프레임이 없다.
-            self.assertLess(max(at_boundary), 60, at_boundary)
+            self.assertLess(darkest_near(out, 2.0), 40)
             self.assertGreater(after[2], 200)
 
     def test_zoompunch_starts_enlarged_and_settles(self) -> None:
