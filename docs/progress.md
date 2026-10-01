@@ -1694,3 +1694,29 @@ AI 편집 초안은 경계마다 고를 수 있는 전환을 편집 화면에서
 - **사고**: 백필 검증 중 URL 치환(`sed`)이 macOS 에서 동작하지 않아 이 마이그레이션이 **개발 DB(`snaply`)에 먼저
   적용됐다.** 추가 전용 변경이고 기존 일상 무비 4개의 컷 4개가 의도대로 채워졌다(main 코드는 새 열을 모르고
   기본값이 있어 그대로 동작한다). 검증은 치환 결과를 확인한 뒤 별도 DB 에서 다시 했다.
+
+## 2026-10-01 (이어서) — 경계별 전환의 렌더(editSpec v3 · `edit-v3` 큐, backlog A-11)
+
+무비를 생성하면 경계마다 고른 전환이 결과물에 들어간다. 편집 화면의 선택·미리보기(MOV-22 의 나머지)는 아직이다.
+
+- **editSpec v3** — v3 초안의 `timeline` 부분만 먼저 쓴다: `timeline.cuts`(`cutId`·`videoId`·`sourceInMs`·
+  `sourceOutMs?`)와 이어진 두 컷마다의 `timeline.transitions`(`fromCutId`·`toCutId`·`kind`·`durationMs?`). 색보정·
+  음악은 아직 `stylePreset` 이 정한다. 무비 생성만 v3 를 쓰고 `POST /edit-jobs` 는 v2 그대로다. 최상위 `clips` 는
+  v3 작업에 싣지 않는다.
+- **큐 분리** — v3 는 `EDIT_V3_QUEUE_NAME`(기본 `edit-v3`)으로만 간다. 구버전 워커는 이 큐를 모르므로 전환을 버리고
+  v2 로 "성공"하는 일이 없다(edit-spec-v3.md §4). 워커는 두 큐를 같은 처리기로 소비하고 스펙 버전이 경로를 가른다.
+  `env-spec.ts` · `.env.example` · `docker-compose.yml` 에 넣었다(기본값이 있어 운영 주입은 필요 없다).
+- **워커 렌더(`editor.edit_timeline`)** — 원본 길이를 재서 경계마다 `resolve_transition` 으로 해석한다(앱과 같은
+  규칙·픽스처). `crossfade` 는 양쪽 컷을 여분 프레임으로 절반씩 늘려 정규화한 뒤 `xfade`·`acrossfade` 로 겹쳐 무비 길이가
+  컷 길이의 합이 된다. `dip`·`flash` 는 각 컷 끝·앞의 `fade`(검정·흰색), `zoompunch` 는 들어오는 컷의 `zoompan`
+  (1.08 → 1.0, easeOutCubic)이다. 빠진 경계를 hardcut 으로 채우지 않고 실패시킨다.
+- **ffmpeg 함정 두 가지** — `xfade` 는 두 입력의 타임베이스가 같아야 해서 구간마다 마지막에 `settb=AVTB` 를 둔다(`fps` 가
+  타임베이스를 다시 바꾸므로 그 뒤에). `zoompan` 은 출력 타임베이스를 1/fps 로 선언하면서 입력 pts 를 그대로 써서, 2초 컷이
+  17분짜리가 되고 뒤의 `fps` 가 프레임을 복제하느라 메모리가 바닥났다 — 앞에서 `fps,settb=1/fps,setpts=N` 으로 맞춘다.
+- **자동 검증**: API 487개(생성이 v3 스펙으로 `edit-v3` 큐에만 들어가고 작업 API 가 같은 스펙을 돌려주는 것 포함) · 워커
+  164개(Docker 이미지, `REQUIRE_FFMPEG=1`) — 실제 ffmpeg 로 길이가 컷 합인지, 경계 프레임이 섞이고(crossfade) 어두워지고
+  (dip) 확대에서 제자리로 오는지(zoompunch), 여분이 없으면 바로 넘기는지를 색으로 읽는다 · 모바일 `verify:mobile` 1211개.
+- **로컬 끝-끝 확인** — 이 브랜치 코드를 마운트한 임시 편집 워커를 개발 인프라에 붙이고, 개발 계정의 실제 스냅 3개
+  (0.5~2.5초씩, 경계에 사용자 `crossfade` 500ms · `dip` 400ms)로 무비를 만들어 서비스 함수로 생성했다. 워커가 `edit-v3` 에서
+  받아 렌더·업로드까지 마쳤고(`done`), 결과는 1080×1920 · 6.04초, 경계 프레임이 각각 반씩 섞이고 어두워졌다. 확인 뒤 무비 ·
+  작업 · 결과 영상 · 크레딧 예약 기록 · MinIO 파일 · 큐 항목을 지웠다(잔액 200 그대로).
