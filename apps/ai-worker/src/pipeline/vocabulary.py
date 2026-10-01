@@ -33,6 +33,7 @@ import config
 # `worker.py` 는 손대지 않는다.
 REQUIRED = (
     "anchor-vocabulary.json",
+    "cut-role-vocabulary.json",
     "stage-vocabulary.json",
     "invalidation-vocabulary.json",
     "transition-vocabulary.json",

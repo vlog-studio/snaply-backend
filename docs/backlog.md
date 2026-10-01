@@ -285,10 +285,9 @@ v3 는 **Movie export 에 붙인다** — `POST /edit-jobs` 는 한 버전 공�
       조달 단계에서 **"신규 배포 중단 / 기존 저작물 유지" 분리 조항**을 협상 항목으로 올린다.
       이 조항이 확보되면 팩 상태를 셋(`experimental → active → deprecated`)으로 줄이고
       `retired` 를 법적 차단 전용으로 좁힌다([edit-spec-v3.md](./decisions/edit-spec-v3.md) §2 C-2)
-- [ ] **컷 역할 어휘를 사전 파일로** — v3 초안은 `cuts[].role`·`accents[].kind` 의 자리만 두고 값을 닫지
-      않았다(전환 `kind` 는 [`transition-vocabulary.json`](../packages/shared-types/src/transition-vocabulary.json)으로
-      닫혔다). 첫 소비처는 A-11 의 초안 선택 단계이고, v1 제안(역할 7개)은
-      [plans/edit-recipe-tools.md](./plans/edit-recipe-tools.md) §3 이다
+- [ ] **강조 어휘를 사전 파일로** — v3 초안은 `accents[].kind` 의 자리만 두고 값을 닫지 않았다. 전환 `kind` 와
+      컷 `role` 은 사전으로 닫혔다([`transition-vocabulary.json`](../packages/shared-types/src/transition-vocabulary.json) ·
+      [`cut-role-vocabulary.json`](../packages/shared-types/src/cut-role-vocabulary.json), 2026-10-01)
 - [ ] **컷 타이밍의 기준을 컷마다** — 결정 B-6(`beatLength` 가 기준)은 사용자가 자른 컷과 음악 없는 무비를
       다루지 못한다. 사용자가 자른 컷은 ms, AI 가 정한 컷은 음악이 있을 때 비트가 기준이다
       ([auto-edit-draft.md](./decisions/auto-edit-draft.md) §2.4). 사용자 수정을 값별 주인으로 표현할지,
@@ -370,7 +369,8 @@ e2e 실검증.
 상한(30 / 분석 12 / 24시간 10)·바로 표시·미업로드 포함·빠진 스냅 알림은 2026-10-01 에 정했다
 ([결정 §5](./decisions/auto-edit-draft.md)).
 
-- [ ] **컷 역할 사전** — `cut-role-vocabulary.json`, TS·워커 로더와 정합성 테스트(A-7 의 해당 항목)
+- [x] **컷 역할 사전** — [`cut-role-vocabulary.json`](../packages/shared-types/src/cut-role-vocabulary.json), TS·워커 로더와
+      정합성 테스트(2026-10-01). editSpec v3 의 `cuts[].role` 에 싣는 일은 초안 제안 API 와 함께 한다
 - [ ] **무비 계약: 구간의 주인(`ai`·`user`)** — 경계별 전환과 그 주인은 들어왔다(2026-10-01). 구간에도 주인을
       둔다(결정 §2.2). 계약 · `openapi.json` · [api-spec.md](./api-spec.md)를 같은 변경에서 고친다
 - [ ] **로컬 신호 reader** — 스냅 사이 중복 · 스냅 안의 좋은 구간 · 밝기·흐림 · 발화 구간(VAD). 업로드 후

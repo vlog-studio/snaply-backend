@@ -1781,3 +1781,16 @@ AI 편집 초안은 경계마다 고를 수 있는 전환을 편집 화면에서
 - 정리: 테스트 무비 · 편집 작업 · 결과 영상 · 크레딧 예약 기록(잔액 200 그대로) · MinIO 파일 · 큐 항목을 지웠고, 폰과
   에뮬레이터 모두 다시 읽은 뒤 그 무비가 사라졌다. 임시 워커와 API 는 내렸다.
 - 기록용 화면 녹화는 확인 뒤 지웠다(가족 영상이 담겨 있다).
+
+## 2026-10-01 (이어서) — 컷 역할 사전(MOV-21 1단계, backlog A-11·A-7)
+
+AI 편집 초안(MOV-21)을 시작했다. 상한·표시 시점·미업로드·빠진 스냅은 오너가 정했다([결정 §5](./decisions/auto-edit-draft.md)).
+
+- **사전** — [`cut-role-vocabulary.json`](../packages/shared-types/src/cut-role-vocabulary.json): 역할 v1 일곱(계획 §3)과
+  자리(`first`·`last`·`any`), 판단에 쓰는 신호와 그 출처(`capture`·`local`·`analysis`). 사용자에게 보이지 않는 값이라
+  `label` 이 없고 앱 사본도 두지 않는다. 첫·마지막 자리는 `hook`·`closer` 로만 채우고, 컷이 하나면 `hook` 이다.
+  분석이 꺼지면 분석 신호만 쓰는 `establish`·`detail` 은 판단할 수 없어 기본값 `body` 로 남는다.
+- **TS** `cut-role.ts`(`cutRolesAllowedAt`·`isCutRoleJudgeable`) · **워커** `pipeline/cut_role.py`(`validate_role`) 와
+  기동 검증 목록 `REQUIRED`. editSpec v3 의 `cuts[].role` 에 싣는 일은 초안 제안 API 와 함께 한다.
+- **자동 검증**: API 514개(사전 대조·자리 규칙 13 신규) · 워커 173개(Docker 이미지, `REQUIRE_FFMPEG=1`, 9 신규) · 모바일
+  `npm run verify:mobile` 156 suites / 1262 tests. `REQUIRED` 에서 새 사전을 빼면 `test_vocabulary` 가 실패하는 것을 확인했다.
