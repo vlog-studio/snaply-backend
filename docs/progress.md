@@ -1671,3 +1671,26 @@ AI 편집 초안은 경계마다 고를 수 있는 전환을 편집 화면에서
   효과음만 무효화한다. 셀별 근거는 사전의 `note`.
 - **자동 검증**: API 테스트 473개(전환 어휘 신규 · 무효화 규칙 2개 추가) · 워커 155개(Docker 이미지, ffmpeg 포함) ·
   모바일 `npm run verify:mobile` 152 suites / 1211 tests · shared-types·API lint·typecheck 통과.
+
+## 2026-10-01 (이어서) — 무비 계약에 경계별 전환과 그 주인(MOV-22, backlog A-11)
+
+모든 무비의 컷이 다음 컷으로의 전환을 갖고, 그 전환을 누가 골랐는지 남는다. 앱 화면과 렌더는 아직 이 값을
+쓰지 않는다(생성은 지금도 `stylePreset` 하나로 전환을 정한다).
+
+- **스펙**: MOV-22 에 규칙을 구체화했다 — 모든 무비에 적용 · 경계마다 `ai`/`user` · 사용자 전환은 두 컷이
+  이어진 동안만 · 들어가지 않으면 짧아지거나 바로 넘기지만 고른 값은 남음 · 무비 길이는 컷 길이의 합.
+- **DB**: `movie_clips` 에 `transition_kind`(varchar — 새 종류가 마이그레이션을 요구하지 않게) · `transition_ms` ·
+  `transition_owner`(`MovieArranger`, 기본 `ai`). 마이그레이션 `20261001000000_add_movie_clip_transitions` 가 기존
+  무비를 지금 렌더되는 값으로 채운다(`감성` = `crossfade` 800ms, 나머지 `hardcut`, 마지막 컷 NULL). 별도 DB 에
+  감성·여행·컷 없는 무비를 넣고 적용해 그대로 채워지는 것을 확인했다.
+- **계약**: 응답 컷의 `transition`(`kind` · `durationMs?` · `owner`, 마지막 컷 `null`)과 입력 컷의 선택 `transition`.
+  보낸 경계만 `user` 이고 나머지는 서버가 고른다. 범위 밖 길이 · `hardcut` 의 길이 · 마지막 컷의 전환은 400.
+  `arranger: ai` 정렬로 두 컷이 떨어지면 그 사용자 전환은 버리고 AI 가 고른다. 스타일만 바꾸면 `ai` 경계만
+  다시 고른다. `openapi.json` 재생성 · [api-spec.md](./api-spec.md) 갱신.
+- **AI 의 선택**: `services/transition-director.ts` — 지금은 스타일 기본값이라 경계별 저장으로 바뀐 뒤에도 사용자가
+  보는 결과가 그대로다. 규칙은 다음 단계(backlog A-11).
+- **자동 검증**: API 테스트 486개(경계 전환 13개 신규) · 모바일 `npm run verify:mobile` 152 suites / 1211 tests ·
+  shared-types·API lint·typecheck. 앱은 자체 DTO 스키마가 모르는 필드를 걸러 내 영향이 없다.
+- **사고**: 백필 검증 중 URL 치환(`sed`)이 macOS 에서 동작하지 않아 이 마이그레이션이 **개발 DB(`snaply`)에 먼저
+  적용됐다.** 추가 전용 변경이고 기존 일상 무비 4개의 컷 4개가 의도대로 채워졌다(main 코드는 새 열을 모르고
+  기본값이 있어 그대로 동작한다). 검증은 치환 결과를 확인한 뒤 별도 DB 에서 다시 했다.
