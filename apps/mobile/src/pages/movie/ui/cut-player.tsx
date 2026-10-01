@@ -3,12 +3,26 @@ import { useEventListener } from 'expo';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useEffect, useImperativeHandle, useRef, useState, type Ref } from 'react';
 import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+  type SharedValue,
+} from 'react-native-reanimated';
+
+import { transitionSpec } from '@/entities/movie';
 
 import { Radius, Spacing, useTheme } from '@/shared/ui/theme';
 import { ThemedText } from '@/shared/ui/themed-text';
 import { VideoFrame } from '@/shared/ui/video-frame';
 
-import { PlaybackProgressIntervalSec, type PlaybackCut } from '../model/playback-cuts';
+import {
+  PlaybackProgressIntervalSec,
+  preRollSec,
+  type BoundaryPlan,
+  type PlaybackCut,
+} from '../model/playback-cuts';
 
 /** What the timeline may ask of the stage. */
 export type CutPlayerHandle = {
@@ -21,6 +35,11 @@ export type CutPlayerHandle = {
   seekTo: (index: number, secIntoCut: number) => void;
   /** Plays or pauses; after the last cut, replays from the first. */
   togglePlayback: () => void;
+  /**
+   * Plays the boundary after cut `index` from a beat before it — the answer to
+   * a transition pick, which is judged by watching it.
+   */
+  previewBoundary: (index: number) => void;
 };
 
 export type CutPlayerProps = {
@@ -51,6 +70,61 @@ export type CutPlayerProps = {
 function playlistSignature(cuts: PlaybackCut[]): string {
   return cuts.map((cut) => `${cut.snapId}:${cut.startSec}:${cut.endSec}`).join('|');
 }
+
+/**
+ * How the boundaries hand over, for re-parking the idle slot when only a
+ * transition changed: a crossfade's incoming cut waits on spare frames before
+ * its window, a cut waits on its window start.
+ */
+function handoverSignature(cuts: PlaybackCut[]): string {
+  return cuts.map((cut) => cut.transitionOut?.kind ?? '-').join('|');
+}
+
+/**
+ * A report this close to a boundary schedules a timer for the rest. Reports
+ * come every `PlaybackProgressIntervalSec`, so acting only on them would start a
+ * transition up to that late; the render cuts on the frame. Checked on device
+ * (root docs/progress.md 2026-09-28/10-01): a timer for the remainder lands
+ * within tens of milliseconds.
+ */
+const ScheduleWindowSec = PlaybackProgressIntervalSec + 0.05;
+
+/** How much of the outgoing cut a boundary preview plays before its transition starts. */
+const BoundaryPreviewLeadInSec = 1;
+
+// Shared-value writes live in module-level functions: the React Compiler lint
+// rejects a `.value` write in a callback declared in the component body
+// (docs/frameworks/animations-and-gestures.md, "Work around the React Compiler
+// lint, structurally").
+
+function placeValue(value: SharedValue<number>, to: number) {
+  value.value = to;
+}
+
+function animateValue(
+  value: SharedValue<number>,
+  from: number,
+  to: number,
+  durationSec: number,
+  easing: 'linear' | 'easeOutCubic',
+) {
+  value.value = from;
+  value.value = withTiming(to, {
+    duration: Math.round(durationSec * 1000),
+    easing: easing === 'linear' ? Easing.linear : Easing.out(Easing.cubic),
+  });
+}
+
+/** A transition the stage is in the middle of — see `beginTransition`. */
+type RunningTransition = {
+  fromSlot: 0 | 1;
+  toSlot: 0 | 1;
+  toIndex: number;
+  plan: BoundaryPlan;
+  /** Whether the movie's clock has passed the boundary onto the incoming cut. */
+  committed: boolean;
+  timers: ReturnType<typeof setTimeout>[];
+};
 
 /**
  * Plays a movie's cuts back to back — the stage of the timeline layout.
@@ -154,6 +228,69 @@ export function CutPlayer({
   });
   const players = [playerA, playerB] as const;
 
+  // The two slots are stacked, B over A, and B's opacity alone picks which one
+  // shows: A is always opaque underneath. A crossfade therefore always fades B —
+  // in over A, or out to reveal it — the fixed stacking checked on a Galaxy
+  // (root docs/progress.md 2026-10-01). Scales serve a zoom punch on either
+  // slot; the overlay is a dip's black or a flash's white over both.
+  const topOpacity = useSharedValue(0);
+  const scaleA = useSharedValue(1);
+  const scaleB = useSharedValue(1);
+  const overlayOpacity = useSharedValue(0);
+  const scales = [scaleA, scaleB] as const;
+  const [overlayColor, setOverlayColor] = useState('#000000');
+  // On while B is fading — Android draws a video under a translucent
+  // TextureView black unless the fading view is a hardware layer (checked on a
+  // Galaxy and the emulator, root docs/progress.md 2026-10-01). Only for the
+  // fade: a hardware layer kept on would cost memory for nothing.
+  const [fadingTop, setFadingTop] = useState(false);
+  const [transitioning, setTransitioning] = useState(false);
+  const transitionRef = useRef<RunningTransition | null>(null);
+  // The one pending boundary timer (see `ScheduleWindowSec`).
+  const boundaryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const topStyle = useAnimatedStyle(() => ({
+    opacity: topOpacity.value,
+    transform: [{ scale: scaleB.value }],
+  }));
+  const bottomStyle = useAnimatedStyle(() => ({ transform: [{ scale: scaleA.value }] }));
+  const overlayStyle = useAnimatedStyle(() => ({ opacity: overlayOpacity.value }));
+
+  /** Makes `slot` the one on stage. */
+  const showSlot = (slot: 0 | 1) => {
+    activeSlotRef.current = slot;
+    setActiveSlot(slot);
+    placeValue(topOpacity, slot === 1 ? 1 : 0);
+  };
+
+  const clearBoundaryTimer = () => {
+    if (boundaryTimerRef.current !== null) clearTimeout(boundaryTimerRef.current);
+    boundaryTimerRef.current = null;
+  };
+
+  /**
+   * Stops a transition where it stands — a pause, a jump, an edited playlist.
+   * The stage settles on whichever cut the movie's clock is on: before the
+   * boundary the outgoing one, after it the incoming one. The effects are put
+   * away rather than frozen half-way, because a half-faded paused frame is not a
+   * frame of the movie.
+   */
+  const abortTransition = () => {
+    clearBoundaryTimer();
+    const running = transitionRef.current;
+    if (!running) return;
+    running.timers.forEach(clearTimeout);
+    transitionRef.current = null;
+    const settled = running.committed ? running.toSlot : running.fromSlot;
+    const other: 0 | 1 = settled === 0 ? 1 : 0;
+    players[other].pause();
+    placeValue(overlayOpacity, 0);
+    placeValue(scaleA, 1);
+    placeValue(scaleB, 1);
+    showSlot(settled);
+    setFadingTop(false);
+    setTransitioning(false);
+  };
+
   // Landing on a cut is also a position: whatever put the stage here — a strip
   // tap, the end of the previous cut, a replay, a scrub — it now sits somewhere
   // in the cut, and the timeline's playhead has to be told before the first
@@ -231,6 +368,7 @@ export function CutPlayer({
    * a replace, inside `loadSlot`.
    */
   const loadCut = (index: number, play: boolean, secIntoCut = 0) => {
+    abortTransition();
     const cut = cuts[index];
     const offset = Math.min(Math.max(secIntoCut, 0), cut.endSec - cut.startSec);
     const holdsFile = (s: 0 | 1) => slotUriRef.current[s] === cut.uri && !slotLoadingRef.current[s];
@@ -240,8 +378,7 @@ export function CutPlayer({
       if (holdsFile(idle)) {
         // The idle slot has the cut's file ready — swap instead of reload.
         slot = idle;
-        activeSlotRef.current = slot;
-        setActiveSlot(slot);
+        showSlot(slot);
       }
     }
     const other: 0 | 1 = slot === 0 ? 1 : 0;
@@ -286,15 +423,21 @@ export function CutPlayer({
   // the load's duration at every cut transition. By effect time the swap is
   // committed and the idle slot is actually off screen. `loadSlot` skips the
   // replace when the slot already holds the file, so re-runs are cheap.
+  // While a transition runs both slots are on stage — the outgoing one is still
+  // playing out its spare frames — so nothing is preloaded until it ends.
+  const handover = handoverSignature(cuts);
   useEffect(() => {
+    if (transitioning) return;
     const idle: 0 | 1 = activeSlot === 0 ? 1 : 0;
     // Past the last cut the natural "next" is the replay, so cut 0 preloads
     // and playing the ended movie again starts on a ready frame.
-    loadSlot(idle, (currentIndex + 1) % cuts.length);
+    const next = (currentIndex + 1) % cuts.length;
+    // A crossfade's incoming cut waits on spare frames before its window.
+    loadSlot(idle, next, next === 0 ? 0 : -preRollSec(cuts[currentIndex]));
     // `loadSlot` and `cuts` are rebuilt every render; what the idle slot should
     // hold changes exactly with the inputs below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSlot, currentIndex, signature]);
+  }, [activeSlot, currentIndex, signature, handover, transitioning]);
 
   const advance = (endedSlot: 0 | 1) => {
     // Only a *playing* stage advances. On Android `timeUpdate` keeps firing
@@ -324,8 +467,7 @@ export function CutPlayer({
     const holdsNext =
       slotCutRef.current[nextSlot] === nextIndex &&
       slotUriRef.current[nextSlot] === cuts[nextIndex].uri;
-    activeSlotRef.current = nextSlot;
-    setActiveSlot(nextSlot);
+    showSlot(nextSlot);
     setIndex(nextIndex);
     if (!holdsNext) {
       // Not preloaded (a rapid change) — load now; the completion plays it.
@@ -340,6 +482,100 @@ export function CutPlayer({
   };
 
   /**
+   * Plays the boundary after `fromIndex` with its transition (the render's
+   * look, fitted the render's way — `BoundaryPlan`). It runs on timers from
+   * here: `leadSec` until the boundary, where the movie's clock moves onto the
+   * incoming cut, and `tailSec` more until the effect is put away and the
+   * outgoing player stops.
+   *
+   * The incoming slot must already hold its cut — the preload effect parks it
+   * (on spare frames for a crossfade) as soon as the previous boundary ends. If
+   * it does not (a cut too short for the load, an edit just now), the stage
+   * cuts instead of waiting: a late transition is a different movie, a cut is
+   * the honest fallback.
+   */
+  const beginTransition = (fromSlot: 0 | 1, fromIndex: number, plan: BoundaryPlan) => {
+    const toSlot: 0 | 1 = fromSlot === 0 ? 1 : 0;
+    const toIndex = fromIndex + 1;
+    const ready =
+      slotCutRef.current[toSlot] === toIndex &&
+      slotUriRef.current[toSlot] === cuts[toIndex]?.uri &&
+      !slotLoadingRef.current[toSlot];
+    if (!ready) {
+      advance(fromSlot);
+      return;
+    }
+    const spec = transitionSpec(plan.kind);
+    const running: RunningTransition = {
+      fromSlot,
+      toSlot,
+      toIndex,
+      plan,
+      committed: false,
+      timers: [],
+    };
+    transitionRef.current = running;
+    setTransitioning(true);
+    const later = (sec: number, step: () => void) => {
+      running.timers.push(
+        setTimeout(() => {
+          if (transitionRef.current === running) step();
+        }, sec * 1000),
+      );
+    };
+
+    // The boundary: the movie's clock moves onto the incoming cut. For a
+    // crossfade both players keep running; otherwise the outgoing one stops.
+    const commit = () => {
+      running.committed = true;
+      if (plan.kind !== 'crossfade') {
+        players[fromSlot].pause();
+        players[toSlot].play();
+        showSlot(toSlot);
+      } else {
+        activeSlotRef.current = toSlot;
+        setActiveSlot(toSlot);
+      }
+      setIndex(toIndex);
+    };
+    const finish = () => {
+      transitionRef.current = null;
+      players[fromSlot].pause();
+      placeValue(overlayOpacity, 0);
+      placeValue(scales[toSlot], 1);
+      showSlot(toSlot);
+      setFadingTop(false);
+      setTransitioning(false);
+    };
+
+    if (plan.kind === 'crossfade') {
+      players[toSlot].play();
+      setFadingTop(true);
+      // B fades in over A, or out to reveal it.
+      if (toSlot === 1) animateValue(topOpacity, 0, 1, plan.durationSec, 'linear');
+      else animateValue(topOpacity, 1, 0, plan.durationSec, 'linear');
+      later(plan.leadSec, commit);
+      later(plan.durationSec, finish);
+      return;
+    }
+    if (plan.kind === 'zoompunch') {
+      commit();
+      animateValue(scales[toSlot], spec.scaleFrom ?? 1, 1, plan.durationSec, spec.easing);
+      later(plan.durationSec, finish);
+      return;
+    }
+    // dip / flash: the overlay rises over the end of one cut and falls over the
+    // start of the next.
+    setOverlayColor(spec.color ?? '#000000');
+    animateValue(overlayOpacity, 0, 1, plan.leadSec, 'linear');
+    later(plan.leadSec, () => {
+      commit();
+      animateValue(overlayOpacity, 1, 0, plan.tailSec, 'linear');
+    });
+    later(plan.durationSec, finish);
+  };
+
+  /**
    * Keeps the active player inside the current cut's window — while the stage
    * is playing. Paused reports are dropped whole: on Android `timeUpdate`
    * fires on its interval regardless of play state, so a paused stage would
@@ -351,12 +587,37 @@ export function CutPlayer({
   const watchBoundary = (slot: 0 | 1, currentTime: number) => {
     if (!isPlayingRef.current) return;
     if (slot !== activeSlotRef.current) return;
-    const cut = cuts[slotCutRef.current[slot]];
+    const index = slotCutRef.current[slot];
+    const cut = cuts[index];
     if (!cut) return;
-    if (currentTime >= cut.endSec) {
-      // The trim boundary arrives with file left over, so `playToEnd` never fires.
-      advance(slot);
+    if (transitionRef.current) {
+      // A transition runs on its own timers; the playhead still follows the
+      // cut the movie's clock is on.
+      onProgress?.(
+        index,
+        Math.min(Math.max(currentTime - cut.startSec, 0), cut.endSec - cut.startSec),
+      );
       return;
+    }
+    // Where this cut hands over: a transition starts `leadSec` before its
+    // boundary, a plain cut at the boundary itself.
+    const plan = index + 1 < cuts.length ? cut.transitionOut : undefined;
+    const handoverAt = cut.endSec - (plan?.leadSec ?? 0);
+    const handOver = () => {
+      boundaryTimerRef.current = null;
+      if (!isPlayingRef.current || activeSlotRef.current !== slot) return;
+      if (plan) beginTransition(slot, index, plan);
+      else advance(slot);
+    };
+    const remaining = handoverAt - currentTime;
+    if (remaining <= 0) {
+      // The trim boundary arrives with file left over, so `playToEnd` never fires.
+      clearBoundaryTimer();
+      handOver();
+      return;
+    }
+    if (remaining <= ScheduleWindowSec && boundaryTimerRef.current === null) {
+      boundaryTimerRef.current = setTimeout(handOver, remaining * 1000);
     }
     // A player that began before its window catches up here — a seek issued while
     // its source was still loading may not have landed, and the alternative is
@@ -375,6 +636,15 @@ export function CutPlayer({
     onPlayingChange?.(isPlaying);
   }, [isPlaying, onPlayingChange]);
 
+  // A transition's timers must not outlive the stage.
+  useEffect(
+    () => () => {
+      transitionRef.current?.timers.forEach(clearTimeout);
+      if (boundaryTimerRef.current !== null) clearTimeout(boundaryTimerRef.current);
+    },
+    [],
+  );
+
   useEventListener(playerA, 'playToEnd', () => advance(0));
   useEventListener(playerB, 'playToEnd', () => advance(1));
   useEventListener(playerA, 'timeUpdate', ({ currentTime }) => watchBoundary(0, currentTime));
@@ -390,11 +660,12 @@ export function CutPlayer({
       replay();
       return;
     }
-    const active = players[activeSlotRef.current];
     if (isPlaying) {
-      active.pause();
+      abortTransition();
+      players[activeSlotRef.current].pause();
       setPlaying(false);
     } else {
+      const active = players[activeSlotRef.current];
       active.play();
       setPlaying(true);
     }
@@ -415,6 +686,12 @@ export function CutPlayer({
       loadCut(index, false, secIntoCut);
     },
     togglePlayback,
+    previewBoundary: (index: number) => {
+      const cut = cuts[index];
+      if (!cut || index + 1 >= cuts.length) return;
+      const leadSec = cut.transitionOut?.leadSec ?? 0;
+      loadCut(index, true, cut.endSec - cut.startSec - leadSec - BoundaryPreviewLeadInSec);
+    },
   }));
 
   const overlayIcon = isEnded ? 'refresh' : isPlaying ? 'pause' : 'play';
@@ -429,21 +706,33 @@ export function CutPlayer({
           preload replace flashed on screen as a blink into another cut. A
           TextureView is an ordinary composited view, so opacity actually
           selects which slot the stage shows. */}
-      <VideoView
-        allowsPictureInPicture={false}
-        contentFit="cover"
-        nativeControls={false}
-        player={playerA}
-        surfaceType="textureView"
-        style={[StyleSheet.absoluteFill, { opacity: activeSlot === 0 ? 1 : 0 }]}
-      />
-      <VideoView
-        allowsPictureInPicture={false}
-        contentFit="cover"
-        nativeControls={false}
-        player={playerB}
-        surfaceType="textureView"
-        style={[StyleSheet.absoluteFill, { opacity: activeSlot === 1 ? 1 : 0 }]}
+      <Animated.View style={[StyleSheet.absoluteFill, bottomStyle]}>
+        <VideoView
+          allowsPictureInPicture={false}
+          contentFit="cover"
+          nativeControls={false}
+          player={playerA}
+          surfaceType="textureView"
+          style={StyleSheet.absoluteFill}
+        />
+      </Animated.View>
+      <Animated.View
+        renderToHardwareTextureAndroid={fadingTop}
+        style={[StyleSheet.absoluteFill, topStyle]}
+      >
+        <VideoView
+          allowsPictureInPicture={false}
+          contentFit="cover"
+          nativeControls={false}
+          player={playerB}
+          surfaceType="textureView"
+          style={StyleSheet.absoluteFill}
+        />
+      </Animated.View>
+      {/* A dip's black or a flash's white, over both slots. */}
+      <Animated.View
+        pointerEvents="none"
+        style={[StyleSheet.absoluteFill, { backgroundColor: overlayColor }, overlayStyle]}
       />
       {untouched ? (
         <VideoFrame uri={cuts[0].uri} atSec={cuts[0].startSec > 0 ? cuts[0].startSec : undefined} />

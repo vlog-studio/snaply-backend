@@ -11,7 +11,7 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 
-import { MovieSnapLimit } from '@/entities/movie';
+import { MovieSnapLimit, transitionAfter, transitionSpec } from '@/entities/movie';
 import { Radius, Spacing, useReducedMotion, useTheme } from '@/shared/ui/theme';
 import { ThemedText } from '@/shared/ui/themed-text';
 
@@ -27,6 +27,7 @@ import {
 } from '../model/timeline-layout';
 import type { Cut } from '../model/use-movie-cuts';
 import { TimelineCut, TimelineCutHeight } from './timeline-cut';
+import { PendingTransitionGlyph, TransitionGlyph } from './transition-glyph';
 
 export type TimelineStripProps = {
   cuts: Cut[];
@@ -52,9 +53,14 @@ export type TimelineStripProps = {
   /** A tap on the strip's empty space — anywhere that is not a clip or a tile. */
   onDeselect: () => void;
   onAddSnaps: () => void;
+  /** A tap on the boundary after cut `index` — opens its transition picker. */
+  onPickTransition: (index: number) => void;
 };
 
 const TickLabelWidth = 48;
+/** The boundary chips under the clips: a 44pt touch target around a smaller mark. */
+const HandoverChipSize = 24;
+const HandoverHitSlop = 10;
 const PlayheadWidth = 12;
 
 /**
@@ -182,6 +188,7 @@ export function TimelineStrip({
   onTrim,
   onDeselect,
   onAddSnaps,
+  onPickTransition,
 }: TimelineStripProps) {
   const theme = useTheme();
   const reducedMotion = useReducedMotion();
@@ -357,6 +364,51 @@ export function TimelineStrip({
               </Pressable>
             ) : null}
           </View>
+
+          {/* One chip per boundary, under the seam it belongs to — below the
+              clips rather than on the seam, where the held clip's trim handles
+              hang. Hidden during a trim drag: the clips resize on the UI thread
+              while the chips would still sit at the old seams. */}
+          <View style={[styles.handovers, { width: stripWidth }]}>
+            {trimming
+              ? null
+              : cuts.slice(0, -1).map((cut, index) => {
+                  const transition = transitionAfter(
+                    cuts.map((each) => each.ref),
+                    index,
+                  );
+                  const seam = metrics[index].x + metrics[index].width;
+                  const label = transition ? transitionSpec(transition.kind).label : '고르는 중';
+                  const owner = transition?.owner === 'user' ? '직접 고름' : '자동';
+                  const tint = transition?.owner === 'user' ? theme.primary : theme.ai;
+                  return (
+                    <Pressable
+                      key={`${cut.ref.snapId}-${index}`}
+                      accessibilityRole="button"
+                      accessibilityLabel={`컷 ${index + 1} → ${index + 2} 전환 · ${label} · ${owner}`}
+                      hitSlop={HandoverHitSlop}
+                      onPress={() => onPickTransition(index)}
+                      style={({ pressed }) => [
+                        styles.handoverChip,
+                        {
+                          left: seam - HandoverChipSize / 2,
+                          borderColor: transition ? tint : theme.border,
+                          backgroundColor: theme.background,
+                          opacity: pressed ? 0.7 : 1,
+                        },
+                      ]}
+                    >
+                      <Ionicons
+                        name={
+                          transition ? TransitionGlyph[transition.kind] : PendingTransitionGlyph
+                        }
+                        size={14}
+                        color={transition ? tint : theme.textSecondary}
+                      />
+                    </Pressable>
+                  );
+                })}
+          </View>
         </Pressable>
       </Animated.ScrollView>
 
@@ -400,6 +452,20 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  handovers: {
+    height: HandoverChipSize,
+    marginTop: Spacing.two,
+  },
+  handoverChip: {
+    position: 'absolute',
+    top: 0,
+    width: HandoverChipSize,
+    height: HandoverChipSize,
+    borderRadius: HandoverChipSize / 2,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   playhead: {
     position: 'absolute',
