@@ -285,11 +285,10 @@ v3 는 **Movie export 에 붙인다** — `POST /edit-jobs` 는 한 버전 공�
       조달 단계에서 **"신규 배포 중단 / 기존 저작물 유지" 분리 조항**을 협상 항목으로 올린다.
       이 조항이 확보되면 팩 상태를 셋(`experimental → active → deprecated`)으로 줄이고
       `retired` 를 법적 차단 전용으로 좁힌다([edit-spec-v3.md](./decisions/edit-spec-v3.md) §2 C-2)
-- [ ] **전환·컷 역할 어휘를 사전 파일로** — v3 초안은 `transitions[].kind`·`cuts[].role`·`accents[].kind` 의
-      자리만 두고 값을 닫지 않았다. 첫 소비처는 A-11 이고, v1 제안(전환 5종·역할 7개)은
-      [plans/edit-recipe-tools.md](./plans/edit-recipe-tools.md) §2·§3 이다
-- [ ] **무효화 사전에 `cut-trim`·`transition-edit`** — 사용자가 초안의 구간과 전환 하나를 고칠 수 있게
-      됐다(MOV-22). 액션 × 레이어를 빠짐없이 판단해 넣는다([auto-edit-draft.md](./decisions/auto-edit-draft.md) §2.5)
+- [ ] **컷 역할 어휘를 사전 파일로** — v3 초안은 `cuts[].role`·`accents[].kind` 의 자리만 두고 값을 닫지
+      않았다(전환 `kind` 는 [`transition-vocabulary.json`](../packages/shared-types/src/transition-vocabulary.json)으로
+      닫혔다). 첫 소비처는 A-11 의 초안 선택 단계이고, v1 제안(역할 7개)은
+      [plans/edit-recipe-tools.md](./plans/edit-recipe-tools.md) §3 이다
 - [ ] **컷 타이밍의 기준을 컷마다** — 결정 B-6(`beatLength` 가 기준)은 사용자가 자른 컷과 음악 없는 무비를
       다루지 못한다. 사용자가 자른 컷은 ms, AI 가 정한 컷은 음악이 있을 때 비트가 기준이다
       ([auto-edit-draft.md](./decisions/auto-edit-draft.md) §2.4). 사용자 수정을 값별 주인으로 표현할지,
@@ -364,8 +363,8 @@ e2e 실검증.
 [decisions/auto-edit-draft.md](./decisions/auto-edit-draft.md), 툴 목록과 착수 순서의 제안은
 [plans/edit-recipe-tools.md](./plans/edit-recipe-tools.md).
 
-**막힌 이유**: 초안에 담을 툴의 어휘(전환·컷 역할)와 사용자 수정의 무효화 규칙이 없고(A-7), 무비 계약에
-경계별 전환과 값별 주인이 없다.
+**막힌 이유**: 무비 계약에 경계별 전환과 값별 주인이 없고, 초안 선택에 쓸 컷 역할 어휘가 없다(A-7).
+전환 어휘와 사용자 수정의 무효화 액션(`cut-trim`·`transition-edit`)은 2026-10-01 에 들어왔다.
 
 - [ ] **넘길 수 있는 스냅 수와 비용 상한** — 지금 고르기 화면은 `최대 10개`(= 컷 상한 MOV-5)라 AI 가 고를
       여지가 없다. 넘길 수 있는 수 · 초안 1회의 vision 분석 수(템플릿 추천의 1회 12개와 별개) · 최근 24시간

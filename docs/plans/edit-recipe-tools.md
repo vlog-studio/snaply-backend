@@ -2,7 +2,9 @@
 
 **작성일**: 2026-09-28
 **상태**: 제안 — 착수 전이며 현행 사실이 아니다. 어휘가 확정되면 값의 원천은
-`packages/shared-types/src/*-vocabulary.json` 이다
+`packages/shared-types/src/*-vocabulary.json` 이다. **전환 `kind` v1 5종은 2026-10-01 에 확정됐다** —
+종류·길이 범위·폴백의 원천은 [`transition-vocabulary.json`](../../packages/shared-types/src/transition-vocabulary.json)이고,
+아래 표의 값과 다르면 그 파일이 맞다
 **원천**: AI 편집 초안(MOV-21·MOV-22)이 쓸 편집 툴의 v1 목록, 툴마다 정할 항목, 착수 순서의 제안.
 미결은 [backlog.md](../backlog.md) A-7·A-11 에만 둔다
 **관련 문서**: [decisions/auto-edit-draft.md](../decisions/auto-edit-draft.md) · [decisions/edit-spec-v3.md](../decisions/edit-spec-v3.md) ·
@@ -30,7 +32,7 @@
 |---|---|---|
 | `kind` | 닫힌 집합의 이름 | `crossfade` |
 | 레이어 | 붙는 곳. 무효화 사전의 레이어 이름 | `timeline.transitions` |
-| 파라미터 | 이름·범위·기본값. 범위 밖은 폴백하지 않고 거부한다 | `durationMs` 200~600, 기본 400 |
+| 파라미터 | 이름·범위·기본값. 범위 밖은 폴백하지 않고 거부한다 | `durationMs` 200~800, 기본 500 |
 | 시간 성격 | 겹침형(두 컷의 프레임을 섞는다) / 경계형(각 컷 안에서 끝난다) | 겹침형 |
 | 적용 조건 | 최소 컷 길이 · 여분 프레임 · 원본 해상도 · 필요한 신호 | 양쪽 컷에 `durationMs/2` 이상의 여분 프레임 |
 | 폴백 | 조건이 맞지 않을 때 | 여분만큼 줄이고, 200ms 미만이 되면 `hardcut` |
@@ -160,7 +162,8 @@ v3 초안이 "가장 먼저 닫아야 하는 어휘"로 적은 것이다. 무효
 사람 손으로 검증하고, AI 는 그 위에서 고른다.
 
 1. **v3 초안을 main 에 들인다** — 남은 개정을 포함한다(A-7 기존 항목)
-2. **어휘를 사전 파일로 닫는다** — 전환 `kind`(v1 5종) · 컷 `role` · 무효화 사전의 `cut-trim`·`transition-edit`(A-7)
+2. **어휘를 사전 파일로 닫는다** — 전환 `kind`(v1 5종) · 컷 `role` · 무효화 사전의 `cut-trim`·`transition-edit`(A-7).
+   전환과 무효화 액션은 2026-10-01 에 닫았다([progress.md](../progress.md)), 컷 `role` 이 남았다
 3. **무비 계약** — 경계별 전환과 값별 주인(`ai`·`user`). `packages/shared-types` 계약 · `openapi.json` ·
    [api-spec.md](../api-spec.md)를 같은 변경에서 고친다(A-11)
 4. **렌더러와 편집 화면** — v1 전환 5종, 여분 프레임 규칙(§1.1), 기본 오디오 처리. 경계별 전환은 v2 에
