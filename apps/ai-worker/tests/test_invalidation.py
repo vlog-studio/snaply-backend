@@ -161,6 +161,24 @@ class DocumentedRulesTest(unittest.TestCase):
         # 사용자가 순서를 정했으므로 디렉터에 선택이 없다.
         self.assertEqual(invalidation.attempt_bump_for("cut-reorder"), ())
         self.assertEqual(invalidation.attempt_bump_for("cut-remove"), ())
+        self.assertEqual(invalidation.attempt_bump_for("cut-trim"), ())
+        self.assertEqual(invalidation.attempt_bump_for("transition-edit"), ())
+
+    def test_trim_keeps_the_chosen_transitions(self) -> None:
+        # 이어지는 컷 쌍이 그대로라 다시 고르지 않고 길이만 다시 해석한다.
+        self.assertEqual(
+            invalidation.layer_state("cut-trim", "timeline.transitions"), invalidation.RETIMED
+        )
+        self.assertEqual(
+            invalidation.layer_state("cut-trim", "timeline.cuts"), invalidation.RETIMED
+        )
+
+    def test_editing_one_transition_does_not_move_the_cuts(self) -> None:
+        # 겹침형 전환이 여분 프레임을 써서 무비 길이가 컷 길이의 합이다.
+        self.assertEqual(
+            invalidation.layers_in_state("transition-edit", invalidation.INVALIDATED),
+            ("timeline.transitions", "audio.sfx"),
+        )
 
     def test_adding_a_clip_reuses_existing_analysis(self) -> None:
         # analysis 를 스펙 밖 참조로 뺀 것의 실질 이득이 여기서 나온다.

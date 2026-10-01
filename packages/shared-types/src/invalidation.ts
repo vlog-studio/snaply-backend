@@ -55,6 +55,8 @@ export const INVALIDATION_ACTIONS = [
   'cut-remove',
   'clip-add',
   'output-profile-change',
+  'cut-trim',
+  'transition-edit',
 ] as const;
 export type InvalidationAction = (typeof INVALIDATION_ACTIONS)[number];
 

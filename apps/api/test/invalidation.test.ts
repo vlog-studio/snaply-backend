@@ -171,6 +171,19 @@ describe('계획이 약속한 규칙', () => {
     // 사용자가 순서를 정했으므로 디렉터에 선택이 없다.
     expect(attemptBumpFor('cut-reorder')).toEqual([]);
     expect(attemptBumpFor('cut-remove')).toEqual([]);
+    expect(attemptBumpFor('cut-trim')).toEqual([]);
+    expect(attemptBumpFor('transition-edit')).toEqual([]);
+  });
+
+  it('트림은 고른 전환을 다시 고르지 않는다', () => {
+    // 이어지는 컷 쌍이 그대로라 길이만 새 구간·여분 프레임에 맞춰 다시 해석한다.
+    expect(layerState('cut-trim', 'timeline.transitions')).toBe('retimed');
+    expect(layerState('cut-trim', 'timeline.cuts')).toBe('retimed');
+  });
+
+  it('전환 하나를 바꿔도 컷은 움직이지 않는다', () => {
+    // 겹침형 전환이 여분 프레임을 써서 무비 길이가 컷 길이의 합이다(edit-recipe-tools §1.1).
+    expect(layersInState('transition-edit', 'invalidated')).toEqual(['timeline.transitions', 'audio.sfx']);
   });
 
   it('클립 추가가 기존 분석을 재사용한다', () => {
