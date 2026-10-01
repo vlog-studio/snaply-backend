@@ -44,7 +44,7 @@ They do not consume each other. The template half is documented in [Movie templa
 
 ## The edit draft (자동 편집)
 
-`Partial` — the whole path is unit-tested against the contract (root `docs/specs/movie.md` MOV-21, `POST /movie-drafts`) but has not yet been walked on a device or emulator.
+`Partial` — walked on the Android emulator against the real local API and workers (2026-10-01): picking, a draft cut from real signals, the movie it opens, a window dragged and handed to the user, a left-out snap offered back and re-added, the offline failure with 다시 시도, and the daily cap offering the hand-made movie (root `docs/progress.md`). Not yet on a phone, and nothing has been made into a run from a draft — whether the render matches the stage is the phone's to show, since the emulator draws server copies black.
 
 | Step | Actual behavior |
 | --- | --- |
