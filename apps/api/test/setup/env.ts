@@ -26,6 +26,7 @@ process.env.SUPABASE_URL ??= 'http://supabase.test.invalid';
 
 process.env.REDIS_URL = TEST_REDIS_URL;
 process.env.EDIT_QUEUE_NAME = 'edit-jobs-test';
+process.env.EDIT_V3_QUEUE_NAME = 'edit-v3-test';
 process.env.VIDEO_ANALYSIS_QUEUE_NAME = 'video-analysis-test';
 // 등록(`POST /videos`)이 렌디션을 적재한다. 개발용 렌디션 워커가 같은 Redis 를 듣고 있으면
 // 테스트의 작업을 가져가므로 큐 이름을 나눈다.

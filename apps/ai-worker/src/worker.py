@@ -19,8 +19,8 @@ import config
 import db
 import notify
 import storage
-from pipeline import anchor, editor, invalidation, music, seed, subtitle, vocabulary
-from pipeline.edit_spec import parse_job_clips
+from pipeline import anchor, editor, invalidation, music, seed, subtitle, transition, vocabulary
+from pipeline.edit_spec import parse_job_clips, parse_timeline
 from pipeline.editor import get_preset
 from pipeline.render_spec import parse_render_spec
 
@@ -68,8 +68,11 @@ async def _progress(job_id: str, progress: int, step: str, extra: dict | None = 
 
 async def _run_pipeline(job_id: str, data: dict, work_dir: str) -> None:
     user_id = data["userId"]
-    clip_specs = parse_job_clips(data)
     edit_spec = data.get("editSpec") or {"stylePreset": data.get("stylePreset", "일상")}
+    # v3 는 경계마다 전환을 갖는다(specs/movie.md MOV-22). edit-v3 큐로만 오므로 구버전 워커는
+    # 이 작업을 받지 않는다 — 받았다면 전환을 버리고 v2 로 "성공"했을 것이다(edit-spec-v3.md §4).
+    timeline = parse_timeline(edit_spec) if edit_spec.get("version") == 3 else None
+    clip_specs = timeline.cuts if timeline is not None else parse_job_clips(data)
     preset = get_preset(edit_spec["stylePreset"])
     render_spec = parse_render_spec(data.get("renderSpec"))
 
@@ -100,7 +103,12 @@ async def _run_pipeline(job_id: str, data: dict, work_dir: str) -> None:
     await _progress(job_id, 10, "원본 다운로드 완료")
 
     # 2) 컷편집
-    base = await asyncio.to_thread(editor.edit, clips, preset, render_spec, work_dir)
+    if timeline is not None:
+        base = await asyncio.to_thread(
+            editor.edit_timeline, clips, timeline.transitions, preset, render_spec, work_dir
+        )
+    else:
+        base = await asyncio.to_thread(editor.edit, clips, preset, render_spec, work_dir)
     duration = await asyncio.to_thread(editor.probe_duration, base)
     await _progress(job_id, 35, "컷편집 완료")
 
@@ -153,10 +161,15 @@ async def _run_pipeline(job_id: str, data: dict, work_dir: str) -> None:
 
 async def process_edit_job(job, _job_token) -> dict:
     job_id = job.data["jobId"]
+    edit_spec = job.data.get("editSpec") or {}
     logger.info(
-        "편집 작업 수신 job_id={} clips={}",
+        "편집 작업 수신 job_id={} spec=v{} clips={}",
         job_id,
-        job.data.get("clips") or job.data.get("videoIds"),
+        edit_spec.get("version"),
+        # v3 는 컷을 timeline 에만 둔다.
+        job.data.get("clips")
+        or job.data.get("videoIds")
+        or (edit_spec.get("timeline") or {}).get("cuts"),
     )
     work_dir = tempfile.mkdtemp(prefix=f"edit_{job_id}_")
     try:
@@ -212,18 +225,26 @@ async def main() -> None:
     # whisper 모델은 자막 요청(subtitles=true)이 처음 올 때 lazy 로드한다.
     # 기본 플로우(자막 없음)에서는 로드하지 않아 기동이 빠르고 메모리를 아낀다.
 
-    worker = Worker(config.EDIT_QUEUE_NAME, process_edit_job, {"connection": config.REDIS_URL})
+    # 두 큐를 같은 처리기로 소비한다. edit-v3 에는 v3 스펙만 오고, 기존 큐에는 v1/v2 가 온다.
+    # 큐를 나눈 이유는 구버전 워커가 v3 를 받지 않게 하는 것뿐이라 처리 경로는 스펙 버전이 가른다.
+    workers = [
+        Worker(queue_name, process_edit_job, {"connection": config.REDIS_URL})
+        for queue_name in (config.EDIT_QUEUE_NAME, config.EDIT_V3_QUEUE_NAME)
+    ]
     # 이미지에 어떤 사전이 들어 있는지는 렌더 결과를 되짚을 때 첫 단서라 기동 로그에 남긴다.
     # 버전 항목은 모듈을 임포트해야 나오므로 사전이 늘면 이 줄도 늘어난다 — 다만 **기동 검증은
     # 위 verify_all() 이 이미 마쳤다.** 로그가 빠뜨려도 없는 사전으로 뜨지는 않는다.
     logger.info(
-        "edit-jobs 워커 시작 (queue={} 사전={}종 anchor=v{} derivation=v{} stage=v{} invalidation=v{})",
+        "edit-jobs 워커 시작 (queue={},{} 사전={}종 anchor=v{} derivation=v{} stage=v{}"
+        " invalidation=v{} transition=v{})",
         config.EDIT_QUEUE_NAME,
+        config.EDIT_V3_QUEUE_NAME,
         len(loaded),
         anchor.VOCABULARY_VERSION,
         anchor.DERIVATION_VERSION,
         seed.STAGE_VOCABULARY_VERSION,
         invalidation.INVALIDATION_VOCABULARY_VERSION,
+        transition.TRANSITION_VOCABULARY_VERSION,
     )
 
     stop_event = asyncio.Event()
@@ -233,7 +254,8 @@ async def main() -> None:
 
     await stop_event.wait()
     logger.info("종료 신호 수신, 정리 중...")
-    await worker.close()
+    for worker in workers:
+        await worker.close()
     if _publisher is not None:
         await _publisher.aclose()
     await notify.close()

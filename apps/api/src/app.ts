@@ -121,7 +121,7 @@ export async function buildApp(
 
   initStorage(config.storage);
   initRedis(config.redis);
-  initEditQueue(config.redis.editQueueName);
+  initEditQueue(config.redis.editQueueName, config.redis.editV3QueueName);
   initVideoAnalysisQueue(config.redis.analysisQueueName);
   initRenditionQueue(config.redis.renditionQueueName);
   initFcm(config.firebase);

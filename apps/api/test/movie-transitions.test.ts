@@ -7,9 +7,12 @@
  *   ③ AI 경계는 스타일을 따라가고, 사용자 경계는 그대로다
  *   ④ 사용자 전환은 보낸 배열에서 이어진 두 컷의 것이다 — `ai` 정렬로 떨어지면 AI 에게 돌아간다
  *   ⑤ 사전에 맞지 않는 값은 고쳐 받지 않고 400 이다
+ *   ⑥ 생성은 editSpec v3 로 **edit-v3 큐에만** 간다 — 구버전 워커가 전환을 버리고 렌더하지 않게
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { Queue } from 'bullmq';
 import { createHarness, type Harness, type TestUser } from './helpers/harness.js';
+import { createRedisConnection } from '../src/lib/redis.js';
 
 let h: Harness;
 
@@ -218,5 +221,66 @@ describe('컷을 다시 보내면', () => {
       { kind: 'hardcut', owner: 'ai' },
       null,
     ]);
+  });
+});
+
+describe('생성(export)은 경계 전환을 editSpec v3 로 보낸다', () => {
+  async function withQueues<T>(run: (queues: { legacy: Queue; v3: Queue }) => Promise<T>): Promise<T> {
+    const legacy = new Queue(process.env.EDIT_QUEUE_NAME ?? '', { connection: createRedisConnection() });
+    const v3 = new Queue(process.env.EDIT_V3_QUEUE_NAME ?? '', { connection: createRedisConnection() });
+    try {
+      return await run({ legacy, v3 });
+    } finally {
+      await Promise.all([legacy.close(), v3.close()]);
+    }
+  }
+
+  it('컷과 고른 전환이 timeline 에 담겨 edit-v3 큐에 들어간다', async () => {
+    const user = await h.createUser();
+    await h.prisma.creditLedger.create({ data: { userId: user.id, delta: 100, reason: 'promo' } });
+    const [a, b, c] = [await createSnap(user), await createSnap(user), await createSnap(user)];
+    const movieId = (
+      await createMovie(user, {
+        stylePreset: '감성',
+        clips: [
+          { videoId: a, startMs: 500, endMs: 2500, transition: { kind: 'dip', durationMs: 300 } },
+          { videoId: b },
+          { videoId: c, startMs: 1000 },
+        ],
+      })
+    ).json().data.id;
+
+    const res = await h.app.inject({ method: 'POST', url: `/movies/${movieId}/export`, headers: user.auth });
+
+    expect(res.statusCode).toBe(202);
+    const jobId = res.json().data.jobId as string;
+    const expectedSpec = {
+      version: 3,
+      stylePreset: '감성',
+      timeline: {
+        cuts: [
+          { cutId: 'c0', videoId: a, sourceInMs: 500, sourceOutMs: 2500 },
+          { cutId: 'c1', videoId: b, sourceInMs: 0 },
+          { cutId: 'c2', videoId: c, sourceInMs: 1000 },
+        ],
+        transitions: [
+          { fromCutId: 'c0', toCutId: 'c1', kind: 'dip', durationMs: 300 },
+          { fromCutId: 'c1', toCutId: 'c2', kind: 'crossfade', durationMs: 800 },
+        ],
+      },
+    };
+    // 저장된 작업 스냅샷과 편집 작업 API 응답이 같은 스펙을 말한다.
+    expect((await h.prisma.editJob.findUnique({ where: { id: jobId } }))?.editSpec).toEqual(expectedSpec);
+    const job = await h.app.inject({ method: 'GET', url: `/edit-jobs/${jobId}`, headers: user.auth });
+    expect(job.json().data.editSpec).toEqual(expectedSpec);
+
+    await withQueues(async ({ legacy, v3 }) => {
+      const queued = await v3.getJob(jobId);
+      expect(queued?.data.editSpec).toEqual(expectedSpec);
+      // 최상위 clips 를 남기지 않는다 — 그것만 읽는 워커가 전환을 버리고 렌더할 여지를 없앤다.
+      expect(queued?.data.clips).toBeUndefined();
+      expect(await legacy.getJob(jobId)).toBeUndefined();
+      await queued?.remove();
+    });
   });
 });

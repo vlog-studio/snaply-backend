@@ -74,6 +74,8 @@ export interface FirebaseConfig {
 export interface RedisConfig {
   url: string;
   editQueueName: string;
+  /** editSpec v3(경계별 전환) 전용 편집 큐. 워커와 같은 값이어야 한다. */
+  editV3QueueName: string;
   /** 스냅 분석 큐. 분석 워커와 같은 값이어야 작업이 전달된다. */
   analysisQueueName: string;
   renditionQueueName: string;
@@ -162,6 +164,7 @@ export function loadConfig(): AppConfig {
     redis: {
       url: requireEnv('REDIS_URL'),
       editQueueName: process.env.EDIT_QUEUE_NAME ?? 'edit-jobs',
+      editV3QueueName: process.env.EDIT_V3_QUEUE_NAME ?? 'edit-v3',
       analysisQueueName: process.env.VIDEO_ANALYSIS_QUEUE_NAME ?? 'video-analysis',
       renditionQueueName: process.env.RENDITION_QUEUE_NAME ?? 'renditions',
       notificationQueueName: process.env.NOTIFICATION_QUEUE_NAME ?? 'notifications',

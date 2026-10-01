@@ -571,6 +571,113 @@
                   "stylePreset",
                   "clips"
                 ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "version": {
+                    "type": "number",
+                    "enum": [
+                      3
+                    ]
+                  },
+                  "stylePreset": {
+                    "type": "string",
+                    "enum": [
+                      "감성",
+                      "여행",
+                      "일상"
+                    ]
+                  },
+                  "timeline": {
+                    "type": "object",
+                    "properties": {
+                      "cuts": {
+                        "minItems": 1,
+                        "maxItems": 10,
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "cutId": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "videoId": {
+                              "type": "string",
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                            },
+                            "sourceInMs": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "sourceOutMs": {
+                              "description": "생략하면 원본 끝까지.",
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": [
+                            "cutId",
+                            "videoId",
+                            "sourceInMs"
+                          ]
+                        }
+                      },
+                      "transitions": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "fromCutId": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "toCutId": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "hardcut",
+                                "crossfade",
+                                "dip",
+                                "flash",
+                                "zoompunch"
+                              ]
+                            },
+                            "durationMs": {
+                              "description": "`hardcut` 은 생략.",
+                              "type": "integer",
+                              "minimum": 0,
+                              "exclusiveMinimum": true,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": [
+                            "fromCutId",
+                            "toCutId",
+                            "kind"
+                          ]
+                        },
+                        "description": "이어진 두 컷마다 하나씩, 컷 순서대로. 길이는 `cuts.length - 1`."
+                      }
+                    },
+                    "required": [
+                      "cuts",
+                      "transitions"
+                    ]
+                  }
+                },
+                "required": [
+                  "version",
+                  "stylePreset",
+                  "timeline"
+                ]
               }
             ]
           },
@@ -1740,6 +1847,117 @@
                   "version",
                   "stylePreset",
                   "clips"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "version": {
+                    "type": "number",
+                    "enum": [
+                      3
+                    ]
+                  },
+                  "stylePreset": {
+                    "type": "string",
+                    "enum": [
+                      "감성",
+                      "여행",
+                      "일상"
+                    ]
+                  },
+                  "timeline": {
+                    "type": "object",
+                    "properties": {
+                      "cuts": {
+                        "minItems": 1,
+                        "maxItems": 10,
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "cutId": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "videoId": {
+                              "type": "string",
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                            },
+                            "sourceInMs": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "sourceOutMs": {
+                              "description": "생략하면 원본 끝까지.",
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": [
+                            "cutId",
+                            "videoId",
+                            "sourceInMs"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "transitions": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "fromCutId": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "toCutId": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "hardcut",
+                                "crossfade",
+                                "dip",
+                                "flash",
+                                "zoompunch"
+                              ]
+                            },
+                            "durationMs": {
+                              "description": "`hardcut` 은 생략.",
+                              "type": "integer",
+                              "minimum": 0,
+                              "exclusiveMinimum": true,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": [
+                            "fromCutId",
+                            "toCutId",
+                            "kind"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "description": "이어진 두 컷마다 하나씩, 컷 순서대로. 길이는 `cuts.length - 1`."
+                      }
+                    },
+                    "required": [
+                      "cuts",
+                      "transitions"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "version",
+                  "stylePreset",
+                  "timeline"
                 ],
                 "additionalProperties": false
               }

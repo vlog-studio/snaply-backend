@@ -55,6 +55,8 @@ _load_dotenv()
 REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379")
 DATABASE_URL = os.environ.get("DATABASE_URL", "")
 EDIT_QUEUE_NAME = os.environ.get("EDIT_QUEUE_NAME", "edit-jobs")
+#: editSpec v3(경계별 전환) 전용 큐. 구버전 워커가 v3 를 v2 로 렌더하지 않게 나눈다(edit-spec-v3.md §4).
+EDIT_V3_QUEUE_NAME = os.environ.get("EDIT_V3_QUEUE_NAME", "edit-v3")
 RENDITION_QUEUE_NAME = os.environ.get("RENDITION_QUEUE_NAME", "renditions")
 #: 알림 요청 큐. 워커가 넣고 Node 쪽 알림 워커가 꺼내 발송한다(notify.py 참고).
 NOTIFICATION_QUEUE_NAME = os.environ.get("NOTIFICATION_QUEUE_NAME", "notifications")

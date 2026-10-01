@@ -539,6 +539,10 @@ export async function exportMovie(params: {
     outputProfile: DEFAULT_OUTPUT_PROFILE,
     fitMode: DEFAULT_FIT_MODE,
     subtitles: movie.captions,
+    // 경계마다 고른 전환(MOV-22). 빈 경계는 없어야 하지만, 있다면 아무 효과 없는 값으로 보낸다.
+    transitions: movie.clips
+      .slice(0, -1)
+      .map((clip): Transition => storedTransition(clip) ?? { kind: 'hardcut' }),
   });
 
   await getPrisma().movie.update({

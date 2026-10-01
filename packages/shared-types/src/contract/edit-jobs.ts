@@ -16,6 +16,7 @@ import {
   fitModeSchema,
   outputProfileSchema,
   stylePresetSchema,
+  transitionKindSchema,
   type FitMode,
   type OutputProfile,
 } from './vocab.js';
@@ -43,7 +44,42 @@ export const editSpecV2Schema = z.object({
 });
 export type EditSpecV2 = z.infer<typeof editSpecV2Schema>;
 
-export const editSpecSchema = z.union([editSpecV1Schema, editSpecV2Schema]);
+/**
+ * editSpec v3 — 컷과 경계마다의 전환(specs/movie.md MOV-22). v3 초안의 `timeline` 부분만 먼저 쓰고,
+ * 색보정·음악은 아직 `stylePreset` 이 정한다. **`edit-v3` 큐로만 간다** — 구버전 워커가 받으면 전환을
+ * 버리고 v2 로 "성공"해 사용자가 돈을 내고 다른 결과를 받는다(decisions/edit-spec-v3.md §4).
+ *
+ * 전환은 고른 값이다. 워커가 원본 길이를 재서 컷·여분 프레임에 맞춰 해석한다(`resolveTransition`).
+ */
+export const timelineCutSchema = z.object({
+  cutId: z.string().min(1),
+  videoId: z.uuid(),
+  sourceInMs: z.int().min(0),
+  sourceOutMs: z.int().min(1).optional().describe('생략하면 원본 끝까지.'),
+});
+export type TimelineCut = z.infer<typeof timelineCutSchema>;
+
+export const timelineTransitionSchema = z.object({
+  fromCutId: z.string().min(1),
+  toCutId: z.string().min(1),
+  kind: transitionKindSchema,
+  durationMs: z.int().positive().optional().describe('`hardcut` 은 생략.'),
+});
+export type TimelineTransition = z.infer<typeof timelineTransitionSchema>;
+
+export const editSpecV3Schema = z.object({
+  version: z.literal(3),
+  stylePreset: stylePresetSchema,
+  timeline: z.object({
+    cuts: z.array(timelineCutSchema).min(1).max(MAX_EDIT_CLIPS),
+    transitions: z
+      .array(timelineTransitionSchema)
+      .describe('이어진 두 컷마다 하나씩, 컷 순서대로. 길이는 `cuts.length - 1`.'),
+  }),
+});
+export type EditSpecV3 = z.infer<typeof editSpecV3Schema>;
+
+export const editSpecSchema = z.union([editSpecV1Schema, editSpecV2Schema, editSpecV3Schema]);
 export type EditSpec = z.infer<typeof editSpecSchema>;
 
 export const renderSpecSchema = z.object({
