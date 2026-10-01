@@ -45,10 +45,16 @@ export function cutsDurationSec(
   }, 0);
 }
 
-/** The same cut, playing whole again. */
+/**
+ * The same cut, playing whole again.
+ *
+ * Like every window edit it makes the window the user's (MOV-22): an `ai` owner
+ * is dropped along with the trim. A cut that already plays whole is returned
+ * as it is — nothing was edited, so nothing changes hands.
+ */
 export function withoutTrim(ref: SnapRef): SnapRef {
   if (!ref.trim) return ref;
-  const { trim: _trim, ...rest } = ref;
+  const { trim: _trim, trimOwner: _owner, ...rest } = ref;
   return rest;
 }
 
@@ -63,7 +69,7 @@ export function sameTrimWindow(left: SnapRef, right: SnapRef): boolean {
 
 /**
  * The reference a trim edit lands on: snapped to {@link CutTrimStepSec}, held
- * inside the snap, and never shorter than {@link MinCutSec}.
+ * inside the snap, never shorter than {@link MinCutSec}, and the user's.
  *
  * A window covering the whole snap drops `trim` altogether, so "plays whole" has
  * a single representation — otherwise a cut dragged out and back would compare as
@@ -83,5 +89,8 @@ export function withTrim(
   const start = clamp(snapToStep(startSec), 0, end - MinCutSec);
   if (start <= 0 && end >= snapDurationSec) return withoutTrim(ref);
 
-  return { ...ref, trim: { startSec: start, endSec: end } };
+  // The window is now the user's (MOV-22). A caller that lands on the same
+  // window keeps the original ref (`sameTrimWindow`), and with it the owner.
+  const { trimOwner: _owner, ...rest } = ref;
+  return { ...rest, trim: { startSec: start, endSec: end } };
 }

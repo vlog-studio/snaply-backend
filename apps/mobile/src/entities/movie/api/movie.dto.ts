@@ -18,6 +18,8 @@ const clipDtoSchema = z.object({
   videoId: z.string(),
   startMs: z.number().optional(),
   endMs: z.number().optional(),
+  // Optional: a server older than trim owners sends none, which reads as the user's.
+  trimOwner: z.string().optional(),
   unavailable: z.boolean(),
   // Optional: a server older than per-boundary transitions sends none. `kind`
   // and `owner` stay strings — a kind this build has not heard of is dropped in
@@ -106,6 +108,7 @@ export function mapRemoteMovie(dto: MovieDto, snapIdOf: SnapIdResolver): RemoteM
       if (clip.startMs !== undefined && clip.endMs !== undefined) {
         ref.trim = { startSec: clip.startMs / 1000, endSec: clip.endMs / 1000 };
       }
+      if (clip.trimOwner === 'ai') ref.trimOwner = 'ai';
       if (clip.unavailable) ref.unavailable = true;
       const next = dto.clips[order + 1];
       if (clip.transition && next && isTransitionKind(clip.transition.kind)) {
@@ -133,6 +136,8 @@ export type MovieClipBody = {
   videoId: string;
   startMs?: number;
   endMs?: number;
+  /** Sent only for a window the edit draft chose; left out, the server records the user's. */
+  trimOwner?: 'ai';
   /** Sent only for a boundary the user chose; the server picks the rest. */
   transition?: { kind: TransitionKind; durationMs?: number };
 };
@@ -153,11 +158,13 @@ export type MovieBody = {
  * them.
  */
 function toClipBody(videoId: string, ref: SnapRef): MovieClipBody {
-  if (!ref.trim) return { videoId };
+  const owner = ref.trimOwner === 'ai' ? { trimOwner: 'ai' as const } : null;
+  if (!ref.trim) return { videoId, ...owner };
   return {
     videoId,
     startMs: Math.round(ref.trim.startSec * 1000),
     endMs: Math.round(ref.trim.endSec * 1000),
+    ...owner,
   };
 }
 

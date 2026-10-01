@@ -109,3 +109,41 @@ describe('sending transitions', () => {
     expect(body?.clips[0].transition).toBeUndefined();
   });
 });
+
+describe('trim owners', () => {
+  it('reads an edit-draft window back as ai, and everything else as the user’s', () => {
+    const remote = mapRemoteMovie(
+      dto([
+        { videoId: 'v1', startMs: 400, endMs: 2600, trimOwner: 'ai', unavailable: false },
+        { videoId: 'v2', trimOwner: 'ai', unavailable: false },
+        { videoId: 'v3', startMs: 0, endMs: 1000, trimOwner: 'user', unavailable: false },
+        // A server older than trim owners sends none.
+        { videoId: 'v4', startMs: 0, endMs: 1000, unavailable: false },
+      ]),
+      snapIdOf,
+    );
+    expect(remote.snapRefs.map((ref) => ref.trimOwner)).toEqual(['ai', 'ai', undefined, undefined]);
+  });
+
+  it('sends ai only for the draft’s windows — a cut left out reads as the user’s on the server', () => {
+    const body = toMovieBody(
+      {
+        title: '무비',
+        style: 'daily',
+        captions: false,
+        arranger: 'ai',
+        snapRefs: [
+          { snapId: 'a', order: 0, trim: { startSec: 0.4, endSec: 2.6 }, trimOwner: 'ai' },
+          { snapId: 'b', order: 1, trimOwner: 'ai' },
+          { snapId: 'c', order: 2, trim: { startSec: 0, endSec: 1 } },
+        ],
+      },
+      (snapId) => `v-${snapId}`,
+    );
+    expect(body?.clips).toEqual([
+      { videoId: 'v-a', startMs: 400, endMs: 2600, trimOwner: 'ai' },
+      { videoId: 'v-b', trimOwner: 'ai' },
+      { videoId: 'v-c', startMs: 0, endMs: 1000 },
+    ]);
+  });
+});
