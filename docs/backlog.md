@@ -363,9 +363,9 @@ e2e 실검증.
 [decisions/auto-edit-draft.md](./decisions/auto-edit-draft.md), 툴 목록과 착수 순서의 제안은
 [plans/edit-recipe-tools.md](./plans/edit-recipe-tools.md).
 
-**막힌 이유**: 경계별 전환이 편집 화면에 아직 없고, 초안 선택에 쓸 컷 역할 어휘와 구간의 주인이 없다(A-7).
+**막힌 이유**: 초안 선택에 쓸 컷 역할 어휘와 구간의 주인이 없고(A-7), 고르기·자르기에 쓸 로컬 신호가 없다.
 전환 어휘 · 무효화 액션(`cut-trim`·`transition-edit`) · 무비 계약의 경계별 전환과 그 주인 · 경계별 렌더(editSpec v3,
-`edit-v3` 큐)는 2026-10-01 에 들어왔다([progress.md](./progress.md)).
+`edit-v3` 큐) · 편집 화면의 경계별 선택과 미리보기는 2026-10-01 에 들어왔다([progress.md](./progress.md)).
 
 - [ ] **넘길 수 있는 스냅 수와 비용 상한** — 지금 고르기 화면은 `최대 10개`(= 컷 상한 MOV-5)라 AI 가 고를
       여지가 없다. 넘길 수 있는 수 · 초안 1회의 vision 분석 수(템플릿 추천의 1회 12개와 별개) · 최근 24시간
