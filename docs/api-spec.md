@@ -161,12 +161,14 @@ FE 가 알아야 할 동작:
   - 사용자가 고른 경계만 컷 입력의 `transition`(`kind`, 선택 `durationMs`)으로 보낸다. 보내지 않은
     경계는 서버가 고른다(`owner: ai`) — **`PATCH` 로 컷을 다시 보낼 때 `owner: user` 인 경계를 빠뜨리면
     AI 에게 돌아간다.** 순서를 바꿔 두 컷이 떨어졌다면 그 경계는 보내지 않는 것이 규칙이다.
-  - `ai` 경계는 컷이나 `stylePreset` 이 바뀔 때마다 서버가 다시 고른다. 지금은 스타일 기본값이다
-    (`감성` = `crossfade` 800ms, 나머지 = `hardcut`).
+  - `ai` 경계는 컷이나 `stylePreset` 이 바뀔 때마다 서버가 다시 고른다 — 스타일 경향 · 촬영 시각 간격(30분
+    이상이면 장면 전환) · 첫 경계 · 두 컷을 키로 한 시드로 고르며, 같은 입력이면 같은 값이다
+    ([decisions/transition-director.md](./decisions/transition-director.md)).
   - 종류·길이 범위는 [`transition-vocabulary.json`](../packages/shared-types/src/transition-vocabulary.json)이
     원천이다. 범위 밖 길이, `hardcut` 의 길이, 마지막 컷의 전환은 400.
   - 응답의 값은 **고른 값**이다. 미리보기·렌더는 컷 길이와 원본의 여분 프레임에 맞춰 다시 해석한다
-    (`resolveTransition` — 짧아지거나 `hardcut` 이 된다).
+    (`resolveTransition` — 짧아지거나 `crossfade` → `dip` → `hardcut` 으로 떨어진다. 트림하지 않은 컷은 여분이
+    없어 `crossfade` 가 대개 `dip` 이 된다).
   - 생성(`export`)은 이 값을 경계마다 그대로 렌더한다(editSpec v3, 아래 AI 편집). 워커가 원본 길이를 재서
     컷·여분 프레임에 맞추고, 겹쳐 녹이는 전환도 여분 프레임을 써서 결과물 길이는 컷 길이의 합이다.
 - **컷의 `unavailable: true`** 는 참조하던 스냅이 만료·삭제됐다는 뜻이다. 그런 컷이 있어도

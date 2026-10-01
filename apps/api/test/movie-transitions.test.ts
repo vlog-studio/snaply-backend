@@ -3,7 +3,7 @@
  *
  * 고정하는 계약:
  *   ① 마지막을 뺀 모든 컷이 다음 컷으로의 전환을 갖고, 고른 쪽(`owner`)이 남는다
- *   ② 사용자가 보내지 않은 경계는 AI 가 고른다 — 지금은 스타일 기본값이다(감성 = crossfade 800ms)
+ *   ② 사용자가 보내지 않은 경계는 AI 가 고른다(`transition-director.ts` — 규칙 자체는 transition-director.test.ts)
  *   ③ AI 경계는 스타일을 따라가고, 사용자 경계는 그대로다
  *   ④ 사용자 전환은 보낸 배열에서 이어진 두 컷의 것이다 — `ai` 정렬로 떨어지면 AI 에게 돌아간다
  *   ⑤ 사전에 맞지 않는 값은 고쳐 받지 않고 400 이다
@@ -13,6 +13,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { Queue } from 'bullmq';
 import { createHarness, type Harness, type TestUser } from './helpers/harness.js';
 import { createRedisConnection } from '../src/lib/redis.js';
+import { pickTransitions } from '../src/services/transition-director.js';
 
 let h: Harness;
 
@@ -53,6 +54,22 @@ function transitions(res: { json: () => { data: { clips: ClipDto[] } } }) {
   return res.json().data.clips.map((clip) => clip.transition);
 }
 
+/** AI 가 이 컷들 사이에 골랐어야 하는 전환 — 규칙 함수로 계산해 시드 운에 기대지 않는다. */
+async function expectedAi(movieId: string, stylePreset: '감성' | '여행' | '일상', videoIds: string[]) {
+  const snaps = await h.prisma.video.findMany({ where: { id: { in: videoIds } } });
+  const timeOf = new Map(snaps.map((snap) => [snap.id, (snap.capturedAt ?? snap.createdAt).getTime()]));
+  return pickTransitions({
+    movieId,
+    stylePreset,
+    boundaries: videoIds.slice(0, -1).map((from, index) => ({
+      fromVideoId: from,
+      toVideoId: videoIds[index + 1]!,
+      fromCapturedAt: timeOf.get(from)!,
+      toCapturedAt: timeOf.get(videoIds[index + 1]!)!,
+    })),
+  }).map((transition) => ({ ...transition, owner: 'ai' }));
+}
+
 describe('경계마다 전환이 있다', () => {
   it('마지막을 뺀 컷이 AI 가 고른 전환을 갖고, 일상은 바로 넘긴다', async () => {
     const user = await h.createUser();
@@ -68,13 +85,26 @@ describe('경계마다 전환이 있다', () => {
     ]);
   });
 
-  it('감성은 지금 렌더와 같은 0.8초 crossfade 로 시작한다', async () => {
+  it('보내지 않은 경계는 AI 규칙이 고른 값이다', async () => {
     const user = await h.createUser();
-    const [a, b] = [await createSnap(user), await createSnap(user)];
+    const [a, b, c] = [await createSnap(user), await createSnap(user), await createSnap(user)];
 
-    const res = await createMovie(user, { stylePreset: '감성', clips: [{ videoId: a }, { videoId: b }] });
+    const res = await createMovie(user, {
+      stylePreset: '감성',
+      clips: [{ videoId: a }, { videoId: b }, { videoId: c }],
+    });
 
-    expect(transitions(res)).toEqual([{ kind: 'crossfade', durationMs: 800, owner: 'ai' }, null]);
+    expect(transitions(res)).toEqual([...(await expectedAi(res.json().data.id, '감성', [a, b, c])), null]);
+  });
+
+  it('촬영 시각이 30분 넘게 떨어진 경계는 장면 전환이라 일상도 검게 넘긴다', async () => {
+    const user = await h.createUser();
+    const morning = await createSnap(user, new Date('2026-05-01T09:00:00Z'));
+    const evening = await createSnap(user, new Date('2026-05-01T18:00:00Z'));
+
+    const res = await createMovie(user, { clips: [{ videoId: morning }, { videoId: evening }] });
+
+    expect(transitions(res)).toEqual([{ kind: 'dip', durationMs: 400, owner: 'ai' }, null]);
   });
 
   it('컷이 하나면 전환이 없다', async () => {
@@ -163,14 +193,12 @@ describe('스타일을 바꾸면', () => {
       clips: [{ videoId: a, transition: { kind: 'flash' } }, { videoId: b }, { videoId: c }],
     });
 
-    const res = await patchMovie(user, created.json().data.id, { stylePreset: '감성' });
+    const movieId = created.json().data.id;
+    const res = await patchMovie(user, movieId, { stylePreset: '감성' });
 
     expect(res.statusCode).toBe(200);
-    expect(transitions(res)).toEqual([
-      { kind: 'flash', durationMs: 200, owner: 'user' },
-      { kind: 'crossfade', durationMs: 800, owner: 'ai' },
-      null,
-    ]);
+    const ai = await expectedAi(movieId, '감성', [a, b, c]);
+    expect(transitions(res)).toEqual([{ kind: 'flash', durationMs: 200, owner: 'user' }, ai[1], null]);
   });
 
   it('스타일이 그대로면 컷을 다시 쓰지 않는다', async () => {
@@ -218,7 +246,8 @@ describe('컷을 다시 보내면', () => {
     expect(res.json().data.clips.map((clip: ClipDto) => clip.videoId)).toEqual([early, middle, late]);
     expect(transitions(res)).toEqual([
       { kind: 'dip', durationMs: 400, owner: 'user' },
-      { kind: 'hardcut', owner: 'ai' },
+      // 떨어진 경계는 AI 가 고른다 — 두 스냅이 한 달 떨어져 장면 전환(일상은 dip 400)이다.
+      { kind: 'dip', durationMs: 400, owner: 'ai' },
       null,
     ]);
   });
@@ -254,6 +283,7 @@ describe('생성(export)은 경계 전환을 editSpec v3 로 보낸다', () => {
 
     expect(res.statusCode).toBe(202);
     const jobId = res.json().data.jobId as string;
+    const { owner: _owner, ...aiSecond } = (await expectedAi(movieId, '감성', [a, b, c]))[1]!;
     const expectedSpec = {
       version: 3,
       stylePreset: '감성',
@@ -265,7 +295,7 @@ describe('생성(export)은 경계 전환을 editSpec v3 로 보낸다', () => {
         ],
         transitions: [
           { fromCutId: 'c0', toCutId: 'c1', kind: 'dip', durationMs: 300 },
-          { fromCutId: 'c1', toCutId: 'c2', kind: 'crossfade', durationMs: 800 },
+          { fromCutId: 'c1', toCutId: 'c2', ...aiSecond },
         ],
       },
     };

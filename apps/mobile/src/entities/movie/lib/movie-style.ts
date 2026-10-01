@@ -15,9 +15,11 @@ export type MovieStyleOption = {
  * style to the union fails to compile until it is described here.
  *
  * The labels are the backend presets' own names, and the descriptions state what
- * its pipeline really does to the footage — the color filter and the cut
- * transition each preset runs (`ai-worker`'s `pipeline/editor.py`). They are
- * written from that table rather than invented, because a style card that
+ * its pipeline really does to the footage — the color filter each preset runs
+ * (`ai-worker`'s `pipeline/editor.py`) and the transitions the server's AI tends
+ * to pick for it (`apps/api/src/services/transition-director.ts`, rules in
+ * `docs/decisions/transition-director.md`). They are written from those rather
+ * than invented, because a style card that
  * promises a look the renderer does not produce is a lie the user only finds out
  * about after a forty-second wait.
  *
