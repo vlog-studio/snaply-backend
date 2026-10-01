@@ -1794,3 +1794,15 @@ AI 편집 초안(MOV-21)을 시작했다. 상한·표시 시점·미업로드·�
   기동 검증 목록 `REQUIRED`. editSpec v3 의 `cuts[].role` 에 싣는 일은 초안 제안 API 와 함께 한다.
 - **자동 검증**: API 514개(사전 대조·자리 규칙 13 신규) · 워커 173개(Docker 이미지, `REQUIRE_FFMPEG=1`, 9 신규) · 모바일
   `npm run verify:mobile` 156 suites / 1262 tests. `REQUIRED` 에서 새 사전을 빼면 `test_vocabulary` 가 실패하는 것을 확인했다.
+
+## 2026-10-01 (이어서) — 무비 계약: 컷 구간의 주인(MOV-21 3단계, backlog A-11)
+
+- **스펙** — MOV-22 에 "구간도 AI 가 자른 것이거나 사용자가 자른 것이고 무비에 남는다"를 넣었다. AI 가 자르는 것은 초안뿐이라
+  직접 고른 무비와 이전 무비의 구간(스냅 전체 포함)은 사용자 것이다.
+- **마이그레이션** `20261001010000_add_movie_clip_trim_owner` — `movie_clips.trim_owner`(`MovieArranger`, 기본 `user`). 전환의
+  기본값 `ai` 와 반대인 이유는 지금까지의 구간이 모두 사용자가 정한 것이라서다.
+- **계약** — 응답 컷에 `trimOwner` 를 항상 싣고, 입력은 선택(생략하면 `user`). 주인은 컷을 따라간다 — `arranger: ai` 정렬로 사용자
+  전환이 떨어지는 컷도, 스타일만 바꿔 다시 저장하는 컷도 주인을 잃지 않는다. `openapi.json` · [api-spec.md](./api-spec.md) 갱신.
+- **자동 검증**: API 520개(주인 계약 6 신규 — 정렬로 전환이 떨어지는 경로에서 주인을 빼면 실패하는 것을 확인) · 워커 173개(Docker,
+  `REQUIRE_FFMPEG=1`) · 모바일 `npm run verify:mobile` 156 suites / 1262 tests. 앱은 아직 `trimOwner` 를 보내지 않으므로 앱의
+  저장은 모두 `user` 다 — 초안 흐름(5단계)에서 붙인다.
