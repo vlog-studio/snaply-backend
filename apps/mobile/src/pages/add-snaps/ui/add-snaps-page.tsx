@@ -17,6 +17,12 @@ const ExpiredSnapRefusal = '보관 기간이 끝난 스냅은 무비에 넣을 �
 export type AddSnapsPageProps = {
   /** `/movie/[id]/add-snaps` — the movie the picks are headed for. */
   movieId?: string;
+  /**
+   * Show only the snaps the edit draft left out of this movie (MOV-21) — the
+   * movie screen's 다시 넣기. The same errand on a shorter list, so it is the
+   * same screen rather than a second picker.
+   */
+  onlyLeftOut?: boolean;
 };
 
 /**
@@ -37,7 +43,7 @@ export type AddSnapsPageProps = {
  * plays or deletes an original: this screen is one errand, and it ends on the
  * movie.
  */
-export function AddSnapsPage({ movieId }: AddSnapsPageProps) {
+export function AddSnapsPage({ movieId, onlyLeftOut = false }: AddSnapsPageProps) {
   const theme = useTheme();
   const router = useRouter();
   // The bar reports its real height (it varies with the safe-area inset, the
@@ -45,7 +51,26 @@ export function AddSnapsPage({ movieId }: AddSnapsPageProps) {
   // before the first layout.
   const [selectionBarHeight, setSelectionBarHeight] = useState(SelectionBarRoomEstimate);
   const movie = useMovieById(movieId);
-  const { days, totalCount, isHydrated } = useSnapDays();
+  const library = useSnapDays();
+  const { isHydrated } = library;
+  const leftOut = useMemo(
+    () => (onlyLeftOut ? new Set(movie?.leftOut ?? []) : undefined),
+    [onlyLeftOut, movie?.leftOut],
+  );
+  // The days, cut down to the left-out snaps when that is what was asked for.
+  const days = useMemo(
+    () =>
+      leftOut === undefined
+        ? library.days
+        : library.days
+            .map((day) => ({ ...day, snaps: day.snaps.filter((snap) => leftOut.has(snap.id)) }))
+            .filter((day) => day.snaps.length > 0),
+    [library.days, leftOut],
+  );
+  const totalCount =
+    leftOut === undefined
+      ? library.totalCount
+      : days.reduce((sum, day) => sum + day.snaps.length, 0);
   const { appendSnaps } = useComposeMovie();
 
   const heldIds = useMemo(
@@ -112,7 +137,11 @@ export function AddSnapsPage({ movieId }: AddSnapsPageProps) {
 
   return (
     <View style={[styles.screen, { backgroundColor: theme.background }]}>
-      <BackBar onPress={goBack} accessibilityLabel="무비로 돌아가기" title="스냅 더 넣기" />
+      <BackBar
+        onPress={goBack}
+        accessibilityLabel="무비로 돌아가기"
+        title={onlyLeftOut ? '넣지 않은 스냅' : '스냅 더 넣기'}
+      />
 
       <ScrollView
         contentContainerStyle={[

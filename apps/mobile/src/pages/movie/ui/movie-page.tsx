@@ -9,10 +9,11 @@ import {
   isAiArranged,
   movieStyleLabel,
   transitionAfter,
+  useClearMovieLeftOut,
   useDeleteMovie,
   type TransitionKind,
 } from '@/entities/movie';
-import { useSnapFiles, type Snap } from '@/entities/snap';
+import { useSnapFiles, useSnapIndex, type Snap } from '@/entities/snap';
 import { useComposeMovie, useRenderSource } from '@/features/compose-movie';
 import { FinishMovieConfirm } from '@/features/finish-movie';
 import { RenameMovieSheet } from '@/features/rename-movie';
@@ -23,6 +24,7 @@ import { BottomSheet } from '@/shared/ui/bottom-sheet';
 import { MaxContentWidth, Radius, Spacing, useTheme } from '@/shared/ui/theme';
 import { ThemedText } from '@/shared/ui/themed-text';
 
+import { offerableLeftOut } from '../model/left-out-snaps';
 import { boundaryPlan, toCutIndex, toPlaybackCuts, toPlaybackIndex } from '../model/playback-cuts';
 import type { TimelinePlayhead } from '../model/timeline-layout';
 import { useMovieCuts } from '../model/use-movie-cuts';
@@ -35,6 +37,7 @@ import { DetailSheet } from './detail-sheet';
 import { EditExitSheet } from './edit-exit-sheet';
 import { GenerateFooter } from './generate-footer';
 import { GenerationProgress } from './generation-progress';
+import { LeftOutNotice } from './left-out-notice';
 import { MovieActionsSheet } from './movie-actions-sheet';
 import { MovieWatch } from './movie-watch';
 import { CutsRefusalMessages, generationRefusalMessage, RefusalNotice } from './refusal-notice';
@@ -98,6 +101,9 @@ export function MoviePage({ movieId }: MoviePageProps) {
   const renderSource = useRenderSource(movie);
   const sharing = useShareMovie(movie, renderSource);
   const deleteMovie = useDeleteMovie();
+  const clearLeftOut = useClearMovieLeftOut();
+  // Only for the edit draft's left-out snaps: which of them the library still holds.
+  const snapIndex = useSnapIndex();
   const watchCuts = useWatchCuts(movie);
 
   const [renaming, setRenaming] = useState(false);
@@ -245,6 +251,10 @@ export function MoviePage({ movieId }: MoviePageProps) {
   // navigator — not the stack — is what would answer the confirming `back`.
   const addSnaps = () =>
     router.push({ pathname: '/movie/[id]/add-snaps', params: { id: movie.id } });
+  // The edit draft's left-out snaps, offered back on the same picker, showing only them.
+  const reAddLeftOut = () =>
+    router.push({ pathname: '/movie/[id]/add-snaps', params: { id: movie.id, only: 'left-out' } });
+  const leftOut = offerableLeftOut(movie, (snapId) => snapIndex.has(snapId));
 
   // Asynchronous now: the run is queued on the backend and the movie only enters
   // `generating` once there is a job to follow, so a refusal can be reported
@@ -340,6 +350,19 @@ export function MoviePage({ movieId }: MoviePageProps) {
         />
       ) : (
         <>
+          {/* Above the stage, because it is about what the stage holds: the
+          snaps that are not in it. Gone once dismissed or once none is left
+          to offer; a job freezes the cut list, so it waits until the run ends. */}
+          {canEdit && leftOut.length > 0 ? (
+            <View style={styles.leftOut}>
+              <LeftOutNotice
+                count={leftOut.length}
+                onReAdd={reAddLeftOut}
+                onDismiss={() => clearLeftOut(movie.id)}
+              />
+            </View>
+          ) : null}
+
           {/* The stage: the player on an editable movie, the ring under a job. It
           takes whatever height the timeline below leaves over. */}
           <View style={styles.stage}>
@@ -641,6 +664,13 @@ export function MoviePage({ movieId }: MoviePageProps) {
 }
 
 const styles = StyleSheet.create({
+  leftOut: {
+    width: '100%',
+    maxWidth: MaxContentWidth,
+    alignSelf: 'center',
+    paddingHorizontal: Spacing.five,
+    paddingBottom: Spacing.two,
+  },
   screen: { flex: 1 },
   centered: {
     alignItems: 'center',
