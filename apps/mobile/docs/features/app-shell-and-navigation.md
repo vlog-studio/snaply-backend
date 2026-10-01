@@ -29,13 +29,13 @@ Snaply opens into a four-tab application — 스튜디오 (`/`), 스냅 (`/snaps
 | Route | Presentation | Owner |
 | --- | --- | --- |
 | `/` | 스튜디오 tab | `pages/studio` |
-| `/snaps` | 스냅 tab; accepts `?select=1` to open in selection mode | `pages/snaps` |
+| `/snaps` | 스냅 tab; accepts `?select=1` to open in selection mode for a new movie, `?select=draft` for the edit draft | `pages/snaps` |
 | `/movies` | 무비 tab | `pages/movies` |
 | `/me` | 나 tab | `pages/me` |
 | `/capture` | Headerless root-stack full-screen modal (opened by the center capture button); the viewfinder | `pages/capture-record` |
 | `/extract` | Headerless root-stack full-screen modal beside `/capture` (opened from the Snap tab's 가져오기, after the system video picker); accepts `?source&duration` | `pages/snap-extract` |
 | `/movie/[id]` | Headerless root-stack screen with its own `BackBar`, titled with the movie and carrying its rename action; one movie at any point of its life | `pages/movie` |
-| `/movie/[id]/add-snaps` | Headerless root-stack screen with its own `BackBar`; the movie's 스냅 더 넣기 picker | `pages/add-snaps` |
+| `/movie/[id]/add-snaps` | Headerless root-stack screen with its own `BackBar`; the movie's 스냅 더 넣기 picker, or with `?only=left-out` its 넣지 않은 스냅 (what the edit draft left out) | `pages/add-snaps` |
 | `/template/[id]` | Headerless root-stack screen with its own `BackBar`; a template matched against the library | `pages/movie-template` |
 | `/settings/credits` | Root-stack screen with the stack's titled header (크레딧); the balance and rewarded-ad screen | `pages/me` |
 | `/settings/notifications` | Root-stack screen with the stack's titled header (알림); every notification preference | `pages/me` |
@@ -45,7 +45,7 @@ Snaply opens into a four-tab application — 스튜디오 (`/`), 스냅 (`/snaps
 | `/settings/delete-account` | Root-stack screen with the stack's titled header (계정 삭제); the deletion consequence read-out and confirm button | `pages/me` |
 | `/account-restore` | Headerless full-screen block (back gesture disabled), forced by its own guard group while the account is pending deletion; restore or sign out | `pages/account-restore` |
 
-`src/app` parses string search parameters where needed and passes them to page components as explicit props (`snaps.tsx` turns `?select=1` into `startSelecting`). The `src/_app/routes` module owns stack and tab policies; page slices own screen content.
+`src/app` parses string search parameters where needed and passes them to page components as explicit props (`snaps.tsx` turns `?select=1` / `?select=draft` into `startSelecting`, `add-snaps.tsx` turns `?only=left-out` into `onlyLeftOut`). The `src/_app/routes` module owns stack and tab policies; page slices own screen content.
 
 **A pushed tab route is not a pushed screen.** Navigating from a root-stack screen to a route inside `(tabs)` diverges at the root stack, so Expo Router pushes a *second* `(tabs)` entry: a whole new tab navigator mounts over the screen the user came from, with the target tab focused and the first tab in its history. `router.back()` is then delivered to that tab navigator — the deepest focused one — which handles it by switching back to its first tab instead of letting the root stack pop. Pushed from the movie screen, a picker on `/snaps` would therefore land the user on the 스튜디오 screen after they added a cut. A flow that starts on a pushed screen and must return to it belongs on the root stack (`/movie/[id]/add-snaps`), even when it looks like a tab.
 

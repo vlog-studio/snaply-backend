@@ -2,8 +2,8 @@
 
 **작성일**: 2026-10-01
 **상태**: 결정 — 이 문서로 정한 v1 이다. 컷 길이·컷 수(§3·§4)는 오너가 v1 값을 맡겼고(2026-10-01), 신호의 문턱값(§2)은
-잠정값이며 실제 스냅으로 다시 정한다(backlog A-11). 서버 구현됨(2026-10-01,
-[`edit-director.ts`](../../apps/api/src/services/edit-director.ts) · `POST /movie-drafts`), 앱 전
+잠정값이며 실제 스냅으로 다시 정한다(backlog A-11). 구현됨(2026-10-01,
+[`edit-director.ts`](../../apps/api/src/services/edit-director.ts) · `POST /movie-drafts` · 앱의 자동 편집)
 **원천**: AI 편집 초안(MOV-21)의 선택 단계(edit-director)가 넘겨받은 스냅 중 무엇을 쓰고, 어떤 순서로 놓고, 컷마다 어느
 구간을 자르는지. 전환은 [transition-director.md](transition-director.md)가 맡는다
 **관련 문서**: [specs/movie.md](../specs/movie.md) MOV-5 · MOV-21 · MOV-22 · [auto-edit-draft.md](auto-edit-draft.md) ·

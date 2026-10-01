@@ -154,6 +154,7 @@ Fixed product vocabulary. Use exactly these words; never introduce a synonym.
 | 삭제 | Removing something: `…삭제할까요?` / `삭제` / `삭제하는 중…` | 지우기, 지울까요 |
 | 정리 | Removing a finished movie's server copy once the user saved it (`무비 정리`, `정리하기`) | 끝내기, 서버에서 삭제 |
 | 전환 | How one 컷 hands over to the next (`전환`, `컷 1 → 2 전환`). The five are named by what they look like: `바로 넘기기`, `겹쳐 녹이기`, `검게 넘기기`, `번쩍 넘기기`, `확대하며 넘기기` | 트랜지션, 효과, 장면 전환 |
+| 자동 편집 | Handing picked snaps over to be chosen among, ordered, and cut into a draft movie (`스냅 골라 자동 편집`, `자동으로 편집하기`, `편집하는 중…`, `스냅 N개는 넣지 않았어요`) | AI 편집, AI 초안, 자동 생성, 추천 |
 | 자동으로 고르기 | Handing a 전환 back to the automatic pick; a boundary owned by it reads `자동`, one the user chose reads `직접 고름` | AI, AI 추천, 인공지능 |
 | 스냅 분석 | The opt-in look at a snap's still images that lets a template's 컷 be filled with better-fitting snaps; what the 나 tab switch and the template screen's offer turn on (`스냅 분석을 켤까요?`, `분석 켜기`, `분석해서 채우기`) | AI 분석, 영상 분석, 인공지능, 인식 |
 

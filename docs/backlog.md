@@ -356,7 +356,7 @@ e2e 실검증.
       정할지 정하지 않았다(editSpec v3 는 목표 길이를 `intent.targetDurationMs` 로 받는다 — A-7).
       **완료 조건**: 상한 또는 목표 길이를 정해 스펙에 적는다
 
-### A-11. AI 편집 초안 — 서버 구현됨, 앱 전
+### A-11. AI 편집 초안 — 구현됨, 실기기 확인 전
 
 고른 스냅 여러 개로 AI 가 고칠 수 있는 무비 초안을 만든다(MOV-21·MOV-22). 범위와 규칙은
 [decisions/auto-edit-draft.md](./decisions/auto-edit-draft.md), 툴 목록과 착수 순서의 제안은
@@ -379,8 +379,10 @@ e2e 실검증.
       [edit-director.md](./decisions/edit-director.md) §2 를 고친다
 - [x] **초안 제안 API 와 선택 단계(edit-director)** — `POST /movie-drafts`(2026-10-01). 업로드되지 않은 스냅은 `localId` 로
       받아 그 자리에 둔다. 규칙은 [edit-director.md](./decisions/edit-director.md)
-- [ ] **앱의 진입 경로와 흐름** — 고르기 상한 30, 제안으로 무비 만들기(`arranger: ai` · `trimOwner: ai`, 다시 보낼 때 유지),
-      넣지 않은 스냅의 개수와 다시 넣기
+- [x] **앱의 진입 경로와 흐름** — 스튜디오 `스냅 골라 자동 편집` · 고르기 상한 30 · 제안으로 무비 만들기(`arranger: ai` ·
+      `trimOwner: ai`, 고치면 `user`) · 넣지 않은 스냅의 개수와 다시 넣기(2026-10-01, 단위 테스트까지). 스타일은 마지막 무비의 것이다
+- [ ] **실기기 확인** — 개발 DB 에 이 브랜치의 마이그레이션 셋(`trim_owner` · `video_signals` · `movie_drafts`)을 적용하고, 실제 스냅으로
+      초안 → 구간·전환 수정 → 생성 → 결과물이 편집 화면과 같은지 본다(아래 완료 조건)
 
 **완료 조건에 넣지 않는 후속**: "다시 편집"은 v1 에 두지 않았다(결정 §5). 붙일 때는 시드 `attempt` 를 올려 `ai`
 값만 다시 고른다.

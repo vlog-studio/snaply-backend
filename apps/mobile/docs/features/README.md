@@ -39,7 +39,7 @@ Root stack
 │
 └── (authenticated guard)
     ├── (tabs)         Four tabs + a center capture button
-    │   ├── /          Studio (스튜디오): the 새 무비 entry, the templates, the movie board
+    │   ├── /          Studio (스튜디오): the 새 무비 and 자동 편집 entries, the templates, the movie board
     │   ├── /snaps     Snap library (스냅): day-grouped grid, playback, selection → new draft movie, deletion
     │   ├── /movies    Movie list (무비)
     │   └── /me        Profile, stats, and the doorway to every preference (나)
@@ -69,7 +69,7 @@ Access control: `src/_app/routes/root-layout.tsx` composes the groups above with
 
 Headless behavior: `src/_app/providers` mounts the app's headless nodes — the account-scope binding that decides whose data every other node sees, the gates that hand a notification preference to the feature acting on it, the notification-tap router, the snap reconcile, movie sync, and upload workers, the deleted-library purge, and two one-per-start repairs — and `src/_app/routes/register-background-tasks.ts` defines the background geofence task at startup. None has a route; the full list, the order they mount in, and why are kept in [Application shell and navigation](app-shell-and-navigation.md#composition-and-ownership).
 
-There are two ways to start a movie, and they meet at the same screen.
+There are three ways to start a movie, and they meet at the same screen.
 
 ```text
 Tap the center capture button in the tab bar
@@ -80,6 +80,9 @@ Tap the center capture button in the tab bar
 
 by hand:    Snap tab → 선택 → pick snaps → 이 스냅으로 새 무비
             → a draft movie, opened right away; refillable later via 스냅 더 넣기
+
+for me:     Studio → 스냅 골라 자동 편집 → pick up to 30 → 자동으로 편집하기
+            → the server picks, orders, and cuts them into a draft movie, opened right away
 
 by template: Studio → 템플릿으로 시작 → the app matches one outing into the slots
             → 지금 찍기 fills what is missing → 이대로 만들기

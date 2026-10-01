@@ -9,6 +9,8 @@ The Studio (`/`) is the workbench the app opens on: the ways into a new movie, a
 ├── 새 무비           one block, whole-block tappable: 스냅 골라 새 무비 ›, and — once
 │                    the library holds a snap — its size (2개 · 0:06) and its five
 │                    newest snaps as frames                          → /snaps?select=1
+├── 스냅 골라 자동 편집 one row under it: the same picking, handed to the edit
+│                    draft (MOV-21)                               → /snaps?select=draft
 ├── 템플릿으로 시작    a card per template, closest to filled first, each leading with
 │                    its slots as a strip (the user's snap in a filled slot, a dashed
 │                    cell in an empty one) over how far the library gets through it
@@ -26,18 +28,32 @@ The Studio (`/`) is the workbench the app opens on: the ways into a new movie, a
 
 Every movie opens on the same screen whatever its status, so no row or tile has to decide where to send it ([The movie screen](movie.md)).
 
-## Two ways to start a movie
+## Three ways to start a movie
 
-The studio offers both, and they answer different questions.
+The studio offers all three, and they answer different questions.
 
-| | Picked snaps (새 무비) | A template |
-| --- | --- | --- |
-| The question | "make a movie out of *these*" | "make me something like *this*" |
-| Who picks the material | the user, one snap at a time | the match, from one outing it found |
-| Who arranges it | the user (pick order) | the AI, until the user reorders it |
-| What it is good at | a set nobody could have guessed at | telling the user what is missing, and what to go shoot |
+| | Picked snaps (새 무비) | The edit draft (자동 편집) | A template |
+| --- | --- | --- | --- |
+| The question | "make a movie out of *these*" | "make a movie out of *these*, for me" | "make me something like *this*" |
+| Who picks the material | the user, one snap at a time | the user hands up to 30; the draft chooses among them | the match, from one outing it found |
+| Who arranges it | the user (pick order) | the draft — capture order — until the user reorders it | the AI, until the user reorders it |
+| Who cuts each window | the user | the draft, until the user trims it | the user |
+| What it is good at | a set nobody could have guessed at | a day's worth of snaps with doubles and duds in it | telling the user what is missing, and what to go shoot |
 
-They do not consume each other. The template half is documented in [Movie templates](movie-templates.md); the rest of this page is the 새 무비 entry and the board.
+They do not consume each other. The template half is documented in [Movie templates](movie-templates.md); the rest of this page is the two picking entries and the board.
+
+## The edit draft (자동 편집)
+
+`Partial` — the whole path is unit-tested against the contract (root `docs/specs/movie.md` MOV-21, `POST /movie-drafts`) but has not yet been walked on a device or emulator.
+
+| Step | Actual behavior |
+| --- | --- |
+| Entry | `스냅 골라 자동 편집`, one row under the 새 무비 block, opens the Snap tab picking with `?select=draft`. It draws no frames: the block above already shows the material, and drawing it twice would make two blocks compete over one library. |
+| Picking | The same grid and rules as 새 무비, with the draft's cap: the bar reads `자동 편집 · 최대 30개` and a pick past it is refused with `자동 편집에는 스냅 30개까지 넣을 수 있어요.` Picks made for one purpose do not carry into the other. |
+| Confirm | `자동으로 편집하기` sends the picks in capture order — uploaded snaps by their server id, snaps still uploading by their local id and capture time — with the style of the movie last worked on (`일상` with none: the cut lengths follow the style, and the user has not chosen one yet). While it is out the button reads `편집하는 중…` with a spinner and takes no second tap; the grid, 해제, 삭제, the header's 취소 and Android back all hold still, because changing the picks or leaving would open a movie the screen no longer describes. |
+| Result | The movie the answer describes, opened at once: `arranger: ai`, every cut's window the draft's (`trimOwner: ai`), a snap still uploading placed at its capture time and played whole. The movie is sent to the server the ordinary way once every cut has uploaded; the server picks the transitions then. Snaps the draft did not put in are kept on the movie for [the movie screen's notice](movie.md#composing-and-fixing-it). |
+| Failure | Nothing is made and the picks stay. A failure that may pass (offline, a server error) shows `자동 편집을 하지 못했어요.` in the bar and turns the button into `다시 시도`. Today's drafts used up (`DRAFT_LIMIT`) shows `오늘은 자동 편집을 다 썼어요.` and offers `이 스냅으로 새 무비` instead — the hand-made movie needs no draft — disabled, with the ten-snap cap named, when the picks would not fit one. Changing a pick clears either. |
+| Mock mode | `USE_MOCK_API` answers with the first ten snaps in capture order, whole, and the rest left out: it has no signals to choose by, but it answers in the real shape so the screens walk the same path. |
 
 ## Why there is no basket between a pick and a movie
 
@@ -91,9 +107,9 @@ Two of these are deliberately identity-preserving: a write that changes nothing 
 
 ## Ownership
 
-- `src/pages/studio` owns the screen, the 새 무비 entry block (it reads the library through `widgets/snap-grid`'s `useSnapDays` and draws frames with `shared/ui/video-frame`), the template cards (`ui/template-panel.tsx`, drawing each offer's `slots`), and the navigation into snap selection, a template, and a movie.
+- `src/pages/studio` owns the screen, the 자동 편집 row (`draftPickerHref`), the 새 무비 entry block (it reads the library through `widgets/snap-grid`'s `useSnapDays` and draws frames with `shared/ui/video-frame`), the template cards (`ui/template-panel.tsx`, drawing each offer's `slots`), and the navigation into snap selection, a template, and a movie.
 - `src/pages/movies` owns the movie tab's grid and its selection mode — the bottom bar (`ui/movie-selection-bar.tsx`) and the delete confirmation (`ui/movie-delete-confirm.tsx`) — page-local because the grid is the actions' only entry point. Share is not its own: the page goes through `features/share-movie`'s export decision.
-- `src/features/compose-movie` starts a movie from picked snaps (`startMovieFromSnaps`) or a template and runs it; its ownership — the rules, the generation runner, the sync — is in [The movie screen](movie.md#ownership).
+- `src/features/compose-movie` starts a movie from picked snaps (`startMovieFromSnaps`), from the edit draft's proposal (`startMovieFromDraft`, through `entities/movie`'s `requestMovieDraft`), or from a template, and runs it; its ownership — the rules, the generation runner, the sync — is in [The movie screen](movie.md#ownership).
 - `src/entities/movie` owns the model above and its persisted store; the store's ownership — the server cache and outbox, the per-account file, the wire shape, the write actions — is in [The movie screen](movie.md#ownership).
 - `src/widgets/movie-shelf` owns the movie↔snap read model (`MovieSummary`: cut count, total played seconds, cover frames, the render's own cover image when it has one, date label, job progress, failure reason), the board selector (`useBoardMovies`), and the two ways a movie is drawn — `MovieRow` for the board and `MovieTile` for the grid, sharing one status badge and one failure notice. Only the tile prefers the render's cover image (`shared/ui/image-frame`): a board row is a work list, where the movie's own first cut says more about the work than finished cover art. It is a widget because both the studio and the movie tab need the same summary and the same vocabulary, and neither entity may own a cross-entity join. The failure notice is the one card part that acts rather than draws: it calls `compose-movie`'s `startGeneration` itself, so the retry cannot drift between the two surfaces.
 - `src/shared/ui/video-frame` draws a video's first frame from the shared thumbnail cache. Business-agnostic — it takes a URI, not a `Snap`.
