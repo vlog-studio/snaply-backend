@@ -35,6 +35,7 @@ REQUIRED = (
     "anchor-vocabulary.json",
     "stage-vocabulary.json",
     "invalidation-vocabulary.json",
+    "transition-vocabulary.json",
 )
 
 
