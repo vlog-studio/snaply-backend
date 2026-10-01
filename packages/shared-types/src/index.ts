@@ -1,5 +1,6 @@
 export * from './contract/index.js';
 export * from './anchor.js';
+export * from './cut-role.js';
 export * from './invalidation.js';
 export * from './seed.js';
 export * from './transition.js';

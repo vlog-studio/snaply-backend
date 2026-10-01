@@ -1,0 +1,78 @@
+{
+  "_note": "컷 역할 어휘의 단일 원본. TypeScript(cut-role.ts)·워커(pipeline/cut_role.py)가 같은 파일을 읽는다. 역할은 AI 편집 초안의 선택 단계(edit-director)가 컷을 고르고 놓는 문법이고, 사용자에게 보이지 않는 내부 값이다(ANA-2 와 같은 취급 — 그래서 label 이 없다). v1 목록은 plans/edit-recipe-tools.md §3, 결정은 decisions/auto-edit-draft.md.",
+
+  "cutRoleVocabularyVersion": 1,
+
+  "_positionsNote": "position 은 역할이 놓일 수 있는 자리다. first 역할은 첫 컷에만, last 역할은 마지막 컷에만 놓이고, 그 두 자리는 각자의 역할로만 채운다. 컷이 하나면 첫 컷이 이기고 last 역할은 쓰지 않는다. 가운데 컷은 any 역할 중에서 고른다.",
+
+  "positions": {
+    "first": "첫 컷에만 놓인다.",
+    "last": "두 컷 이상일 때 마지막 컷에만 놓인다.",
+    "any": "첫 컷과 마지막 컷 사이에 놓인다."
+  },
+
+  "_sourcesNote": "신호가 어디서 오는지다. 분석이 꺼져 있어도 초안은 나와야 하므로(auto-edit-draft.md §2.7) analysis 신호만 쓰는 역할은 분석이 없을 때 판단할 수 없고 default 로 남는다.",
+
+  "sources": {
+    "capture": "촬영 시각과 순서(SNAP-10). 언제나 있다.",
+    "local": "업로드 뒤 워커가 프레임·오디오에서 계산한다. 분석 동의와 무관하다(plans/edit-recipe-tools.md §4).",
+    "analysis": "vision 분석 결과. 동의(REC-4·ANA-5)와 서버 스위치가 있어야 있다."
+  },
+
+  "signals": {
+    "captureOrder": { "source": "capture", "_note": "넘긴 스냅 사이에서의 촬영 순서." },
+    "motion": { "source": "local", "_note": "프레임 사이 움직임 점수." },
+    "quality": { "source": "local", "_note": "밝기·흐림. 못 쓰는 스냅을 거르는 데도 쓴다." },
+    "face": { "source": "local", "_note": "얼굴 검출. 검출기가 아직 없어(plans/edit-recipe-tools.md §2.2 리프레임) 생기기 전까지 이 신호는 비어 있다." },
+    "places": { "source": "analysis", "_note": "분석의 places." },
+    "objects": { "source": "analysis", "_note": "분석의 objects." },
+    "actions": { "source": "analysis", "_note": "분석의 actions." }
+  },
+
+  "default": "body",
+
+  "roles": {
+    "hook": {
+      "order": 0,
+      "position": "first",
+      "signals": ["motion", "face", "quality"],
+      "_note": "첫 컷. 가장 눈길을 끄는 것."
+    },
+    "establish": {
+      "order": 1,
+      "position": "any",
+      "signals": ["places"],
+      "_note": "어디인지 보여주는 넓은 샷."
+    },
+    "detail": {
+      "order": 2,
+      "position": "any",
+      "signals": ["objects"],
+      "_note": "가까이 찍은 사물."
+    },
+    "action": {
+      "order": 3,
+      "position": "any",
+      "signals": ["actions", "motion"],
+      "_note": "움직임·행동이 중심."
+    },
+    "people": {
+      "order": 4,
+      "position": "any",
+      "signals": ["face"],
+      "_note": "사람이 중심(셀카·얼굴)."
+    },
+    "closer": {
+      "order": 5,
+      "position": "last",
+      "signals": ["captureOrder"],
+      "_note": "마무리."
+    },
+    "body": {
+      "order": 6,
+      "position": "any",
+      "signals": [],
+      "_note": "특정 역할 없음. 신호로 판단할 수 없는 가운데 컷은 이것이다."
+    }
+  }
+}

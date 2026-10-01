@@ -163,7 +163,8 @@ v3 초안이 "가장 먼저 닫아야 하는 어휘"로 적은 것이다. 무효
 
 1. **v3 초안을 main 에 들인다** — 남은 개정을 포함한다(A-7 기존 항목)
 2. **어휘를 사전 파일로 닫는다** — 전환 `kind`(v1 5종) · 컷 `role` · 무효화 사전의 `cut-trim`·`transition-edit`(A-7).
-   전환과 무효화 액션은 2026-10-01 에 닫았다([progress.md](../progress.md)), 컷 `role` 이 남았다
+   전환과 무효화 액션, 컷 `role`([`cut-role-vocabulary.json`](../../packages/shared-types/src/cut-role-vocabulary.json))은
+   2026-10-01 에 닫았다([progress.md](../progress.md))
 3. **무비 계약** — 경계별 전환과 값별 주인(`ai`·`user`). `packages/shared-types` 계약 · `openapi.json` ·
    [api-spec.md](../api-spec.md)를 같은 변경에서 고친다(A-11)
 4. **렌더러와 편집 화면** — v1 전환 5종, 여분 프레임 규칙(§1.1), 기본 오디오 처리. 경계별 전환은 v2 에
