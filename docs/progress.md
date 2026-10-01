@@ -1837,3 +1837,20 @@ AI 편집 초안(MOV-21)을 시작했다. 상한·표시 시점·미업로드·�
 - **DB** `20261001030000_add_movie_drafts`. 계약 `contract/movie-drafts.ts` · `openapi.json` · [api-spec.md](./api-spec.md).
 - **자동 검증**: API 556개(규칙 25 · API 9 신규 — 제안 그대로 `POST /movies` 가 `trimOwner: ai` 로 받는 것 포함) · 모바일 1262 tests.
   세 마이그레이션 모두 `prisma migrate diff` 로 스키마와 어긋나지 않는다.
+
+## 2026-10-01 (이어서) — 앱: 자동 편집(MOV-21 6단계, backlog A-11)
+
+화면 흐름은 오너와 정했다 — 스튜디오 블록 하나, 스타일은 마지막 무비의 것, 실패는 안내 + 다시 시도.
+
+- **컷 구간의 주인** — `SnapRef.trimOwner`(`ai` 일 때만 있고 없으면 사용자 것). 구간을 끌거나 `전체 사용` 을 누르면 사용자 것이
+  된다(`withTrim`·`withoutTrim`). 보낼 때 `ai` 만 싣고, 읽어 올 때 서버 값을 따른다.
+- **제안으로 무비 만들기** — `entities/movie` 의 `requestMovieDraft`(목업 모드 포함) · `compose-movie` 의 `startMovieFromDraft`: 촬영순으로
+  업로드된 스냅은 `videoId`, 업로드 중인 스냅은 `localId`+촬영 시각으로 보내고, 답의 컷으로 `arranger: ai` 무비를 만든다. 넣지 않은
+  스냅은 무비에 기기 전용(`Movie.leftOut`)으로 남긴다.
+- **화면** — 스튜디오 `스냅 골라 자동 편집` → `/snaps?select=draft`(상한 30, `자동 편집 · 최대 30개`) → `자동으로 편집하기`(요청 중
+  `편집하는 중…`, 고르기·해제·삭제·취소·뒤로가기 잠금) → 편집 화면. 실패는 선택 바에 `자동 편집을 하지 못했어요.` + `다시 시도`, 하루 한도는
+  `오늘은 자동 편집을 다 썼어요.` + `이 스냅으로 새 무비`(10개 이하일 때). 편집 화면 위에 `스냅 N개는 넣지 않았어요 · 다시 넣기 · ✕`,
+  `다시 넣기` 는 컷 추가 화면의 `?only=left-out`.
+- **문서**: 모바일 기능 문서 `studio.md`·`movie.md`·`snaps.md`·`app-shell-and-navigation.md`·`README.md`, UX 용어표에 `자동 편집`.
+- **자동 검증**: 모바일 `npm run verify:mobile` 160 suites / 1296 tests(신규 — 구간 주인 왕복 · 제안 매핑 · `startMovieFromDraft` 8 ·
+  선택 바 확정 상태 9 · 선택 바 대기 2 · 넣지 않은 스냅 4 등). **기기·에뮬레이터에서는 아직 보지 않았다**(backlog A-11 실기기 확인).
