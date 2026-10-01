@@ -11,6 +11,7 @@ import { AppError } from '../lib/errors.js';
 import { captureException } from '../lib/sentry.js';
 import { enqueueSignals } from '../queue/rendition-queue.js';
 import {
+  EDIT_DIRECTOR_VERSION,
   SIGNALS_VERSION,
   directDraft,
   draftSeedRoot,
@@ -45,12 +46,17 @@ function keyOf(snap: SnapInput): string {
   return 'videoId' in snap ? snap.videoId : snap.localId;
 }
 
-/** (스타일, 스냅 집합)의 해시. 업로드되지 않은 스냅은 촬영 시각까지 넣는다 — 시각이 바뀌면 자리가 바뀐다. */
+/**
+ * (규칙 버전, 스타일, 스냅 집합)의 해시. 업로드되지 않은 스냅은 촬영 시각까지 넣는다 — 시각이 바뀌면 자리가 바뀐다.
+ * 규칙 버전이 들어가야 규칙을 고친 뒤 같은 요청이 예전 제안을 재사용하지 않는다.
+ */
 function snapHashOf(stylePreset: StylePreset, snaps: SnapInput[]): string {
   const parts = snaps
     .map((snap) => ('videoId' in snap ? `v:${snap.videoId}` : `l:${snap.localId}@${Date.parse(snap.capturedAt)}`))
     .sort();
-  return createHash('sha256').update(`${stylePreset}\n${parts.join(',')}`).digest('hex');
+  return createHash('sha256')
+    .update(`edit-director:${EDIT_DIRECTOR_VERSION}:signals:${SIGNALS_VERSION}\n${stylePreset}\n${parts.join(',')}`)
+    .digest('hex');
 }
 
 function dedupeByKey(snaps: SnapInput[]): SnapInput[] {

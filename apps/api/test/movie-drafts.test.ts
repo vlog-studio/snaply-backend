@@ -11,6 +11,7 @@
  * 고르는 규칙 자체는 edit-director.test.ts 가 고정한다.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { createHash } from 'node:crypto';
 import { Queue } from 'bullmq';
 import { createHarness, type Harness, type TestUser } from './helpers/harness.js';
 import { createRedisConnection } from '../src/lib/redis.js';
@@ -202,6 +203,26 @@ describe('상한', () => {
 
     // 한도에 닿아도 이미 받은 제안은 다시 받을 수 있다.
     expect((await requestDraft(user, same)).statusCode).toBe(200);
+  });
+});
+
+describe('규칙이 바뀌면', () => {
+  it('예전 규칙의 제안을 재사용하지 않는다 — 재사용 키에 규칙 버전이 들어간다', async () => {
+    const user = await h.createUser();
+    const a = await createSnap(user, 0);
+    // 규칙 버전이 키에 들어가기 전의 키로 저장된 제안. 그대로 재사용되면 컷이 하나도 없는 제안이 돌아온다.
+    await h.prisma.movieDraft.create({
+      data: {
+        userId: user.id,
+        stylePreset: '일상',
+        snapHash: createHash('sha256').update(`일상\nv:${a}`).digest('hex'),
+        complete: true,
+        result: { stylePreset: '일상', cuts: [], excluded: [] },
+      },
+    });
+
+    const res = await requestDraft(user, { snaps: [{ videoId: a }] });
+    expect(res.json().data.cuts).toHaveLength(1);
   });
 });
 
