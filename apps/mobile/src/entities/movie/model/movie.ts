@@ -97,6 +97,16 @@ export type SnapRef = {
   order: number;
   trim?: { startSec: number; endSec: number };
   /**
+   * Who chose the window (root docs/specs/movie.md MOV-22). Present only as
+   * `ai`: on a cut the edit draft cut for the user (MOV-21), until the user
+   * edits that window. Absent means the user's — every cut the user picked,
+   * added, or trimmed, and every cut stored before the field existed — so
+   * "the user's" has one representation, the same reason `withTrim` drops a
+   * full-width window. A whole-snap cut can be `ai` too: the draft chose to
+   * play it whole.
+   */
+  trimOwner?: 'ai';
+  /**
    * The snap's id on the server, when known: written when the movie is synced
    * or read back. Absent on a cut whose snap has not been uploaded yet.
    */
