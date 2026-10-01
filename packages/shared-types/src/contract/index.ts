@@ -18,6 +18,7 @@ export * from './sns.js';
 export * from './billing.js';
 export * from './movies.js';
 export * from './movie-templates.js';
+export * from './movie-drafts.js';
 export * from './movie-recommendations.js';
 export * from './health.js';
 
@@ -41,6 +42,7 @@ import {
 import { cancelEditJob, createEditJob, getEditJob } from './edit-jobs.js';
 import { getHealth } from './health.js';
 import { listNearbyLocations, reportGeofenceEnter } from './locations.js';
+import { requestMovieDraft } from './movie-drafts.js';
 import { getMovieRecommendation, requestMovieRecommendation } from './movie-recommendations.js';
 import { getMovieTemplates } from './movie-templates.js';
 import {
@@ -104,6 +106,7 @@ export const apiContract = {
   getMovieTemplates,
   requestMovieRecommendation,
   getMovieRecommendation,
+  requestMovieDraft,
   listNearbyLocations,
   reportGeofenceEnter,
   listSnsConnections,

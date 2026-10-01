@@ -21,7 +21,7 @@
   부가 필드는 **라우트·상태 코드별로** 계약(`common.ts`의 `*ErrorSchema`)에 선언된 것만 온다 — 선언되지 않은 키는 직렬화에서 지워진다. 예: `403 ACCOUNT_PENDING_DELETION` 의 `purgeAfter`, `POST /edit-jobs` 의 `402 INSUFFICIENT_CREDITS` 의 `required`·`balance`(`POST /movies/{id}/export` 의 402 는 아직 이 둘을 선언하지 않아 오지 않는다 — [backlog E-9](./backlog.md#e-9-무비-생성의-402-가-부족분-숫자를-싣지-못한다)).
 - **공통 에러 코드**: `UNAUTHORIZED`(401) · `FORBIDDEN`(403) · `ACCOUNT_PENDING_DELETION`(403, 삭제 대기 계정 — 복구는 `POST /auth/me/restore`) · `NOT_FOUND`(404) · `BAD_REQUEST`/`VALIDATION_ERROR`(400) · `RATE_LIMITED`(429) · `INTERNAL_SERVER_ERROR`(500).
   타 유저의 리소스를 **조회·삭제**하면 403 이 아니라 **404** 다(존재를 알리지 않는다). 편집 요청처럼 남의 영상을 **입력으로 넘긴** 경우만 403 이다.
-- **Rate limit**: 기본 IP당 60req/분. `POST /edit-jobs` 유저당 5req/분, `POST /notifications/geofence-enter`·`POST /movie-recommendations` 유저당 10req/분. 초과 시 `429 RATE_LIMITED`. 도메인 한도(`429 RECOMMENDATION_LIMIT`)는 다른 코드다 — 잠시 후 재시도로 풀리지 않는다.
+- **Rate limit**: 기본 IP당 60req/분. `POST /edit-jobs` 유저당 5req/분, `POST /notifications/geofence-enter`·`POST /movie-recommendations`·`POST /movie-drafts` 유저당 10req/분. 초과 시 `429 RATE_LIMITED`. 도메인 한도(`429 RECOMMENDATION_LIMIT`·`429 DRAFT_LIMIT`)는 다른 코드다 — 잠시 후 재시도로 풀리지 않는다.
   `POST /edit-jobs` 의 유저당 제한은 요청당 비용이 큰 작업의 큐 폭탄을 막는 보호 장치이며, 크레딧·결제와 무관하게 모두에게 같다.
 - **알 수 없는 enum 값**: 서버가 값을 늘릴 수 있는 곳(편집 상태·에러 코드·템플릿 스타일 등)에서 앱은 모르는 값을 **버리지 말고 보수적으로 해석**한다(모르는 실패 코드는 `INTERNAL`처럼, 모르는 템플릿 스타일은 건너뛰기).
 
@@ -239,6 +239,24 @@ FE 가 알아야 할 동작:
   - `slots` 는 템플릿 슬롯 순서 그대로. `videoId: null` 은 **넣을 후보가 없었다**는 뜻이고 화면에서는 `지금 찍기` 로 남는다.
   - `score` 는 **슬롯 적합도**다. 스냅이 무엇을 담고 있는지에 대한 주장이 아니다.
   - 분석의 `summary`·`topics` 등 모델 출력은 **응답에 없다.**
+
+## 편집 초안 (`contract/movie-drafts.ts`)
+
+넘긴 스냅으로 고칠 수 있는 무비 초안을 **제안**한다(2026-10-01, [specs/movie.md](./specs/movie.md) MOV-21). 고르는 규칙은
+[decisions/edit-director.md](./decisions/edit-director.md), 상한은 [decisions/auto-edit-draft.md](./decisions/auto-edit-draft.md) §5.
+화면에는 "AI" 라는 말을 쓰지 않는다.
+
+- `POST /movie-drafts` 🔒 (10req/분) — **동기**. 응답이 곧 결과다. 분석 동의·기능 스위치와 무관하게 동작한다.
+  - `snaps` 는 업로드된 스냅 `{ videoId }` 와 업로드되지 않은 스냅 `{ localId, capturedAt }` 을 섞어 보낸다. 순서는 상관없다.
+  - 응답 `cuts` 는 **촬영순**이다. 업로드된 컷은 `startMs`·`endMs`(서버가 자른 구간, 없으면 스냅 전체), 업로드되지 않은 컷은
+    `{ localId }` 로 돌아오고 스냅 전체를 쓴다. 업로드됐지만 서버가 아직 신호를 계산하지 못한 스냅도 구간 없이 돌아온다.
+  - **무비가 아니다.** 앱이 `cuts` 로 무비를 만든다 — `arranger: ai`, 컷마다 `trimOwner: ai`. 업로드가 끝나면 지금처럼
+    `POST /movies` 로 보내고, 전환은 그때 서버가 고른다. 사용자가 구간을 고치면 그 컷은 `trimOwner: user` 로 보낸다.
+  - `excluded` 는 넣지 않은 스냅(`{ videoId }`, 드물게 `{ localId }`)이다. **이유는 없다** — 개수를 알리고 다시 넣을 수 있게 한다.
+  - **멱등하다.** 같은 스타일 · 같은 스냅 집합이 24시간 안에 다시 오면 같은 제안을 돌려주고 횟수에 세지 않는다. 단, 신호가 없는
+    스냅이 있었던 제안은 다시 계산한다.
+  - 소유·`kind=source`·`status=ready` 가 아닌 `videoId` 가 섞이면 403(어느 것인지는 알려주지 않는다).
+  - 에러: 스냅 초과 **`400 TOO_MANY_SNAPS`**(`max` 동봉, 지금 30) · 24시간 한도 **`429 DRAFT_LIMIT`**(지금 10번).
 
 ---
 
