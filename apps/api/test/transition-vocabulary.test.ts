@@ -86,11 +86,24 @@ describe('사전 자체의 내부 정합성', () => {
     expect(orders).toEqual(orders.map((_, i) => i));
   });
 
-  it('길이가 없는 것은 hardcut 하나뿐이고, 모든 폴백은 hardcut 에서 끝난다', () => {
+  it('길이가 없는 것은 hardcut 하나뿐이고, 모든 폴백 사슬은 돌지 않고 hardcut 에서 끝난다', () => {
     for (const [kind, entry] of Object.entries(vocabulary.kinds)) {
       expect(entry.durationMs === null, kind).toBe(kind === 'hardcut');
-      expect(entry.fallback, kind).toBe(kind === 'hardcut' ? null : 'hardcut');
+      const seen = new Set<string>([kind]);
+      let next = entry.fallback;
+      while (next !== null && next !== 'hardcut') {
+        expect(seen.has(next), `${kind} 의 폴백이 돈다`).toBe(false);
+        seen.add(next);
+        next = vocabulary.kinds[next]?.fallback ?? null;
+      }
+      expect(next, kind).toBe(kind === 'hardcut' ? null : 'hardcut');
     }
+  });
+
+  it('겹침형은 여분이 필요 없는 경계형으로 떨어진다 — 트림하지 않은 컷에서도 부드러운 전환이 남게', () => {
+    // decisions/transition-director.md §2
+    const fallback = vocabulary.kinds.crossfade?.fallback ?? '';
+    expect(vocabulary.kinds[fallback]?.timing).toBe('boundary');
   });
 
   it('길이 범위가 min ≤ default ≤ max 인 양의 정수다', () => {
@@ -161,13 +174,13 @@ describe('validateTransition', () => {
 });
 
 describe('resolveTransition — 공용 픽스처', () => {
-  it('픽스처가 hardcut 이 아닌 모든 종류의 폴백을 덮는다', () => {
-    const fellBack = new Set(
-      fixture.cases
-        .filter((c) => c.transition.kind !== 'hardcut' && c.expected.kind === 'hardcut')
-        .map((c) => c.transition.kind),
-    );
-    expect([...fellBack].sort()).toEqual(TRANSITION_KINDS.filter((k) => k !== 'hardcut').sort());
+  it('픽스처가 hardcut 이 아닌 모든 종류의 폴백과 hardcut 끝을 덮는다', () => {
+    const casesOf = (kind: string) => fixture.cases.filter((c) => c.transition.kind === kind);
+    for (const kind of TRANSITION_KINDS.filter((k) => k !== 'hardcut')) {
+      const fallback = vocabulary.kinds[kind]?.fallback;
+      expect(casesOf(kind).some((c) => c.expected.kind === fallback), `${kind} → ${fallback}`).toBe(true);
+      expect(casesOf(kind).some((c) => c.expected.kind === 'hardcut'), `${kind} → hardcut`).toBe(true);
+    }
   });
 
   for (const c of fixture.cases) {

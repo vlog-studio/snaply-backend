@@ -175,15 +175,17 @@ class TimelineContract(unittest.TestCase):
             self.assertLess(max(dark), 40, dark)
             self.assertGreater(green[1], 90)
 
-    def test_crossfade_without_spare_frames_falls_back_to_a_cut(self) -> None:
+    def test_crossfade_without_spare_frames_falls_back_to_a_dip(self) -> None:
         with tempfile.TemporaryDirectory() as work:
-            # 첫 컷이 원본 끝(3초)까지라 뒤 여분이 없다 → hardcut. 길이는 2 + 2 + 2.
+            # 첫 컷이 원본 끝(3초)까지라 뒤 여분이 없다 → dip(400ms). 길이는 그대로 2 + 2 + 2.
             out = self.render(work, [Transition("crossfade", 400), Transition("hardcut")], last_to_end=True)
 
             self.assertAlmostEqual(duration_of(out), 6.0, delta=0.1)
-            just_before, just_after = pixel(out, 1.95), pixel(out, 2.05)
-            self.assertGreater(just_before[0], 200)
-            self.assertGreater(just_after[2], 200)
+            before, at_boundary, after = pixel(out, 1.5), pixel(out, 2.0), pixel(out, 2.5)
+            self.assertGreater(before[0], 200)
+            # 섞이지 않고 어두워진다 — 두 컷이 겹친 프레임이 없다.
+            self.assertLess(max(at_boundary), 60, at_boundary)
+            self.assertGreater(after[2], 200)
 
     def test_zoompunch_starts_enlarged_and_settles(self) -> None:
         with tempfile.TemporaryDirectory() as work:

@@ -13,7 +13,7 @@
     "easeOutCubic": "1 - (1 - t)^3"
   },
 
-  "_kindsNote": "durationMs 는 정수 밀리초이고 범위 밖 값은 폴백하지 않고 거부한다. 범위 안의 값은 해석(resolve) 단계에서 컷 길이·여분 프레임에 맞춰 줄어들 수 있고, 줄어든 길이가 minMs 보다 짧으면 fallback 으로 바뀐다. split 은 경계형 전환이 나가는 컷의 끝과 들어오는 컷의 앞에 몇 비율씩 걸치는지다(합 1). 한 컷에 걸치는 몫은 그 컷 길이의 절반을 넘지 않는다 — 앞뒤 경계가 모두 전환이어도 컷의 가운데는 그대로 보이게.",
+  "_kindsNote": "durationMs 는 정수 밀리초이고 범위 밖 값은 폴백하지 않고 거부한다. 범위 안의 값은 해석(resolve) 단계에서 컷 길이·여분 프레임에 맞춰 줄어들 수 있고, 줄어든 길이가 min 보다 짧으면 fallback 을 그 기본 길이로 다시 해석한다(fallback 의 사슬은 hardcut 에서 끝난다). split 은 경계형 전환이 나가는 컷의 끝과 들어오는 컷의 앞에 몇 비율씩 걸치는지다(합 1). 한 컷에 걸치는 몫은 그 컷 길이의 절반을 넘지 않는다 — 앞뒤 경계가 모두 전환이어도 컷의 가운데는 그대로 보이게.",
 
   "kinds": {
     "hardcut": {
@@ -30,8 +30,8 @@
       "timing": "overlap",
       "durationMs": { "min": 200, "max": 800, "default": 500 },
       "easing": "linear",
-      "fallback": "hardcut",
-      "_note": "경계를 가운데에 두고 나가는 컷은 구간 끝 뒤로 durationMs/2, 들어오는 컷은 구간 시작 앞으로 durationMs/2 의 여분 프레임을 쓴다. 상한 800 은 지금 '감성' 프리셋의 0.8초를 그대로 표현하기 위해서다. Android 미리보기는 페이드하는 플레이어를 감싼 뷰에 그 동안만 renderToHardwareTextureAndroid 를 켜야 아래 영상이 검게 나오지 않는다(progress.md 2026-10-01)."
+      "fallback": "dip",
+      "_note": "경계를 가운데에 두고 나가는 컷은 구간 끝 뒤로 durationMs/2, 들어오는 컷은 구간 시작 앞으로 durationMs/2 의 여분 프레임을 쓴다. 상한 800 은 지금 '감성' 프리셋의 0.8초를 그대로 표현하기 위해서다. 여분이 모자라 min 보다 짧아지면 dip(기본 길이)으로 바꾼다 — 트림하지 않은 컷은 여분이 0 이라 hardcut 으로 떨어지면 부드러운 전환이 대부분 사라진다. dip 은 컷 안에서 끝나 여분이 필요 없다(decisions/transition-director.md §2). Android 미리보기는 페이드하는 플레이어를 감싼 뷰에 그 동안만 renderToHardwareTextureAndroid 를 켜야 아래 영상이 검게 나오지 않는다(progress.md 2026-10-01)."
     },
     "dip": {
       "order": 2,

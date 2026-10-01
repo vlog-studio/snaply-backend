@@ -16,7 +16,7 @@ export const MOVIE_LIST_MAX_LIMIT = 50;
 
 /**
  * 컷에서 다음 컷으로 넘어가는 전환 — 고른 값이다. 렌더와 미리보기는 이 값을 컷 길이·여분 프레임에
- * 맞춰 다시 해석한다(`resolveTransition`): 들어가지 않으면 짧아지거나 `hardcut` 이 되지만 고른 값은
+ * 맞춰 다시 해석한다(`resolveTransition`): 들어가지 않으면 짧아지거나 폴백(`crossfade` → `dip` → `hardcut`)이 되지만 고른 값은
  * 그대로 남는다(specs/movie.md MOV-22).
  */
 export const movieTransitionSchema = z
