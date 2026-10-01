@@ -560,6 +560,14 @@ model MovieClip {
   /// 트림 구간(밀리초). 없으면 스냅 전체를 쓴다.
   startMs Int? @map("start_ms")
   endMs   Int? @map("end_ms")
+  /// 이 컷에서 다음 컷으로 넘어가는 전환 — `transition-vocabulary.json` 의 kind. 마지막 컷은 NULL.
+  /// 경계를 컷 쪽에 두는 이유는 컷 목록이 통째로 교체되기 때문이다(경계 테이블을 따로 두면 두 목록이 어긋난다).
+  transitionKind  String?       @map("transition_kind") @db.VarChar(20)
+  /// 고른 전환 길이(밀리초). hardcut·마지막 컷은 NULL. 렌더·미리보기는 컷 길이·여분 프레임에 맞춰 다시 해석한다.
+  transitionMs    Int?          @map("transition_ms")
+  /// 전환을 고른 쪽(specs/movie.md MOV-22). ai 면 컷·스타일이 바뀔 때 다시 고르고,
+  /// user 면 이 컷과 다음 컷이 이어져 있는 동안 유지된다.
+  transitionOwner MovieArranger @default(ai) @map("transition_owner")
 
   movie Movie @relation(fields: [movieId], references: [id], onDelete: Cascade)
   video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)

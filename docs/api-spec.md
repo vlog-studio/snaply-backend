@@ -151,6 +151,18 @@ FE 가 알아야 할 동작:
   `ai` 면 촬영 시각 순으로 정렬한다. 사용자가 순서를 손대면 `user` 로 바꿔 보내야 그 뒤로 고정된다.
 - **`PATCH` 의 `clips` 는 통째로 교체**다. 부분 수정이 아니다. **빈 배열도 받는다**(2026-09-12) —
   마지막 스냅을 지운 무비는 컷 없는 초안으로 남는다. 그 상태로 `export` 하면 400.
+- **컷마다 `transition`** 은 그 컷에서 다음 컷으로 넘어가는 전환이고, 마지막 컷은 `null` 이다
+  (2026-10-01, [specs/movie.md](./specs/movie.md) MOV-22). `owner` 가 고른 쪽이다.
+  - 사용자가 고른 경계만 컷 입력의 `transition`(`kind`, 선택 `durationMs`)으로 보낸다. 보내지 않은
+    경계는 서버가 고른다(`owner: ai`) — **`PATCH` 로 컷을 다시 보낼 때 `owner: user` 인 경계를 빠뜨리면
+    AI 에게 돌아간다.** 순서를 바꿔 두 컷이 떨어졌다면 그 경계는 보내지 않는 것이 규칙이다.
+  - `ai` 경계는 컷이나 `stylePreset` 이 바뀔 때마다 서버가 다시 고른다. 지금은 스타일 기본값이다
+    (`감성` = `crossfade` 800ms, 나머지 = `hardcut`).
+  - 종류·길이 범위는 [`transition-vocabulary.json`](../packages/shared-types/src/transition-vocabulary.json)이
+    원천이다. 범위 밖 길이, `hardcut` 의 길이, 마지막 컷의 전환은 400.
+  - 응답의 값은 **고른 값**이다. 미리보기·렌더는 컷 길이와 원본의 여분 프레임에 맞춰 다시 해석한다
+    (`resolveTransition` — 짧아지거나 `hardcut` 이 된다).
+  - **아직 렌더에 반영되지 않는다** — 생성은 지금도 `stylePreset` 하나로 전환을 정한다(backlog A-11).
 - **컷의 `unavailable: true`** 는 참조하던 스냅이 만료·삭제됐다는 뜻이다. 그런 컷이 있어도
   무비는 열리고 목록에서 사라지지 않는다 — 사용자가 무엇을 잃었는지 알아야 하기 때문이다.
   다만 그 상태로 `export` 하면 400 이다(빼고 다시 시도).

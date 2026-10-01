@@ -8,10 +8,44 @@ import {
   movieArrangerSchema,
   movieStatusSchema,
   stylePresetSchema,
+  transitionKindSchema,
 } from './vocab.js';
 
 export const MOVIE_LIST_DEFAULT_LIMIT = 20;
 export const MOVIE_LIST_MAX_LIMIT = 50;
+
+/**
+ * 컷에서 다음 컷으로 넘어가는 전환 — 고른 값이다. 렌더와 미리보기는 이 값을 컷 길이·여분 프레임에
+ * 맞춰 다시 해석한다(`resolveTransition`): 들어가지 않으면 짧아지거나 `hardcut` 이 되지만 고른 값은
+ * 그대로 남는다(specs/movie.md MOV-22).
+ */
+export const movieTransitionSchema = z
+  .object({
+    kind: transitionKindSchema.describe('전환 종류. 종류·길이 범위의 원천은 `transition-vocabulary.json`.'),
+    durationMs: z
+      .int()
+      .positive()
+      .optional()
+      .describe('고른 길이(밀리초). `hardcut` 은 길이가 없어 생략된다.'),
+    owner: movieArrangerSchema.describe(
+      '고른 쪽. `ai` 면 컷·스타일이 바뀔 때 서버가 다시 고르고, `user` 면 이 컷과 다음 컷이 이어져 있는 동안 유지된다.',
+    ),
+  })
+  .meta({ id: 'MovieTransition' });
+export type MovieTransition = z.infer<typeof movieTransitionSchema>;
+
+/**
+ * 사용자가 고른 전환. 보내면 그 경계의 주인이 `user` 가 되고, 생략하면 서버(`ai`)가 고른다.
+ * 길이를 생략하면 그 종류의 기본 길이다. 범위 밖 길이는 고쳐 받지 않고 400 이다.
+ */
+const transitionInputSchema = z.object({
+  kind: transitionKindSchema,
+  durationMs: z
+    .int()
+    .positive()
+    .optional()
+    .describe('길이(밀리초). 생략하면 종류의 기본값. `hardcut` 에 보내면 400.'),
+});
 
 /**
  * 무비 안의 컷 하나 — 어떤 스냅을 어느 구간으로 쓰는지.
@@ -35,6 +69,9 @@ export const movieClipSchema = z
     unavailable: z
       .boolean()
       .describe('참조하던 스냅이 사라진 컷. `true` 면 재생할 수 없고 편집에서 빼야 한다.'),
+    transition: movieTransitionSchema
+      .nullable()
+      .describe('이 컷에서 다음 컷으로 넘어가는 전환. 마지막 컷은 `null`.'),
   })
   .meta({ id: 'MovieClip' });
 export type MovieClip = z.infer<typeof movieClipSchema>;
@@ -79,6 +116,11 @@ const clipInputSchema = z.object({
   videoId: z.uuid(),
   startMs: z.int().min(0).optional(),
   endMs: z.int().min(1).optional(),
+  transition: transitionInputSchema
+    .optional()
+    .describe(
+      '이 컷에서 다음 컷으로 넘어가는 전환을 사용자가 고른 경우에만 보낸다. 생략하면 서버가 고른다(`owner: ai`). 마지막 컷에 보내면 400. `arranger: ai` 정렬로 다음 컷이 바뀌면 그 경계는 서버가 다시 고른다.',
+    ),
 });
 
 const clipsInputSchema = z

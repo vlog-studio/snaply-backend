@@ -7,13 +7,21 @@ import {
   type Movie,
   type MovieArranger,
   type MovieStatus,
+  type MovieTransition,
   type StylePreset,
+  type Transition,
+  type TransitionKind,
+  TransitionError,
+  defaultTransition,
+  isTransitionKind,
+  validateTransition,
 } from '@vlog-studio/shared-types';
 import { getPrisma } from '../db/client.js';
 import { AppError } from '../lib/errors.js';
 import { captureException } from '../lib/sentry.js';
 import { createEditJob } from './edit-job.service.js';
 import { deleteObject } from './storage.service.js';
+import { pickTransition } from './transition-director.js';
 
 const DEFAULT_TITLE = '새 무비';
 const DEFAULT_STYLE: StylePreset = '일상';
@@ -22,6 +30,19 @@ export interface ClipInput {
   videoId: string;
   startMs?: number;
   endMs?: number;
+  /** 사용자가 고른, 이 컷에서 다음 컷으로의 전환. 없으면 AI 가 고른다. */
+  transition?: { kind: TransitionKind; durationMs?: number };
+}
+
+/**
+ * 저장할 순서로 정리된 컷. 사용자가 고른 전환만 붙어 있다 — AI 몫은 저장하는 순간
+ * `clipCreateData` 가 고른다(컷·스타일이 바뀔 때마다 다시 고르기 위해서다).
+ */
+interface ResolvedClip {
+  videoId: string;
+  startMs?: number;
+  endMs?: number;
+  userTransition?: Transition;
 }
 
 /**
@@ -33,6 +54,9 @@ interface ClipRow {
   order: number;
   startMs: number | null;
   endMs: number | null;
+  transitionKind: string | null;
+  transitionMs: number | null;
+  transitionOwner: string;
   video: { deletedAt: Date | null; status: string };
 }
 
@@ -78,10 +102,33 @@ const SELECT = {
       order: true,
       startMs: true,
       endMs: true,
+      transitionKind: true,
+      transitionMs: true,
+      transitionOwner: true,
       video: { select: { deletedAt: true, status: true } },
     },
   },
 } as const;
+
+/** 저장된 전환을 사전의 값으로. */
+function storedTransition(clip: ClipRow): Transition | null {
+  if (clip.transitionKind === null || !isTransitionKind(clip.transitionKind)) return null;
+  if (clip.transitionKind === 'hardcut') return { kind: 'hardcut' };
+  return {
+    kind: clip.transitionKind,
+    durationMs: clip.transitionMs ?? (defaultTransition(clip.transitionKind) as { durationMs: number }).durationMs,
+  };
+}
+
+function transitionDto(clip: ClipRow): MovieTransition {
+  const transition = storedTransition(clip);
+  if (transition === null) {
+    // 마지막이 아닌 컷은 언제나 전환을 갖는다(저장할 때 채우고, 기존 행은 마이그레이션이 채웠다).
+    // 그래도 비었다면 응답을 깨지 말고 아무 효과 없는 값으로 — 다음 저장에서 AI 가 다시 고른다.
+    return { kind: 'hardcut', owner: 'ai' };
+  }
+  return { ...transition, owner: clip.transitionOwner as MovieArranger };
+}
 
 function toDto(row: MovieRowWithJob): Movie {
   return {
@@ -92,11 +139,12 @@ function toDto(row: MovieRowWithJob): Movie {
     captions: row.captions,
     ratio: row.ratio,
     arranger: row.arranger as MovieArranger,
-    clips: row.clips.map((clip) => ({
+    clips: row.clips.map((clip, index) => ({
       videoId: clip.videoId,
       ...(clip.startMs !== null ? { startMs: clip.startMs } : {}),
       ...(clip.endMs !== null ? { endMs: clip.endMs } : {}),
       unavailable: clip.video.deletedAt !== null || clip.video.status !== 'ready',
+      transition: index === row.clips.length - 1 ? null : transitionDto(clip),
     })),
     resultVideoId: row.resultVideoId,
     jobId: row.job?.id ?? null,
@@ -113,6 +161,9 @@ function toDto(row: MovieRowWithJob): Movie {
  * 정렬한다. 사용자가 순서를 잡은 무비(`user`)는 보낸 배열 순서를 그대로 쓴다 — 서버가 다시
  * 정렬하면 사용자가 의도적으로 옮긴 컷이 되돌아간다.
  * `capturedAt` 은 전달 이전에 올라온 스냅에 없으므로(SNAP-10) 없으면 업로드 시각으로 대신한다.
+ *
+ * 사용자가 고른 전환은 **보낸 배열에서 이어진 두 컷**의 것이다(MOV-22). `ai` 정렬로 다음 컷이
+ * 달라지면 그 전환은 떨어지고 그 경계는 AI 가 고른다.
  */
 async function resolveClips(params: {
   userId: string;
@@ -120,7 +171,7 @@ async function resolveClips(params: {
   arranger: MovieArranger;
   /** 수정은 컷을 모두 빼는 것도 허용한다 — 마지막 스냅을 지운 무비도 초안으로 남아야 한다. */
   allowEmpty?: boolean;
-}): Promise<ClipInput[]> {
+}): Promise<ResolvedClip[]> {
   const min = params.allowEmpty ? 0 : MOVIE_CLIP_MIN;
   if (params.clips.length < min || params.clips.length > MOVIE_CLIP_MAX) {
     throw AppError.badRequest(
@@ -135,6 +186,14 @@ async function resolveClips(params: {
       throw AppError.badRequest('컷 종료 시간은 시작 시간보다 커야 합니다.');
     }
   }
+  const resolved = params.clips.map((clip, index): ResolvedClip => {
+    const { transition, ...cut } = clip;
+    if (transition === undefined) return cut;
+    if (index === params.clips.length - 1) {
+      throw AppError.badRequest('마지막 컷에는 다음 컷으로의 전환을 둘 수 없습니다.');
+    }
+    return { ...cut, userTransition: toUserTransition(transition) };
+  });
 
   const uniqueIds = [...new Set(params.clips.map((clip) => clip.videoId))];
   const snaps = await getPrisma().video.findMany({
@@ -146,30 +205,69 @@ async function resolveClips(params: {
   }
 
   if (params.arranger === 'user') {
-    return params.clips;
+    return resolved;
   }
 
   const timeOf = new Map(
     snaps.map((snap) => [snap.id, (snap.capturedAt ?? snap.createdAt).getTime()]),
   );
   // 같은 시각이면 보낸 순서를 유지해야 정렬이 안정적이다.
-  return params.clips
+  const sorted = resolved
     .map((clip, index) => ({ clip, index }))
     .sort(
       (left, right) =>
         (timeOf.get(left.clip.videoId) ?? 0) - (timeOf.get(right.clip.videoId) ?? 0) ||
         left.index - right.index,
-    )
-    .map((entry) => entry.clip);
+    );
+  return sorted.map(({ clip, index }, position) => {
+    if (clip.userTransition === undefined || sorted[position + 1]?.index === index + 1) return clip;
+    // 사용자가 고른 전환은 그 두 컷의 것이다 — 정렬로 떨어졌으면 AI 에게 돌아간다.
+    return { videoId: clip.videoId, startMs: clip.startMs, endMs: clip.endMs };
+  });
 }
 
-function clipCreateData(clips: ClipInput[]) {
-  return clips.map((clip, index) => ({
-    videoId: clip.videoId,
-    order: index,
-    startMs: clip.startMs ?? null,
-    endMs: clip.endMs ?? null,
-  }));
+/** 사용자가 보낸 전환을 사전의 값으로. 길이를 생략하면 기본값, 범위 밖이면 400. */
+function toUserTransition(input: { kind: TransitionKind; durationMs?: number }): Transition {
+  try {
+    if (input.kind === 'hardcut' || input.durationMs !== undefined) return validateTransition(input);
+    return defaultTransition(input.kind);
+  } catch (err) {
+    if (err instanceof TransitionError) throw AppError.badRequest(err.message);
+    throw err;
+  }
+}
+
+/**
+ * 저장할 행. 마지막 컷을 뺀 모든 컷이 다음 컷으로의 전환을 갖는다 — 사용자가 고른 것은 그대로,
+ * 나머지는 지금 AI 가 고른다(`ai` 경계는 컷·스타일이 바뀔 때마다 다시 고른다는 규칙이 여기서 나온다).
+ */
+function clipCreateData(clips: ResolvedClip[], stylePreset: StylePreset) {
+  return clips.map((clip, index) => {
+    const isLast = index === clips.length - 1;
+    const chosen = isLast ? null : (clip.userTransition ?? pickTransition({ stylePreset }));
+    return {
+      videoId: clip.videoId,
+      order: index,
+      startMs: clip.startMs ?? null,
+      endMs: clip.endMs ?? null,
+      transitionKind: chosen?.kind ?? null,
+      transitionMs: chosen !== null && chosen.kind !== 'hardcut' ? chosen.durationMs : null,
+      transitionOwner: !isLast && clip.userTransition !== undefined ? ('user' as const) : ('ai' as const),
+    };
+  });
+}
+
+/** 저장된 컷을 다시 저장할 형태로 — 스타일만 바뀌었을 때 AI 경계를 다시 고르기 위해서다. */
+function resolvedFromRows(rows: ClipRow[]): ResolvedClip[] {
+  return rows.map((row) => {
+    const transition = storedTransition(row);
+    return {
+      videoId: row.videoId,
+      ...(row.startMs !== null ? { startMs: row.startMs } : {}),
+      ...(row.endMs !== null ? { endMs: row.endMs } : {}),
+      ...(row.transitionOwner === 'user' && transition !== null ? { userTransition: transition } : {}),
+    };
+  });
 }
 
 /**
@@ -293,6 +391,7 @@ export async function createMovie(params: {
   }
 
   const arranger = params.arranger ?? 'user';
+  const stylePreset = params.stylePreset ?? DEFAULT_STYLE;
   const clips = params.clips ? await resolveClips({ ...params, clips: params.clips, arranger }) : [];
 
   const created = await getPrisma().movie.create({
@@ -300,10 +399,10 @@ export async function createMovie(params: {
       ...(params.id ? { id: params.id } : {}),
       userId: params.userId,
       title: params.title ?? DEFAULT_TITLE,
-      stylePreset: params.stylePreset ?? DEFAULT_STYLE,
+      stylePreset,
       captions: params.captions ?? false,
       arranger,
-      clips: { create: clipCreateData(clips) },
+      clips: { create: clipCreateData(clips, stylePreset) },
     },
     select: SELECT,
   });
@@ -360,15 +459,20 @@ export async function updateMovie(params: {
   }
 
   const arranger = params.arranger ?? (current.arranger as MovieArranger);
+  const stylePreset = params.stylePreset ?? (current.stylePreset as StylePreset);
+  // 컷을 보내면 그것으로, 스타일만 바뀌면 지금 컷으로 다시 저장한다 — AI 가 고른 경계는
+  // 스타일을 따라가야 한다(무효화 사전 transition-style-swap). 사용자가 고른 경계는 그대로다.
   const clips =
-    params.clips === undefined
-      ? undefined
-      : await resolveClips({
+    params.clips !== undefined
+      ? await resolveClips({
           userId: params.userId,
           clips: params.clips,
           arranger,
           allowEmpty: true,
-        });
+        })
+      : stylePreset !== current.stylePreset
+        ? resolvedFromRows(current.clips)
+        : undefined;
 
   const updated = await getPrisma().movie.update({
     where: { id: current.id },
@@ -379,7 +483,7 @@ export async function updateMovie(params: {
       ...(params.arranger !== undefined ? { arranger: params.arranger } : {}),
       // 컷은 통째로 교체한다. 부분 갱신은 순서를 다시 계산해야 해서 두 표현이 어긋나기 쉽다.
       ...(clips !== undefined
-        ? { clips: { deleteMany: {}, create: clipCreateData(clips) } }
+        ? { clips: { deleteMany: {}, create: clipCreateData(clips, stylePreset) } }
         : {}),
     },
     select: SELECT,
