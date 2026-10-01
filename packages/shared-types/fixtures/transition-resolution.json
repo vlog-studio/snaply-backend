@@ -3,108 +3,320 @@
   "cases": [
     {
       "name": "hardcut 은 그대로다",
-      "transition": { "kind": "hardcut" },
-      "outgoing": { "cutMs": 100, "spareAfterMs": 0 },
-      "incoming": { "cutMs": 100, "spareBeforeMs": 0 },
-      "expected": { "kind": "hardcut" }
+      "transition": {
+        "kind": "hardcut"
+      },
+      "outgoing": {
+        "cutMs": 100,
+        "spareAfterMs": 0
+      },
+      "incoming": {
+        "cutMs": 100,
+        "spareBeforeMs": 0
+      },
+      "expected": {
+        "kind": "hardcut"
+      }
     },
     {
       "name": "crossfade — 여분이 충분하면 고른 길이 그대로",
-      "transition": { "kind": "crossfade", "durationMs": 800 },
-      "outgoing": { "cutMs": 2000, "spareAfterMs": 500 },
-      "incoming": { "cutMs": 2000, "spareBeforeMs": 500 },
-      "expected": { "kind": "crossfade", "durationMs": 800 }
+      "transition": {
+        "kind": "crossfade",
+        "durationMs": 800
+      },
+      "outgoing": {
+        "cutMs": 2000,
+        "spareAfterMs": 500
+      },
+      "incoming": {
+        "cutMs": 2000,
+        "spareBeforeMs": 500
+      },
+      "expected": {
+        "kind": "crossfade",
+        "durationMs": 800
+      }
     },
     {
       "name": "crossfade — 짧은 쪽 여분의 두 배로 줄어든다",
-      "transition": { "kind": "crossfade", "durationMs": 800 },
-      "outgoing": { "cutMs": 2000, "spareAfterMs": 1000 },
-      "incoming": { "cutMs": 2000, "spareBeforeMs": 150 },
-      "expected": { "kind": "crossfade", "durationMs": 300 }
+      "transition": {
+        "kind": "crossfade",
+        "durationMs": 800
+      },
+      "outgoing": {
+        "cutMs": 2000,
+        "spareAfterMs": 1000
+      },
+      "incoming": {
+        "cutMs": 2000,
+        "spareBeforeMs": 150
+      },
+      "expected": {
+        "kind": "crossfade",
+        "durationMs": 300
+      }
     },
     {
       "name": "crossfade — 정확히 min 이면 남는다",
-      "transition": { "kind": "crossfade", "durationMs": 500 },
-      "outgoing": { "cutMs": 2000, "spareAfterMs": 100 },
-      "incoming": { "cutMs": 2000, "spareBeforeMs": 400 },
-      "expected": { "kind": "crossfade", "durationMs": 200 }
+      "transition": {
+        "kind": "crossfade",
+        "durationMs": 500
+      },
+      "outgoing": {
+        "cutMs": 2000,
+        "spareAfterMs": 100
+      },
+      "incoming": {
+        "cutMs": 2000,
+        "spareBeforeMs": 400
+      },
+      "expected": {
+        "kind": "crossfade",
+        "durationMs": 200
+      }
     },
     {
-      "name": "crossfade — min 아래로 줄면 hardcut",
-      "transition": { "kind": "crossfade", "durationMs": 500 },
-      "outgoing": { "cutMs": 2000, "spareAfterMs": 99 },
-      "incoming": { "cutMs": 2000, "spareBeforeMs": 400 },
-      "expected": { "kind": "hardcut" }
+      "name": "crossfade — min 아래로 줄면 dip",
+      "transition": {
+        "kind": "crossfade",
+        "durationMs": 500
+      },
+      "outgoing": {
+        "cutMs": 2000,
+        "spareAfterMs": 99
+      },
+      "incoming": {
+        "cutMs": 2000,
+        "spareBeforeMs": 400
+      },
+      "expected": {
+        "kind": "dip",
+        "durationMs": 400
+      }
     },
     {
-      "name": "crossfade — 원본 끝까지 쓴 컷(여분 0)은 hardcut",
-      "transition": { "kind": "crossfade", "durationMs": 500 },
-      "outgoing": { "cutMs": 3000, "spareAfterMs": 0 },
-      "incoming": { "cutMs": 3000, "spareBeforeMs": 1000 },
-      "expected": { "kind": "hardcut" }
+      "name": "crossfade — 원본 끝까지 쓴 컷(여분 0)은 dip",
+      "transition": {
+        "kind": "crossfade",
+        "durationMs": 500
+      },
+      "outgoing": {
+        "cutMs": 3000,
+        "spareAfterMs": 0
+      },
+      "incoming": {
+        "cutMs": 3000,
+        "spareBeforeMs": 1000
+      },
+      "expected": {
+        "kind": "dip",
+        "durationMs": 400
+      }
     },
     {
       "name": "crossfade — 섞이는 몫이 컷의 절반을 넘지 않는다",
-      "transition": { "kind": "crossfade", "durationMs": 800 },
-      "outgoing": { "cutMs": 600, "spareAfterMs": 1000 },
-      "incoming": { "cutMs": 2000, "spareBeforeMs": 1000 },
-      "expected": { "kind": "crossfade", "durationMs": 600 }
+      "transition": {
+        "kind": "crossfade",
+        "durationMs": 800
+      },
+      "outgoing": {
+        "cutMs": 600,
+        "spareAfterMs": 1000
+      },
+      "incoming": {
+        "cutMs": 2000,
+        "spareBeforeMs": 1000
+      },
+      "expected": {
+        "kind": "crossfade",
+        "durationMs": 600
+      }
     },
     {
       "name": "dip — 양쪽 컷이 길면 그대로",
-      "transition": { "kind": "dip", "durationMs": 400 },
-      "outgoing": { "cutMs": 2000, "spareAfterMs": 0 },
-      "incoming": { "cutMs": 2000, "spareBeforeMs": 0 },
-      "expected": { "kind": "dip", "durationMs": 400 }
+      "transition": {
+        "kind": "dip",
+        "durationMs": 400
+      },
+      "outgoing": {
+        "cutMs": 2000,
+        "spareAfterMs": 0
+      },
+      "incoming": {
+        "cutMs": 2000,
+        "spareBeforeMs": 0
+      },
+      "expected": {
+        "kind": "dip",
+        "durationMs": 400
+      }
     },
     {
       "name": "dip — 여분 프레임은 쓰지 않으므로 여분 0 이어도 된다, 짧은 컷 길이까지 줄어든다",
-      "transition": { "kind": "dip", "durationMs": 600 },
-      "outgoing": { "cutMs": 2000, "spareAfterMs": 0 },
-      "incoming": { "cutMs": 301, "spareBeforeMs": 0 },
-      "expected": { "kind": "dip", "durationMs": 301 }
+      "transition": {
+        "kind": "dip",
+        "durationMs": 600
+      },
+      "outgoing": {
+        "cutMs": 2000,
+        "spareAfterMs": 0
+      },
+      "incoming": {
+        "cutMs": 301,
+        "spareBeforeMs": 0
+      },
+      "expected": {
+        "kind": "dip",
+        "durationMs": 301
+      }
     },
     {
       "name": "dip — 컷이 min 보다 짧으면 hardcut",
-      "transition": { "kind": "dip", "durationMs": 400 },
-      "outgoing": { "cutMs": 199, "spareAfterMs": 0 },
-      "incoming": { "cutMs": 2000, "spareBeforeMs": 0 },
-      "expected": { "kind": "hardcut" }
+      "transition": {
+        "kind": "dip",
+        "durationMs": 400
+      },
+      "outgoing": {
+        "cutMs": 199,
+        "spareAfterMs": 0
+      },
+      "incoming": {
+        "cutMs": 2000,
+        "spareBeforeMs": 0
+      },
+      "expected": {
+        "kind": "hardcut"
+      }
     },
     {
       "name": "flash — 짧은 컷에서도 min(100) 까지는 남는다",
-      "transition": { "kind": "flash", "durationMs": 200 },
-      "outgoing": { "cutMs": 150, "spareAfterMs": 0 },
-      "incoming": { "cutMs": 2000, "spareBeforeMs": 0 },
-      "expected": { "kind": "flash", "durationMs": 150 }
+      "transition": {
+        "kind": "flash",
+        "durationMs": 200
+      },
+      "outgoing": {
+        "cutMs": 150,
+        "spareAfterMs": 0
+      },
+      "incoming": {
+        "cutMs": 2000,
+        "spareBeforeMs": 0
+      },
+      "expected": {
+        "kind": "flash",
+        "durationMs": 150
+      }
     },
     {
       "name": "flash — 컷이 min(100) 보다 짧으면 hardcut",
-      "transition": { "kind": "flash", "durationMs": 200 },
-      "outgoing": { "cutMs": 2000, "spareAfterMs": 0 },
-      "incoming": { "cutMs": 99, "spareBeforeMs": 0 },
-      "expected": { "kind": "hardcut" }
+      "transition": {
+        "kind": "flash",
+        "durationMs": 200
+      },
+      "outgoing": {
+        "cutMs": 2000,
+        "spareAfterMs": 0
+      },
+      "incoming": {
+        "cutMs": 99,
+        "spareBeforeMs": 0
+      },
+      "expected": {
+        "kind": "hardcut"
+      }
     },
     {
       "name": "zoompunch — 들어오는 컷만 본다(나가는 컷이 아주 짧아도 된다)",
-      "transition": { "kind": "zoompunch", "durationMs": 300 },
-      "outgoing": { "cutMs": 100, "spareAfterMs": 0 },
-      "incoming": { "cutMs": 2000, "spareBeforeMs": 0 },
-      "expected": { "kind": "zoompunch", "durationMs": 300 }
+      "transition": {
+        "kind": "zoompunch",
+        "durationMs": 300
+      },
+      "outgoing": {
+        "cutMs": 100,
+        "spareAfterMs": 0
+      },
+      "incoming": {
+        "cutMs": 2000,
+        "spareBeforeMs": 0
+      },
+      "expected": {
+        "kind": "zoompunch",
+        "durationMs": 300
+      }
     },
     {
       "name": "zoompunch — 들어오는 컷 절반까지 줄어든다",
-      "transition": { "kind": "zoompunch", "durationMs": 400 },
-      "outgoing": { "cutMs": 2000, "spareAfterMs": 0 },
-      "incoming": { "cutMs": 500, "spareBeforeMs": 0 },
-      "expected": { "kind": "zoompunch", "durationMs": 250 }
+      "transition": {
+        "kind": "zoompunch",
+        "durationMs": 400
+      },
+      "outgoing": {
+        "cutMs": 2000,
+        "spareAfterMs": 0
+      },
+      "incoming": {
+        "cutMs": 500,
+        "spareBeforeMs": 0
+      },
+      "expected": {
+        "kind": "zoompunch",
+        "durationMs": 250
+      }
     },
     {
       "name": "zoompunch — 들어오는 컷 절반이 min 아래면 hardcut",
-      "transition": { "kind": "zoompunch", "durationMs": 300 },
-      "outgoing": { "cutMs": 2000, "spareAfterMs": 0 },
-      "incoming": { "cutMs": 299, "spareBeforeMs": 0 },
-      "expected": { "kind": "hardcut" }
+      "transition": {
+        "kind": "zoompunch",
+        "durationMs": 300
+      },
+      "outgoing": {
+        "cutMs": 2000,
+        "spareAfterMs": 0
+      },
+      "incoming": {
+        "cutMs": 299,
+        "spareBeforeMs": 0
+      },
+      "expected": {
+        "kind": "hardcut"
+      }
+    },
+    {
+      "name": "crossfade — 여분도 없고 컷도 짧아 dip 마저 들어가지 않으면 hardcut",
+      "transition": {
+        "kind": "crossfade",
+        "durationMs": 500
+      },
+      "outgoing": {
+        "cutMs": 150,
+        "spareAfterMs": 0
+      },
+      "incoming": {
+        "cutMs": 2000,
+        "spareBeforeMs": 0
+      },
+      "expected": {
+        "kind": "hardcut"
+      }
+    },
+    {
+      "name": "crossfade → dip 은 짧은 컷에 맞춰 줄어든다",
+      "transition": {
+        "kind": "crossfade",
+        "durationMs": 500
+      },
+      "outgoing": {
+        "cutMs": 300,
+        "spareAfterMs": 0
+      },
+      "incoming": {
+        "cutMs": 2000,
+        "spareBeforeMs": 0
+      },
+      "expected": {
+        "kind": "dip",
+        "durationMs": 300
+      }
     }
   ]
 }

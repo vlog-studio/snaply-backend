@@ -151,8 +151,9 @@ function capacityMs(kind: TimedTransitionKind, boundary: TransitionBoundary): nu
  * 고른 전환을 이 경계에 실제로 들어가는 전환으로 바꾼다.
  *
  * 길이는 컷 길이·여분 프레임이 허락하는 만큼 줄어들고, 줄어든 길이가 사전의 `min` 보다 짧으면
- * `fallback`(v1 은 전부 `hardcut`)이 된다. 종류(`kind`)를 바꾸는 것은 이 폴백뿐이다 — 고른 값
- * 자체는 그대로 저장되고, 컷이 다시 길어지면 원래 전환이 돌아온다.
+ * `fallback` 을 그 기본 길이로 다시 해석한다 — `crossfade` → `dip` → `hardcut`, 나머지는 바로 `hardcut`
+ * (decisions/transition-director.md §2). 종류(`kind`)를 바꾸는 것은 이 폴백뿐이다 — 고른 값 자체는
+ * 그대로 저장되고, 컷이 다시 길어지면 원래 전환이 돌아온다.
  */
 export function resolveTransition(transition: Transition, boundary: TransitionBoundary): Transition {
   if (transition.kind === 'hardcut') return transition;
