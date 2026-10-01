@@ -2,7 +2,7 @@ import { useIsFocused, useRouter, useScrollToTop } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BackHandler, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { MovieSnapLimit } from '@/entities/movie';
+import { MovieDraftSnapLimit, MovieSnapLimit, type Movie } from '@/entities/movie';
 import {
   isSnapFileLocal,
   useExpiredSnapIds,
@@ -32,13 +32,24 @@ import { ThemedText } from '@/shared/ui/themed-text';
 import { VideoPlayerModal } from '@/shared/ui/video-player-modal';
 import { SnapDayGrid, SnapSelectionBar, useSnapDays, useSnapPicking } from '@/widgets/snap-grid';
 
+import { draftConfirmation, useEditDraft } from '../model/use-edit-draft';
 import { playerAlbumAction } from '../model/player-album-action';
 import { useMovieDeleteImpact } from '../model/use-movie-delete-impact';
 import { SnapDeleteDialog, type DeviceOnlyDelete } from './snap-delete-dialog';
 
+/**
+ * What a selection is for. `movie` — the user's own cut list, in pick order,
+ * up to {@link MovieSnapLimit}. `draft` — material handed to the edit draft
+ * (MOV-21), up to {@link MovieDraftSnapLimit}, which chooses among it.
+ */
+export type SelectionPurpose = 'movie' | 'draft';
+
 export type SnapsPageProps = {
-  /** `?select=1` — the studio sends the user here to pick for a new movie. */
-  startSelecting?: boolean;
+  /**
+   * The studio sends the user here to pick: `?select=1` for a new movie,
+   * `?select=draft` for the edit draft.
+   */
+  startSelecting?: SelectionPurpose;
 };
 
 /**
@@ -66,7 +77,7 @@ export type SnapsPageProps = {
  * navigator then answers the confirming `back` by switching tabs instead of
  * returning to the movie the user came from.
  */
-export function SnapsPage({ startSelecting = false }: SnapsPageProps) {
+export function SnapsPage({ startSelecting }: SnapsPageProps) {
   const theme = useTheme();
   const router = useRouter();
   const topInset = useTopContentInset();
@@ -87,7 +98,11 @@ export function SnapsPage({ startSelecting = false }: SnapsPageProps) {
   const scrollRef = useRef<ScrollView>(null);
   useScrollToTop(scrollRef);
 
-  const [selecting, setSelecting] = useState(startSelecting);
+  const [selecting, setSelecting] = useState(startSelecting !== undefined);
+  // Selecting from the library itself (선택, a long press) is for a new movie;
+  // only the studio's 자동 편집 row asks for the draft.
+  const [purpose, setPurpose] = useState<SelectionPurpose>(startSelecting ?? 'movie');
+  const capacity = purpose === 'draft' ? MovieDraftSnapLimit : MovieSnapLimit;
   const [playing, setPlaying] = useState<Snap>();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteOpenedAt, setDeleteOpenedAt] = useState(0);
@@ -102,8 +117,11 @@ export function SnapsPage({ startSelecting = false }: SnapsPageProps) {
   const { picked, notice, toggle, drop, clear, reset, announce } = useSnapPicking({
     heldIds: NoHeldIds,
     heldCount: 0,
-    capacity: MovieSnapLimit,
-    describeRefusal: () => `한 편에는 스냅 ${MovieSnapLimit}개까지 들어가요.`,
+    capacity,
+    describeRefusal: () =>
+      purpose === 'draft'
+        ? `자동 편집에는 스냅 ${MovieDraftSnapLimit}개까지 넣을 수 있어요.`
+        : `한 편에는 스냅 ${MovieSnapLimit}개까지 들어가요.`,
   });
 
   const impact = useMovieDeleteImpact(deleteOpen ? picked : EmptySelection);
@@ -177,23 +195,50 @@ export function SnapsPage({ startSelecting = false }: SnapsPageProps) {
   const [lastStartSelecting, setLastStartSelecting] = useState(startSelecting);
   if (startSelecting !== lastStartSelecting) {
     setLastStartSelecting(startSelecting);
-    if (startSelecting) setSelecting(true);
+    if (startSelecting) {
+      // Picks made for one purpose do not carry into the other: the caps differ,
+      // and so does what confirming does with them.
+      if (startSelecting !== purpose) reset();
+      setPurpose(startSelecting);
+      setSelecting(true);
+    }
   }
+
+  const {
+    state: draftState,
+    start: startDraft,
+    reset: resetDraft,
+  } = useEditDraft(
+    useCallback(
+      (movie: Movie) => {
+        setSelecting(false);
+        setPurpose('movie');
+        reset();
+        router.push(movieHref(movie.id));
+      },
+      [reset, router],
+    ),
+  );
+  const confirmation = purpose === 'draft' ? draftConfirmation(draftState, picked) : undefined;
+  const draftBusy = confirmation?.busy === true;
 
   const exitSelection = useCallback(() => {
     setSelecting(false);
+    setPurpose('movie');
     reset();
-  }, [reset]);
+    resetDraft();
+  }, [reset, resetDraft]);
 
   // Android hardware back leaves selection mode instead of leaving the tab.
   useEffect(() => {
     if (!selecting) return;
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-      exitSelection();
+      // Mid-request, back is held: leaving would still open the movie it makes.
+      if (!draftBusy) exitSelection();
       return true;
     });
     return () => subscription.remove();
-  }, [selecting, exitSelection]);
+  }, [selecting, exitSelection, draftBusy]);
 
   // Selection swaps the bottom chrome: the tab bar and the capture button out,
   // the SnapSelectionBar in. The navigator paints its bar above every scene, so
@@ -214,6 +259,9 @@ export function SnapsPage({ startSelecting = false }: SnapsPageProps) {
   }, [selecting, isFocused, setTabBarHidden]);
 
   const handlePress = (snap: Snap) => {
+    // The draft is being made from these picks; changing them now would open a
+    // movie the screen no longer describes.
+    if (selecting && draftBusy) return;
     if (selecting) toggle(snap.id);
     else setPlaying(snap);
   };
@@ -254,8 +302,14 @@ export function SnapsPage({ startSelecting = false }: SnapsPageProps) {
       announce(ExpiredSnapRefusal);
       return;
     }
+    // The edit draft asks the server first; the bar shows it working.
+    if (confirmation?.action === 'draft') {
+      void startDraft(picked);
+      return;
+    }
     // The draft is where the picks land, so open it — the cap was enforced pick
-    // by pick, so a non-empty selection always makes a movie.
+    // by pick, so a non-empty selection always makes a movie. (Past today's edit
+    // drafts the hand-made movie is offered, and only for picks that fit one.)
     const movie = startMovieFromSnaps(picked);
     if (!movie) return;
     exitSelection();
@@ -316,6 +370,9 @@ export function SnapsPage({ startSelecting = false }: SnapsPageProps) {
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={selecting ? '선택 취소' : '스냅 선택'}
+                // Leaving mid-request would still open the movie it makes.
+                accessibilityState={{ disabled: draftBusy }}
+                disabled={draftBusy}
                 hitSlop={12}
                 onPress={() => (selecting ? exitSelection() : setSelecting(true))}
                 style={styles.headerAction}
@@ -404,10 +461,12 @@ export function SnapsPage({ startSelecting = false }: SnapsPageProps) {
         <SnapSelectionBar
           selectedCount={picked.length}
           heldCount={0}
-          capacity={MovieSnapLimit}
-          targetLabel="새 무비"
-          confirmLabel="이 스냅으로 새 무비"
-          notice={notice}
+          capacity={capacity}
+          targetLabel={purpose === 'draft' ? '자동 편집' : '새 무비'}
+          confirmLabel={confirmation?.label ?? '이 스냅으로 새 무비'}
+          notice={notice ?? confirmation?.notice}
+          busy={confirmation?.busy}
+          confirmDisabled={confirmation?.disabled}
           onClear={clear}
           onConfirm={confirmPicks}
           onDelete={() => {
