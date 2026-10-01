@@ -103,6 +103,11 @@
 - `GET /edit-jobs/{id}` 🔒 — 폴링용. `videoId` 는 **결과물** 영상 id 다(원본이 아니다). 완료 후 `GET /videos/{videoId}` 로 `editedUrl` 을 얻는다.
   - `errorMessage` 는 서버 진단용 원문 — **사용자 노출 문구가 아니다.** 화면 문구는 `errorCode` 로 분기해 앱이 만든다. `errorCode` 는 append-only 라 앱은 모르는 코드를 `INTERNAL` 처럼 다룬다. `TIMEOUT` 은 작업이 워커 제한 시간(`EDIT_TIMEOUT_SECONDS`)을 넘긴 것이다 — 멈춘 ffmpeg·whisper 가 워커를 붙잡아 두지 않게 한다.
   - `pipelineVersion`·`editSpec`·`renderSpec` 은 재현 가능한 작업 스냅샷이다.
+  - `editSpec.version` 은 셋이다. `POST /edit-jobs` 는 v2(프리셋 하나가 전환을 정한다), **무비 생성은 v3**
+    (2026-10-01) — `timeline.cuts`(`cutId`·`videoId`·`sourceInMs`·`sourceOutMs?`)와 이어진 두 컷마다의
+    `timeline.transitions`(`fromCutId`·`toCutId`·`kind`·`durationMs?`). v3 는 별도 큐(`EDIT_V3_QUEUE_NAME`, 기본
+    `edit-v3`)로만 간다 — 구버전 워커가 전환을 버리고 v2 로 렌더하지 않게 하기 위해서다
+    ([decisions/edit-spec-v3.md](./decisions/edit-spec-v3.md) §4).
 - `DELETE /edit-jobs/{id}` 🔒 — `queued`/`processing` 취소. 최종 상태 `canceled`, 결과물 레코드는 목록에서 사라진다. 대기 중은 큐에서 제거, 처리 중은 워커가 다음 진행률 갱신 시점에 중단(업로드 직전이면 산출물이 생길 수 있으나 `canceled` 가 `done` 으로 되살아나지 않는다). 재취소는 200(멱등), `done`/`failed` 는 `409 CONFLICT`. 예약 크레딧은 전액 환급(한 번만 기록).
 
 ### WebSocket `/edit-jobs/{id}/progress`
@@ -162,7 +167,8 @@ FE 가 알아야 할 동작:
     원천이다. 범위 밖 길이, `hardcut` 의 길이, 마지막 컷의 전환은 400.
   - 응답의 값은 **고른 값**이다. 미리보기·렌더는 컷 길이와 원본의 여분 프레임에 맞춰 다시 해석한다
     (`resolveTransition` — 짧아지거나 `hardcut` 이 된다).
-  - **아직 렌더에 반영되지 않는다** — 생성은 지금도 `stylePreset` 하나로 전환을 정한다(backlog A-11).
+  - 생성(`export`)은 이 값을 경계마다 그대로 렌더한다(editSpec v3, 아래 AI 편집). 워커가 원본 길이를 재서
+    컷·여분 프레임에 맞추고, 겹쳐 녹이는 전환도 여분 프레임을 써서 결과물 길이는 컷 길이의 합이다.
 - **컷의 `unavailable: true`** 는 참조하던 스냅이 만료·삭제됐다는 뜻이다. 그런 컷이 있어도
   무비는 열리고 목록에서 사라지지 않는다 — 사용자가 무엇을 잃었는지 알아야 하기 때문이다.
   다만 그 상태로 `export` 하면 400 이다(빼고 다시 시도).

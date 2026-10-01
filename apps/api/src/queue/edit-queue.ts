@@ -17,33 +17,46 @@ export interface EditJobData {
   subtitles: boolean;
 }
 
-let queue: Queue<EditJobData> | null = null;
+/**
+ * 편집 큐는 둘이다. editSpec v3(경계별 전환)는 **별도 큐**로 보낸다 — 구버전 워커는 v3 를 모르고
+ * 최상위 필드만 읽어 v2 로 "성공"하므로, 큐 이름으로 아예 받지 못하게 한다(decisions/edit-spec-v3.md §4).
+ */
+let queues: { legacy: Queue<EditJobData>; v3: Queue<EditJobData> } | null = null;
 
-export function initEditQueue(queueName: string): Queue<EditJobData> {
-  if (!queue) {
-    queue = new Queue<EditJobData>(queueName, {
-      connection: createRedisConnection(),
-      defaultJobOptions: {
-        attempts: 3,
-        backoff: { type: 'exponential', delay: 5000 },
-        removeOnComplete: 1000,
-        removeOnFail: 5000,
-      },
-    });
-  }
-  return queue;
+function createQueue(queueName: string): Queue<EditJobData> {
+  return new Queue<EditJobData>(queueName, {
+    connection: createRedisConnection(),
+    defaultJobOptions: {
+      attempts: 3,
+      backoff: { type: 'exponential', delay: 5000 },
+      removeOnComplete: 1000,
+      removeOnFail: 5000,
+    },
+  });
 }
 
-function getQueue(): Queue<EditJobData> {
-  if (!queue) {
+export function initEditQueue(queueName: string, v3QueueName: string): void {
+  if (!queues) {
+    queues = { legacy: createQueue(queueName), v3: createQueue(v3QueueName) };
+  }
+}
+
+function getQueues(): { legacy: Queue<EditJobData>; v3: Queue<EditJobData> } {
+  if (!queues) {
     throw new Error('edit 큐가 초기화되지 않았습니다. initEditQueue()를 먼저 호출하세요.');
   }
-  return queue;
+  return queues;
+}
+
+/** 이 작업이 갈 큐 — 스펙 버전이 정한다. */
+export function editQueueFor(data: Pick<EditJobData, 'editSpec'>): Queue<EditJobData> {
+  const { legacy, v3 } = getQueues();
+  return data.editSpec.version === 3 ? v3 : legacy;
 }
 
 export async function enqueueEditJob(data: EditJobData): Promise<void> {
   // jobId를 BullMQ job id로도 사용해 중복 적재를 방지
-  await getQueue().add('edit', data, { jobId: data.jobId });
+  await editQueueFor(data).add('edit', data, { jobId: data.jobId });
 }
 
 /**
@@ -51,17 +64,19 @@ export async function enqueueEditJob(data: EditJobData): Promise<void> {
  * BullMQ 가 제거를 거부하므로 조용히 넘어간다 — DB 상태 변경이 원천이다.
  */
 export async function removeEditJob(jobId: string): Promise<void> {
-  try {
-    const job = await getQueue().getJob(jobId);
-    await job?.remove();
-  } catch {
-    // active 작업 제거 실패 등 — 무시
+  for (const queue of Object.values(getQueues())) {
+    try {
+      const job = await queue.getJob(jobId);
+      await job?.remove();
+    } catch {
+      // active 작업 제거 실패 등 — 무시
+    }
   }
 }
 
 export async function closeEditQueue(): Promise<void> {
-  if (queue) {
-    await queue.close();
-    queue = null;
+  if (queues) {
+    await Promise.all([queues.legacy.close(), queues.v3.close()]);
+    queues = null;
   }
 }

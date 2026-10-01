@@ -180,6 +180,13 @@ export const ENV_VARS = [
     description: '편집 큐 이름. 기본 edit-jobs. API 와 워커가 일치해야 한다',
   },
   {
+    key: 'EDIT_V3_QUEUE_NAME',
+    required: false,
+    origin: 'shared',
+    description:
+      'editSpec v3(경계별 전환) 편집 큐 이름. 기본 edit-v3. 구버전 워커가 v3 를 받지 않게 나눈 큐라 API 와 워커가 일치해야 한다',
+  },
+  {
     key: 'VIDEO_ANALYSIS_QUEUE_NAME',
     required: false,
     origin: 'shared',

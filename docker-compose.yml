@@ -129,6 +129,7 @@ services:
       REDIS_URL: redis://redis:6379
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/snaply
       EDIT_QUEUE_NAME: edit-jobs
+      EDIT_V3_QUEUE_NAME: edit-v3
       S3_ENDPOINT: http://minio:9000
       S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-http://localhost:9200}
       S3_BUCKET_NAME: snaply

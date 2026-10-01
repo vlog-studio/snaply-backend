@@ -10,6 +10,8 @@ import {
   type OutputProfile,
   type RenderSpec,
   type StylePreset,
+  type Transition,
+  isTransitionKind,
 } from '@vlog-studio/shared-types';
 import { getPrisma } from '../db/client.js';
 import { AppError } from '../lib/errors.js';
@@ -62,6 +64,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function parseEditSpec(value: unknown): EditSpec {
+  const timeline = parseTimelineSpec(value);
+  if (timeline !== null) {
+    return timeline;
+  }
   if (
     isRecord(value) &&
     value.version === 2 &&
@@ -85,6 +91,72 @@ function parseEditSpec(value: unknown): EditSpec {
     return value as unknown as EditSpec;
   }
   return { version: 1, stylePreset: '일상' };
+}
+
+/** 저장된 v3 스펙. 모양이 맞지 않으면 `null` — 아래 v2/v1 판정으로 넘긴다. */
+function parseTimelineSpec(value: unknown): EditSpec | null {
+  if (
+    !isRecord(value) ||
+    value.version !== 3 ||
+    !['감성', '여행', '일상'].includes(String(value.stylePreset)) ||
+    !isRecord(value.timeline) ||
+    !Array.isArray(value.timeline.cuts) ||
+    !Array.isArray(value.timeline.transitions)
+  ) {
+    return null;
+  }
+  const cuts = value.timeline.cuts;
+  const transitions = value.timeline.transitions;
+  const cutsValid =
+    cuts.length >= 1 &&
+    cuts.length <= MAX_CLIPS &&
+    cuts.every(
+      (cut) =>
+        isRecord(cut) &&
+        typeof cut.cutId === 'string' &&
+        typeof cut.videoId === 'string' &&
+        Number.isInteger(cut.sourceInMs) &&
+        (cut.sourceOutMs === undefined || Number.isInteger(cut.sourceOutMs)),
+    );
+  const transitionsValid =
+    transitions.length === cuts.length - 1 &&
+    transitions.every(
+      (transition) =>
+        isRecord(transition) &&
+        typeof transition.fromCutId === 'string' &&
+        typeof transition.toCutId === 'string' &&
+        typeof transition.kind === 'string' &&
+        isTransitionKind(transition.kind),
+    );
+  return cutsValid && transitionsValid ? (value as unknown as EditSpec) : null;
+}
+
+/**
+ * 무비 생성이 보내는 v3 스펙 — 컷마다 `c0, c1, …` 를 붙이고 경계 전환이 그 둘을 가리킨다.
+ * 전환은 고른 값 그대로다. 컷·여분 프레임에 맞추는 해석은 원본 길이를 아는 워커가 한다.
+ */
+function timelineSpec(stylePreset: StylePreset, clips: ClipSpec[], transitions: Transition[]): EditSpec {
+  if (transitions.length !== clips.length - 1) {
+    throw new Error('전환은 컷 사이마다 하나씩이어야 합니다.');
+  }
+  return {
+    version: 3,
+    stylePreset,
+    timeline: {
+      cuts: clips.map((clip, index) => ({
+        cutId: `c${index}`,
+        videoId: clip.videoId,
+        sourceInMs: clip.startMs,
+        ...(clip.endMs !== undefined ? { sourceOutMs: clip.endMs } : {}),
+      })),
+      transitions: transitions.map((transition, index) => ({
+        fromCutId: `c${index}`,
+        toCutId: `c${index + 1}`,
+        kind: transition.kind,
+        ...(transition.kind !== 'hardcut' ? { durationMs: transition.durationMs } : {}),
+      })),
+    },
+  };
 }
 
 function parseClipSpec(value: unknown): ClipSpec | null {
@@ -177,6 +249,11 @@ export async function createEditJob(params: {
   fitMode: FitMode;
   /** 소프트 자막 생성 여부 (기본 false — 쇼츠용) */
   subtitles: boolean;
+  /**
+   * 경계마다의 전환(`clips.length - 1` 개). 주면 editSpec v3 로 `edit-v3` 큐에 간다(무비 생성).
+   * 없으면 지금까지처럼 v2 — 프리셋 하나가 전환을 정한다(`POST /edit-jobs`).
+   */
+  transitions?: Transition[];
 }): Promise<{ jobId: string; videoId: string }> {
   const prisma = getPrisma();
   validateClips(params.clips);
@@ -185,7 +262,10 @@ export async function createEditJob(params: {
     startMs: clip.startMs,
     ...(clip.endMs !== undefined ? { endMs: clip.endMs } : {}),
   }));
-  const editSpec: EditSpec = { version: 2, stylePreset: params.stylePreset, clips };
+  const editSpec: EditSpec =
+    params.transitions === undefined
+      ? { version: 2, stylePreset: params.stylePreset, clips }
+      : timelineSpec(params.stylePreset, clips, params.transitions);
   const renderSpec = createRenderSpec(params.outputProfile, params.fitMode);
   const uniqueVideoIds = [...new Set(clips.map((clip) => clip.videoId))];
 
@@ -243,15 +323,7 @@ export async function createEditJob(params: {
         videoId: video.id,
         userId: params.userId,
         pipelineVersion: '3',
-        editSpec: {
-          version: editSpec.version,
-          stylePreset: editSpec.stylePreset,
-          clips: clips.map((clip) => ({
-            videoId: clip.videoId,
-            startMs: clip.startMs,
-            ...(clip.endMs !== undefined ? { endMs: clip.endMs } : {}),
-          })),
-        },
+        editSpec,
         renderSpec: {
           profileVersion: renderSpec.profileVersion,
           outputProfile: renderSpec.outputProfile,
@@ -275,7 +347,8 @@ export async function createEditJob(params: {
     await enqueueEditJob({
       jobId: job.id,
       userId: params.userId,
-      clips,
+      // v3 는 컷을 timeline 에만 둔다. 최상위 clips 를 남기면 그것만 읽는 워커가 생길 여지가 남는다.
+      ...(editSpec.version === 3 ? {} : { clips }),
       stylePreset: params.stylePreset,
       editSpec,
       renderSpec,

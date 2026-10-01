@@ -27,7 +27,8 @@ import unittest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from pipeline import rendition  # noqa: E402
-from pipeline.editor import ClipSource, edit, get_preset  # noqa: E402
+from pipeline.editor import ClipSource, edit, edit_timeline, get_preset  # noqa: E402
+from pipeline.transition import Transition  # noqa: E402
 from pipeline.render_spec import DEFAULT_RENDER_SPEC  # noqa: E402
 
 
@@ -104,6 +105,104 @@ class EditOutputContract(unittest.TestCase):
 
             self.assertEqual(info["codec_name"], "h264")
             self.assertEqual(info["pix_fmt"], "yuv420p")
+
+
+def make_color_clip(path: str, color: str, *, seconds: float = 3.0, box: str | None = None) -> None:
+    """단색(선택: 가운데 상자) 세로 입력과 소리. 전환을 색으로 읽으려고 단색을 쓴다."""
+    video = f"color=c={color}:s=1080x1920:rate=30:duration={seconds}"
+    if box is not None:
+        video += f",drawbox=x=270:y=480:w=540:h=960:color={box}:t=fill"
+    subprocess.run(
+        [
+            "ffmpeg", "-y",
+            "-f", "lavfi", "-i", video,
+            "-f", "lavfi", "-i", f"sine=frequency=440:duration={seconds}",
+            "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac", "-shortest",
+            path,
+        ],
+        capture_output=True,
+        check=True,
+    )
+
+
+def pixel(path: str, at: float, x: int = 540, y: int = 300) -> tuple[int, int, int]:
+    """`at` 초 프레임의 (x, y) 주변 8x8 평균 RGB."""
+    out = subprocess.run(
+        [
+            "ffmpeg", "-v", "error", "-ss", f"{at:.3f}", "-i", path, "-frames:v", "1",
+            "-vf", f"crop=8:8:{x - 4}:{y - 4},scale=1:1:flags=area",
+            "-f", "rawvideo", "-pix_fmt", "rgb24", "-",
+        ],
+        capture_output=True,
+        check=True,
+    ).stdout
+    return out[0], out[1], out[2]
+
+
+def duration_of(path: str) -> float:
+    return float(probe(path)["format"]["duration"])
+
+
+@unittest.skipUnless(FFMPEG_AVAILABLE, "ffmpeg/ffprobe 없음")
+class TimelineContract(unittest.TestCase):
+    """경계별 전환(editSpec v3)의 산출물. 색으로 읽는다 — 빨강 → 파랑 → 초록."""
+
+    def render(self, work: str, transitions: list[Transition], *, last_to_end: bool = False) -> str:
+        paths = []
+        for color in ("red", "blue", "green"):
+            path = os.path.join(work, f"{color}.mp4")
+            make_color_clip(path, color)
+            paths.append(path)
+        # 각 컷은 0.5~2.5초 — 앞뒤 0.5초가 여분 프레임이다.
+        clips = [ClipSource(path, 500, 2500) for path in paths]
+        if last_to_end:
+            clips[0] = ClipSource(paths[0], 1000, None)
+        return edit_timeline(clips, transitions, get_preset("일상"), DEFAULT_RENDER_SPEC, work)
+
+    def test_crossfade_mixes_and_dip_darkens_while_length_is_the_sum_of_cuts(self) -> None:
+        with tempfile.TemporaryDirectory() as work:
+            out = self.render(work, [Transition("crossfade", 400), Transition("dip", 400)])
+
+            # 겹침형이 여분 프레임을 쓰므로 길이는 컷 길이의 합(2+2+2)이다.
+            self.assertAlmostEqual(duration_of(out), 6.0, delta=0.1)
+            red, mid, blue, dark, green = (pixel(out, t) for t in (1.0, 2.0, 3.0, 4.0, 5.0))
+            self.assertGreater(red[0], 200)
+            self.assertTrue(red[2] < 40)
+            # 경계(2.0초)에서는 두 컷이 반씩 섞인다.
+            self.assertTrue(60 < mid[0] < 200 and 60 < mid[2] < 200, mid)
+            self.assertGreater(blue[2], 200)
+            # dip 경계(4.0초)는 검정에 가깝다.
+            self.assertLess(max(dark), 40, dark)
+            self.assertGreater(green[1], 90)
+
+    def test_crossfade_without_spare_frames_falls_back_to_a_cut(self) -> None:
+        with tempfile.TemporaryDirectory() as work:
+            # 첫 컷이 원본 끝(3초)까지라 뒤 여분이 없다 → hardcut. 길이는 2 + 2 + 2.
+            out = self.render(work, [Transition("crossfade", 400), Transition("hardcut")], last_to_end=True)
+
+            self.assertAlmostEqual(duration_of(out), 6.0, delta=0.1)
+            just_before, just_after = pixel(out, 1.95), pixel(out, 2.05)
+            self.assertGreater(just_before[0], 200)
+            self.assertGreater(just_after[2], 200)
+
+    def test_zoompunch_starts_enlarged_and_settles(self) -> None:
+        with tempfile.TemporaryDirectory() as work:
+            first = os.path.join(work, "plain.mp4")
+            boxed = os.path.join(work, "boxed.mp4")
+            make_color_clip(first, "green")
+            make_color_clip(boxed, "red", box="blue")
+            clips = [ClipSource(first, 500, 2500), ClipSource(boxed, 500, 2500)]
+
+            out = edit_timeline(
+                clips, [Transition("zoompunch", 300)], get_preset("일상"), DEFAULT_RENDER_SPEC, work
+            )
+
+            # 상자의 왼쪽 가장자리는 x=270. 1.08배로 시작하면 x≈248 까지 넓어진다 → x=258 은
+            # 처음에는 파랑(상자 안), 0.3초 뒤에는 빨강(상자 밖)이다.
+            at_start, settled = pixel(out, 2.02, x=258, y=960), pixel(out, 2.6, x=258, y=960)
+            self.assertGreater(at_start[2], 150, at_start)
+            self.assertGreater(settled[0], 150, settled)
+            self.assertAlmostEqual(duration_of(out), 4.0, delta=0.1)
 
 
 @unittest.skipUnless(FFMPEG_AVAILABLE, "ffmpeg/ffprobe 없음")
