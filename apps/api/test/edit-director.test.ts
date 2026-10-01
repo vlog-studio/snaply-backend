@@ -274,6 +274,23 @@ describe('§3·§7 구간', () => {
     expect(range.endMs).toBeGreaterThanOrEqual(3800);
   });
 
+  it.each([
+    ['3초 일상 hook', 3000, '일상', 'hook', []],
+    ['2.997초 감성 closer', 2997, '감성', 'closer', []],
+    ['4.31초 여행 hook', 4310, '여행', 'hook', []],
+    ['발화 끝점이 격자 밖', 5000, '일상', 'body', [[630, 2370]]],
+    ['5초 여행 closer', 5000, '여행', 'closer', []],
+  ] as const)('창은 앱의 트림 격자(100ms) 위에 놓인다 — %s', (_name, durationMs, style, role, speech) => {
+    const range = chooseRange(
+      signals({ durationMs, motion: Array(Math.floor(durationMs / 100)).fill(0.01), speech: speech.map(([a, b]) => [a, b]) }),
+      style,
+      role,
+    )!;
+    expect(range.startMs % 100).toBe(0);
+    expect(range.endMs % 100).toBe(0);
+    expect(range.endMs).toBeLessThanOrEqual(durationMs);
+  });
+
   it('너무 길어 못 담으면 발화의 시작을 담는다', () => {
     const range = chooseRange(signals({ durationMs: 5000, motion: [], speech: [[1500, 4700]] }), '여행', 'body')!;
     expect(range.startMs).toBeLessThanOrEqual(1500);

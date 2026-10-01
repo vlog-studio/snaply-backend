@@ -54,7 +54,7 @@ const ROLE_LENGTH_FACTOR: Partial<Record<CutRole, number>> = { hook: 0.75, close
 /** §4 점수 가중치. */
 const SCORE_WEIGHTS = { quality: 0.5, motion: 0.3, speech: 0.2 } as const;
 
-/** §7 구간 창이 움직이는 단위. */
+/** §7 구간 창이 움직이는 단위이자 창이 놓이는 격자 — 앱의 트림 단위(`CutTrimStepSec`)와 같아야 한다. */
 const WINDOW_STEP_MS = 100;
 
 export interface DraftSignals {
@@ -259,18 +259,29 @@ export function chooseRange(
   const duration = signals.durationMs;
   if (duration <= lengths.min) return null;
 
-  const wanted = Math.round(lengths.base * (ROLE_LENGTH_FACTOR[role] ?? 1));
+  // 창은 앱의 트림 격자(`CutTrimStepSec`, 100ms) 위에 놓는다. 격자 밖이면 사용자가 한쪽 핸들을 처음 끌 때
+  // 다른 끝도 격자에 맞춰 움직여, 건드리지 않은 끝이 바뀐다(2026-10-01 Galaxy 에서 2750 → 2800 을 봤다).
+  const down = (ms: number) => Math.floor(ms / WINDOW_STEP_MS) * WINDOW_STEP_MS;
+  const up = (ms: number) => Math.ceil(ms / WINDOW_STEP_MS) * WINDOW_STEP_MS;
+  const usable = down(duration);
+
+  const wanted = down(lengths.base * (ROLE_LENGTH_FACTOR[role] ?? 1));
   let length = Math.min(lengths.max, Math.max(lengths.min, wanted));
   let spare = lengths.spare;
   // 길이를 먼저 줄이고, 그다음 여분을 앞뒤 똑같이 줄인다.
-  if (length + 2 * spare > duration) length = Math.max(lengths.min, duration - 2 * spare);
-  if (length + 2 * spare > duration) spare = Math.floor((duration - length) / 2);
-  const low = spare;
-  const high = duration - spare;
+  if (length + 2 * spare > usable) length = Math.max(lengths.min, down(usable - 2 * spare));
+  if (length + 2 * spare > usable) spare = (usable - length) / 2;
+  // 격자 위의 여분 — 자리가 남으면 올려서, 모자라면 내려서.
+  let low = up(spare);
+  let high = usable - up(spare);
+  if (high - low < length) {
+    low = down(spare);
+    high = usable - down(spare);
+  }
 
   // 발화를 자르지 않는다 — 가장 긴 발화 하나를 통째로, 안 되면 그 시작을 담는다.
   let contains: ((start: number, end: number) => boolean) | null = null;
-  // 100ms 격자에 발화의 끝점이 맞지 않을 수 있어 끝점에 맞춘 창도 후보로 넣는다.
+  // 100ms 격자에 발화의 끝점이 맞지 않을 수 있어 끝점을 담는 격자 위의 창도 후보로 넣는다.
   const anchors: number[] = [];
   const speech = [...signals.speech]
     .map(([start, end]) => [Math.max(0, start), Math.min(duration, end)] as const)
@@ -278,14 +289,14 @@ export function chooseRange(
     .sort((left, right) => right[1] - right[0] - (left[1] - left[0]) || left[0] - right[0])[0];
   if (speech !== undefined) {
     const [speechStart, speechEnd] = speech;
-    const stretched = Math.min(lengths.max, high - low, Math.max(length, speechEnd - speechStart));
+    const stretched = Math.min(lengths.max, high - low, Math.max(length, up(speechEnd - speechStart)));
     if (speechStart >= low && speechEnd <= high && stretched >= speechEnd - speechStart) {
       length = stretched;
       contains = (start, end) => start <= speechStart && end >= speechEnd;
-      anchors.push(speechStart, speechEnd - length);
+      anchors.push(down(speechStart), up(speechEnd) - length);
     } else if (speechStart >= low && speechStart <= high) {
       contains = (start, end) => start <= speechStart && end > speechStart;
-      anchors.push(speechStart);
+      anchors.push(down(speechStart));
     }
   }
 
@@ -293,7 +304,7 @@ export function chooseRange(
   for (let start = low; start + length <= high; start += WINDOW_STEP_MS) starts.push(start);
   for (const anchor of anchors) if (anchor >= low && anchor + length <= high && !starts.includes(anchor)) starts.push(anchor);
   starts.sort((a, b) => a - b);
-  if (starts.length === 0) starts.push(Math.max(0, Math.floor((duration - length) / 2)));
+  if (starts.length === 0) starts.push(Math.max(0, down((usable - length) / 2)));
   const allowed = contains === null ? starts : starts.filter((start) => contains!(start, start + length));
   const candidates = allowed.length > 0 ? allowed : starts;
 
