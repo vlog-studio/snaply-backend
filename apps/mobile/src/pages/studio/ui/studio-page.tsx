@@ -5,7 +5,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { useTemplateOffers } from '@/features/fill-template';
 import { formatDuration } from '@/shared/lib/datetime';
-import { movieHref, snapPickerHref } from '@/shared/routes';
+import { draftPickerHref, movieHref, snapPickerHref } from '@/shared/routes';
 import { FadeInView } from '@/shared/ui/fade-in-view';
 import {
   MaxContentWidth,
@@ -76,6 +76,7 @@ export function StudioPage() {
     : [];
 
   const pickSnaps = () => router.push(snapPickerHref());
+  const pickForDraft = () => router.push(draftPickerHref());
   // Every movie opens on the same screen, whatever it is waiting for: watching a
   // finished one and fixing it happen in the same place.
   const openMovie = (movieId: string) => router.push(movieHref(movieId));
@@ -147,6 +148,31 @@ export function StudioPage() {
               })}
             </View>
           ) : null}
+        </Pressable>
+
+        {/* The same picking, handed to the edit draft (MOV-21): the snaps it is
+            given are chosen among, ordered, and cut. One row under the block
+            above — the material is already on show there, so it is not drawn
+            twice. */}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="스냅 골라서 자동으로 편집하기"
+          onPress={pickForDraft}
+          style={({ pressed }) => [
+            styles.newMovie,
+            {
+              backgroundColor: theme.backgroundElement,
+              borderColor: theme.border,
+              opacity: pressed ? 0.7 : 1,
+            },
+          ]}
+        >
+          <View style={styles.newMovieHead}>
+            <ThemedText selectable={false} type="smallBold" style={styles.newMovieTitle}>
+              스냅 골라 자동 편집
+            </ThemedText>
+            <Ionicons color={theme.textSecondary} name="chevron-forward" size={16} />
+          </View>
         </Pressable>
 
         <TemplatePanel offers={templateOffers} onOpen={openTemplate} />

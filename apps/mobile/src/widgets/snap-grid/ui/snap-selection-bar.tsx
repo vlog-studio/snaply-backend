@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MaxContentWidth, Radius, Spacing, useTheme } from '@/shared/ui/theme';
@@ -23,6 +23,14 @@ export type SnapSelectionBarProps = {
   notice?: string;
   onClear: () => void;
   onConfirm: () => void;
+  /**
+   * The confirm is waiting on the server (the edit draft asks before it opens a
+   * movie): it shows that it is working and takes no second tap, and the picks
+   * cannot be cleared or deleted under it.
+   */
+  busy?: boolean;
+  /** The target cannot take these picks right now, for a reason `notice` gives. */
+  confirmDisabled?: boolean;
   /**
    * Reports the bar's rendered height. The bar floats over the screen's scroll,
    * so the screen pads its content by exactly this much — a guessed constant is
@@ -56,11 +64,14 @@ export function SnapSelectionBar({
   onConfirm,
   onDelete,
   onHeight,
+  busy = false,
+  confirmDisabled = false,
 }: SnapSelectionBarProps) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const room = Math.max(capacity - heldCount, 0);
-  const canConfirm = selectedCount > 0 && room > 0;
+  const canConfirm = selectedCount > 0 && room > 0 && !busy && !confirmDisabled;
+  const canChange = selectedCount > 0 && !busy;
 
   return (
     <View
@@ -101,8 +112,8 @@ export function SnapSelectionBar({
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={`${selectedCount}개 스냅 삭제`}
-            accessibilityState={{ disabled: selectedCount === 0 }}
-            disabled={selectedCount === 0}
+            accessibilityState={{ disabled: !canChange }}
+            disabled={!canChange}
             hitSlop={8}
             onPress={onDelete}
             style={styles.textAction}
@@ -110,7 +121,7 @@ export function SnapSelectionBar({
             <ThemedText
               selectable={false}
               type="smallBold"
-              style={{ color: selectedCount > 0 ? theme.danger : theme.textSecondary }}
+              style={{ color: canChange ? theme.danger : theme.textSecondary }}
             >
               삭제
             </ThemedText>
@@ -119,8 +130,8 @@ export function SnapSelectionBar({
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="선택 해제"
-          accessibilityState={{ disabled: selectedCount === 0 }}
-          disabled={selectedCount === 0}
+          accessibilityState={{ disabled: !canChange }}
+          disabled={!canChange}
           hitSlop={8}
           onPress={onClear}
           style={styles.textAction}
@@ -132,14 +143,19 @@ export function SnapSelectionBar({
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={confirmLabel}
-          accessibilityState={{ disabled: !canConfirm }}
+          accessibilityState={{ disabled: !canConfirm, busy }}
           disabled={!canConfirm}
           onPress={onConfirm}
           style={({ pressed }) => [
             styles.primaryAction,
-            { backgroundColor: theme.primary, opacity: canConfirm ? (pressed ? 0.78 : 1) : 0.45 },
+            {
+              backgroundColor: theme.primary,
+              // A request in flight is not a refusal: the button keeps its weight.
+              opacity: canConfirm || busy ? (pressed ? 0.78 : 1) : 0.45,
+            },
           ]}
         >
+          {busy ? <ActivityIndicator color={theme.onPrimary} size="small" /> : null}
           <ThemedText selectable={false} type="button" style={{ color: theme.onPrimary }}>
             {confirmLabel}
           </ThemedText>
@@ -174,6 +190,8 @@ const styles = StyleSheet.create({
   textAction: { minHeight: 44, justifyContent: 'center' },
   primaryAction: {
     flex: 1,
+    flexDirection: 'row',
+    gap: Spacing.two,
     minHeight: 48,
     borderRadius: Radius.medium,
     borderCurve: 'continuous',

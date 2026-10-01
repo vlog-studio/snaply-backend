@@ -23,3 +23,11 @@ export function movieHref(movieId: string): Href {
 export function snapPickerHref(): Href {
   return { pathname: '/snaps', params: { select: '1' } };
 }
+
+/**
+ * The snap library picking for the edit draft (MOV-21) — the studio's 자동 편집
+ * row. The same picking surface with a different cap and a different confirm.
+ */
+export function draftPickerHref(): Href {
+  return { pathname: '/snaps', params: { select: 'draft' } };
+}
