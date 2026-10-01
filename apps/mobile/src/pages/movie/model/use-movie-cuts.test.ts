@@ -14,6 +14,7 @@ jest.mock('@/entities/movie', () => {
   // this hook is about which of them it applies and what it commits.
   const trim = jest.requireActual('@/entities/movie/lib/movie-trim');
   const render = jest.requireActual('@/entities/movie/lib/movie-render');
+  const transition = jest.requireActual('@/entities/movie/lib/movie-transition');
   return {
     useMovieById: () => mockMovie(),
     cutDurationSec: trim.cutDurationSec,
@@ -23,6 +24,9 @@ jest.mock('@/entities/movie', () => {
     withoutTrim: trim.withoutTrim,
     isEditedSinceRender: render.isEditedSinceRender,
     sameCuts: render.sameCuts,
+    samePlayback: render.samePlayback,
+    transitionAfter: transition.transitionAfter,
+    withTransitionAfter: transition.withTransitionAfter,
   };
 });
 jest.mock('@/entities/snap', () => ({
@@ -414,5 +418,97 @@ describe('trimming a cut', () => {
 
     expect(result.current.cuts[1].ref.trim).toBeUndefined();
     expect(result.current.totalSec).toBe(12);
+  });
+});
+
+describe('boundary transitions', () => {
+  it("stores the user's pick for the boundary after a cut and can undo it", async () => {
+    const { result } = await renderHook(() => useMovieCuts('m1'));
+
+    await act(async () => result.current.setTransition(0, 'flash'));
+
+    const written = mockSaveCuts.mock.calls[0][1] as SnapRef[];
+    expect(written[0].transition).toEqual({
+      kind: 'flash',
+      durationMs: 200,
+      owner: 'user',
+      toSnapId: 's2',
+    });
+    expect(result.current.canUndo).toBe(true);
+  });
+
+  it("hands a user's boundary back to the server's pick", async () => {
+    mockMovie.mockReturnValue(
+      makeMovie({
+        snapRefs: [
+          {
+            snapId: 's1',
+            order: 0,
+            transition: { kind: 'dip', durationMs: 400, owner: 'user', toSnapId: 's2' },
+          },
+          { snapId: 's2', order: 1 },
+        ],
+      }),
+    );
+    const { result } = await renderHook(() => useMovieCuts('m1'));
+
+    await act(async () => result.current.setTransition(0, undefined));
+
+    expect((mockSaveCuts.mock.calls[0][1] as SnapRef[])[0]).not.toHaveProperty('transition');
+  });
+
+  it('writes nothing for a pick that changes nothing', async () => {
+    mockMovie.mockReturnValue(
+      makeMovie({
+        snapRefs: [
+          {
+            snapId: 's1',
+            order: 0,
+            transition: { kind: 'dip', durationMs: 400, owner: 'user', toSnapId: 's2' },
+          },
+          { snapId: 's2', order: 1, transition: { kind: 'hardcut', owner: 'ai', toSnapId: 's3' } },
+          { snapId: 's3', order: 2 },
+        ],
+      }),
+    );
+    const { result } = await renderHook(() => useMovieCuts('m1'));
+
+    // The same pick again, and "AI 에게 맡기기" on a boundary the server already owns.
+    await act(async () => result.current.setTransition(0, 'dip'));
+    await act(async () => result.current.setTransition(1, undefined));
+    // There is no boundary after the last cut.
+    await act(async () => result.current.setTransition(2, 'dip'));
+
+    expect(mockSaveCuts).not.toHaveBeenCalled();
+  });
+
+  it("keeps the history when the server's own picks are read back", async () => {
+    const { result, rerender } = await renderHook(() => useMovieCuts('m1'));
+    await act(async () => result.current.moveCut(0, 1));
+    expect(result.current.canUndo).toBe(true);
+
+    // The write comes back with the server's transition picks filled in — the
+    // same composition, not an outside edit.
+    const written = mockSaveCuts.mock.calls[0][1] as SnapRef[];
+    mockMovie.mockReturnValue(
+      makeMovie({
+        snapRefs: written.map((ref, order) => ({
+          ...ref,
+          order,
+          ...(order < written.length - 1
+            ? {
+                transition: {
+                  kind: 'hardcut' as const,
+                  owner: 'ai' as const,
+                  toSnapId: written[order + 1].snapId,
+                },
+              }
+            : null),
+        })),
+      }),
+    );
+    await rerender({});
+
+    expect(result.current.canUndo).toBe(true);
   });
 });

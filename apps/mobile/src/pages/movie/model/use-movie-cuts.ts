@@ -5,12 +5,16 @@ import {
   cutsDurationSec,
   isEditedSinceRender,
   sameCuts,
+  samePlayback,
   sameTrimWindow,
+  transitionAfter,
   useMovieById,
+  withTransitionAfter,
   withTrim,
   withoutTrim,
   type Movie,
   type SnapRef,
+  type TransitionKind,
 } from '@/entities/movie';
 import { useSnapIndex, type Snap } from '@/entities/snap';
 import { canEditMovie, useComposeMovie, type CutsRefusal } from '@/features/compose-movie';
@@ -68,6 +72,11 @@ export type MovieCuts = {
   trimCut: (index: number, startSec: number, endSec: number) => void;
   /** Puts a cut back to playing whole. */
   resetTrim: (index: number) => void;
+  /**
+   * Sets the transition after cut `index` to the user's pick, or hands that
+   * boundary back to the server's pick (`undefined`, "AI 에게 맡기기").
+   */
+  setTransition: (index: number, kind: TransitionKind | undefined) => void;
   /** Steps the cut list back to before the last edit made on this screen. */
   undo: () => void;
   /** Reapplies the edit the last undo stepped over. */
@@ -231,6 +240,21 @@ export function useMovieCuts(movieId: string | undefined): MovieCuts {
 
   const resetTrim = (index: number) => replaceCut(index, (ref) => withoutTrim(ref));
 
+  const setTransition = (index: number, kind: TransitionKind | undefined) => {
+    if (index < 0 || index >= storedRefs.length - 1) return;
+    const current = transitionAfter(storedRefs, index);
+    // Picking what is already the user's choice, or handing back a boundary the
+    // server already owns, changes nothing — and must not push a history entry.
+    if (
+      kind === undefined
+        ? current?.owner !== 'user'
+        : current?.owner === 'user' && current.kind === kind
+    ) {
+      return;
+    }
+    commit(withTransitionAfter(storedRefs, index, kind));
+  };
+
   // The render's composition, back as the stored list. Not a rollback of the
   // render itself — there is only ever one — but of the cut list that drifted
   // out from under it; a snapshot the movie no longer answers to (already
@@ -239,7 +263,7 @@ export function useMovieCuts(movieId: string | undefined): MovieCuts {
     const source = movie?.render?.snapRefs;
     if (!source || source.length === 0) return;
     const target = [...source].sort((left, right) => left.order - right.order);
-    if (sameCuts(storedRefs, target)) return;
+    if (samePlayback(storedRefs, target)) return;
     commit(target);
   };
 
@@ -258,6 +282,7 @@ export function useMovieCuts(movieId: string | undefined): MovieCuts {
     removeCut,
     trimCut,
     resetTrim,
+    setTransition,
     undo,
     redo,
   };

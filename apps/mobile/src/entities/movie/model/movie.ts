@@ -52,6 +52,35 @@ export type MovieStatus = 'draft' | 'generating' | 'ready' | 'failed';
 export type MovieArranger = 'user' | 'ai';
 
 /**
+ * How one cut hands over to the next — the server's closed set (root
+ * `packages/shared-types/src/transition-vocabulary.json`). Ranges, labels and
+ * fallbacks live in `lib/movie-transition.ts`, checked against that file.
+ */
+export type TransitionKind = 'hardcut' | 'crossfade' | 'dip' | 'flash' | 'zoompunch';
+
+/**
+ * The transition chosen for the boundary after a cut (root docs/specs/movie.md
+ * MOV-22). It is the *chosen* value: the stage and the render fit it to the two
+ * cuts' lengths and spare frames (`resolveCutTransition`), so it may play
+ * shorter, or as a fallback, while this stays as chosen.
+ *
+ * `owner` is who chose it. `ai` boundaries are re-picked by the server whenever
+ * the cuts or the style are saved; `user` ones are the user's and are sent back
+ * with every write. `toSnapId` is the cut it led into when chosen: a user's
+ * choice belongs to *those two cuts*, so once a reorder or removal puts a
+ * different cut after this one, the transition no longer applies — it is not
+ * sent, and the boundary reads as the server's to pick again
+ * (`transitionAfter`). A trim changes no snap id, so it keeps the choice.
+ */
+export type CutTransition = {
+  kind: TransitionKind;
+  /** Chosen length in milliseconds; absent for `hardcut`. */
+  durationMs?: number;
+  owner: MovieArranger;
+  toSnapId: string;
+};
+
+/**
  * A movie's reference to a snap. The snap original is immutable; per-movie edit
  * information (position in the cut list, optional trim) lives here so the same
  * snap can be cut differently into two movies.
@@ -79,6 +108,13 @@ export type SnapRef = {
    * refused), so the cut has to say so and offer removal.
    */
   unavailable?: boolean;
+  /**
+   * The transition into the next cut. Absent on the last cut, on a boundary the
+   * server has not picked for yet (a draft not yet synced, or an edit not yet
+   * read back), and on movies stored before transitions existed — all of which
+   * read as "the server picks".
+   */
+  transition?: CutTransition;
 };
 
 /**

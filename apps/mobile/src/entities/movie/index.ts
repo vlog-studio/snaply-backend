@@ -41,7 +41,17 @@ export { getMovies } from './api/get-movies';
 export { toMovieBody, type SnapIdResolver, type VideoIdResolver } from './api/movie.dto';
 export type { PendingWrite } from './lib/movie-sync';
 export { isAiArranged, sameArrangement } from './lib/movie-arrangement';
-export { isEditedSinceRender, sameCuts } from './lib/movie-render';
+export { isEditedSinceRender, sameCuts, samePlayback } from './lib/movie-render';
+export {
+  TransitionCatalog,
+  resolveCutTransition,
+  transitionAfter,
+  transitionSpec,
+  withTransitionAfter,
+  type PlayedTransition,
+  type TransitionBoundary,
+  type TransitionSpec,
+} from './lib/movie-transition';
 export { MovieSnapLimit } from './model/movie';
 export { MovieTitleMaxLength } from './lib/movie-title';
 export { MovieBgmCatalog } from './lib/movie-bgm';
@@ -57,11 +67,13 @@ export {
   withoutTrim,
 } from './lib/movie-trim';
 export type {
+  CutTransition,
   Movie,
   MovieArranger,
   MovieRender,
   MovieStatus,
   MovieStyle,
   SnapRef,
+  TransitionKind,
 } from './model/movie';
 export type { RemoteMovie } from './model/remote-movie';
