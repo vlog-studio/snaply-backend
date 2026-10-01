@@ -1,10 +1,14 @@
 import { useCallback } from 'react';
 
 import {
+  MovieDraftSnapLimit,
   MovieSnapLimit,
   exportRemoteMovie,
+  getLatestMovieStyle,
   getMovieById,
   isAiArranged,
+  movieStyleOrDefault,
+  requestMovieDraft,
   sameArrangement,
   toMovieBody,
   useBeginMovieJob,
@@ -15,6 +19,7 @@ import {
   useUpdateMovieStyle,
   type Movie,
   type MovieArranger,
+  type MovieDraftSnap,
   type MovieStylePatch,
   type SnapRef,
 } from '@/entities/movie';
@@ -41,6 +46,19 @@ export type CutsOutcome = {
   cutCount: number;
   refused?: CutsRefusal;
 };
+
+/**
+ * Why the edit draft did not open (MOV-21).
+ *
+ * `limit` — today's drafts are used up (the server's `DRAFT_LIMIT`); asking
+ * again will not help until tomorrow, so the screen offers the hand-made path.
+ * `unreachable` — no usable answer came back (offline, a server error, a snap
+ * the server would not take); asking again may.
+ */
+export type DraftRefusal = 'limit' | 'unreachable';
+
+export type DraftOutcome =
+  { movie: Movie; refused?: undefined } | { movie?: undefined; refused: DraftRefusal };
 
 /**
  * Why generation would not start.
@@ -199,6 +217,85 @@ export function useComposeMovie() {
       return createMovie({ snapIds, arranger: 'user' });
     },
     [createMovie],
+  );
+
+  /**
+   * Starts a draft the edit draft chose (MOV-21): hands the snaps to the server,
+   * which picks, orders, and trims them, and makes the movie from its answer.
+   * No picks, or more than {@link MovieDraftSnapLimit}, make nothing.
+   *
+   * Snaps not uploaded yet go too, by their local id and capture time — the
+   * server puts them in place whole rather than waiting for them. Every cut it
+   * returns is the draft's (`trimOwner: ai`) and the order is `ai`, so the user
+   * owns only what they change. The snaps it left out are kept on the movie for
+   * the screen to offer back. Expired snaps must be dropped by the caller: they
+   * have no upload left to name them by, and would travel as local ones.
+   */
+  const startMovieFromDraft = useCallback(
+    async (snapIds: readonly string[]): Promise<DraftOutcome | undefined> => {
+      const picked = [...new Set(snapIds)].filter((snapId) => snapIndex.has(snapId));
+      if (picked.length === 0 || picked.length > MovieDraftSnapLimit) return undefined;
+
+      // Capture order: the server sorts again, but the mock build keeps what it is sent.
+      picked.sort(
+        (left, right) => snapIndex.get(left)!.capturedAt - snapIndex.get(right)!.capturedAt,
+      );
+      const { videoIdOf } = snapResolvers();
+      const snapByVideo = new Map<string, string>();
+      const snaps = picked.map((snapId): MovieDraftSnap => {
+        const videoId = videoIdOf(snapId);
+        if (videoId === undefined)
+          return { localId: snapId, capturedAt: snapIndex.get(snapId)!.capturedAt };
+        snapByVideo.set(videoId, snapId);
+        return { videoId };
+      });
+      // The cut lengths follow the style, which the user has not chosen yet: the
+      // movie last worked on is the best guess at the one they will want.
+      const style = movieStyleOrDefault(getLatestMovieStyle());
+
+      let proposal;
+      try {
+        proposal = await requestMovieDraft(snaps, style);
+      } catch (error) {
+        if (error instanceof ApiError && error.code === 'DRAFT_LIMIT') return { refused: 'limit' };
+        if (__DEV__) console.warn(`[compose-movie] edit draft failed: ${String(error)}`);
+        return { refused: 'unreachable' };
+      }
+
+      const snapOf = (key: { videoId: string } | { localId: string }) =>
+        'videoId' in key
+          ? snapByVideo.get(key.videoId)
+          : picked.includes(key.localId)
+            ? key.localId
+            : undefined;
+      const windows = new Map<string, Pick<SnapRef, 'trim' | 'trimOwner'>>();
+      const cutSnapIds: string[] = [];
+      for (const cut of proposal.cuts) {
+        const snapId = snapOf(cut);
+        if (snapId === undefined || windows.has(snapId)) continue;
+        cutSnapIds.push(snapId);
+        windows.set(snapId, {
+          trimOwner: 'ai',
+          ...('trim' in cut && cut.trim ? { trim: cut.trim } : null),
+        });
+      }
+      if (cutSnapIds.length === 0 || cutSnapIds.length > MovieSnapLimit)
+        return { refused: 'unreachable' };
+      const leftOut = proposal.leftOut.flatMap((key) => {
+        const snapId = snapOf(key);
+        return snapId === undefined || windows.has(snapId) ? [] : [snapId];
+      });
+
+      const movie = createMovie({
+        snapIds: cutSnapIds,
+        arranger: 'ai',
+        style,
+        windows,
+        leftOut,
+      });
+      return { movie };
+    },
+    [createMovie, snapIndex],
   );
 
   /**
@@ -445,6 +542,7 @@ export function useComposeMovie() {
 
   return {
     startMovieFromSnaps,
+    startMovieFromDraft,
     startMovieFromTemplate,
     saveCuts,
     appendSnaps,

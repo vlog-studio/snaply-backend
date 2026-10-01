@@ -34,6 +34,13 @@ export type CreateMovieInput = {
   createdAt?: number;
   /** Injectable for tests; production callers get a fresh uuid. */
   id?: string;
+  /**
+   * The window each cut starts with, by snap id — what the edit draft chose
+   * (MOV-21). A snap with none plays whole and is the user's.
+   */
+  windows?: ReadonlyMap<string, Pick<SnapRef, 'trim' | 'trimOwner'>>;
+  /** Snaps the edit draft left out, offered back on the movie screen. */
+  leftOut?: readonly string[];
 };
 
 /**
@@ -90,6 +97,7 @@ type MovieState = {
   /** Whether the server's list has been read at least once for this account. */
   hasSynced: boolean;
   createMovie: (input: CreateMovieInput) => Movie;
+  clearMovieLeftOut: (movieId: string) => void;
   updateMovieCuts: (movieId: string, snapRefs: SnapRef[], updatedAt?: number) => void;
   updateMovieStyle: (movieId: string, patch: MovieStylePatch, updatedAt?: number) => void;
   setMovieArranger: (movieId: string, arranger: MovieArranger, updatedAt?: number) => void;
@@ -168,8 +176,10 @@ function createDraft(
     style,
     bgm,
     createdAt,
+    windows,
+    leftOut,
   }: Required<Pick<CreateMovieInput, 'snapIds' | 'createdAt' | 'id'>> &
-    Pick<CreateMovieInput, 'title' | 'arranger' | 'style' | 'bgm'>,
+    Pick<CreateMovieInput, 'title' | 'arranger' | 'style' | 'bgm' | 'windows' | 'leftOut'>,
   existing: readonly Movie[],
 ): Movie {
   return {
@@ -178,12 +188,13 @@ function createDraft(
     status: 'draft',
     createdAt,
     updatedAt: createdAt,
-    snapRefs: snapIds.map((snapId, order) => ({ snapId, order })),
+    snapRefs: snapIds.map((snapId, order) => ({ snapId, order, ...windows?.get(snapId) })),
     style: style ?? DefaultMovieStyle,
     bgm: bgm ?? DefaultMovieBgm,
     captions: false,
     ratio: '9:16',
     arranger: arranger ?? 'user',
+    ...(leftOut && leftOut.length > 0 ? { leftOut: [...leftOut] } : null),
   };
 }
 
@@ -238,9 +249,11 @@ export const useMovieStore = create<MovieState>()(
         style,
         bgm,
         createdAt = Date.now(),
+        windows,
+        leftOut,
       }) => {
         const movie = createDraft(
-          { id, snapIds, title, arranger, style, bgm, createdAt },
+          { id, snapIds, title, arranger, style, bgm, createdAt, windows, leftOut },
           get().movies,
         );
         set((state) => ({
@@ -250,6 +263,16 @@ export const useMovieStore = create<MovieState>()(
         }));
         return movie;
       },
+      // The notice is this device's own (`Movie.leftOut`): dismissing it is not an
+      // edit, so it neither marks the movie pending nor moves `updatedAt`.
+      clearMovieLeftOut: (movieId) =>
+        set((state) =>
+          patchMovie(state, movieId, (movie) => {
+            if (!movie.leftOut) return movie;
+            const { leftOut: _leftOut, ...rest } = movie;
+            return rest;
+          }),
+        ),
       updateMovieCuts: (movieId, snapRefs, updatedAt = Date.now()) =>
         set((state) => editMovie(state, movieId, (movie) => ({ ...movie, snapRefs, updatedAt }))),
       updateMovieStyle: (movieId, patch, updatedAt = Date.now()) =>
@@ -585,6 +608,26 @@ export function markMovieDeleteSent(movieId: string): void {
  */
 export function useCreateMovie(): (input: CreateMovieInput) => Movie {
   return useMovieStore((state) => state.createMovie);
+}
+
+/** Drops the edit draft's left-out snaps from a movie — the user dismissed the notice. */
+export function useClearMovieLeftOut(): (movieId: string) => void {
+  return useMovieStore((state) => state.clearMovieLeftOut);
+}
+
+/**
+ * The style of the movie most recently worked on, for a new movie that has
+ * nothing else to go by (the edit draft cuts to a style before the user has
+ * seen it). `undefined` with no movies.
+ */
+export function getLatestMovieStyle(): MovieStyle | undefined {
+  const latest = useMovieStore
+    .getState()
+    .movies.reduce<Movie | undefined>(
+      (best, movie) => (best === undefined || movie.updatedAt > best.updatedAt ? movie : best),
+      undefined,
+    );
+  return latest?.style;
 }
 
 /**

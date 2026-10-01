@@ -7,6 +7,7 @@ import type { RemoteMovie } from './remote-movie';
 import {
   getMovieById,
   applyRemoteMovies,
+  getLatestMovieStyle,
   getMovieOutbox,
   markMovieDeleteSent,
   markMovieGone,
@@ -14,6 +15,7 @@ import {
   useAdvanceMovieJob,
   useBeginMovieJob,
   useCancelMovieJob,
+  useClearMovieLeftOut,
   useCompleteMovieJob,
   useCreateMovie,
   useDeleteMovie,
@@ -217,6 +219,61 @@ describe('creating a movie', () => {
 
     expect(second?.id).not.toBe(first?.id);
     expect(second?.title).toBe('무비 08-03 (2)');
+  });
+
+  // MOV-21: the edit draft's movie starts with the windows it chose and the
+  // snaps it left out.
+  it('starts each cut with the window it was given, and keeps the snaps left out', async () => {
+    const { result } = await renderHook(() => useCreateMovie());
+
+    let movie: Movie | undefined;
+    await act(async () => {
+      movie = result.current({
+        snapIds: ['s1', 's2'],
+        arranger: 'ai',
+        windows: new Map([
+          ['s1', { trim: { startSec: 0.4, endSec: 2.6 }, trimOwner: 'ai' as const }],
+        ]),
+        leftOut: ['s3'],
+        createdAt,
+      });
+    });
+
+    expect(movie?.snapRefs).toEqual([
+      { snapId: 's1', order: 0, trim: { startSec: 0.4, endSec: 2.6 }, trimOwner: 'ai' },
+      { snapId: 's2', order: 1 },
+    ]);
+    expect(movie?.leftOut).toEqual(['s3']);
+  });
+
+  it('dismisses the left-out snaps without owing the server a write', async () => {
+    const { result: create } = await renderHook(() => useCreateMovie());
+    const { result: clear } = await renderHook(() => useClearMovieLeftOut());
+    let movie: Movie | undefined;
+    await act(async () => {
+      movie = create.current({ snapIds: ['s1'], leftOut: ['s2'], createdAt });
+    });
+    // As if the create had been sent.
+    useMovieStore.setState({ pending: {} });
+    const version = getMovieOutbox().versions[movie!.id];
+
+    await act(async () => clear.current(movie!.id));
+
+    expect(getMovieById(movie!.id)?.leftOut).toBeUndefined();
+    expect(getMovieById(movie!.id)?.updatedAt).toBe(createdAt);
+    expect(getMovieOutbox().pending).toEqual({});
+    expect(getMovieOutbox().versions[movie!.id]).toBe(version);
+  });
+
+  it('reads the style of the movie last worked on', () => {
+    expect(getLatestMovieStyle()).toBeUndefined();
+    useMovieStore.setState({
+      movies: [
+        { ...makeMovie('old', ['s1']), style: 'travel', updatedAt: 1 },
+        { ...makeMovie('new', ['s2']), style: 'emotional', updatedAt: 2 },
+      ],
+    });
+    expect(getLatestMovieStyle()).toBe('emotional');
   });
 
   it('reads back by id without subscribing', async () => {

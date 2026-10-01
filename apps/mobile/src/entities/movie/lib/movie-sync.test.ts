@@ -62,6 +62,12 @@ describe('movieFromRemote', () => {
     expect(movieFromRemote(remote(), local({ bgm: 'sunny-day' })).bgm).toBe('sunny-day');
   });
 
+  // The server never hears of the edit draft's left-out snaps (MOV-21).
+  it('keeps the left-out snaps, which the server does not hold', () => {
+    expect(movieFromRemote(remote(), local({ leftOut: ['s9'] })).leftOut).toEqual(['s9']);
+    expect(movieFromRemote(remote(), local()).leftOut).toBeUndefined();
+  });
+
   it('hands a run this device did not start to the runner as an adopted job', () => {
     const movie = movieFromRemote(remote({ status: 'generating', jobId: 'job-9' }), undefined);
 

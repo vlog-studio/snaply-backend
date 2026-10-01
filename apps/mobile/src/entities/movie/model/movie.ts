@@ -6,6 +6,13 @@
 export const MovieSnapLimit = 10;
 
 /**
+ * How many snaps one edit draft may be handed (root docs/specs/movie.md MOV-21).
+ * More than {@link MovieSnapLimit}, so the draft has something to choose from;
+ * the server enforces it and answers `max` when it moves.
+ */
+export const MovieDraftSnapLimit = 30;
+
+/**
  * The look a movie is generated with — the three presets the backend's editing
  * pipeline actually implements, no more and no fewer (2026-08-07).
  *
@@ -268,6 +275,14 @@ export type Movie = {
   arranger?: MovieArranger;
   /** Present only while a job is in flight; cleared when it finishes. */
   job?: MovieJob;
+  /**
+   * Snaps the edit draft was handed but did not put in (MOV-21), so the movie
+   * screen can say how many and offer them back. **This device's only** — the
+   * server never hears of it, the way it never hears of `bgm`. Read through what
+   * is still worth offering (a snap re-added or deleted since is not), and gone
+   * once the user dismisses the notice.
+   */
+  leftOut?: string[];
   render?: MovieRender;
   /**
    * Epoch milliseconds the user "finished" the movie — took the result by
