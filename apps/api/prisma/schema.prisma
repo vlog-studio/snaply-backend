@@ -181,6 +181,7 @@ model Video {
   editJobs   EditJob[]
   snsUploads SnsUpload[]
   analyses   VideoAnalysis[]
+  signals    VideoSignals?
   recommendationItems MovieRecommendationItem[]
   movieClips MovieClip[]
   notificationLogs NotificationLog[]
@@ -266,6 +267,38 @@ model VideoAnalysis {
   @@index([userId, status])
   @@index([status, createdAt])
   @@map("video_analyses")
+}
+
+// 스냅의 로컬 신호 — AI 편집 초안(specs/movie.md MOV-21)이 고르고 자르는 데 쓴다.
+//
+// 모델 출력이 아니다. 업로드 뒤 렌디션 워커가 원본 프레임·오디오에서 계산한다
+// (apps/ai-worker/src/pipeline/snap_signals.py). 그래서 분석 동의와 무관하게 있고 동의 철회로 지우지
+// 않는다. 해시도 내용에서 나온 값이라 스냅 파일이 purge 될 때 함께 지운다.
+// 규칙: docs/decisions/edit-director.md
+model VideoSignals {
+  videoId        String   @id @map("video_id") @db.Uuid
+  /// 계산 방법의 버전(`SIGNALS_VERSION`). 다른 버전끼리 비교하지 않는다.
+  signalsVersion Int      @map("signals_version")
+  durationMs     Int      @map("duration_ms")
+  /// 움직임 값의 간격(밀리초).
+  stepMs         Int      @map("step_ms")
+  /// 평균 밝기 0~1.
+  brightness     Float
+  /// 대표 프레임 라플라시안 분산의 중앙값(짧은 변 360px). 작을수록 흐리다.
+  sharpness      Float
+  /// 대표 프레임(25·50·75%)의 8×8 평균 해시, 16자리 16진수.
+  frameHashes    String[] @map("frame_hashes")
+  /// stepMs 마다의 움직임 0~1.
+  motion         Float[]
+  hasAudio       Boolean  @map("has_audio")
+  /// 발화 구간 [[startMs, endMs], ...].
+  speech         Json
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@map("video_signals")
 }
 
 // 무비 템플릿 카탈로그 — 사용자가 "템플릿으로 시작"할 때 고르는 무비의 형태.

@@ -8,6 +8,11 @@
 
 **실패는 치명적이지 않다.** 렌디션이 없으면 다른 플랫폼에서 재생이 안 될 뿐, 스냅은 쓸 수
 있고 편집은 원본으로 돈다 — 그래서 실패해도 `videos.status` 는 건드리지 않는다.
+
+**로컬 신호도 여기서 계산한다**(`pipeline/snap_signals.py`). 원본을 이미 받아 둔 자리라 다시 받지
+않고, 업로드 직후에 계산해 두면 AI 편집 초안이 신호를 기다리지 않는다. 신호가 실패해도 렌디션은
+성공이다 — 신호가 없는 스냅은 초안에서 검사 없이 들어갈 뿐이다(docs/decisions/edit-director.md §1).
+신호가 없는 예전 스냅은 `only: "signals"` 작업으로 신호만 계산한다.
 """
 
 import asyncio
@@ -22,8 +27,10 @@ from loguru import logger
 import config
 import db
 import rendition_db
+import signals_db
 import storage
 from pipeline.rendition import RenditionError, build
+from pipeline.snap_signals import SignalsError, read_signals
 
 
 class RenditionSkipped(Exception):
@@ -58,6 +65,31 @@ async def _discard(keys: list[str | None]) -> None:
         except Exception as exc:  # noqa: BLE001 — 정리 실패로 작업을 재시도할 이유는 없다
             logger.warning("반영하지 못한 객체 삭제 실패 key={} 이유={}", key, exc)
             _capture(exc)
+
+
+async def _record_signals(video_id: str, local: str, duration_ms: int | None) -> None:
+    """렌디션 뒤의 신호 계산. 어떤 실패도 렌디션 결과를 바꾸지 않는다."""
+    try:
+        signals = await asyncio.to_thread(read_signals, local, duration_ms)
+        if await signals_db.save_signals(video_id, signals):
+            logger.info("신호 저장 video_id={} motion={}개", video_id, len(signals.motion))
+    except Exception as exc:  # noqa: BLE001 — 신호는 초안을 낫게 할 뿐 렌디션의 조건이 아니다
+        logger.warning("신호 계산 실패 video_id={} 이유={}", video_id, exc)
+        if not isinstance(exc, SignalsError):
+            _capture(exc)
+
+
+async def _run_signals(video_id: str, s3_key: str, work_dir: str) -> None:
+    """신호만 계산하는 작업 — 신호 없이 올라온 예전 스냅을 초안이 쓰려 할 때."""
+    ctx = await rendition_db.fetch_context(video_id)
+    if ctx is None or ctx["deleted_at"] is not None:
+        raise RenditionSkipped(f"영상이 없습니다: {video_id}")
+    local = os.path.join(work_dir, f"source{os.path.splitext(s3_key)[1] or '.mp4'}")
+    await asyncio.to_thread(storage.download, s3_key, local)
+    signals = await asyncio.to_thread(read_signals, local, None)
+    if not await signals_db.save_signals(video_id, signals):
+        raise RenditionSkipped(f"반영 대상이 없습니다: {video_id}")
+    logger.info("신호 저장 video_id={} motion={}개", video_id, len(signals.motion))
 
 
 async def _run(video_id: str, user_id: str, s3_key: str, work_dir: str) -> None:
@@ -96,12 +128,41 @@ async def _run(video_id: str, user_id: str, s3_key: str, work_dir: str) -> None:
         await _discard([rendition_key, thumbnail_key])
         raise RenditionSkipped(f"반영 대상이 없습니다: {video_id}")
 
+    await _record_signals(video_id, local, outcome.duration_ms)
+
     logger.info(
         "렌디션 완료 video_id={} key={} {}x{}", video_id, rendition_key, outcome.width, outcome.height
     )
 
 
+async def process_signals_job(job) -> dict:
+    video_id = job.data["videoId"]
+    logger.info("신호 작업 수신 video_id={}", video_id)
+    work_dir = tempfile.mkdtemp(prefix=f"signals_{video_id}_")
+    try:
+        await asyncio.wait_for(
+            _run_signals(video_id, job.data["s3Key"], work_dir),
+            timeout=config.RENDITION_TIMEOUT_SECONDS,
+        )
+        return {"videoId": video_id, "status": "ready"}
+    except RenditionSkipped as exc:
+        logger.info("신호 건너뜀 video_id={} 이유={}", video_id, exc)
+        return {"videoId": video_id, "status": "skipped"}
+    except SignalsError as exc:
+        # 읽을 수 없는 파일이다. 다시 시도해도 같다.
+        logger.error("신호 실패 video_id={} 이유={}", video_id, exc)
+        return {"videoId": video_id, "status": "failed"}
+    except Exception as exc:  # noqa: BLE001 — 스토리지 장애 등은 재시도 대상이다
+        logger.exception("신호 작업 중 예상치 못한 오류 video_id={}", video_id)
+        _capture(exc)
+        raise
+    finally:
+        shutil.rmtree(work_dir, ignore_errors=True)
+
+
 async def process_rendition_job(job, _job_token) -> dict:
+    if job.data.get("only") == "signals":
+        return await process_signals_job(job)
     video_id = job.data["videoId"]
     logger.info("렌디션 작업 수신 video_id={}", video_id)
     work_dir = tempfile.mkdtemp(prefix=f"rendition_{video_id}_")

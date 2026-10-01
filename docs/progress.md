@@ -1806,3 +1806,19 @@ AI 편집 초안(MOV-21)을 시작했다. 상한·표시 시점·미업로드·�
 - **자동 검증**: API 520개(주인 계약 6 신규 — 정렬로 전환이 떨어지는 경로에서 주인을 빼면 실패하는 것을 확인) · 워커 173개(Docker,
   `REQUIRE_FFMPEG=1`) · 모바일 `npm run verify:mobile` 156 suites / 1262 tests. 앱은 아직 `trimOwner` 를 보내지 않으므로 앱의
   저장은 모두 `user` 다 — 초안 흐름(5단계)에서 붙인다.
+
+## 2026-10-01 (이어서) — 스냅 로컬 신호(MOV-21 4단계, backlog A-11)
+
+- **워커** [`pipeline/snap_signals.py`](../apps/ai-worker/src/pipeline/snap_signals.py) — 밝기 · 흐림(라플라시안 분산) · 대표 프레임
+  셋의 8×8 평균 해시 · 100ms 마다의 움직임 · silero VAD 발화 구간. 모델을 부르지 않고 새 의존성도 없다(numpy · VAD 는
+  faster-whisper 에 이미 있다). 합성 3초 클립 하나에 0.35초.
+- **렌디션 워커** — 렌디션을 반영한 뒤 받아 둔 원본으로 신호를 계산해 `video_signals` 에 upsert 한다. 신호가 실패해도
+  렌디션은 성공이다. `only: "signals"` 작업은 렌디션 없이 신호만 계산한다(예전 스냅용, 적재는 초안 API 에서).
+- **DB** `20261001020000_add_video_signals` — 스냅당 한 행, `signals_version`. 지운 스냅에는 쓰지 않고, 스냅 파일 purge
+  (만료·회수 배치) 때 함께 지운다. 분석 동의와 무관하다.
+- **자동 검증**: 워커 196개(Docker, `REQUIRE_FFMPEG=1`, 23 신규 — 검은 화면은 어둡고, 흐린 사본은 선명도가 1/10 아래로
+  떨어지되 해시는 같고, 정지 화면은 움직임이 0, 가로 스냅도 같은 짧은 변으로 읽고, 무음은 발화가 없다) · API 522개(purge 2
+  신규) · 모바일 1262 tests. `save_signals` 의 SQL 은 `snaply_test` 에 실제로 써서 삽입 · 덮어쓰기 · 지운 스냅 거부를 확인했다.
+  두 마이그레이션은 `prisma migrate diff` 로 스키마와 어긋나지 않음을 확인했다(남은 차이는 이전 테이블의 기본값·인덱스
+  이름뿐이다).
+- 문턱값은 아직이다 — 실제 스냅의 분포로 정한다(backlog A-11).
