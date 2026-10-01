@@ -1649,3 +1649,25 @@ AI 편집 초안은 경계마다 고를 수 있는 전환을 편집 화면에서
   `renderToHardwareTextureAndroid` 를 켠다. 정지 프레임 방식(계획 §2.1의 대안)은 필요 없다.
 - 전환 시작 오차(플레이어 시계 기준)는 -1~21ms 였다. `timeUpdate` 를 50ms 간격으로 받고 남은 시간을 타이머로 보정했다.
 - `zoompunch` 는 단색 클립이라 배율 변화를 색으로 읽지 못해 이번에 확인하지 않았다(에뮬레이터 확인은 2026-09-28).
+
+## 2026-10-01 (이어서) — 전환 어휘와 사용자 수정의 무효화 액션(backlog A-7 · A-11)
+
+경계별 전환(MOV-22)의 첫 단계로 전환 `kind` 를 닫힌 집합으로 만들고, 사용자가 구간·전환을 고칠 때의
+무효화 판단을 사전에 넣었다. 아직 무비 계약·렌더·앱이 쓰지 않는 어휘다.
+
+- **`transition-vocabulary.json`(신규)** — v1 5종 `hardcut` · `crossfade` · `dip` · `flash` · `zoompunch`.
+  종류마다 timing(경계형/겹침형) · 길이 범위(정수 ms, 범위 밖은 거부) · 경계형의 걸침 비율 · easing · 폴백
+  (`hardcut`)을 담는다. `crossfade` 상한은 지금 `감성` 프리셋의 0.8초를 표현하도록 800ms 로 잡았다(계획의
+  툴 카드는 600 이었다). TS `transition.ts`, 워커 `pipeline/transition.py` 가 같은 파일을 읽고, 워커는 기동 시
+  검증 목록(`vocabulary.REQUIRED`)에 넣었다.
+- **해석 규칙 `resolveTransition` / `resolve_transition`** — 고른 전환을 경계 양쪽 컷의 길이·여분 프레임에 맞춰
+  줄이고, 사전의 최소 길이보다 짧아지면 `hardcut` 으로 바꾼다. 겹침형은 양쪽 여분 프레임의 두 배와 양쪽 컷
+  길이를, 경계형은 걸치는 몫이 컷 절반을 넘지 않게 상한을 잡는다. 앱 미리보기와 렌더가 같은 답을 내야 하므로
+  두 구현을 공용 픽스처 `packages/shared-types/fixtures/transition-resolution.json`(15건, 정확히 최소 길이 ·
+  여분 0 · 컷 절반 같은 경계값 포함)으로 함께 검사한다.
+- **무효화 사전에 `cut-trim` · `transition-edit`** — 둘 다 `attempt` 를 올리지 않는다. 트림은 컷 쌍이 그대로라
+  전환을 다시 고르지 않고 길이만 다시 해석한다(`timeline.transitions: retimed`). 전환 하나를 바꾸면 겹침형도
+  여분 프레임을 써서 무비 길이가 컷 길이의 합이라 컷이 움직이지 않는다(`timeline.cuts: preserved`) — 전환과
+  효과음만 무효화한다. 셀별 근거는 사전의 `note`.
+- **자동 검증**: API 테스트 473개(전환 어휘 신규 · 무효화 규칙 2개 추가) · 워커 155개(Docker 이미지, ffmpeg 포함) ·
+  모바일 `npm run verify:mobile` 152 suites / 1211 tests · shared-types·API lint·typecheck 통과.
