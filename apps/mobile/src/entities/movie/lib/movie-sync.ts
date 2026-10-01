@@ -52,6 +52,8 @@ export function movieFromRemote(remote: RemoteMovie, local: Movie | undefined): 
     arranger: remote.arranger,
     ...(remote.finishedAt !== undefined ? { finishedAt: remote.finishedAt } : null),
     ...(local?.settledJobId ? { settledJobId: local.settledJobId } : null),
+    // The server never hears of the draft's left-out snaps; the notice is kept.
+    ...(local?.leftOut ? { leftOut: local.leftOut } : null),
   };
 
   const sameRun = local?.job !== undefined && local.job.id === remote.jobId;

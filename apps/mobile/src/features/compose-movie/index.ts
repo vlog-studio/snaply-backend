@@ -4,6 +4,8 @@ export {
   type CancellationOutcome,
   type CutsOutcome,
   type CutsRefusal,
+  type DraftOutcome,
+  type DraftRefusal,
   type GenerationOutcome,
   type GenerationRefusal,
 } from './model/use-compose-movie';

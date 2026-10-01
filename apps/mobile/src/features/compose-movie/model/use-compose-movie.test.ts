@@ -17,6 +17,8 @@ const mockExportMovie = jest.fn();
 const mockSendMovie = jest.fn();
 const mockCancelEditJob = jest.fn();
 const mockCancelMovieJob = jest.fn();
+const mockRequestMovieDraft = jest.fn();
+const mockLatestStyle = jest.fn<string | undefined, []>();
 
 // Mock each dependency at its slice Public API so the test stays at the seam.
 jest.mock('@/entities/movie', () => {
@@ -24,9 +26,14 @@ jest.mock('@/entities/movie', () => {
   // tested there; this suite is about which rules apply and what they then write.
   const arrangement = jest.requireActual('@/entities/movie/lib/movie-arrangement');
   const dto = jest.requireActual('@/entities/movie/api/movie.dto');
+  const style = jest.requireActual('@/entities/movie/lib/movie-style');
   return {
     MovieSnapLimit: 10,
+    MovieDraftSnapLimit: 30,
     getMovieById: (id: string) => mockGetMovieById(id),
+    getLatestMovieStyle: () => mockLatestStyle(),
+    movieStyleOrDefault: style.movieStyleOrDefault,
+    requestMovieDraft: (...args: unknown[]) => mockRequestMovieDraft(...args),
     isAiArranged: arrangement.isAiArranged,
     sameArrangement: arrangement.sameArrangement,
     toMovieBody: dto.toMovieBody,
@@ -137,6 +144,102 @@ describe('startMovieFromSnaps', () => {
 
     expect(movie).toBeUndefined();
     expect(mockCreateMovie).not.toHaveBeenCalled();
+  });
+});
+
+describe('startMovieFromDraft', () => {
+  beforeEach(() => {
+    mockSnapIndex.mockReturnValue([
+      ['late', { capturedAt: 300 }],
+      ['early', { capturedAt: 100 }],
+      ['local', { capturedAt: 200 }],
+    ]);
+    mockSyncEntries.mockReturnValue({
+      late: { status: 'uploaded', videoId: 'v-late' },
+      early: { status: 'uploaded', videoId: 'v-early' },
+      // `local` has not finished uploading.
+    });
+    mockLatestStyle.mockReturnValue('emotional');
+    mockCreateMovie.mockImplementation((input) => makeMovie({ id: 'drafted', ...input }));
+  });
+
+  async function draft(snapIds: string[]) {
+    const { result } = await renderHook(() => useComposeMovie());
+    let outcome;
+    await act(async () => {
+      outcome = await result.current.startMovieFromDraft(snapIds);
+    });
+    return outcome;
+  }
+
+  it('hands the snaps over in capture order — uploaded by server id, the rest by local id and when shot', async () => {
+    mockRequestMovieDraft.mockResolvedValue({ cuts: [], leftOut: [] });
+    await draft(['late', 'local', 'early']);
+
+    expect(mockRequestMovieDraft).toHaveBeenCalledWith(
+      [{ videoId: 'v-early' }, { localId: 'local', capturedAt: 200 }, { videoId: 'v-late' }],
+      'emotional',
+    );
+  });
+
+  it('makes an ai-arranged movie whose every cut is the draft\u2019s, and keeps what it left out', async () => {
+    mockRequestMovieDraft.mockResolvedValue({
+      cuts: [{ videoId: 'v-early', trim: { startSec: 0.4, endSec: 2.6 } }, { localId: 'local' }],
+      leftOut: [{ videoId: 'v-late' }],
+    });
+    const outcome = await draft(['late', 'local', 'early']);
+
+    expect(mockCreateMovie).toHaveBeenCalledWith({
+      snapIds: ['early', 'local'],
+      arranger: 'ai',
+      style: 'emotional',
+      windows: new Map([
+        ['early', { trimOwner: 'ai', trim: { startSec: 0.4, endSec: 2.6 } }],
+        ['local', { trimOwner: 'ai' }],
+      ]),
+      leftOut: ['late'],
+    });
+    expect(outcome).toEqual({ movie: expect.objectContaining({ id: 'drafted' }) });
+  });
+
+  it('cuts to the default style when there is no movie to take one from', async () => {
+    mockLatestStyle.mockReturnValue(undefined);
+    mockRequestMovieDraft.mockResolvedValue({ cuts: [{ videoId: 'v-early' }], leftOut: [] });
+    await draft(['early']);
+
+    expect(mockRequestMovieDraft).toHaveBeenCalledWith([{ videoId: 'v-early' }], 'daily');
+  });
+
+  it.each([
+    [
+      'today\u2019s drafts are used up',
+      new ApiError('DRAFT_LIMIT', 'limit', { status: 429 }),
+      'limit',
+    ],
+    ['the server failed', new ApiError('INTERNAL', 'boom', { status: 500 }), 'unreachable'],
+    ['the request never left', new TypeError('Network request failed'), 'unreachable'],
+  ])('makes nothing when %s', async (_name, error, refused) => {
+    mockRequestMovieDraft.mockRejectedValue(error);
+    const outcome = await draft(['early', 'late']);
+
+    expect(outcome).toEqual({ refused });
+    expect(mockCreateMovie).not.toHaveBeenCalled();
+  });
+
+  it('makes nothing from an answer that names none of the snaps it was sent', async () => {
+    mockRequestMovieDraft.mockResolvedValue({ cuts: [{ videoId: 'v-stranger' }], leftOut: [] });
+
+    expect(await draft(['early'])).toEqual({ refused: 'unreachable' });
+    expect(mockCreateMovie).not.toHaveBeenCalled();
+  });
+
+  it('asks for nothing with no picks or past the draft cap', async () => {
+    const many = Array.from({ length: 31 }, (_, index) => `x${index}`);
+    mockSnapIndex.mockReturnValue(many.map((id, index) => [id, { capturedAt: index }]));
+
+    expect(await draft([])).toBeUndefined();
+    expect(await draft(many)).toBeUndefined();
+    expect(mockRequestMovieDraft).not.toHaveBeenCalled();
   });
 });
 

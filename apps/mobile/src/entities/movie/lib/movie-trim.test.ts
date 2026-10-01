@@ -120,10 +120,19 @@ describe('withoutTrim', () => {
 
 // MOV-22: a window the edit draft chose stays the draft's until the user edits it.
 describe('trim owner', () => {
-  const drafted: SnapRef = { snapId: 's1', order: 0, trim: { startSec: 0.4, endSec: 2.6 }, trimOwner: 'ai' };
+  const drafted: SnapRef = {
+    snapId: 's1',
+    order: 0,
+    trim: { startSec: 0.4, endSec: 2.6 },
+    trimOwner: 'ai',
+  };
 
   it('hands the window to the user when it is dragged', () => {
-    expect(withTrim(drafted, 0.5, 2.6, 3)).toEqual({ snapId: 's1', order: 0, trim: { startSec: 0.5, endSec: 2.6 } });
+    expect(withTrim(drafted, 0.5, 2.6, 3)).toEqual({
+      snapId: 's1',
+      order: 0,
+      trim: { startSec: 0.5, endSec: 2.6 },
+    });
   });
 
   it('hands it to the user when the cut is set to play whole', () => {

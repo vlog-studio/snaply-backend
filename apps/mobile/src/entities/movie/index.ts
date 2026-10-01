@@ -1,6 +1,7 @@
 export {
   applyMovieScope,
   applyRemoteMovies,
+  getLatestMovieStyle,
   getMovieById,
   getMovieOutbox,
   markMovieDeleteSent,
@@ -10,6 +11,7 @@ export {
   useAdvanceMovieJob,
   useBeginMovieJob,
   useCancelMovieJob,
+  useClearMovieLeftOut,
   useCompleteMovieJob,
   useCreateMovie,
   useDeleteMovie,
@@ -38,6 +40,13 @@ export {
   type MovieFinished,
 } from './api/write-movie';
 export { getMovies } from './api/get-movies';
+export {
+  requestMovieDraft,
+  type MovieDraftCut,
+  type MovieDraftProposal,
+  type MovieDraftSnap,
+  type MovieDraftSnapKey,
+} from './api/request-movie-draft';
 export { toMovieBody, type SnapIdResolver, type VideoIdResolver } from './api/movie.dto';
 export type { PendingWrite } from './lib/movie-sync';
 export { isAiArranged, sameArrangement } from './lib/movie-arrangement';
@@ -52,7 +61,7 @@ export {
   type TransitionBoundary,
   type TransitionSpec,
 } from './lib/movie-transition';
-export { MovieSnapLimit } from './model/movie';
+export { MovieDraftSnapLimit, MovieSnapLimit } from './model/movie';
 export { MovieTitleMaxLength } from './lib/movie-title';
 export { MovieBgmCatalog } from './lib/movie-bgm';
 export { MovieStyleCatalog, movieStyleLabel, movieStyleOrDefault } from './lib/movie-style';
