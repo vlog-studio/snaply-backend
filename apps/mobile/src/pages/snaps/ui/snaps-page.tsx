@@ -50,6 +50,14 @@ export type SnapsPageProps = {
    * `?select=draft` for the edit draft.
    */
   startSelecting?: SelectionPurpose;
+  /**
+   * Which request to pick this is (`?at=`, minted per tap by the hrefs). This
+   * tab stays mounted, and the same `?select=` arriving a second time — the
+   * studio's row tapped again after a movie was made — would change no prop at
+   * all: navigation does not re-apply nested params equal to the last ones. A
+   * new request is what re-opens selection, not a new value.
+   */
+  selectionRequest?: string;
 };
 
 /**
@@ -77,7 +85,7 @@ export type SnapsPageProps = {
  * navigator then answers the confirming `back` by switching tabs instead of
  * returning to the movie the user came from.
  */
-export function SnapsPage({ startSelecting }: SnapsPageProps) {
+export function SnapsPage({ startSelecting, selectionRequest }: SnapsPageProps) {
   const theme = useTheme();
   const router = useRouter();
   const topInset = useTopContentInset();
@@ -192,9 +200,10 @@ export function SnapsPage({ startSelecting }: SnapsPageProps) {
   // state is not enough — the prop change has to be noticed. Adjusted during
   // render rather than in an effect: React re-runs this render before painting,
   // so the screen never flashes out of selection mode first.
-  const [lastStartSelecting, setLastStartSelecting] = useState(startSelecting);
-  if (startSelecting !== lastStartSelecting) {
-    setLastStartSelecting(startSelecting);
+  const arrival = startSelecting ? `${startSelecting}:${selectionRequest ?? ''}` : undefined;
+  const [lastArrival, setLastArrival] = useState(arrival);
+  if (arrival !== lastArrival) {
+    setLastArrival(arrival);
     if (startSelecting) {
       // Picks made for one purpose do not carry into the other: the caps differ,
       // and so does what confirming does with them.
