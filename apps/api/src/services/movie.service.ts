@@ -32,6 +32,8 @@ export interface ClipInput {
   videoId: string;
   startMs?: number;
   endMs?: number;
+  /** 구간을 정한 쪽. 없으면 사용자다 — AI 가 자른 구간은 초안을 옮기는 앱만 `ai` 로 보낸다. */
+  trimOwner?: MovieArranger;
   /** 사용자가 고른, 이 컷에서 다음 컷으로의 전환. 없으면 AI 가 고른다. */
   transition?: { kind: TransitionKind; durationMs?: number };
 }
@@ -44,6 +46,7 @@ interface ResolvedClip {
   videoId: string;
   startMs?: number;
   endMs?: number;
+  trimOwner?: MovieArranger;
   userTransition?: Transition;
 }
 
@@ -56,6 +59,7 @@ interface ClipRow {
   order: number;
   startMs: number | null;
   endMs: number | null;
+  trimOwner: string;
   transitionKind: string | null;
   transitionMs: number | null;
   transitionOwner: string;
@@ -104,6 +108,7 @@ const SELECT = {
       order: true,
       startMs: true,
       endMs: true,
+      trimOwner: true,
       transitionKind: true,
       transitionMs: true,
       transitionOwner: true,
@@ -145,6 +150,7 @@ function toDto(row: MovieRowWithJob): Movie {
       videoId: clip.videoId,
       ...(clip.startMs !== null ? { startMs: clip.startMs } : {}),
       ...(clip.endMs !== null ? { endMs: clip.endMs } : {}),
+      trimOwner: clip.trimOwner as MovieArranger,
       unavailable: clip.video.deletedAt !== null || clip.video.status !== 'ready',
       transition: index === row.clips.length - 1 ? null : transitionDto(clip),
     })),
@@ -224,7 +230,7 @@ async function resolveClips(params: {
   return sorted.map(({ clip, index }, position) => {
     if (clip.userTransition === undefined || sorted[position + 1]?.index === index + 1) return clip;
     // 사용자가 고른 전환은 그 두 컷의 것이다 — 정렬로 떨어졌으면 AI 에게 돌아간다.
-    return { videoId: clip.videoId, startMs: clip.startMs, endMs: clip.endMs };
+    return { videoId: clip.videoId, startMs: clip.startMs, endMs: clip.endMs, trimOwner: clip.trimOwner };
   });
 }
 
@@ -285,6 +291,7 @@ function clipCreateData(clips: ResolvedClip[], aiTransitions: Transition[]) {
       order: index,
       startMs: clip.startMs ?? null,
       endMs: clip.endMs ?? null,
+      trimOwner: clip.trimOwner ?? ('user' as const),
       transitionKind: chosen?.kind ?? null,
       transitionMs: chosen !== null && chosen.kind !== 'hardcut' ? chosen.durationMs : null,
       transitionOwner: !isLast && clip.userTransition !== undefined ? ('user' as const) : ('ai' as const),
@@ -300,6 +307,7 @@ function resolvedFromRows(rows: ClipRow[]): ResolvedClip[] {
       videoId: row.videoId,
       ...(row.startMs !== null ? { startMs: row.startMs } : {}),
       ...(row.endMs !== null ? { endMs: row.endMs } : {}),
+      trimOwner: row.trimOwner as MovieArranger,
       ...(row.transitionOwner === 'user' && transition !== null ? { userTransition: transition } : {}),
     };
   });

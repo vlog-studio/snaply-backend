@@ -371,8 +371,8 @@ e2e 실검증.
 
 - [x] **컷 역할 사전** — [`cut-role-vocabulary.json`](../packages/shared-types/src/cut-role-vocabulary.json), TS·워커 로더와
       정합성 테스트(2026-10-01). editSpec v3 의 `cuts[].role` 에 싣는 일은 초안 제안 API 와 함께 한다
-- [ ] **무비 계약: 구간의 주인(`ai`·`user`)** — 경계별 전환과 그 주인은 들어왔다(2026-10-01). 구간에도 주인을
-      둔다(결정 §2.2). 계약 · `openapi.json` · [api-spec.md](./api-spec.md)를 같은 변경에서 고친다
+- [x] **무비 계약: 구간의 주인(`ai`·`user`)** — 컷마다 `trimOwner`(2026-10-01). 생략하면 `user`, 기존 행도 `user`.
+      앱은 아직 보내지 않는다 — 초안을 옮기는 앱 흐름에서 `ai` 를 보내고 다시 보낼 때 유지한다
 - [ ] **로컬 신호 reader** — 스냅 사이 중복 · 스냅 안의 좋은 구간 · 밝기·흐림 · 발화 구간(VAD). 업로드 후
       렌디션 작업에서 계산해 둔다. 분석 활성화와 무관하게 쓴다(계획 §4). 거르기·중복의 문턱값을 팀 스냅으로
       정해 [edit-director.md](./decisions/edit-director.md) §2 를 고친다

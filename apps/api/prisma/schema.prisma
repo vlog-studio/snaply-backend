@@ -560,6 +560,9 @@ model MovieClip {
   /// 트림 구간(밀리초). 없으면 스냅 전체를 쓴다.
   startMs Int? @map("start_ms")
   endMs   Int? @map("end_ms")
+  /// 구간을 정한 쪽(specs/movie.md MOV-22). ai 는 초안(MOV-21)이 자른 구간이라 시스템이 다시 고를 수 있고,
+  /// user 구간은 바꾸지 않는다. 스냅 전체(구간 없음)도 주인이 있다.
+  trimOwner MovieArranger @default(user) @map("trim_owner")
   /// 이 컷에서 다음 컷으로 넘어가는 전환 — `transition-vocabulary.json` 의 kind. 마지막 컷은 NULL.
   /// 경계를 컷 쪽에 두는 이유는 컷 목록이 통째로 교체되기 때문이다(경계 테이블을 따로 두면 두 목록이 어긋난다).
   transitionKind  String?       @map("transition_kind") @db.VarChar(20)

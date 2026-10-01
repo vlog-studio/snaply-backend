@@ -971,6 +971,14 @@
             "minimum": 1,
             "maximum": 9007199254740991
           },
+          "trimOwner": {
+            "type": "string",
+            "enum": [
+              "user",
+              "ai"
+            ],
+            "description": "구간(스냅 전체 포함)을 정한 쪽. `ai` 는 편집 초안이 자른 구간이라 시스템이 다시 고를 수 있고, `user` 구간은 바꾸지 않는다."
+          },
           "unavailable": {
             "type": "boolean",
             "description": "참조하던 스냅이 사라진 컷. `true` 면 재생할 수 없고 편집에서 빼야 한다."
@@ -987,6 +995,7 @@
         },
         "required": [
           "videoId",
+          "trimOwner",
           "unavailable",
           "transition"
         ]
@@ -2259,6 +2268,14 @@
             "minimum": 1,
             "maximum": 9007199254740991
           },
+          "trimOwner": {
+            "type": "string",
+            "enum": [
+              "user",
+              "ai"
+            ],
+            "description": "구간(스냅 전체 포함)을 정한 쪽. `ai` 는 편집 초안이 자른 구간이라 시스템이 다시 고를 수 있고, `user` 구간은 바꾸지 않는다."
+          },
           "unavailable": {
             "type": "boolean",
             "description": "참조하던 스냅이 사라진 컷. `true` 면 재생할 수 없고 편집에서 빼야 한다."
@@ -2275,6 +2292,7 @@
         },
         "required": [
           "videoId",
+          "trimOwner",
           "unavailable",
           "transition"
         ],
@@ -5752,6 +5770,14 @@
                           "minimum": 1,
                           "maximum": 9007199254740991
                         },
+                        "trimOwner": {
+                          "description": "구간을 정한 쪽. 생략하면 `user` 다. 편집 초안이 자른 구간을 그대로 옮길 때만 `ai` 를 보내고, 사용자가 구간을 고치면 `user` 로 보낸다 — **`PATCH` 로 컷을 다시 보낼 때 `ai` 를 빠뜨리면 사용자 것이 된다.**",
+                          "type": "string",
+                          "enum": [
+                            "user",
+                            "ai"
+                          ]
+                        },
                         "transition": {
                           "description": "이 컷에서 다음 컷으로 넘어가는 전환을 사용자가 고른 경우에만 보낸다. 생략하면 서버가 고른다(`owner: ai`). 마지막 컷에 보내면 400. `arranger: ai` 정렬로 다음 컷이 바뀌면 그 경계는 서버가 다시 고른다.",
                           "type": "object",
@@ -6279,6 +6305,14 @@
                           "type": "integer",
                           "minimum": 1,
                           "maximum": 9007199254740991
+                        },
+                        "trimOwner": {
+                          "description": "구간을 정한 쪽. 생략하면 `user` 다. 편집 초안이 자른 구간을 그대로 옮길 때만 `ai` 를 보내고, 사용자가 구간을 고치면 `user` 로 보낸다 — **`PATCH` 로 컷을 다시 보낼 때 `ai` 를 빠뜨리면 사용자 것이 된다.**",
+                          "type": "string",
+                          "enum": [
+                            "user",
+                            "ai"
+                          ]
                         },
                         "transition": {
                           "description": "이 컷에서 다음 컷으로 넘어가는 전환을 사용자가 고른 경우에만 보낸다. 생략하면 서버가 고른다(`owner: ai`). 마지막 컷에 보내면 400. `arranger: ai` 정렬로 다음 컷이 바뀌면 그 경계는 서버가 다시 고른다.",

@@ -62,6 +62,9 @@ export const movieClipSchema = z
       .optional()
       .describe('트림 시작(밀리초). 생략하면 처음부터.'),
     endMs: z.int().min(1).optional().describe('트림 끝(밀리초). 생략하면 끝까지.'),
+    trimOwner: movieArrangerSchema.describe(
+      '구간(스냅 전체 포함)을 정한 쪽. `ai` 는 편집 초안이 자른 구간이라 시스템이 다시 고를 수 있고, `user` 구간은 바꾸지 않는다.',
+    ),
     /**
      * 스냅이 만료·삭제돼 더 이상 재생할 수 없는 컷. 무비는 그래도 열려야 하므로
      * (specs/snap-library.md SNAP-12) 컷을 빼는 대신 이 표시를 붙여 돌려준다.
@@ -116,6 +119,11 @@ const clipInputSchema = z.object({
   videoId: z.uuid(),
   startMs: z.int().min(0).optional(),
   endMs: z.int().min(1).optional(),
+  trimOwner: movieArrangerSchema
+    .optional()
+    .describe(
+      '구간을 정한 쪽. 생략하면 `user` 다. 편집 초안이 자른 구간을 그대로 옮길 때만 `ai` 를 보내고, 사용자가 구간을 고치면 `user` 로 보낸다 — **`PATCH` 로 컷을 다시 보낼 때 `ai` 를 빠뜨리면 사용자 것이 된다.**',
+    ),
   transition: transitionInputSchema
     .optional()
     .describe(
