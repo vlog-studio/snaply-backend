@@ -44,11 +44,13 @@ export interface PurgeOutcome {
  * **행은 남긴다.** 사용자는 무엇이 사라졌는지 알 수 있어야 하고(SNAP-12), 그 영상을 참조하던
  * 무비의 컷도 깨지지 않아야 한다. 그래서 지우는 것은 바이트뿐이고 메타데이터는 남는다.
  * URL 컬럼은 비운다 — 더 이상 가리킬 대상이 없는 주소를 남기면 앱이 404 를 재생하려 든다.
+ * 로컬 신호(`video_signals`)도 지운다 — 프레임 해시는 내용에서 나온 값이고, 파일이 없는 스냅은 초안에 쓸 수 없다.
  */
 async function purgeVideoAssets(video: VideoAssets & { id: string }): Promise<void> {
   for (const key of ownedObjectKeys(video)) {
     await deleteObject(key);
   }
+  await getPrisma().videoSignals.deleteMany({ where: { videoId: video.id } });
   await getPrisma().video.update({
     where: { id: video.id },
     data: {
@@ -206,6 +208,7 @@ export async function purgeOrphanedObjects(): Promise<PurgeOutcome> {
       for (const key of ownedObjectKeys(video)) {
         await deleteObject(key);
       }
+      await prisma.videoSignals.deleteMany({ where: { videoId: video.id } });
       // 키를 비워야 다음 실행에서 다시 걸리지 않는다. 삭제 사유는 원래 값을 유지한다.
       await prisma.video.update({
         where: { id: video.id },

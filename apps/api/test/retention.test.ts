@@ -208,6 +208,58 @@ describe('무비 결과물 만료', () => {
   });
 });
 
+/** 렌디션 워커가 쓰는 로컬 신호 한 행(apps/ai-worker/src/signals_db.py). */
+async function addSignals(videoId: string): Promise<void> {
+  await h.prisma.videoSignals.create({
+    data: {
+      videoId,
+      signalsVersion: 1,
+      durationMs: 3000,
+      stepMs: 100,
+      brightness: 0.5,
+      sharpness: 300,
+      frameHashes: ['0123456789abcdef'],
+      motion: [0.01, 0.02],
+      hasAudio: true,
+      speech: [[200, 900]],
+    },
+  });
+}
+
+describe('로컬 신호는 파일과 함께 사라진다', () => {
+  it('만료로 파일을 지우면 신호도 지운다 — 프레임 해시는 내용에서 나온 값이다', async () => {
+    const user = await h.createUser();
+    const snapId = await snapUploadedDaysAgo(user, SNAP_RETENTION_DAYS + 1);
+    const freshId = await snapUploadedDaysAgo(user, SNAP_RETENTION_DAYS - 1);
+    await addSignals(snapId);
+    await addSignals(freshId);
+
+    await purgeExpiredSnaps();
+
+    expect(await h.prisma.videoSignals.findUnique({ where: { videoId: snapId } })).toBeNull();
+    expect(await h.prisma.videoSignals.findUnique({ where: { videoId: freshId } })).not.toBeNull();
+  });
+
+  it('사용자가 지운 스냅의 파일을 회수할 때도 지운다', async () => {
+    const user = await h.createUser();
+    const deleted = await h.prisma.video.create({
+      data: {
+        userId: user.id,
+        kind: 'source',
+        status: 'deleted',
+        s3Key: `uploads/${user.id}/${crypto.randomUUID()}.mp4`,
+        deletedAt: new Date(),
+        removalReason: 'user',
+      },
+    });
+    await addSignals(deleted.id);
+
+    await purgeOrphanedObjects();
+
+    expect(await h.prisma.videoSignals.findUnique({ where: { videoId: deleted.id } })).toBeNull();
+  });
+});
+
 describe('남은 S3 객체 회수', () => {
   it('행은 지워졌다는데 키가 남아 있는 영상을 찾아 정리한다', async () => {
     const user = await h.createUser();
