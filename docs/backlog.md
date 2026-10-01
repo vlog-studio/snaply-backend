@@ -376,8 +376,8 @@ e2e 실검증.
       [decisions/edit-spec-v3.md](./decisions/edit-spec-v3.md) §4). v3 의 컷·전환 부분을 `edit-v3` 큐로 먼저 낸다
 - [ ] **앱: 경계별 전환 선택과 미리보기** — 무대와 같은 구조의 임시 화면으로 v1 전환이 그려지는 것을
       확인했다(iOS 시뮬레이터는 전부, Android 에뮬레이터는 `crossfade` 만 실패 — [progress.md](./progress.md)
-      2026-09-28). 남은 것: ① **Android 실기기에서 영상 두 개를 겹친 `crossfade`** — 안 되면 정지 프레임 방식으로
-      (계획 §2.1) ② 무대의 `timeUpdate` 간격(지금 250ms)을 경계 근처에서 줄인다 — 검증은 50ms 간격과 타이머 보정으로
+      2026-09-28). Android 실기기의 `crossfade` 는 페이드하는 플레이어를 감싼 뷰에 그 동안만
+      `renderToHardwareTextureAndroid` 를 켜면 된다(progress.md 2026-10-01). 남은 것: ② 무대의 `timeUpdate` 간격(지금 250ms)을 경계 근처에서 줄인다 — 검증은 50ms 간격과 타이머 보정으로
       전환 시작 오차 2~50ms 였다 ③ 경계를 눌러 전환을 고르는 UI
 - [ ] **로컬 신호 reader** — 스냅 사이 중복 · 스냅 안의 좋은 구간 · 밝기·흐림 · 발화 구간(VAD). 분석
       활성화와 무관하게 쓴다(계획 §4)

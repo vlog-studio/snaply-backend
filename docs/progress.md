@@ -1626,3 +1626,26 @@ AI 편집 초안은 경계마다 고를 수 있는 전환을 편집 화면에서
 - 두 번째 촬영이 에뮬레이터 카메라 HAL 의 버퍼 대기(`Can't dequeue next output buffer`)로 멈췄고, 화면을 다시 열어 찍으니
   됐다. 이번 변경과 무관하다.
 - 확인용으로 만든 스냅 2개와 무비 초안 1개는 앱에서 지웠고, 에뮬레이터 앨범의 테스트 영상과 자동 저장 설정도 되돌렸다.
+
+## 2026-10-01 — Android 실기기에서 영상 두 개를 겹친 `crossfade`(backlog A-11 ①)
+
+2026-09-28 에 Android 에뮬레이터에서만 실패한 `crossfade` 를 오너의 Galaxy S22 Ultra(dev 빌드)에서 다시 돌렸다. 같은
+구조의 임시 화면(`expo-video` 플레이어 둘 · `surfaceType="textureView"` · 감싼 `Animated.View` 의 불투명도)을 만들어
+돌린 뒤 지웠다(커밋하지 않음). 클립은 720×1280 H.264 High 세 개 — 처음에는 단색, 마지막에는 시간에 따라 초록 성분이
+늘어나는 색(전환 중에도 영상이 움직이는지 보려고). 각 클립의 0.5~2.5초를 쓰고 앞뒤 0.5초를 여분 프레임으로 남겼다.
+`screenrecord` 를 30fps 로 풀어 무대 색을 프레임마다 읽었고, 각 경우를 두 번씩 돌렸다.
+
+| 경우 | 결과 |
+|---|---|
+| `hardcut` · `dip` · `flash` | ✅ |
+| `crossfade` — 들어오는 컷을 위에, 또는 나가는 컷을 위에(쌓는 순서를 바꿈) | ❌ 에뮬레이터와 같다. 위 영상이 반투명인 동안 아래 영상이 검다 |
+| `crossfade` — 쌓는 순서 고정 | ❌ 같다. 순서 변경이 원인이 아니다 |
+| `crossfade` — 감싼 뷰에 `needsOffscreenAlphaCompositing` 만 | ❌ 같다 |
+| `crossfade` — 감싼 뷰에 `renderToHardwareTextureAndroid` | ✅ 두 색이 고르게 섞이고(중간 프레임 R≈B), 섞이는 동안 두 영상 모두 계속 움직인다 |
+| `crossfade` — `renderToHardwareTextureAndroid` 를 페이드 0.8초 동안만 켬 | ✅ 켜고 끄는 순간 깜빡임이 없다 |
+| `crossfade` — 나가는 컷의 프레임을 이미지로 올려 사라지게 | ✅ 섞이지만, 이미지 소스를 바꿀 때 이전 이미지가 한 프레임 보였다 |
+
+- **영상 두 개를 겹친 `crossfade` 는 Android 실기기에서 된다** — 페이드하는 플레이어를 감싼 뷰에 그 동안만
+  `renderToHardwareTextureAndroid` 를 켠다. 정지 프레임 방식(계획 §2.1의 대안)은 필요 없다.
+- 전환 시작 오차(플레이어 시계 기준)는 -1~21ms 였다. `timeUpdate` 를 50ms 간격으로 받고 남은 시간을 타이머로 보정했다.
+- `zoompunch` 는 단색 클립이라 배율 변화를 색으로 읽지 못해 이번에 확인하지 않았다(에뮬레이터 확인은 2026-09-28).
