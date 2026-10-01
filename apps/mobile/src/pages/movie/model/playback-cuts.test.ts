@@ -1,6 +1,6 @@
 import type { Snap } from '@/entities/snap';
 
-import { toCutIndex, toPlaybackCuts, toPlaybackIndex } from './playback-cuts';
+import { preRollSec, toCutIndex, toPlaybackCuts, toPlaybackIndex } from './playback-cuts';
 import type { Cut } from './use-movie-cuts';
 
 function makeSnap(id: string, durationSec = 3): Snap {
@@ -17,11 +17,21 @@ function makeSnap(id: string, durationSec = 3): Snap {
 
 function makeCut(
   id: string,
-  options: { durationSec?: number; trim?: Cut['ref']['trim']; missing?: boolean } = {},
+  options: {
+    durationSec?: number;
+    trim?: Cut['ref']['trim'];
+    missing?: boolean;
+    transition?: Cut['ref']['transition'];
+  } = {},
 ): Cut {
   const snap = options.missing ? undefined : makeSnap(id, options.durationSec ?? 3);
   return {
-    ref: { snapId: id, order: 0, trim: options.trim },
+    ref: {
+      snapId: id,
+      order: 0,
+      trim: options.trim,
+      ...(options.transition ? { transition: options.transition } : null),
+    },
     snap,
     unavailable: false,
     usedSec: snap
@@ -91,5 +101,90 @@ describe('toCutIndex', () => {
 
   it('answers 0 for an empty list', () => {
     expect(toCutIndex([], 0)).toBe(0);
+  });
+});
+
+describe('boundary transitions in the playlist', () => {
+  const into = (
+    toSnapId: string,
+    kind: 'crossfade' | 'dip' | 'zoompunch' | 'hardcut',
+    durationMs?: number,
+  ) => ({
+    kind,
+    ...(durationMs !== undefined ? { durationMs } : null),
+    owner: 'user' as const,
+    toSnapId,
+  });
+
+  it('plans a crossfade half before and half after the boundary, on spare frames', () => {
+    const [first, second] = toPlaybackCuts([
+      makeCut('s1', {
+        trim: { startSec: 0.5, endSec: 2.5 },
+        transition: into('s2', 'crossfade', 400),
+      }),
+      makeCut('s2', { trim: { startSec: 0.5, endSec: 2.5 } }),
+    ]);
+    expect(first.transitionOut).toEqual({
+      kind: 'crossfade',
+      durationSec: 0.4,
+      leadSec: 0.2,
+      tailSec: 0.2,
+    });
+    // The incoming cut is parked that far before its window.
+    expect(preRollSec(first)).toBe(0.2);
+    expect(second.transitionOut).toBeUndefined();
+  });
+
+  it('plays a crossfade without spare frames as the render does — a dip', () => {
+    // Untrimmed cuts have no frames outside their windows.
+    const [first] = toPlaybackCuts([
+      makeCut('s1', { transition: into('s2', 'crossfade', 800) }),
+      makeCut('s2'),
+    ]);
+    expect(first.transitionOut).toEqual({
+      kind: 'dip',
+      durationSec: 0.4,
+      leadSec: 0.2,
+      tailSec: 0.2,
+    });
+    expect(preRollSec(first)).toBe(0);
+  });
+
+  it('puts a zoom punch wholly on the incoming cut', () => {
+    const [first] = toPlaybackCuts([
+      makeCut('s1', { transition: into('s2', 'zoompunch', 300) }),
+      makeCut('s2'),
+    ]);
+    expect(first.transitionOut).toEqual({
+      kind: 'zoompunch',
+      durationSec: 0.3,
+      leadSec: 0,
+      tailSec: 0.3,
+    });
+  });
+
+  it('cuts where the boundary is a hardcut, not read back yet, or chosen for another cut', () => {
+    const cuts = toPlaybackCuts([
+      makeCut('s1', { transition: into('s2', 'hardcut') }),
+      makeCut('s2'),
+      makeCut('s3', { transition: into('s9', 'dip', 400) }),
+      makeCut('s4'),
+    ]);
+    expect(cuts.map((cut) => cut.transitionOut)).toEqual([
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+    ]);
+  });
+
+  it('cuts past a dead cut instead of handing over to it', () => {
+    const cuts = toPlaybackCuts([
+      makeCut('s1', { transition: into('s2', 'dip', 400) }),
+      makeCut('s2', { missing: true }),
+      makeCut('s3'),
+    ]);
+    expect(cuts).toHaveLength(2);
+    expect(cuts[0].transitionOut).toBeUndefined();
   });
 });

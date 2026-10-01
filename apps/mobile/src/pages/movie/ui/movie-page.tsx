@@ -5,7 +5,13 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { BackHandler, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { isAiArranged, movieStyleLabel, useDeleteMovie } from '@/entities/movie';
+import {
+  isAiArranged,
+  movieStyleLabel,
+  transitionAfter,
+  useDeleteMovie,
+  type TransitionKind,
+} from '@/entities/movie';
 import { useSnapFiles, type Snap } from '@/entities/snap';
 import { useComposeMovie, useRenderSource } from '@/features/compose-movie';
 import { FinishMovieConfirm } from '@/features/finish-movie';
@@ -17,7 +23,7 @@ import { BottomSheet } from '@/shared/ui/bottom-sheet';
 import { MaxContentWidth, Radius, Spacing, useTheme } from '@/shared/ui/theme';
 import { ThemedText } from '@/shared/ui/themed-text';
 
-import { toCutIndex, toPlaybackCuts, toPlaybackIndex } from '../model/playback-cuts';
+import { boundaryPlan, toCutIndex, toPlaybackCuts, toPlaybackIndex } from '../model/playback-cuts';
 import type { TimelinePlayhead } from '../model/timeline-layout';
 import { useMovieCuts } from '../model/use-movie-cuts';
 import { useWatchCuts } from '../model/watch-cuts';
@@ -33,6 +39,7 @@ import { MovieActionsSheet } from './movie-actions-sheet';
 import { MovieWatch } from './movie-watch';
 import { CutsRefusalMessages, generationRefusalMessage, RefusalNotice } from './refusal-notice';
 import { StylePickerSheet } from './style-picker-sheet';
+import { TransitionPickerSheet } from './transition-picker-sheet';
 import { TimelineStrip } from './timeline-strip';
 
 export type MoviePageProps = {
@@ -95,6 +102,8 @@ export function MoviePage({ movieId }: MoviePageProps) {
 
   const [renaming, setRenaming] = useState(false);
   const [styleOpen, setStyleOpen] = useState(false);
+  // The boundary whose transition picker is open — after cut N — or -1.
+  const [transitionIndex, setTransitionIndex] = useState(-1);
   const [detailOpen, setDetailOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   // A ready movie opens as something to watch; the studio is asked for ("무비
@@ -131,6 +140,16 @@ export function MoviePage({ movieId }: MoviePageProps) {
   // offers the run rather than one cut's edit controls.
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const playerRef = useRef<CutPlayerHandle>(null);
+  // A transition pick's preview runs after the render that carries the pick: by then the stage holds the
+  // edited playlist (its handle is refreshed in the child's layout phase, which
+  // precedes this effect), so the preview plays the new transition, not the old.
+  const pendingPreviewRef = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    const index = pendingPreviewRef.current;
+    if (index === undefined) return;
+    pendingPreviewRef.current = undefined;
+    playerRef.current?.previewBoundary(index);
+  });
   const selected = cuts.length > 0 ? Math.min(selectedIndex, cuts.length - 1) : -1;
   // Mirrors the stage, for the transport's play/pause button.
   const [isPlaying, setIsPlaying] = useState(false);
@@ -198,6 +217,22 @@ export function MoviePage({ movieId }: MoviePageProps) {
   }
 
   const playbackCuts = toPlaybackCuts(cuts);
+  // What the open picker's boundary will actually play — a pick that does not
+  // fit its cuts plays as its fallback, and the sheet says so.
+  const pickerTransition =
+    transitionIndex >= 0
+      ? transitionAfter(
+          cuts.map((cut) => cut.ref),
+          transitionIndex,
+        )
+      : undefined;
+  const pickerPlan =
+    pickerTransition && cuts[transitionIndex + 1]
+      ? boundaryPlan(cuts[transitionIndex], cuts[transitionIndex + 1], pickerTransition)
+      : undefined;
+  const pickerPlayedKind: TransitionKind | undefined = pickerTransition
+    ? (pickerPlan?.kind ?? 'hardcut')
+    : undefined;
   const canPlay = playbackCuts.length > 0 && previewReady;
   const isGenerating = movie.status === 'generating';
   const viewing = movie.status === 'ready' && !editing;
@@ -257,6 +292,20 @@ export function MoviePage({ movieId }: MoviePageProps) {
   // transport's job. The selection is left alone: scrubbing is looking through
   // the movie, and every cut the finger passed would otherwise end up held. A
   // dead cut can be landed on but not shown; the playhead still moves there.
+  // A transition pick closes the sheet and plays the boundary at once: a
+  // transition is judged by watching it, and the sheet covers the stage. The
+  // stage plays it as it will be made — with the pick fitted to the cuts — once
+  // the edited playlist reaches the player on the next render.
+  const pickTransition = (kind: TransitionKind | undefined) => {
+    const index = transitionIndex;
+    setTransitionIndex(-1);
+    if (index < 0) return;
+    list.setTransition(index, kind);
+    const playbackIndex = toPlaybackIndex(cuts, index);
+    if (playbackIndex === undefined || toPlaybackIndex(cuts, index + 1) === undefined) return;
+    pendingPreviewRef.current = playbackIndex;
+  };
+
   const scrubTo = (target: TimelinePlayhead) => {
     if (target.index < 0) return;
     setPlayhead(target);
@@ -398,6 +447,7 @@ export function MoviePage({ movieId }: MoviePageProps) {
             onDeselect={deselectCut}
             onTrim={list.trimCut}
             onAddSnaps={addSnaps}
+            onPickTransition={setTransitionIndex}
           />
 
           <View style={styles.content}>
@@ -551,6 +601,15 @@ export function MoviePage({ movieId }: MoviePageProps) {
         />
       </BottomSheet>
 
+      <TransitionPickerSheet
+        visible={transitionIndex >= 0}
+        index={Math.max(transitionIndex, 0)}
+        current={pickerTransition}
+        playedKind={pickerPlayedKind}
+        canEdit={canEdit}
+        onPick={pickTransition}
+        onClose={() => setTransitionIndex(-1)}
+      />
       <StylePickerSheet
         visible={styleOpen}
         movie={movie}

@@ -153,6 +153,8 @@ Fixed product vocabulary. Use exactly these words; never introduce a synonym.
 | 이 기기에서만 삭제 | Deleting a snap's file on this device while the server still keeps it; the opposite answer is `모든 기기에서 삭제` | 로컬 삭제, 서버에 남기기, 공간 정리 |
 | 삭제 | Removing something: `…삭제할까요?` / `삭제` / `삭제하는 중…` | 지우기, 지울까요 |
 | 정리 | Removing a finished movie's server copy once the user saved it (`무비 정리`, `정리하기`) | 끝내기, 서버에서 삭제 |
+| 전환 | How one 컷 hands over to the next (`전환`, `컷 1 → 2 전환`). The five are named by what they look like: `바로 넘기기`, `겹쳐 녹이기`, `검게 넘기기`, `번쩍 넘기기`, `확대하며 넘기기` | 트랜지션, 효과, 장면 전환 |
+| 자동으로 고르기 | Handing a 전환 back to the automatic pick; a boundary owned by it reads `자동`, one the user chose reads `직접 고름` | AI, AI 추천, 인공지능 |
 | 스냅 분석 | The opt-in look at a snap's still images that lets a template's 컷 be filled with better-fitting snaps; what the 나 tab switch and the template screen's offer turn on (`스냅 분석을 켤까요?`, `분석 켜기`, `분석해서 채우기`) | AI 분석, 영상 분석, 인공지능, 인식 |
 
 `트레이` is not a product term: picks go straight into a movie (`이 스냅으로 새 무비`, `스냅 더 넣기`), and no surface may name a destination other than a movie ([why there is no basket](../features/studio.md#why-there-is-no-basket-between-a-pick-and-a-movie)).
