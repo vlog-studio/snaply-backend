@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { TRANSITION_KINDS } from '../transition.js';
+
 /**
  * 계약에 쓰이는 닫힌 값 집합. 응답 스키마의 enum 이 곧 와이어 계약이므로, 값을 늘릴 때는
  * 여기 하나만 고친다 — 백엔드 직렬화·OpenAPI·앱 타입이 전부 이 파일에서 나온다.
@@ -50,6 +52,12 @@ export type MovieStatus = z.infer<typeof movieStatusSchema>;
 export const MOVIE_ARRANGERS = ['user', 'ai'] as const;
 export const movieArrangerSchema = z.enum(MOVIE_ARRANGERS);
 export type MovieArranger = z.infer<typeof movieArrangerSchema>;
+
+/**
+ * 컷 사이 전환의 종류(specs/movie.md MOV-22). 원천은 `transition-vocabulary.json` 이고 이 enum 은
+ * 그 이름 목록(`TRANSITION_KINDS`)을 그대로 쓴다 — 길이 범위·폴백도 그 사전에 있다.
+ */
+export const transitionKindSchema = z.enum(TRANSITION_KINDS);
 
 /** 무비 하나가 담을 수 있는 컷 수 (specs/movie.md MOV-5). */
 export const MOVIE_CLIP_MIN = 1;

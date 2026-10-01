@@ -808,6 +808,41 @@
           "createdAt"
         ]
       },
+      "MovieTransitionInput": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "hardcut",
+              "crossfade",
+              "dip",
+              "flash",
+              "zoompunch"
+            ],
+            "description": "전환 종류. 종류·길이 범위의 원천은 `transition-vocabulary.json`."
+          },
+          "durationMs": {
+            "description": "고른 길이(밀리초). `hardcut` 은 길이가 없어 생략된다.",
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991
+          },
+          "owner": {
+            "type": "string",
+            "enum": [
+              "user",
+              "ai"
+            ],
+            "description": "고른 쪽. `ai` 면 컷·스타일이 바뀔 때 서버가 다시 고르고, `user` 면 이 컷과 다음 컷이 이어져 있는 동안 유지된다."
+          }
+        },
+        "required": [
+          "kind",
+          "owner"
+        ]
+      },
       "MovieClipInput": {
         "type": "object",
         "properties": {
@@ -832,11 +867,21 @@
           "unavailable": {
             "type": "boolean",
             "description": "참조하던 스냅이 사라진 컷. `true` 면 재생할 수 없고 편집에서 빼야 한다."
+          },
+          "transition": {
+            "nullable": true,
+            "description": "이 컷에서 다음 컷으로 넘어가는 전환. 마지막 컷은 `null`.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MovieTransitionInput"
+              }
+            ]
           }
         },
         "required": [
           "videoId",
-          "unavailable"
+          "unavailable",
+          "transition"
         ]
       },
       "MovieInput": {
@@ -1939,6 +1984,42 @@
         ],
         "additionalProperties": false
       },
+      "MovieTransition": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "hardcut",
+              "crossfade",
+              "dip",
+              "flash",
+              "zoompunch"
+            ],
+            "description": "전환 종류. 종류·길이 범위의 원천은 `transition-vocabulary.json`."
+          },
+          "durationMs": {
+            "description": "고른 길이(밀리초). `hardcut` 은 길이가 없어 생략된다.",
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991
+          },
+          "owner": {
+            "type": "string",
+            "enum": [
+              "user",
+              "ai"
+            ],
+            "description": "고른 쪽. `ai` 면 컷·스타일이 바뀔 때 서버가 다시 고르고, `user` 면 이 컷과 다음 컷이 이어져 있는 동안 유지된다."
+          }
+        },
+        "required": [
+          "kind",
+          "owner"
+        ],
+        "additionalProperties": false
+      },
       "MovieClip": {
         "type": "object",
         "properties": {
@@ -1963,11 +2044,21 @@
           "unavailable": {
             "type": "boolean",
             "description": "참조하던 스냅이 사라진 컷. `true` 면 재생할 수 없고 편집에서 빼야 한다."
+          },
+          "transition": {
+            "nullable": true,
+            "description": "이 컷에서 다음 컷으로 넘어가는 전환. 마지막 컷은 `null`.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MovieTransition"
+              }
+            ]
           }
         },
         "required": [
           "videoId",
-          "unavailable"
+          "unavailable",
+          "transition"
         ],
         "additionalProperties": false
       },
@@ -5442,6 +5533,32 @@
                           "type": "integer",
                           "minimum": 1,
                           "maximum": 9007199254740991
+                        },
+                        "transition": {
+                          "description": "이 컷에서 다음 컷으로 넘어가는 전환을 사용자가 고른 경우에만 보낸다. 생략하면 서버가 고른다(`owner: ai`). 마지막 컷에 보내면 400. `arranger: ai` 정렬로 다음 컷이 바뀌면 그 경계는 서버가 다시 고른다.",
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "hardcut",
+                                "crossfade",
+                                "dip",
+                                "flash",
+                                "zoompunch"
+                              ]
+                            },
+                            "durationMs": {
+                              "description": "길이(밀리초). 생략하면 종류의 기본값. `hardcut` 에 보내면 400.",
+                              "type": "integer",
+                              "minimum": 0,
+                              "exclusiveMinimum": true,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": [
+                            "kind"
+                          ]
                         }
                       },
                       "required": [
@@ -5944,6 +6061,32 @@
                           "type": "integer",
                           "minimum": 1,
                           "maximum": 9007199254740991
+                        },
+                        "transition": {
+                          "description": "이 컷에서 다음 컷으로 넘어가는 전환을 사용자가 고른 경우에만 보낸다. 생략하면 서버가 고른다(`owner: ai`). 마지막 컷에 보내면 400. `arranger: ai` 정렬로 다음 컷이 바뀌면 그 경계는 서버가 다시 고른다.",
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "hardcut",
+                                "crossfade",
+                                "dip",
+                                "flash",
+                                "zoompunch"
+                              ]
+                            },
+                            "durationMs": {
+                              "description": "길이(밀리초). 생략하면 종류의 기본값. `hardcut` 에 보내면 400.",
+                              "type": "integer",
+                              "minimum": 0,
+                              "exclusiveMinimum": true,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": [
+                            "kind"
+                          ]
                         }
                       },
                       "required": [
