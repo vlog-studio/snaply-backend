@@ -1,4 +1,5 @@
 import type { Movie, SnapRef } from '../model/movie';
+import { sameTransitions } from './movie-transition';
 import { sameTrimWindow } from './movie-trim';
 
 /**
@@ -33,5 +34,16 @@ export function isEditedSinceRender(movie: Pick<Movie, 'snapRefs' | 'render'>): 
   if (!source) return false;
   const byOrder = (refs: readonly SnapRef[]) =>
     [...refs].sort((left, right) => left.order - right.order);
-  return !sameCuts(byOrder(movie.snapRefs), byOrder(source));
+  return !samePlayback(byOrder(movie.snapRefs), byOrder(source));
+}
+
+/**
+ * Whether two cut lists (in play order) would play the same: the same
+ * composition (`sameCuts`) handing over the same way at every boundary. The
+ * render drift is measured with this — a transition changed after a run
+ * changes what the stage plays — while the edit history keeps `sameCuts`,
+ * because the server filling in its own transition picks is not an edit.
+ */
+export function samePlayback(left: readonly SnapRef[], right: readonly SnapRef[]): boolean {
+  return sameCuts(left, right) && sameTransitions(left, right);
 }

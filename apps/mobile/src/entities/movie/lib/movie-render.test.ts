@@ -49,6 +49,17 @@ describe('isEditedSinceRender', () => {
     expect(isEditedSinceRender(movie({ snapRefs }))).toBe(true);
   });
 
+  it('reads a transition changed after the run as drift — the stage would play something else', () => {
+    const snapRefs: SnapRef[] = [
+      {
+        ...ref('s1', 0),
+        transition: { kind: 'flash', durationMs: 200, owner: 'user', toSnapId: 's2' },
+      },
+      ref('s2', 1),
+    ];
+    expect(isEditedSinceRender(movie({ snapRefs }))).toBe(true);
+  });
+
   it('compares by stored order, not array position', () => {
     expect(isEditedSinceRender(movie({ snapRefs: [ref('s2', 1), ref('s1', 0)] }))).toBe(false);
   });

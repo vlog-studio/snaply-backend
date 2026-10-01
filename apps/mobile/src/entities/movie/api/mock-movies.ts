@@ -93,13 +93,31 @@ export function mockFinishMovie(
   return { finishedAt, resultDeleted: current.resultVideoId !== null };
 }
 
+/**
+ * The mock's stand-in for the server's transition picks: the style's same-scene
+ * tendency without the seed (the real rules are the server's,
+ * `apps/api/src/services/transition-director.ts`). A user's pick is kept.
+ */
 function toFields(body: MovieBody) {
+  const aiPick =
+    body.stylePreset === '감성'
+      ? { kind: 'crossfade', durationMs: 800, owner: 'ai' }
+      : { kind: 'hardcut', owner: 'ai' };
   return {
     title: body.title,
     stylePreset: body.stylePreset,
     captions: body.captions,
     arranger: body.arranger,
-    clips: body.clips.map((clip) => ({ ...clip, unavailable: false })),
+    clips: body.clips.map(({ transition, ...clip }, index) => ({
+      ...clip,
+      unavailable: false,
+      transition:
+        index === body.clips.length - 1
+          ? null
+          : transition
+            ? { ...transition, owner: 'user' }
+            : aiPick,
+    })),
   };
 }
 

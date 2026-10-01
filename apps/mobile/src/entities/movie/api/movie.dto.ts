@@ -1,7 +1,8 @@
 import { z } from 'zod';
 
 import { movieStyleOrDefault } from '../lib/movie-style';
-import type { Movie, MovieStyle, SnapRef } from '../model/movie';
+import { isTransitionKind, transitionAfter } from '../lib/movie-transition';
+import type { Movie, MovieStyle, SnapRef, TransitionKind } from '../model/movie';
 
 import type { RemoteMovie } from '../model/remote-movie';
 
@@ -18,6 +19,13 @@ const clipDtoSchema = z.object({
   startMs: z.number().optional(),
   endMs: z.number().optional(),
   unavailable: z.boolean(),
+  // Optional: a server older than per-boundary transitions sends none. `kind`
+  // and `owner` stay strings — a kind this build has not heard of is dropped in
+  // the mapper rather than failing the read.
+  transition: z
+    .object({ kind: z.string(), durationMs: z.number().optional(), owner: z.string() })
+    .nullable()
+    .optional(),
 });
 
 export const movieDtoSchema = z.object({
@@ -99,6 +107,17 @@ export function mapRemoteMovie(dto: MovieDto, snapIdOf: SnapIdResolver): RemoteM
         ref.trim = { startSec: clip.startMs / 1000, endSec: clip.endMs / 1000 };
       }
       if (clip.unavailable) ref.unavailable = true;
+      const next = dto.clips[order + 1];
+      if (clip.transition && next && isTransitionKind(clip.transition.kind)) {
+        ref.transition = {
+          kind: clip.transition.kind,
+          ...(clip.transition.durationMs !== undefined
+            ? { durationMs: clip.transition.durationMs }
+            : null),
+          owner: clip.transition.owner === 'user' ? 'user' : 'ai',
+          toSnapId: snapIdOf(next.videoId) ?? next.videoId,
+        };
+      }
       return ref;
     }),
     ...(dto.resultVideoId ? { resultVideoId: dto.resultVideoId } : null),
@@ -110,7 +129,13 @@ export function mapRemoteMovie(dto: MovieDto, snapIdOf: SnapIdResolver): RemoteM
 }
 
 /** One cut as the server takes it. */
-export type MovieClipBody = { videoId: string; startMs?: number; endMs?: number };
+export type MovieClipBody = {
+  videoId: string;
+  startMs?: number;
+  endMs?: number;
+  /** Sent only for a boundary the user chose; the server picks the rest. */
+  transition?: { kind: TransitionKind; durationMs?: number };
+};
 
 /** What `POST /movies` and `PATCH /movies/{id}` are sent about a movie. */
 export type MovieBody = {
@@ -152,10 +177,21 @@ export function toMovieBody(
 ): MovieBody | undefined {
   const ordered = [...movie.snapRefs].sort((left, right) => left.order - right.order);
   const clips: MovieClipBody[] = [];
-  for (const ref of ordered) {
+  for (const [index, ref] of ordered.entries()) {
     const videoId = ref.videoId ?? videoIdOf(ref.snapId);
     if (!videoId) return undefined;
-    clips.push(toClipBody(videoId, ref));
+    const clip = toClipBody(videoId, ref);
+    // Only the user's own picks travel, and only while they still lead into the
+    // cut they were chosen for — a boundary left out is the server's to pick
+    // (root docs/api-spec.md, 무비 · MOV-22).
+    const transition = transitionAfter(ordered, index);
+    if (transition?.owner === 'user') {
+      clip.transition = {
+        kind: transition.kind,
+        ...(transition.durationMs !== undefined ? { durationMs: transition.durationMs } : null),
+      };
+    }
+    clips.push(clip);
   }
   return {
     title: movie.title,
