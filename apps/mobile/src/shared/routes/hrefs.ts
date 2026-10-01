@@ -21,7 +21,7 @@ export function movieHref(movieId: string): Href {
  * tab's empty state are the same act and must land in the same place.
  */
 export function snapPickerHref(): Href {
-  return { pathname: '/snaps', params: { select: '1' } };
+  return { pathname: '/snaps', params: { select: '1', at: pickingRequest() } };
 }
 
 /**
@@ -29,5 +29,16 @@ export function snapPickerHref(): Href {
  * row. The same picking surface with a different cap and a different confirm.
  */
 export function draftPickerHref(): Href {
-  return { pathname: '/snaps', params: { select: 'draft' } };
+  return { pathname: '/snaps', params: { select: 'draft', at: pickingRequest() } };
+}
+
+/**
+ * A fresh token per picking request. The Snap tab stays mounted, and navigation
+ * does not re-apply nested params equal to the ones it last had — so without it
+ * the same row tapped a second time opens the tab browsing instead of picking.
+ */
+let pickingRequests = 0;
+function pickingRequest(): string {
+  pickingRequests += 1;
+  return `${Date.now()}-${pickingRequests}`;
 }

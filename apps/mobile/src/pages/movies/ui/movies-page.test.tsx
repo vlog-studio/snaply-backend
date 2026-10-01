@@ -106,7 +106,11 @@ describe('MoviesPage', () => {
 
     await fireEvent.press(screen.getByRole('button', { name: emptyActionLabel }));
 
-    expect(mockPush).toHaveBeenCalledWith({ pathname: '/snaps', params: { select: '1' } });
+    // `at` tells one picking request from the next (shared/routes `snapPickerHref`).
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: '/snaps',
+      params: expect.objectContaining({ select: '1' }),
+    });
   });
 
   it('opens a movie on tap while not selecting', async () => {
