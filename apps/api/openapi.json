@@ -1193,6 +1193,101 @@
           "slots"
         ]
       },
+      "MovieDraftInput": {
+        "type": "object",
+        "properties": {
+          "stylePreset": {
+            "type": "string",
+            "enum": [
+              "감성",
+              "여행",
+              "일상"
+            ]
+          },
+          "cuts": {
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "videoId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "startMs": {
+                      "description": "자른 구간의 시작. 구간이 없으면 스냅 전체다.",
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "endMs": {
+                      "description": "자른 구간의 끝.",
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "videoId"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "localId": {
+                      "type": "string",
+                      "description": "요청의 `localId`. 스냅 전체를 쓴다."
+                    }
+                  },
+                  "required": [
+                    "localId"
+                  ]
+                }
+              ]
+            },
+            "description": "쓸 스냅. **배열 순서가 곧 재생 순서**(촬영순)다. 최대 10개."
+          },
+          "excluded": {
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "videoId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    }
+                  },
+                  "required": [
+                    "videoId"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "localId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "localId"
+                  ]
+                }
+              ]
+            },
+            "description": "넣지 않은 스냅, 촬영순. 이유는 주지 않는다 — 앱은 개수를 알리고 다시 넣을 수 있게 한다. 업로드되지 않은 스냅(`localId`)은 그런 스냅만 10개를 넘을 때만 빠진다."
+          }
+        },
+        "required": [
+          "stylePreset",
+          "cuts",
+          "excluded"
+        ]
+      },
       "MovieRecommendationInput": {
         "type": "object",
         "properties": {
@@ -2493,6 +2588,106 @@
           "style",
           "bgm",
           "slots"
+        ],
+        "additionalProperties": false
+      },
+      "MovieDraft": {
+        "type": "object",
+        "properties": {
+          "stylePreset": {
+            "type": "string",
+            "enum": [
+              "감성",
+              "여행",
+              "일상"
+            ]
+          },
+          "cuts": {
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "videoId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "startMs": {
+                      "description": "자른 구간의 시작. 구간이 없으면 스냅 전체다.",
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "endMs": {
+                      "description": "자른 구간의 끝.",
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "videoId"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "localId": {
+                      "type": "string",
+                      "description": "요청의 `localId`. 스냅 전체를 쓴다."
+                    }
+                  },
+                  "required": [
+                    "localId"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            },
+            "description": "쓸 스냅. **배열 순서가 곧 재생 순서**(촬영순)다. 최대 10개."
+          },
+          "excluded": {
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "videoId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    }
+                  },
+                  "required": [
+                    "videoId"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "localId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "localId"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            },
+            "description": "넣지 않은 스냅, 촬영순. 이유는 주지 않는다 — 앱은 개수를 알리고 다시 넣을 수 있게 한다. 업로드되지 않은 스냅(`localId`)은 그런 스냅만 10개를 넘을 때만 빠진다."
+          }
+        },
+        "required": [
+          "stylePreset",
+          "cuts",
+          "excluded"
         ],
         "additionalProperties": false
       },
@@ -7431,6 +7626,231 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/movie-drafts": {
+      "post": {
+        "summary": "넘긴 스냅으로 편집 초안 제안 받기",
+        "tags": [
+          "movies"
+        ],
+        "description": "넘긴 스냅 중 쓸 것을 고르고(못 쓰는 것·중복은 뺀다), 촬영순으로 놓고, 컷마다 구간을 자른 **제안**을 돌려준다.\n**무비를 만들지 않는다** — 앱이 이 컷들로 무비를 만들고(`POST /movies`, `arranger: ai`, 컷마다\n`trimOwner: ai`) 업로드가 끝나면 지금처럼 보낸다. 전환은 그때 서버가 고른다.\n\n**업로드되지 않은 스냅도 넘긴다**(`localId` + `capturedAt`). 빼지 않고 촬영 시각 자리에 구간 없이 놓는다.\n업로드됐지만 신호가 아직 없는 스냅도 같다 — 서버가 신호 계산을 적재해 두고 다음 요청부터 쓴다.\n\n**기다리지 않는다.** 응답이 곧 결과다. 분석에 동의하지 않았거나 분석이 꺼져 있어도 초안은 나온다.\n\n**크레딧을 차감하지 않는다.** 비용은 상한으로 막는다 — 한 번에 스냅\n**30개**(넘으면 400 `TOO_MANY_SNAPS` + `max`), 최근 24시간 **10번**\n(넘으면 429 `DRAFT_LIMIT`). 같은 스타일 · 같은 스냅 집합이 24시간 안에 다시 오면 같은 제안을 돌려주고\n횟수에 세지 않는다.\n\n`excluded` 는 넣지 않은 스냅이다. **이유는 주지 않는다** — 앱은 개수를 알리고 다시 넣을 수 있게 한다.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "stylePreset": {
+                    "description": "컷 길이를 정하는 스타일. 생략하면 `일상`.",
+                    "type": "string",
+                    "enum": [
+                      "감성",
+                      "여행",
+                      "일상"
+                    ]
+                  },
+                  "snaps": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "videoId": {
+                              "type": "string",
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                              "description": "업로드가 끝난 스냅(`kind: source`)의 id."
+                            }
+                          },
+                          "required": [
+                            "videoId"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "localId": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 100,
+                              "description": "앱이 붙인 스냅 id. 응답의 컷에 그대로 돌아온다."
+                            },
+                            "capturedAt": {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                              "description": "촬영 시각. 이 자리에 놓인다."
+                            }
+                          },
+                          "required": [
+                            "localId",
+                            "capturedAt"
+                          ]
+                        }
+                      ]
+                    },
+                    "description": "넘기는 스냅. 순서는 상관없다(서버가 촬영순으로 놓는다). 최대 30개."
+                  }
+                },
+                "required": [
+                  "snaps"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/MovieDraft"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "max": {
+                          "description": "초안 1회에 넘길 수 있는 스냅 수",
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "purgeAfter": {
+                          "description": "ACCOUNT_PENDING_DELETION — 이 시각 이전에는 POST /auth/me/restore 로 복구 가능",
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "additionalProperties": false
                 }
               }
             }

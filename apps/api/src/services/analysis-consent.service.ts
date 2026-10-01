@@ -85,7 +85,7 @@ export async function giveAnalysisConsent(
 /**
  * 철회. 그 뒤로 분석하지 않고 **이미 만든 분석 결과와 추천 기록을 파기한다**(ANA-5).
  *
- * 추천 기록도 지운다 — 제외 사유(`unusable` 등)가 분석의 판단을 그대로 담고 있다. 큐에 남은 분석
+ * 추천 기록과 편집 초안 기록도 지운다 — 제외 사유(`unusable` 등)나 뺀 스냅이 분석의 판단을 담고 있을 수 있다. 큐에 남은 분석
  * 작업은 행이 사라졌으므로 워커가 건너뛴다(`analysis_worker.py` 의 `AnalysisSkipped`). 철회 순간
  * 이미 모델에 보내는 중이던 1건은 되돌릴 수 없고, 결과는 저장할 행이 없어 버려진다.
  *
@@ -101,6 +101,7 @@ export async function withdrawAnalysisConsent(userId: string): Promise<AnalysisC
     }),
     prisma.videoAnalysis.deleteMany({ where: { userId } }),
     prisma.movieRecommendation.deleteMany({ where: { userId } }),
+    prisma.movieDraft.deleteMany({ where: { userId } }),
   ]);
   return toDto(null);
 }

@@ -44,6 +44,7 @@ model User {
   creditEntries    CreditLedger[]
   adRewards        AdReward[]
   recommendations  MovieRecommendation[]
+  movieDrafts      MovieDraft[]
   movies           Movie[]
   consents         UserConsent[]
 
@@ -382,6 +383,30 @@ model MovieRecommendation {
   // 일일 추천 횟수 집계.
   @@index([userId, createdAt])
   @@map("movie_recommendations")
+}
+
+// AI 편집 초안의 제안 기록(specs/movie.md MOV-21) — 무비가 아니다. 앱이 이 제안으로 무비를 만든다.
+//
+// 남기는 이유는 둘이다: 최근 24시간 초안 수 상한과, 같은 요청에 같은 제안을 돌려주는 재사용 창.
+// 분석 결과로 뺀 스냅이 담길 수 있어 분석 동의를 철회하면 추천 기록과 함께 지운다.
+// 규칙: docs/decisions/edit-director.md · 상한: docs/decisions/auto-edit-draft.md §5
+model MovieDraft {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  stylePreset String   @map("style_preset") @db.VarChar(20)
+  // (스타일, 넘긴 스냅 집합)의 해시. 업로드되지 않은 스냅은 localId 와 촬영 시각으로 들어간다.
+  snapHash    String   @map("snap_hash") @db.VarChar(64)
+  // 넘긴 업로드 스냅이 모두 신호를 갖고 있었는가. 아니면 신호가 생긴 뒤 다시 받을 수 있게 재사용하지 않는다.
+  complete    Boolean
+  // 응답 그대로({ stylePreset, cuts, excluded }).
+  result      Json
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, snapHash, createdAt])
+  @@index([userId, createdAt])
+  @@map("movie_drafts")
 }
 
 // 슬롯 하나에 대한 배정. `videoId` 가 null 이면 채울 후보가 없었다는 뜻이고, 그 자리는

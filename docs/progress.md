@@ -1822,3 +1822,18 @@ AI 편집 초안(MOV-21)을 시작했다. 상한·표시 시점·미업로드·�
   두 마이그레이션은 `prisma migrate diff` 로 스키마와 어긋나지 않음을 확인했다(남은 차이는 이전 테이블의 기본값·인덱스
   이름뿐이다).
 - 문턱값은 아직이다 — 실제 스냅의 분포로 정한다(backlog A-11).
+
+## 2026-10-01 (이어서) — 편집 초안 제안 API(MOV-21 5단계, backlog A-11)
+
+- **선택 단계** [`edit-director.ts`](../apps/api/src/services/edit-director.ts) — 거르기(절반 한도) · 중복(연쇄) · 10컷을 넘으면 촬영
+  흐름을 묶음으로 나눠 고르기 · 촬영순 · 역할 · 스타일별 길이와 여분 · 발화를 자르지 않고 움직임이 큰 창. 규칙과 시드만 쓰는 순수
+  함수다. 문턱값은 잠정값(`DRAFT_THRESHOLDS`).
+- **규칙을 고친 곳**([edit-director.md](./decisions/edit-director.md)): 검사 없는 스냅(업로드 전 · 신호 없음)은 자리를 먼저 차지하고 남은 자리를
+  고른다 — "그 스냅이 든 묶음은 그것을 고른다"는 한 묶음에 둘이 들면 하나가 빠졌다. `action` 은 움직임이 중앙값보다 커야 한다.
+  구간 창은 걸친 만큼만 움직임을 세고, 발화 끝점에 맞춘 창도 후보에 넣는다.
+- **API** `POST /movie-drafts` — 동기. 업로드된 스냅 `{ videoId }` 와 업로드 전 스냅 `{ localId, capturedAt }`. 상한 30개
+  (`TOO_MANY_SNAPS`+`max`) · 24시간 10번(`DRAFT_LIMIT`) · 같은 요청 재사용(신호가 다 있었던 제안만). 신호가 없는 스냅은 렌디션 큐에
+  `only: "signals"` 로 적재한다. vision 은 부르지 않고 이미 있는 분석만 얹는다. 분석 동의 철회 때 초안 기록도 지운다.
+- **DB** `20261001030000_add_movie_drafts`. 계약 `contract/movie-drafts.ts` · `openapi.json` · [api-spec.md](./api-spec.md).
+- **자동 검증**: API 556개(규칙 25 · API 9 신규 — 제안 그대로 `POST /movies` 가 `trimOwner: ai` 로 받는 것 포함) · 모바일 1262 tests.
+  세 마이그레이션 모두 `prisma migrate diff` 로 스키마와 어긋나지 않는다.

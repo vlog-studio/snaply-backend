@@ -7,6 +7,8 @@ export interface RenditionJobData {
   userId: string;
   /** 원본 객체 키. 워커가 이것만으로 내려받는다. */
   s3Key: string;
+  /** `signals` 면 렌디션 없이 로컬 신호만 계산한다(apps/ai-worker/src/rendition_worker.py). */
+  only?: 'signals';
 }
 
 let queue: Queue<RenditionJobData> | null = null;
@@ -41,6 +43,14 @@ function getQueue(): Queue<RenditionJobData> {
  */
 export async function enqueueRendition(data: RenditionJobData): Promise<void> {
   await getQueue().add('rendition', data, { jobId: data.videoId });
+}
+
+/**
+ * 로컬 신호만 계산하는 작업 — 신호 없이 올라온 예전 스냅을 편집 초안이 쓰려 할 때(docs/decisions/edit-director.md §8.1).
+ * 렌디션과 job id 를 나눠야 이미 끝난 렌디션 작업에 막히지 않는다. 같은 스냅의 신호 작업은 하나만 쌓인다.
+ */
+export async function enqueueSignals(data: Omit<RenditionJobData, 'only'>): Promise<void> {
+  await getQueue().add('signals', { ...data, only: 'signals' }, { jobId: `signals-${data.videoId}` });
 }
 
 export async function closeRenditionQueue(): Promise<void> {
