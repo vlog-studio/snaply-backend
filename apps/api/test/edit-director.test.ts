@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url';
 import {
   CUT_LENGTHS,
   DRAFT_THRESHOLDS,
+  FRAME_HASH_COUNT,
   SIGNALS_VERSION,
   chooseRange,
   directDraft,
@@ -66,6 +67,12 @@ describe('신호 버전', () => {
   it('워커의 SIGNALS_VERSION 과 같다 — 다르면 다른 방법으로 잰 신호에 같은 문턱값을 쓰게 된다', () => {
     const source = readFileSync(join(REPO, 'apps/ai-worker/src/pipeline/snap_signals.py'), 'utf-8');
     expect(Number(/^SIGNALS_VERSION = (\d+)$/m.exec(source)?.[1])).toBe(SIGNALS_VERSION);
+  });
+
+  it('대표 프레임 수가 워커의 HASH_POSITIONS 와 같다 — 다르면 모든 스냅이 중복 검사에서 빠진다', () => {
+    const source = readFileSync(join(REPO, 'apps/ai-worker/src/pipeline/snap_signals.py'), 'utf-8');
+    const positions = /^HASH_POSITIONS = \((.*)\)$/m.exec(source)?.[1];
+    expect(positions?.split(',').filter((value) => value.trim() !== '').length).toBe(FRAME_HASH_COUNT);
   });
 });
 
@@ -165,6 +172,17 @@ describe('§2.2 중복', () => {
       snap('c', 2, { frameHashes: hashes(step * 2), sharpness: 100 }),
     ]);
     expect(keysOf(result)).toEqual(['b']);
+  });
+
+  it('대표 프레임이 모자란 스냅은 중복 검사에서 빠진다 — 위치가 빠진 목록을 인덱스끼리 비교하지 않는다', () => {
+    // 이 규칙 전의 워커는 뽑지 못한 위치를 건너뛰어 [h50, h75] 를 남겼다. 같은 장면이라도 어느 위치가 빠졌는지 모른다.
+    const same = sceneHash(7);
+    const result = draft([
+      snap('full', 0, { frameHashes: same, sharpness: 800 }),
+      snap('partial', 1, { frameHashes: same.slice(1), sharpness: 40 }),
+    ]);
+    expect(keysOf(result)).toEqual(['full', 'partial']);
+    expect(result.excluded).toEqual([]);
   });
 });
 

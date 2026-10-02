@@ -31,6 +31,12 @@ export const SIGNALS_VERSION = 1;
 export const EDIT_DIRECTOR_VERSION = 3;
 
 /**
+ * 대표 프레임 수 — 워커의 `HASH_POSITIONS`(25·50·75%). 셋을 다 가진 스냅끼리만 중복을 잰다(§2.2). 두 값이 어긋나면
+ * `edit-director.test.ts` 가 잡는다.
+ */
+export const FRAME_HASH_COUNT = 3;
+
+/**
  * §2 의 문턱값 — **잠정값**이다. 실제 스냅의 분포로 다시 정한다(backlog A-11). 극단만 잡는 쪽으로 둔다:
  * 밤 외출은 스냅 전부가 어둡고, 흔들린 컷도 대개 쓸 만하다.
  */
@@ -158,9 +164,10 @@ function isDuplicate(left: Scored, right: Scored): boolean {
   if (Math.abs(left.candidate.capturedAt - right.candidate.capturedAt) > DRAFT_THRESHOLDS.duplicateWindowMs) {
     return false;
   }
-  const pairs = Math.min(a.frameHashes.length, b.frameHashes.length);
-  if (pairs === 0) return false;
-  const distances = Array.from({ length: pairs }, (_, i) => hashDistance(a.frameHashes[i]!, b.frameHashes[i]!));
+  // 셋을 다 가진 스냅끼리만 잰다. 위치가 빠진 목록(이 규칙 전에 저장한 신호에 있다)을 인덱스끼리 비교하면
+  // 다른 위치의 프레임끼리 잰다 — 그런 스냅은 해시가 없는 스냅처럼 중복 검사에서 빠진다.
+  if (a.frameHashes.length !== FRAME_HASH_COUNT || b.frameHashes.length !== FRAME_HASH_COUNT) return false;
+  const distances = a.frameHashes.map((hash, i) => hashDistance(hash, b.frameHashes[i]!));
   return median(distances) <= DRAFT_THRESHOLDS.duplicateHashDistance;
 }
 
