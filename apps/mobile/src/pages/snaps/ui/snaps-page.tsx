@@ -2,7 +2,7 @@ import { useIsFocused, useRouter, useScrollToTop } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BackHandler, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { MovieDraftSnapLimit, MovieSnapLimit, type Movie } from '@/entities/movie';
+import { MovieSnapLimit } from '@/entities/movie';
 import {
   isSnapFileLocal,
   useExpiredSnapIds,
@@ -40,7 +40,8 @@ import { SnapDeleteDialog, type DeviceOnlyDelete } from './snap-delete-dialog';
 /**
  * What a selection is for. `movie` — the user's own cut list, in pick order,
  * up to {@link MovieSnapLimit}. `draft` — material handed to the edit draft
- * (MOV-21), up to {@link MovieDraftSnapLimit}, which chooses among it.
+ * (MOV-21), up to the draft's cap (`useEditDraft`'s `limit`), which chooses
+ * among it.
  */
 export type SelectionPurpose = 'movie' | 'draft';
 
@@ -110,7 +111,15 @@ export function SnapsPage({ startSelecting, selectionRequest }: SnapsPageProps) 
   // Selecting from the library itself (선택, a long press) is for a new movie;
   // only the studio's 자동 편집 row asks for the draft.
   const [purpose, setPurpose] = useState<SelectionPurpose>(startSelecting ?? 'movie');
-  const capacity = purpose === 'draft' ? MovieDraftSnapLimit : MovieSnapLimit;
+  // The draft's cap is the app's own until the server names a lower one
+  // (`TOO_MANY_SNAPS`); the picking follows whichever holds.
+  const {
+    state: draftState,
+    start: startDraft,
+    reset: resetDraft,
+    limit: draftLimit,
+  } = useEditDraft();
+  const capacity = purpose === 'draft' ? draftLimit : MovieSnapLimit;
   const [playing, setPlaying] = useState<Snap>();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteOpenedAt, setDeleteOpenedAt] = useState(0);
@@ -128,7 +137,7 @@ export function SnapsPage({ startSelecting, selectionRequest }: SnapsPageProps) 
     capacity,
     describeRefusal: () =>
       purpose === 'draft'
-        ? `자동 편집에는 스냅 ${MovieDraftSnapLimit}개까지 넣을 수 있어요.`
+        ? `자동 편집에는 스냅 ${draftLimit}개까지 넣을 수 있어요.`
         : `한 편에는 스냅 ${MovieSnapLimit}개까지 들어가요.`,
   });
 
@@ -213,22 +222,8 @@ export function SnapsPage({ startSelecting, selectionRequest }: SnapsPageProps) 
     }
   }
 
-  const {
-    state: draftState,
-    start: startDraft,
-    reset: resetDraft,
-  } = useEditDraft(
-    useCallback(
-      (movie: Movie) => {
-        setSelecting(false);
-        setPurpose('movie');
-        reset();
-        router.push(movieHref(movie.id));
-      },
-      [reset, router],
-    ),
-  );
-  const confirmation = purpose === 'draft' ? draftConfirmation(draftState, picked) : undefined;
+  const confirmation =
+    purpose === 'draft' ? draftConfirmation(draftState, picked, draftLimit) : undefined;
   const draftBusy = confirmation?.busy === true;
 
   const exitSelection = useCallback(() => {
@@ -311,9 +306,14 @@ export function SnapsPage({ startSelecting, selectionRequest }: SnapsPageProps) 
       announce(ExpiredSnapRefusal);
       return;
     }
-    // The edit draft asks the server first; the bar shows it working.
+    // The edit draft asks the server first; the bar shows it working, and the
+    // movie it makes opens once the answer is in.
     if (confirmation?.action === 'draft') {
-      void startDraft(picked);
+      void startDraft(picked).then((movie) => {
+        if (!movie) return;
+        exitSelection();
+        router.push(movieHref(movie.id));
+      });
       return;
     }
     // The draft is where the picks land, so open it — the cap was enforced pick
