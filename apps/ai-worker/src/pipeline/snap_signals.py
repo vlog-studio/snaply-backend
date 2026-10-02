@@ -8,7 +8,7 @@
 |---|---|---|
 | `brightness` | 움직임 프레임의 평균 밝기, 0~1 | 거르기(어둠) §2.1 |
 | `sharpness` | 대표 프레임 라플라시안 분산의 중앙값 | 거르기(흐림) §2.1 |
-| `frame_hashes` | 대표 프레임 셋(25·50·75%)의 8×8 평균 해시 | 중복 §2.2 |
+| `frame_hashes` | 대표 프레임 셋(25·50·75%)의 8×8 평균 해시. 하나라도 못 뽑으면 비어 있다 | 중복 §2.2 |
 | `motion` | `STEP_MS` 마다 이웃 프레임의 평균 절대 차이, 0~1 | 점수 §4 · 역할 §6 · 구간 §7 |
 | `speech` | 발화 구간 `[startMs, endMs]` 목록 | 점수 §4 · 구간 §7 |
 
@@ -65,6 +65,16 @@ def ahash(frame: np.ndarray) -> str:
         if value:
             bits |= 1 << index
     return f"{bits:016x}"
+
+
+def representative_hashes(frames: list[np.ndarray | None]) -> tuple[str, ...]:
+    """
+    대표 위치(`HASH_POSITIONS`)마다의 해시. 한 위치라도 프레임을 못 뽑았으면 **비운다** — 빠진 자리를 건너뛴
+    목록을 다른 스냅과 인덱스끼리 비교하면 다른 위치의 프레임끼리 잰다. 빈 해시는 중복 검사에서 빠진다.
+    """
+    if any(frame is None for frame in frames):
+        return ()
+    return tuple(ahash(frame) for frame in frames)
 
 
 def hash_distance(left: str, right: str) -> int:
@@ -171,15 +181,18 @@ def _motion_frames(path: str, work_dir: str) -> list[np.ndarray]:
     return [read_pgm(os.path.join(work_dir, name)) for name in names]
 
 
-def _detail_frames(path: str, work_dir: str, duration_ms: int) -> list[np.ndarray]:
-    frames = []
+def _detail_frames(path: str, work_dir: str, duration_ms: int) -> list[np.ndarray | None]:
+    """
+    대표 위치마다 프레임 하나. 뽑지 못한 위치는 `None` 으로 자리를 지킨다 — 끝을 넘겨 seek 하면 ffmpeg 는
+    성공(0)으로 끝나고 파일만 쓰지 않는다.
+    """
+    frames: list[np.ndarray | None] = []
     for index, position in enumerate(HASH_POSITIONS):
         out = os.path.join(work_dir, f"detail_{index}.pgm")
         at = f"{duration_ms * position / 1000:.3f}"
         _ffmpeg(["-ss", at, "-i", path, "-an", "-frames:v", "1", "-vf", _short_side(DETAIL_SHORT_SIDE), out])
-        if os.path.exists(out):
-            frames.append(read_pgm(out))
-    if not frames:
+        frames.append(read_pgm(out) if os.path.exists(out) else None)
+    if all(frame is None for frame in frames):
         raise SignalsError("대표 프레임을 뽑지 못했습니다")
     return frames
 
@@ -204,8 +217,8 @@ def read_signals(path: str, duration_ms: int | None = None) -> SnapSignals:
     return SnapSignals(
         duration_ms=duration,
         brightness=brightness(motion_frames),
-        sharpness=float(np.median([sharpness(frame) for frame in detail])),
-        frame_hashes=tuple(ahash(frame) for frame in detail),
+        sharpness=float(np.median([sharpness(frame) for frame in detail if frame is not None])),
+        frame_hashes=representative_hashes(detail),
         motion=motion_series(motion_frames),
         has_audio=audio,
         speech=_speech(path) if audio else (),

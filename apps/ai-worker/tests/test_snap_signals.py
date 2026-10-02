@@ -28,6 +28,7 @@ from pipeline.snap_signals import (  # noqa: E402
     motion_series,
     read_pgm,
     read_signals,
+    representative_hashes,
     sharpness,
     speech_spans_ms,
 )
@@ -64,6 +65,14 @@ class PureTest(unittest.TestCase):
         top_dark = np.zeros((64, 64), np.uint8)
         top_dark[32:, :] = 255
         self.assertGreaterEqual(hash_distance(ahash(left_dark), ahash(top_dark)), 24)
+
+    def test_representative_hashes_keep_the_position_order(self) -> None:
+        frames = [_checker(cell=8), np.full((64, 64), 128, np.uint8), _checker(cell=16)]
+        self.assertEqual(representative_hashes(frames), tuple(ahash(frame) for frame in frames))
+
+    def test_a_missing_representative_frame_empties_the_hashes(self) -> None:
+        # [h50, h75] 를 남기면 다른 스냅의 [h25, h50, h75] 와 인덱스끼리 비교돼 다른 위치끼리 잰다.
+        self.assertEqual(representative_hashes([None, _checker(), _checker(cell=16)]), ())
 
     def test_flat_frame_has_no_sharpness(self) -> None:
         self.assertEqual(sharpness(np.full((40, 40), 128, np.uint8)), 0.0)
@@ -178,6 +187,12 @@ class ReadSignalsTest(unittest.TestCase):
         self.assertEqual(self.signals["black"].speech, ())
         self.assertFalse(self.signals["moving"].has_audio)
         self.assertEqual(self.signals["moving"].speech, ())
+
+    def test_a_seek_past_the_end_leaves_no_partial_hashes(self) -> None:
+        # 2초 클립을 3초로 읽으면 75%(2.25초) seek 가 끝을 넘는다 — ffmpeg 는 0 으로 끝나고 파일만 없다.
+        signals = read_signals(self.paths["moving"], 3000)
+        self.assertEqual(signals.frame_hashes, ())
+        self.assertGreater(signals.sharpness, 0)
 
     def test_unreadable_file_raises_signals_error(self) -> None:
         path = os.path.join(self.tmp.name, "broken.mp4")
