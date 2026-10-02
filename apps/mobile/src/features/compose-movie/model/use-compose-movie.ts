@@ -28,6 +28,7 @@ import { ApiError } from '@/shared/api';
 
 import { cancelEditJob } from '../api/cancel-edit-job';
 import { readCreditShortfall, type CreditShortfall } from '../lib/read-credit-shortfall';
+import { readDraftSnapLimit } from '../lib/read-draft-snap-limit';
 
 import { sendMovie, snapResolvers } from './movie-outbox';
 
@@ -52,13 +53,24 @@ export type CutsOutcome = {
  *
  * `limit` — today's drafts are used up (the server's `DRAFT_LIMIT`); asking
  * again will not help until tomorrow, so the screen offers the hand-made path.
+ * `too-many` — more snaps than one draft takes (the server's `TOO_MANY_SNAPS`);
+ * the same picks will never pass, so the screen asks for fewer.
  * `unreachable` — no usable answer came back (offline, a server error, a snap
  * the server would not take); asking again may.
  */
-export type DraftRefusal = 'limit' | 'unreachable';
+export type DraftRefusal = 'limit' | 'too-many' | 'unreachable';
 
 export type DraftOutcome =
-  { movie: Movie; refused?: undefined } | { movie?: undefined; refused: DraftRefusal };
+  | { movie: Movie; refused?: undefined }
+  | {
+      movie?: undefined;
+      refused: DraftRefusal;
+      /**
+       * With `too-many`: how many snaps one draft takes, as the server stated it.
+       * The app's own cap ({@link MovieDraftSnapLimit}) is only its first guess.
+       */
+      max?: number;
+    };
 
 /**
  * Why generation would not start.
@@ -258,6 +270,10 @@ export function useComposeMovie() {
         proposal = await requestMovieDraft(snaps, style);
       } catch (error) {
         if (error instanceof ApiError && error.code === 'DRAFT_LIMIT') return { refused: 'limit' };
+        if (error instanceof ApiError && error.code === 'TOO_MANY_SNAPS') {
+          const max = readDraftSnapLimit(error);
+          return max === undefined ? { refused: 'too-many' } : { refused: 'too-many', max };
+        }
         if (__DEV__) console.warn(`[compose-movie] edit draft failed: ${String(error)}`);
         return { refused: 'unreachable' };
       }

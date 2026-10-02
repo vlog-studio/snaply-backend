@@ -226,6 +226,21 @@ describe('startMovieFromDraft', () => {
     expect(mockCreateMovie).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ['with the cap it named', { max: 20 }, { refused: 'too-many', max: 20 }],
+    ['without a cap', undefined, { refused: 'too-many' }],
+  ])(
+    'asks for fewer snaps when the server refuses that many — %s',
+    async (_name, details, outcome) => {
+      mockRequestMovieDraft.mockRejectedValue(
+        new ApiError('TOO_MANY_SNAPS', 'too many', { status: 400, details }),
+      );
+
+      expect(await draft(['early', 'late'])).toEqual(outcome);
+      expect(mockCreateMovie).not.toHaveBeenCalled();
+    },
+  );
+
   it('makes nothing from an answer that names none of the snaps it was sent', async () => {
     mockRequestMovieDraft.mockResolvedValue({ cuts: [{ videoId: 'v-stranger' }], leftOut: [] });
 
