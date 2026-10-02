@@ -376,7 +376,8 @@ e2e 실검증.
 - [x] **로컬 신호 reader** — 밝기 · 흐림 · 프레임 해시 · 100ms 움직임 · VAD 발화 구간을 렌디션 작업이 계산해
       `video_signals` 에 둔다(2026-10-01, [edit-director.md](./decisions/edit-director.md) §8.1)
 - [ ] **거르기·중복의 문턱값** — 실제 스냅의 신호 분포로 어둠·흐림·해시 거리 문턱값을 정해
-      [edit-director.md](./decisions/edit-director.md) §2 를 고친다
+      [edit-director.md](./decisions/edit-director.md) §2 를 고친다. 이때 점수·거르기의 `quality` 에 밝기를 넣을지도 정한다 —
+      지금은 선명도(`log1p(sharpness)`)만 쓰는데 결정 문서 §2.1 · §4 는 "밝기·흐림"이라 적었다(2026-10-02 리뷰)
 - [x] **초안 제안 API 와 선택 단계(edit-director)** — `POST /movie-drafts`(2026-10-01). 업로드되지 않은 스냅은 `localId` 로
       받아 그 자리에 둔다. 규칙은 [edit-director.md](./decisions/edit-director.md)
 - [x] **앱의 진입 경로와 흐름** — 스튜디오 `스냅 골라 자동 편집` · 고르기 상한 30 · 제안으로 무비 만들기(`arranger: ai` ·
@@ -385,7 +386,7 @@ e2e 실검증.
       (2026-10-01, [progress.md](./progress.md))
 
 **완료 조건에 넣지 않는 후속**: "다시 편집"은 v1 에 두지 않았다(결정 §5). 붙일 때는 시드 `attempt` 를 올려 `ai`
-값만 다시 고른다.
+값만 다시 고른다. 구현 뒤 리뷰(2026-10-02)에서 찾은 결함은 E-13 · E-14 · E-15 · E-16 에 따로 둔다.
 
 **완료 조건**: 위 항목이 끝나고, 고른 스냅으로 받은 초안에서 구간과 전환을 고친 뒤 생성한 결과물이 편집
 화면에서 본 것과 같음을 실기기에서 확인한다. 그러면 MOV-21 이 `구현됨` 이 된다. 경계별 전환(MOV-22)은 모든 무비에서
@@ -765,6 +766,54 @@ GHCR 패키지를 공개로 돌릴지도 정한다 — 공개면 새 개발자�
 
 **완료 조건**: 배포본에 원본의 `creation_time`(없으면 `captured_at`)을 싣고(`-metadata creation_time=…`), 워커 계약
 테스트로 확인한다. 이미 만든 배포본은 다시 만들지 않으면 그대로다.
+
+### E-13. 신호를 한 번 못 계산한 스냅은 다시 계산되지 않는다
+
+편집 초안(A-11)은 신호가 없는 업로드 스냅의 신호 계산을 적재한다(`enqueueSignals`, jobId `signals-<videoId>`). 렌디션 큐는
+끝난 작업을 남겨 두므로(`removeOnComplete: 1000` · `removeOnFail: 5000`) 그 jobId 의 작업이 한 번 끝나면 — 읽을 수 없는
+파일(`SignalsError` 면 `failed` 를 돌려주고 완료된다)이든 재시도 소진이든 — 다음 적재는 아무 일도 하지 않는다. 그 스냅은 끝까지
+신호가 없고, 그 스냅이 든 초안은 매번 `complete: false` 로 새 행을 만들어 재사용되지 않으며 같은 요청마다 하루 10회 한도를
+하나씩 쓴다(2026-10-02 리뷰에서 찾음, 실측 전).
+
+**결정할 것**: 일시 실패(재시도 소진)한 작업을 지우고 다시 적재할지, 신호를 계산할 수 없는 스냅을 재사용 판정과 한도에서 어떻게
+다룰지 — 예: 영구 실패를 표시해 그 스냅을 "검사 없음"으로 확정하고 그 초안을 `complete` 로 본다.
+
+**완료 조건**: 정한 대로 고치고, 같은 스냅 집합의 두 번째 요청이 재사용되거나(영구 실패) 신호를 받아 검사한 초안이 되는 것(일시
+실패)을 `apps/api/test/movie-drafts.test.ts` 로 고정한다.
+
+### E-14. 서버에서 사라진 스냅 하나가 편집 초안 전체를 막는다
+
+`POST /movie-drafts` 는 넘긴 업로드 스냅 중 하나라도 이 사용자의 `ready` · 삭제되지 않은 `source` 가 아니면 요청 전체를 403 으로
+거절한다(`apps/api/src/services/movie-draft.service.ts` — 남의 id 로 존재를 떠보지 못하게 어느 것인지 알리지 않는다). 다른
+기기에서 지웠거나 보관 기간이 끝났는데 이 기기의 동기화 항목은 아직 `uploaded` 인 스냅이 섞이면, 앱은 이를 `unreachable` 로 받아
+`다시 시도` 를 보여 주지만 다시 시도해도 같다. 사용자는 이유를 알 수 없다(2026-10-02 리뷰에서 찾음).
+
+**결정할 것**: 쓸 수 없는 자기 스냅을 `excluded` 로 돌려줄지(남의 id 는 그대로 403), 다른 코드로 거절해 앱이 그 스냅을 빼고 다시
+묻게 할지.
+
+**완료 조건**: 정한 동작을 계약(`packages/shared-types/src/contract/movie-drafts.ts`) · [api-spec.md](./api-spec.md) · 앱의
+`startMovieFromDraft` 에 반영하고 API·앱 테스트로 고정한다.
+
+### E-15. 앱이 편집 초안의 스냅 상한(`max`)을 읽지 않는다
+
+계약은 개수 상한을 스키마에 걸지 않고 서비스가 `400 TOO_MANY_SNAPS` + `max` 로 답하게 했다 — 앱이 상한을 하드코딩하지 않게
+하려는 것이다(`contract/movie-drafts.ts` 주석). 그런데 앱은 `MovieDraftSnapLimit = 30` 을 하드코딩하고
+(`apps/mobile/src/entities/movie/model/movie.ts`), `TOO_MANY_SNAPS` 를 다른 실패처럼 `unreachable` 로 받아 `다시 시도` 를 보여
+준다(`apps/mobile/src/features/compose-movie/model/use-compose-movie.ts`). 서버 상한(잠정값)을 30 보다 낮추면 그 사이 개수를
+고른 사용자는 다시 시도해도 계속 실패한다(2026-10-02 리뷰에서 찾음).
+
+**완료 조건**: 앱이 `TOO_MANY_SNAPS` 를 따로 받아 `max` 로 고르기 상한과 안내 문구를 맞춘다. 또는 상한을 바꿀 때 앱도 함께
+바꾼다고 [auto-edit-draft.md](./decisions/auto-edit-draft.md) §5 에 적고 계약 주석을 사실대로 고친다.
+
+### E-16. 대표 프레임 하나를 못 뽑으면 중복 비교의 위치가 어긋난다
+
+워커의 `_detail_frames`(`apps/ai-worker/src/pipeline/snap_signals.py`)는 25·50·75% 중 뽑지 못한 위치를 조용히 건너뛰어
+`frame_hashes` 가 셋보다 짧을 수 있다. 중복 판정(`isDuplicate`, `apps/api/src/services/edit-director.ts`)은 두 스냅의 해시를 같은
+인덱스끼리 비교하므로, `[h50, h75]` 와 `[h25, h50, h75]` 를 비교하면 다른 위치의 프레임끼리 거리를 잰다 — 같은 장면을 놓치거나
+다른 장면을 중복으로 뺄 수 있다. 짧은 스냅에서 seek 가 프레임을 내지 못할 때만 생겨 드물다(2026-10-02 리뷰에서 찾음, 실측 전).
+
+**완료 조건**: 위치를 함께 저장하거나 셋을 다 뽑지 못하면 해시를 비워 중복 검사에서 빼고, 신호 형식이 바뀌면 `SIGNALS_VERSION`
+을 워커·API 양쪽에서 올린다. 워커·API 테스트로 고정한다.
 
 ---
 
