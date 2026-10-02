@@ -1928,3 +1928,18 @@ AI 편집 초안(MOV-21)을 시작했다. 상한·표시 시점·미업로드·�
   ([edit-director.md](./decisions/edit-director.md) §2.2 · §8.1). `EDIT_DIRECTOR_VERSION` 은 같은 PR 에서 이미 3 으로 올렸다.
 - **자동 검증**: API 569개(2 신규 — 둘짜리 목록 테스트는 고치기 전 비교에서 실패) · typecheck · lint · 워커 201개(Docker,
   `REQUIRE_FFMPEG=1`, 3 신규 — 비우기 두 개는 고치기 전 동작에서 실패, 순서 하나는 기존 동작의 고정).
+
+## 2026-10-03 — 편집 초안의 스냅 상한을 서버에서 배운다(backlog E-15)
+
+앱이 편집 초안의 스냅 상한을 30 으로 박아 두고, 서버의 `400 TOO_MANY_SNAPS` 를 다른 실패처럼 받아 `다시 시도` 를 보여 줬다 — 서버
+상한(잠정값)을 낮추면 그 사이 개수를 고른 사용자는 다시 시도해도 계속 거절됐다. 계약은 상한을 스키마에 걸지 않고 `max` 로 답해
+앱이 하드코딩하지 않게 해 두었는데 앱이 그 값을 읽지 않았다.
+
+- **`features/compose-movie`** — `TOO_MANY_SNAPS` 를 `too-many` 거절로 받고 `max` 를 싣는다(`readDraftSnapLimit`, 크레딧 부족분의
+  `readCreditShortfall` 과 같은 방식 — 전송층은 `details` 를 그대로 나르고 이 슬라이스가 좁힌다).
+- **`pages/snaps`** — `useEditDraft` 가 서버가 말한 상한을 기억하고(스냅 탭이 살아 있는 동안), 고르기 상한 · 거절 문구 · 확인 버튼이
+  그 값을 따른다. 상한을 넘은 고르기는 `자동 편집에는 스냅 N개까지 넣을 수 있어요. M개를 빼 주세요.` 와 함께 버튼이 꺼진다 —
+  `다시 시도` 는 보이지 않는다. `useEditDraft` 의 `start` 는 만든 무비를 돌려주고 화면이 연다(고르기 상한을 정하기 전에 훅이 있어야 해서).
+- 앱 기능 문서 [studio.md](../apps/mobile/docs/features/studio.md) · [snaps.md](../apps/mobile/docs/features/snaps.md) 갱신.
+- **자동 검증**: `npm run verify:mobile` 162 suites / 1309 tests(format · lint · typecheck 포함) · 새 테스트 중 `TOO_MANY_SNAPS` 두 경우는 고치기 전 코드에서 `unreachable` 로 실패하는
+  것을 확인했다. 실기기 확인은 하지 않았다 — 서버 상한이 30 이라 지금 앱에서는 이 거절이 나지 않는다.
