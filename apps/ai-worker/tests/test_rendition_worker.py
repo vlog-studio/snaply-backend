@@ -7,7 +7,9 @@ ffmpeg·S3·DB 없이 돈다. 변환(`build`)과 저장소·DB 호출을 가짜�
     cd apps/ai-worker && python -m unittest tests.test_rendition_worker
 """
 
+import asyncio
 import sys
+import time
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -120,6 +122,41 @@ class SignalsAfterRenditionTest(_WorkerCase):
         with self.assertRaises(rendition_worker.RenditionSkipped):
             await rendition_worker._run(VIDEO_ID, USER_ID, "uploads/x/source.mov", "/tmp")
 
+        self.read_signals.assert_not_called()
+
+
+class TimeLimitTest(_WorkerCase):
+    """렌디션과 신호는 시간 제한을 따로 받는다 — 늦은 신호가 반영한 렌디션을 `failed` 로 덮으면 안 된다."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.db.save_rendition = mock.AsyncMock(return_value=True)
+        self.db.mark_failed = mock.AsyncMock()
+        mock.patch.object(rendition_worker.config, "RENDITION_TIMEOUT_SECONDS", 0.05).start()
+
+    def _job(self) -> mock.MagicMock:
+        job = mock.MagicMock()
+        job.data = {"videoId": VIDEO_ID, "userId": USER_ID, "s3Key": "uploads/x/source.mov"}
+        return job
+
+    async def test_slow_signals_leave_the_saved_rendition_ready(self) -> None:
+        self.read_signals.side_effect = lambda *_: time.sleep(0.3)
+
+        result = await rendition_worker.process_rendition_job(self._job(), None)
+
+        self.assertEqual(result["status"], "ready")
+        self.db.mark_failed.assert_not_awaited()
+        self.signals_db.save_signals.assert_not_called()
+        # 시간 초과는 예상한 실패가 아니라 Sentry 로 보낸다.
+        self.capture.assert_called_once()
+
+    async def test_a_slow_rendition_still_fails_and_retries(self) -> None:
+        mock.patch.object(rendition_worker, "build", side_effect=lambda *_: time.sleep(0.3)).start()
+
+        with self.assertRaises(asyncio.TimeoutError):
+            await rendition_worker.process_rendition_job(self._job(), None)
+
+        self.db.mark_failed.assert_awaited_once_with(VIDEO_ID)
         self.read_signals.assert_not_called()
 
 

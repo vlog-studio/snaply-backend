@@ -68,9 +68,17 @@ async def _discard(keys: list[str | None]) -> None:
 
 
 async def _record_signals(video_id: str, local: str, duration_ms: int | None) -> None:
-    """렌디션 뒤의 신호 계산. 어떤 실패도 렌디션 결과를 바꾸지 않는다."""
+    """
+    렌디션 뒤의 신호 계산. 어떤 실패도 렌디션 결과를 바꾸지 않는다 — 시간 초과도 그렇다.
+
+    렌디션의 시간 제한 밖에서 따로 제한을 받는다. 같은 제한 안에 있으면 신호 계산이 늦어질 때 이미 반영한
+    렌디션이 `failed` 로 덮이고 작업이 재시도돼 같은 변환을 다시 돌린다.
+    """
     try:
-        signals = await asyncio.to_thread(read_signals, local, duration_ms)
+        signals = await asyncio.wait_for(
+            asyncio.to_thread(read_signals, local, duration_ms),
+            timeout=config.RENDITION_TIMEOUT_SECONDS,
+        )
         if await signals_db.save_signals(video_id, signals):
             logger.info("신호 저장 video_id={} motion={}개", video_id, len(signals.motion))
     except Exception as exc:  # noqa: BLE001 — 신호는 초안을 낫게 할 뿐 렌디션의 조건이 아니다
@@ -93,6 +101,16 @@ async def _run_signals(video_id: str, s3_key: str, work_dir: str) -> None:
 
 
 async def _run(video_id: str, user_id: str, s3_key: str, work_dir: str) -> None:
+    """렌디션(시간 제한 안)을 반영한 뒤, 받아 둔 원본으로 신호를 계산한다(따로 제한)."""
+    local, duration_ms = await asyncio.wait_for(
+        _render(video_id, user_id, s3_key, work_dir),
+        timeout=config.RENDITION_TIMEOUT_SECONDS,
+    )
+    await _record_signals(video_id, local, duration_ms)
+
+
+async def _render(video_id: str, user_id: str, s3_key: str, work_dir: str) -> tuple[str, int | None]:
+    """렌디션을 만들어 반영한다. 신호 계산에 쓸 원본 경로와 길이를 돌려준다."""
     ctx = await rendition_db.fetch_context(video_id)
     if ctx is None or ctx["deleted_at"] is not None:
         raise RenditionSkipped(f"영상이 없습니다: {video_id}")
@@ -128,11 +146,10 @@ async def _run(video_id: str, user_id: str, s3_key: str, work_dir: str) -> None:
         await _discard([rendition_key, thumbnail_key])
         raise RenditionSkipped(f"반영 대상이 없습니다: {video_id}")
 
-    await _record_signals(video_id, local, outcome.duration_ms)
-
     logger.info(
         "렌디션 완료 video_id={} key={} {}x{}", video_id, rendition_key, outcome.width, outcome.height
     )
+    return local, outcome.duration_ms
 
 
 async def process_signals_job(job) -> dict:
@@ -167,10 +184,8 @@ async def process_rendition_job(job, _job_token) -> dict:
     logger.info("렌디션 작업 수신 video_id={}", video_id)
     work_dir = tempfile.mkdtemp(prefix=f"rendition_{video_id}_")
     try:
-        await asyncio.wait_for(
-            _run(video_id, job.data["userId"], job.data["s3Key"], work_dir),
-            timeout=config.RENDITION_TIMEOUT_SECONDS,
-        )
+        # 시간 제한은 `_run` 안에서 렌디션과 신호에 따로 건다.
+        await _run(video_id, job.data["userId"], job.data["s3Key"], work_dir)
         return {"videoId": video_id, "status": "ready"}
     except RenditionSkipped as exc:
         logger.info("렌디션 건너뜀 video_id={} 이유={}", video_id, exc)
