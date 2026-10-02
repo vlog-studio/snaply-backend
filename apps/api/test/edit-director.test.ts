@@ -296,4 +296,37 @@ describe('§3·§7 구간', () => {
     expect(range.startMs).toBeLessThanOrEqual(1500);
     expect(range.endMs).toBeGreaterThan(1500);
   });
+
+  // 움직임은 발화 밖(뒤쪽)에 몰아 둔다 — 발화 규칙이 지지 않으면 창이 그쪽으로 간다.
+  const lateMotion = Array.from({ length: 30 }, (_, i) => (i > 20 ? 1 : 0));
+
+  it.each([
+    ['격자 밖 끝점, 컷 길이와 같은 발화', [350, 2350]],
+    ['격자 밖 끝점, 컷 길이보다 50ms 짧은 발화', [360, 2310]],
+  ] as const)('끝점이 격자 밖이어도 발화를 통째로 담는다 — %s', (_name, [speechStart, speechEnd]) => {
+    const range = chooseRange(signals({ motion: lateMotion, speech: [[speechStart, speechEnd]] }), '일상', 'body')!;
+    expect(range.startMs).toBeLessThanOrEqual(speechStart);
+    expect(range.endMs).toBeGreaterThanOrEqual(speechEnd);
+    expect(range.startMs % 100).toBe(0);
+    expect(range.endMs % 100).toBe(0);
+  });
+
+  it('앞 여분 안에서 시작한 발화는 그 컷의 앞 여분을 줄여 통째로 담는다', () => {
+    const range = chooseRange(signals({ motion: lateMotion, speech: [[0, 1500]] }), '일상', 'body')!;
+    expect(range.startMs).toBe(0);
+    expect(range.endMs).toBeGreaterThanOrEqual(1500);
+    // 뒤 여분은 그대로다.
+    expect(range.endMs).toBeLessThanOrEqual(3000 - CUT_LENGTHS.일상.spare);
+  });
+
+  it('앞 여분 안에서 시작해 너무 길면 발화의 시작부터 담는다', () => {
+    const range = chooseRange(signals({ durationMs: 5000, motion: [], speech: [[120, 4900]] }), '여행', 'body')!;
+    expect(range.startMs).toBe(100);
+    expect(range.endMs).toBeGreaterThan(120);
+  });
+
+  it('뒤 여분 안에서 시작한 발화는 담지 않는다 — 뒤 여분은 줄이지 않는다', () => {
+    const range = chooseRange(signals({ motion: [], speech: [[2800, 3000]] }), '일상', 'body')!;
+    expect(range.endMs).toBeLessThanOrEqual(3000 - CUT_LENGTHS.일상.spare);
+  });
 });
