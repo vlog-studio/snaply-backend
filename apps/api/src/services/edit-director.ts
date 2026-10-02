@@ -28,7 +28,7 @@ export const SIGNALS_VERSION = 1;
  * 고르는 규칙의 버전. 규칙(문턱값·길이·격자)을 바꾸면 올린다 — 같은 요청을 24시간 재사용하는 창이 이 값을 키에 넣으므로,
  * 올리지 않으면 바뀐 규칙이 하루 동안 예전 제안에 가려진다.
  */
-export const EDIT_DIRECTOR_VERSION = 2;
+export const EDIT_DIRECTOR_VERSION = 3;
 
 /**
  * §2 의 문턱값 — **잠정값**이다. 실제 스냅의 분포로 다시 정한다(backlog A-11). 극단만 잡는 쪽으로 둔다:
@@ -285,31 +285,30 @@ export function chooseRange(
     high = usable - down(spare);
   }
 
-  // 발화를 자르지 않는다 — 가장 긴 발화 하나를 통째로, 안 되면 그 시작을 담는다.
+  // 발화를 자르지 않는다 — 가장 긴 발화 하나를 통째로, 안 되면 그 시작을 담는다. 창의 끝은 격자 위에 있으므로
+  // 발화를 덮는 격자 구간 [down(시작), up(끝)] 으로 따진다 — 발화 길이로 따지면 끝점이 격자 밖일 때 담는 창이 없다.
   let contains: ((start: number, end: number) => boolean) | null = null;
-  // 100ms 격자에 발화의 끝점이 맞지 않을 수 있어 끝점을 담는 격자 위의 창도 후보로 넣는다.
-  const anchors: number[] = [];
   const speech = [...signals.speech]
     .map(([start, end]) => [Math.max(0, start), Math.min(duration, end)] as const)
     .filter(([start, end]) => end > start)
     .sort((left, right) => right[1] - right[0] - (left[1] - left[0]) || left[0] - right[0])[0];
-  if (speech !== undefined) {
+  if (speech !== undefined && speech[0] < high) {
     const [speechStart, speechEnd] = speech;
-    const stretched = Math.min(lengths.max, high - low, Math.max(length, up(speechEnd - speechStart)));
-    if (speechStart >= low && speechEnd <= high && stretched >= speechEnd - speechStart) {
-      length = stretched;
+    const head = down(speechStart);
+    const tail = up(speechEnd);
+    // 앞 여분 안에서 시작한 발화는 그 컷만 앞 여분을 발화 시작까지 줄인다 — 말의 첫머리가 잘리는 것이
+    // 전환이 겹치지 못하는 것보다 어색하다(§7). 뒤 여분은 줄이지 않는다: 끝이 잘리는 것은 받아들인다.
+    low = Math.min(low, head);
+    if (tail <= high && tail - head <= Math.min(lengths.max, high - low)) {
+      length = Math.max(length, tail - head);
       contains = (start, end) => start <= speechStart && end >= speechEnd;
-      anchors.push(down(speechStart), up(speechEnd) - length);
-    } else if (speechStart >= low && speechStart <= high) {
+    } else {
       contains = (start, end) => start <= speechStart && end > speechStart;
-      anchors.push(down(speechStart));
     }
   }
 
   const starts: number[] = [];
   for (let start = low; start + length <= high; start += WINDOW_STEP_MS) starts.push(start);
-  for (const anchor of anchors) if (anchor >= low && anchor + length <= high && !starts.includes(anchor)) starts.push(anchor);
-  starts.sort((a, b) => a - b);
   if (starts.length === 0) starts.push(Math.max(0, down((usable - length) / 2)));
   const allowed = contains === null ? starts : starts.filter((start) => contains!(start, start + length));
   const candidates = allowed.length > 0 ? allowed : starts;
