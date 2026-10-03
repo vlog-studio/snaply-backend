@@ -2,8 +2,9 @@
 
 **작성일**: 2026-08-20 (착수 계획 §1·§3~§6에서 분리 — 원문은 [archive/edit-spec-v3-kickoff.md](../archive/edit-spec-v3-kickoff.md))
 **상태**: 결정 — 스펙 초안 검토(5회)에서 수렴했다. 공유 어휘 사전 3종(앵커 · 스테이지·시드 · 재생성
-무효화)은 구현됐고, `editSpec` v3 와 에셋 매니페스트의 **스키마 본문은 아직 저장소에 없다** — 남은 개정과
-미결은 [backlog.md](../backlog.md) A-7 에만 둔다.
+무효화)은 구현됐고, `editSpec` v3 와 에셋 매니페스트의 스키마 본문은 초안
+([plans/edit-spec-v3.md](../plans/edit-spec-v3.md) · [plans/asset-pack-manifest.md](../plans/asset-pack-manifest.md))으로
+있다 — 미결은 [backlog.md](../backlog.md) A-7 에만 둔다.
 **원천**: v3 스펙·매니페스트가 따라야 할 설계 규칙과 그 근거. 어휘와 무효화 판단의 **값**은
 `packages/shared-types/src/*-vocabulary.json` 이 원천이며, 이 문서는 그 이유만 담는다.
 **관련 문서**: [plans/trend-editing-pipeline.md](../plans/trend-editing-pipeline.md)(상위 계획) ·

@@ -8,8 +8,8 @@
 **원천**: AI 편집 초안(MOV-21·MOV-22)이 쓸 편집 툴의 v1 목록, 툴마다 정할 항목, 착수 순서의 제안.
 미결은 [backlog.md](../backlog.md) A-7·A-11 에만 둔다
 **관련 문서**: [decisions/auto-edit-draft.md](../decisions/auto-edit-draft.md) · [decisions/edit-spec-v3.md](../decisions/edit-spec-v3.md) ·
-[trend-editing-pipeline.md](trend-editing-pipeline.md) · v3 스키마 초안(main 에 없음 — 커밋 `c8530f2` 의
-`docs/plans/edit-spec-v3.md`·`docs/plans/asset-pack-manifest.md`)
+[trend-editing-pipeline.md](trend-editing-pipeline.md) · v3 스키마 초안([edit-spec-v3.md](edit-spec-v3.md) ·
+[asset-pack-manifest.md](asset-pack-manifest.md))
 
 ---
 

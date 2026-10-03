@@ -1,13 +1,14 @@
 # editSpec v3 — 스키마
 
-**작성일**: 2026-08-20 · **상태**: 제안 (착수 전) — 현행 사실이 아니다.
-
-착수 순서와 커밋 계획은 [edit-spec-v3-kickoff.md](./edit-spec-v3-kickoff.md),
-상위 계획은 [trend-editing-pipeline.md](./trend-editing-pipeline.md),
-미결은 [backlog.md](../backlog.md) A-7 에만 둔다.
-
-관련: [asset-pack-manifest.md](./asset-pack-manifest.md) ·
+**작성일**: 2026-08-20 (main 에는 2026-10-03 에 들어왔다)
+**상태**: 제안 (착수 전) — 현행 사실이 아니다. 이 초안이 따르는 확정 결정은
+[decisions/edit-spec-v3.md](../decisions/edit-spec-v3.md) 가 원천이다.
+**관련 문서**: [asset-pack-manifest.md](./asset-pack-manifest.md) ·
+[trend-editing-pipeline.md](./trend-editing-pipeline.md)(상위 계획) ·
+[archive/edit-spec-v3-kickoff.md](../archive/edit-spec-v3-kickoff.md)(착수 순서와 커밋 계획, 보관) ·
 [storage-and-subscription-policy.md](../decisions/storage-and-subscription-policy.md) §3
+
+미결은 [backlog.md](../backlog.md) A-7 에만 둔다.
 
 ---
 

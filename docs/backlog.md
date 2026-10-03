@@ -258,19 +258,17 @@ v3 는 **Movie export 에 붙인다** — `POST /edit-jobs` 는 한 버전 공�
 - [ ] 번인 자막으로 전환할 것인가 — [decisions/subtitle-rendering.md](./decisions/subtitle-rendering.md)(미결)
 - [ ] BGM 을 어디서 확보할 것인가(AI 생성 음원 포함)와 예산 — [decisions/bgm-sourcing.md](./decisions/bgm-sourcing.md)(미결)
 - [ ] `bgm_tracks` 스키마 신설 — `schema.prisma` 는 공유 파일이라 [team.md](./team.md) §2·§3 적용
-- [ ] **스티커 팩 매니페스트 스키마** — 에셋 URL·앵커 적합성·무드 태그·스케일 범위·기본 모션.
+- [x] **스티커 팩 매니페스트 스키마** — 에셋 URL·앵커 적합성·무드 태그·스케일 범위·기본 모션.
       뒤로 미룰수록 마이그레이션 비용이 커진다(trend-editing-pipeline §8.3).
       **설계는 확정됐다**([edit-spec-v3.md](./decisions/edit-spec-v3.md) §2 C·D, 폰트 형식은 C-1) — 앵커 어휘는
-      이미 공유 사전에 있고, 남은 것은 매니페스트 본문을 저장소에 들이는 일이다(아래 초안 개정 항목)
-- [ ] **editSpec v3·에셋 매니페스트 초안의 남은 개정** — 확정 결정([decisions/edit-spec-v3.md](./decisions/edit-spec-v3.md))을
-      두 스키마 초안에 반영하는 일이 남았다: ① editSpec 초안에 §1 A·B 의 잔여와 `fallback` 예시의
-      `prefer` → `ref` ② 매니페스트 초안에 §2 C·D 전부 — anchor 어휘를 별도 절로 떼고 `defaultAnchor` 를
-      지우며(`anchorAffinity[0]` 이 기본값) 남은 `prefer` 를 `ref` 로 ③ 두 초안의 "모든 좌표는 0~1" 문장이
-      좌표계 진술이지 범위 보장이 아님을 밝히고, 초안의 JSON Schema 예시와 v3 스펙 검증(`parseEditSpec` 확장)
-      모두 `resolved.xy` 에 범위 제약을 두지 않는다고 적는다. 사전은 이미 `ref` 를 쓰므로 지금 두 초안과
-      사전이 갈라져 있다.
-      **완료 조건**: 두 초안(`docs/plans/edit-spec-v3.md` · `docs/plans/asset-pack-manifest.md`)은 main 에 없고
-      미병합 브랜치 `feat/media/edit-spec-v3-vocabularies`(c8530f2)에만 있다 — 먼저 main 에 들이고 위 셋을 반영한다
+      이미 공유 사전에 있고, 매니페스트 본문은 초안 [plans/asset-pack-manifest.md](./plans/asset-pack-manifest.md)
+      §5(스티커 팩) · §9(anchor 어휘)에 있다(2026-10-03 main 에 들어옴)
+- [x] **editSpec v3·에셋 매니페스트 초안의 남은 개정** — 확정 결정([decisions/edit-spec-v3.md](./decisions/edit-spec-v3.md))을
+      두 스키마 초안에 반영하는 일. 초안은 2026-08-20 에 이미 개정돼 있었는데 미병합 브랜치에만 있었고, 2026-10-03
+      main 에 들어왔다([plans/edit-spec-v3.md](./plans/edit-spec-v3.md) · [plans/asset-pack-manifest.md](./plans/asset-pack-manifest.md)).
+      들일 때 확인한 것: `prefer` 가 남지 않았고(`ref`), anchor 어휘가 매니페스트 §9 로 떨어져 있고 `defaultAnchor` 가 없으며,
+      editSpec §10.3 이 `resolved.xy` 를 "범위 무제약"으로 적는다. 결정 A-1~D-8 의 각 항목은 초안에서 대응하는 서술을
+      찾는 정도로 대조했다
 - [ ] 스티커를 어디서 확보할 것인가(디자이너 커미션 여부와 스타일 방향) —
       [decisions/sticker-asset-sourcing.md](./decisions/sticker-asset-sourcing.md) 결정 1(미결)
 - [ ] 스티커를 어떤 경로로 등록·관리할 것인가(관리자 페이지 도입 여부) — 같은 문서 결정 2(미결)
