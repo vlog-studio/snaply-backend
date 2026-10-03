@@ -199,6 +199,25 @@ describe('신호가 없는 스냅', () => {
     expect(await h.prisma.movieDraft.count({ where: { userId: user.id } })).toBe(2);
   });
 
+  it('렌디션이 아직 돌지 않았으면 신호 작업을 따로 넣지 않는다 — 렌디션이 신호도 계산한다', async () => {
+    const user = await h.createUser();
+    const fresh = await createSnap(user, 0, null);
+    const queue = new Queue(process.env.RENDITION_QUEUE_NAME ?? '', { connection: createRedisConnection() });
+    try {
+      await queue.add('rendition', { videoId: fresh, userId: user.id, s3Key: 'k' }, { jobId: fresh });
+    } finally {
+      await queue.close();
+    }
+    const body = { snaps: [{ videoId: fresh }] };
+
+    await requestDraft(user, body);
+    await requestDraft(user, body);
+
+    expect(await signalJobState(fresh)).toBeUndefined();
+    // 신호를 기다리므로 재사용하지 않는다.
+    expect(await h.prisma.movieDraft.count({ where: { userId: user.id } })).toBe(2);
+  });
+
   it.each([
     ['재시도를 소진한 작업', { failed: 'storage down' }],
     ['신호를 남기지 못하고 끝난 작업', { returned: { status: 'skipped' } }],

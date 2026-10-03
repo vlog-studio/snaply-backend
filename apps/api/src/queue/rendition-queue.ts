@@ -60,20 +60,27 @@ export async function enqueueSignals(
   data: Omit<RenditionJobData, 'only'>,
   signalsVersion: number,
 ): Promise<SignalsEnqueueOutcome> {
+  // 렌디션이 아직 기다리거나 도는 중이면 그 작업이 신호도 계산한다 — 따로 넣으면 원본을 두 번 받아 두 번 계산한다.
+  const rendition = await getQueue().getJob(data.videoId);
+  if (rendition && isPending(await rendition.getState())) return 'queued';
+
   const jobId = `signals-${data.videoId}`;
   const existing = await getQueue().getJob(jobId);
   if (existing) {
     const state = await existing.getState();
     if (state === 'completed' && isUnreadable(existing.returnvalue, signalsVersion)) return 'unreadable';
-    if (state === 'completed' || state === 'failed') {
-      // 다른 요청이 먼저 지웠을 수 있다. 그러면 아래 add 는 그 요청이 넣은 작업에 막혀 아무것도 하지 않는다.
-      await existing.remove().catch(() => undefined);
-    } else if (state !== 'unknown') {
-      return 'queued'; // 기다리거나 도는 중이다
-    }
+    if (isPending(state)) return 'queued';
+    // 끝났거나(completed · failed) 그 사이 사라졌다. 다른 요청이 먼저 지웠다면 아래 add 는 그 요청이 넣은 작업에 막혀
+    // 아무것도 하지 않는다.
+    await existing.remove().catch(() => undefined);
   }
   await getQueue().add('signals', { ...data, only: 'signals' }, { jobId });
   return 'queued';
+}
+
+/** 기다리거나 도는 중인 작업. 끝났거나(completed · failed) 사라진(unknown) 작업이 아니다. */
+function isPending(state: string): boolean {
+  return state !== 'completed' && state !== 'failed' && state !== 'unknown';
 }
 
 function isUnreadable(result: unknown, signalsVersion: number): boolean {
