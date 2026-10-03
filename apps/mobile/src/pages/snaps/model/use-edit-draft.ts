@@ -58,6 +58,16 @@ export function draftConfirmation(
     };
   }
   const refused = state.kind === 'failed' && state.picks === picks ? state.refused : undefined;
+  if (refused === 'unavailable') {
+    // The server no longer has any of these snaps; the same picks will not pass.
+    return {
+      label: ConfirmLabel,
+      notice: '고른 스냅을 자동 편집에 쓸 수 없어요. 다른 스냅을 골라 주세요.',
+      disabled: true,
+      busy: false,
+      action: 'draft',
+    };
+  }
   if (refused === 'too-many') {
     // Refused without a cap to name: these picks will not pass, and how many to
     // drop is not known.

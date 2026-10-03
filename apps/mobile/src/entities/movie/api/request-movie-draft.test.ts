@@ -52,6 +52,29 @@ describe('requestMovieDraft', () => {
         { localId: 'snap-3' },
       ],
       leftOut: [{ videoId: 'v4' }, { localId: 'snap-5' }],
+      // A server older than `unavailable` sends none.
+      unavailable: [],
+    });
+  });
+
+  it('names the snaps the server could no longer use by their server id', async () => {
+    mockApiRequest.mockImplementation((_path, { schema }) =>
+      Promise.resolve(
+        schema.parse({
+          stylePreset: '\uC77C\uC0C1',
+          cuts: [{ videoId: 'v1' }],
+          excluded: [],
+          unavailable: [{ videoId: 'v2' }],
+        }),
+      ),
+    );
+
+    await expect(
+      requestMovieDraft([{ videoId: 'v1' }, { videoId: 'v2' }], 'daily'),
+    ).resolves.toEqual({
+      cuts: [{ videoId: 'v1' }],
+      leftOut: [],
+      unavailable: ['v2'],
     });
   });
 });
