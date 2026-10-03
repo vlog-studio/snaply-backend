@@ -42,6 +42,11 @@ export const DRAFT_REUSE_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 type SnapInput = MovieDraftBody['snaps'][number];
 
+/**
+ * 저장하는 제안 — 응답에서 `unavailable` 을 뺀 것. `unavailable` 은 요청마다 그때의 스냅 상태로 붙인다(재사용한 제안에도).
+ */
+type StoredDraft = Omit<MovieDraft, 'unavailable'>;
+
 function keyOf(snap: SnapInput): string {
   return 'videoId' in snap ? snap.videoId : snap.localId;
 }
@@ -84,19 +89,34 @@ export async function requestDraft(params: {
     });
   }
 
-  const uploadedIds = snaps.flatMap((snap) => ('videoId' in snap ? [snap.videoId] : []));
-  // 소유·source·ready 를 한 번에 본다. 어느 것이 어긋났는지 알려주지 않는다 — 남의 id 로 존재를 떠보지 못하게.
-  const videos = await prisma.video.findMany({
-    where: { id: { in: uploadedIds }, userId: params.userId, kind: 'source', status: 'ready', deletedAt: null },
-    select: { id: true, s3Key: true, capturedAt: true, createdAt: true },
+  const handedIds = snaps.flatMap((snap) => ('videoId' in snap ? [snap.videoId] : []));
+  // 소유·source 를 본다. 어느 것이 어긋났는지 알려주지 않는다 — 남의 id 로 존재를 떠보지 못하게.
+  const owned = await prisma.video.findMany({
+    where: { id: { in: handedIds }, userId: params.userId, kind: 'source' },
+    select: { id: true, s3Key: true, capturedAt: true, createdAt: true, status: true, deletedAt: true },
   });
-  if (videos.length !== uploadedIds.length) {
+  if (owned.length !== handedIds.length) {
     throw AppError.forbidden('초안에 쓸 수 없는 스냅이 포함돼 있습니다.');
+  }
+
+  // 자기 스냅이지만 지워졌거나(다른 기기에서 지움 · 보관 기간 만료 — 기기는 아직 모를 수 있다) 준비되지 않은 스냅은 빼고
+  // `unavailable` 로 알린다. 하나 때문에 요청 전체를 거절하면 앱은 다시 물어도 같은 거절을 받는다. `excluded` 에 넣지 않는
+  // 것은 앱이 그 스냅을 다시 넣으라고 권하기 때문이다 — 서버에 없는 스냅으로는 무비를 만들 수 없다.
+  const gone = new Set(owned.filter((video) => video.deletedAt !== null || video.status !== 'ready').map((video) => video.id));
+  const unavailable = handedIds.filter((id) => gone.has(id)).map((videoId) => ({ videoId }));
+  const videos = owned.filter((video) => !gone.has(video.id));
+  const uploadedIds = videos.map((video) => video.id);
+  const usable = snaps.filter((snap) => !('videoId' in snap) || !gone.has(snap.videoId));
+  if (usable.length === 0) {
+    // 고를 것이 없다. 비용도 없으므로 기록하지 않고 횟수에도 세지 않는다.
+    return { stylePreset, cuts: [], excluded: [], unavailable };
   }
 
   const now = Date.now();
   const windowStart = new Date(now - DRAFT_REUSE_WINDOW_MS);
-  const snapHash = snapHashOf(stylePreset, snaps);
+  // 쓸 수 있는 스냅만으로 따진다 — 초안은 그것만의 함수다. 그래서 스냅 하나가 나중에 사라져도 그 스냅을 담은 예전 제안은
+  // 재사용되지 않는다(집합이 달라진다).
+  const snapHash = snapHashOf(stylePreset, usable);
 
   const reusable = await prisma.movieDraft.findFirst({
     where: { userId: params.userId, snapHash, complete: true, createdAt: { gte: windowStart } },
@@ -104,7 +124,7 @@ export async function requestDraft(params: {
     select: { result: true },
   });
   if (reusable) {
-    return reusable.result as unknown as MovieDraft;
+    return { ...(reusable.result as unknown as StoredDraft), unavailable };
   }
 
   // 한도는 새 초안에만 건다. 재사용은 비용이 없다.
@@ -137,7 +157,7 @@ export async function requestDraft(params: {
   const missing = videos.filter((video) => !signalsOf.has(video.id));
   await enqueueMissingSignals(params.userId, missing);
 
-  const candidates = snaps.map((snap): DraftCandidate => {
+  const candidates = usable.map((snap): DraftCandidate => {
     if (!('videoId' in snap)) {
       return { key: snap.localId, uploaded: false, capturedAt: Date.parse(snap.capturedAt), signals: null, analysis: null };
     }
@@ -175,12 +195,12 @@ export async function requestDraft(params: {
   });
 
   const direction = directDraft({
-    seedRoot: draftSeedRoot(params.userId, snaps.map(keyOf)),
+    seedRoot: draftSeedRoot(params.userId, usable.map(keyOf)),
     stylePreset,
     candidates,
   });
   const uploaded = new Set(uploadedIds);
-  const draft: MovieDraft = {
+  const draft: StoredDraft = {
     stylePreset,
     cuts: direction.cuts.map((cut) =>
       uploaded.has(cut.key)
@@ -203,7 +223,7 @@ export async function requestDraft(params: {
       result: draft as unknown as Prisma.InputJsonValue,
     },
   });
-  return draft;
+  return { ...draft, unavailable };
 }
 
 /** 신호가 없는 스냅의 신호를 계산해 둔다. 실패해도 초안은 나간다 — 그 스냅은 검사 없이 들어갔을 뿐이다. */

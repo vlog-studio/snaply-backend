@@ -56,6 +56,11 @@ export const movieDraftSchema = z
       .describe(
         '넣지 않은 스냅, 촬영순. 이유는 주지 않는다 — 앱은 개수를 알리고 다시 넣을 수 있게 한다. 업로드되지 않은 스냅(`localId`)은 그런 스냅만 10개를 넘을 때만 빠진다.',
       ),
+    unavailable: z
+      .array(z.object({ videoId: z.uuid() }))
+      .describe(
+        '넘긴 스냅 중 서버가 더는 쓸 수 없는 자기 스냅 — 지워졌거나(다른 기기에서 지움 · 보관 기간 만료) 준비되지 않았다. 나머지로 초안을 만들고, 이 스냅은 `cuts` 에도 `excluded` 에도 넣지 않는다(다시 넣을 수 없으므로). 넘긴 스냅이 모두 이렇다면 `cuts` 가 비어 있다. 남의 id 는 여기 오지 않고 요청 전체가 403 이다.',
+      ),
   })
   .meta({ id: 'MovieDraft' });
 export type MovieDraft = z.infer<typeof movieDraftSchema>;

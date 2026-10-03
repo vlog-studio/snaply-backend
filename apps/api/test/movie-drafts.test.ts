@@ -6,7 +6,7 @@
  *   ② 업로드되지 않은 스냅과 신호가 없는 스냅은 빼지 않고 구간 없이 놓는다. 신호가 없으면 신호 계산을 적재한다
  *   ③ 상한은 서버가 집행한다 — 한 번에 30개(400 `TOO_MANY_SNAPS` + max) · 24시간 10번(429 `DRAFT_LIMIT`)
  *   ④ 같은 요청은 24시간 안에서 같은 제안이고 횟수에 세지 않는다(신호가 다 있었던 제안만)
- *   ⑤ 남의 스냅은 403
+ *   ⑤ 남의 스냅은 403. 자기 스냅이지만 지워졌거나 준비되지 않은 스냅은 거절하지 않고 `unavailable` 로 알린다
  *   ⑥ 분석 동의를 철회하면 초안 기록도 지운다
  * 고르는 규칙 자체는 edit-director.test.ts 가 고정한다.
  */
@@ -226,11 +226,83 @@ describe('규칙이 바뀌면', () => {
   });
 });
 
+describe('쓸 수 없는 자기 스냅', () => {
+  it('지워졌거나 준비되지 않은 스냅은 빼고 unavailable 로 알린다 — 나머지로 초안을 만든다', async () => {
+    const user = await h.createUser();
+    const ok = await createSnap(user, 0);
+    const deleted = await createSnap(user, 1);
+    const pending = await createSnap(user, 2);
+    await h.prisma.video.update({ where: { id: deleted }, data: { deletedAt: new Date() } });
+    await h.prisma.video.update({ where: { id: pending }, data: { status: 'pending' } });
+
+    const res = await requestDraft(user, {
+      snaps: [{ videoId: ok }, { videoId: deleted }, { videoId: pending }],
+    });
+
+    expect(res.statusCode).toBe(200);
+    const data = res.json().data;
+    expect(data.cuts.map((cut: { videoId: string }) => cut.videoId)).toEqual([ok]);
+    // excluded 에 넣으면 앱이 다시 넣으라고 권한다 — 서버에 없는 스냅으로는 무비를 만들 수 없다.
+    expect(data.excluded).toEqual([]);
+    expect(data.unavailable).toEqual([{ videoId: deleted }, { videoId: pending }]);
+  });
+
+  it('모두 쓸 수 없으면 컷 없이 돌려주고 기록하지 않는다 — 횟수에 세지 않는다', async () => {
+    const user = await h.createUser();
+    const deleted = await createSnap(user, 0);
+    await h.prisma.video.update({ where: { id: deleted }, data: { deletedAt: new Date() } });
+
+    const res = await requestDraft(user, { snaps: [{ videoId: deleted }] });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().data).toMatchObject({ cuts: [], excluded: [], unavailable: [{ videoId: deleted }] });
+    expect(await h.prisma.movieDraft.count({ where: { userId: user.id } })).toBe(0);
+  });
+
+  it('스냅이 사라진 뒤에는 그 스냅을 담은 예전 제안을 재사용하지 않는다', async () => {
+    const user = await h.createUser();
+    const a = await createSnap(user, 0);
+    const b = await createSnap(user, 1);
+    const first = await requestDraft(user, { snaps: [{ videoId: a }, { videoId: b }] });
+    expect(first.json().data.cuts).toHaveLength(2);
+
+    await h.prisma.video.update({ where: { id: b }, data: { deletedAt: new Date() } });
+    const again = await requestDraft(user, { snaps: [{ videoId: a }, { videoId: b }] });
+
+    expect(again.json().data.cuts.map((cut: { videoId: string }) => cut.videoId)).toEqual([a]);
+    expect(again.json().data.unavailable).toEqual([{ videoId: b }]);
+  });
+
+  it('재사용한 제안에도 unavailable 이 붙는다', async () => {
+    const user = await h.createUser();
+    const a = await createSnap(user, 0);
+    const b = await createSnap(user, 1);
+    await h.prisma.video.update({ where: { id: b }, data: { deletedAt: new Date() } });
+    const body = { snaps: [{ videoId: a }, { videoId: b }] };
+
+    await requestDraft(user, body);
+    const reused = await requestDraft(user, body);
+
+    expect(await h.prisma.movieDraft.count({ where: { userId: user.id } })).toBe(1);
+    expect(reused.json().data.unavailable).toEqual([{ videoId: b }]);
+  });
+});
+
 describe('권한과 파기', () => {
   it('남의 스냅이 섞이면 403', async () => {
     const [user, other] = [await h.createUser(), await h.createUser()];
     const mine = await createSnap(user, 0);
     const theirs = await createSnap(other, 1);
+    const res = await requestDraft(user, { snaps: [{ videoId: mine }, { videoId: theirs }] });
+    expect(res.statusCode).toBe(403);
+  });
+
+  it('남의 지운 스냅도 unavailable 이 아니라 403 — 남의 id 로 존재를 떠보지 못하게', async () => {
+    const [user, other] = [await h.createUser(), await h.createUser()];
+    const mine = await createSnap(user, 0);
+    const theirs = await createSnap(other, 1);
+    await h.prisma.video.update({ where: { id: theirs }, data: { deletedAt: new Date() } });
+
     const res = await requestDraft(user, { snaps: [{ videoId: mine }, { videoId: theirs }] });
     expect(res.statusCode).toBe(403);
   });
