@@ -28,6 +28,12 @@ export type MovieDraftProposal = {
   cuts: MovieDraftCut[];
   /** Snaps handed over but not put in, in capture order. */
   leftOut: MovieDraftSnapKey[];
+  /**
+   * Uploaded snaps the server could no longer use, by server id: deleted
+   * (on another device, or expired) or not ready. Neither a cut nor left out —
+   * there is nothing on the server to make a movie from, so nothing to offer back.
+   */
+  unavailable: string[];
 };
 
 export type MovieDraftSnapKey = { videoId: string } | { localId: string };
@@ -49,6 +55,8 @@ const movieDraftDtoSchema = z.object({
     ]),
   ),
   excluded: z.array(snapKeySchema),
+  // Optional: a server older than this field refused such a request whole (403).
+  unavailable: z.array(z.object({ videoId: z.string() })).optional(),
 });
 type MovieDraftDto = z.infer<typeof movieDraftDtoSchema>;
 
@@ -64,6 +72,7 @@ function mapDraft(dto: MovieDraftDto): MovieDraftProposal {
       };
     }),
     leftOut: dto.excluded,
+    unavailable: (dto.unavailable ?? []).map((snap) => snap.videoId),
   };
 }
 
@@ -79,6 +88,7 @@ function mockDraft(snaps: readonly MovieDraftSnap[]): MovieDraftDto {
   return {
     cuts: snaps.slice(0, MovieSnapLimit).map(key),
     excluded: snaps.slice(MovieSnapLimit).map(key),
+    unavailable: [],
   };
 }
 

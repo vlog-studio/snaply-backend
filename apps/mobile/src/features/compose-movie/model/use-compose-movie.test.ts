@@ -173,7 +173,7 @@ describe('startMovieFromDraft', () => {
   }
 
   it('hands the snaps over in capture order — uploaded by server id, the rest by local id and when shot', async () => {
-    mockRequestMovieDraft.mockResolvedValue({ cuts: [], leftOut: [] });
+    mockRequestMovieDraft.mockResolvedValue({ cuts: [], leftOut: [], unavailable: [] });
     await draft(['late', 'local', 'early']);
 
     expect(mockRequestMovieDraft).toHaveBeenCalledWith(
@@ -186,6 +186,7 @@ describe('startMovieFromDraft', () => {
     mockRequestMovieDraft.mockResolvedValue({
       cuts: [{ videoId: 'v-early', trim: { startSec: 0.4, endSec: 2.6 } }, { localId: 'local' }],
       leftOut: [{ videoId: 'v-late' }],
+      unavailable: [],
     });
     const outcome = await draft(['late', 'local', 'early']);
 
@@ -204,7 +205,11 @@ describe('startMovieFromDraft', () => {
 
   it('cuts to the default style when there is no movie to take one from', async () => {
     mockLatestStyle.mockReturnValue(undefined);
-    mockRequestMovieDraft.mockResolvedValue({ cuts: [{ videoId: 'v-early' }], leftOut: [] });
+    mockRequestMovieDraft.mockResolvedValue({
+      cuts: [{ videoId: 'v-early' }],
+      leftOut: [],
+      unavailable: [],
+    });
     await draft(['early']);
 
     expect(mockRequestMovieDraft).toHaveBeenCalledWith([{ videoId: 'v-early' }], 'daily');
@@ -242,9 +247,38 @@ describe('startMovieFromDraft', () => {
   );
 
   it('makes nothing from an answer that names none of the snaps it was sent', async () => {
-    mockRequestMovieDraft.mockResolvedValue({ cuts: [{ videoId: 'v-stranger' }], leftOut: [] });
+    mockRequestMovieDraft.mockResolvedValue({
+      cuts: [{ videoId: 'v-stranger' }],
+      leftOut: [],
+      unavailable: [],
+    });
 
     expect(await draft(['early'])).toEqual({ refused: 'unreachable' });
+    expect(mockCreateMovie).not.toHaveBeenCalled();
+  });
+
+  it('makes the movie from the rest when the server no longer has some snaps, and offers none of those back', async () => {
+    mockRequestMovieDraft.mockResolvedValue({
+      cuts: [{ videoId: 'v-early' }],
+      leftOut: [],
+      unavailable: ['v-late'],
+    });
+    const outcome = await draft(['early', 'late']);
+
+    expect(mockCreateMovie).toHaveBeenCalledWith(
+      expect.objectContaining({ snapIds: ['early'], leftOut: [] }),
+    );
+    expect(outcome).toEqual({ movie: expect.objectContaining({ id: 'drafted' }) });
+  });
+
+  it('asks for other snaps when the server no longer has any of them — asking again would answer the same', async () => {
+    mockRequestMovieDraft.mockResolvedValue({
+      cuts: [],
+      leftOut: [],
+      unavailable: ['v-early', 'v-late'],
+    });
+
+    expect(await draft(['early', 'late'])).toEqual({ refused: 'unavailable' });
     expect(mockCreateMovie).not.toHaveBeenCalled();
   });
 

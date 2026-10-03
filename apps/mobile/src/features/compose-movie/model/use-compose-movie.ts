@@ -55,10 +55,13 @@ export type CutsOutcome = {
  * again will not help until tomorrow, so the screen offers the hand-made path.
  * `too-many` — more snaps than one draft takes (the server's `TOO_MANY_SNAPS`);
  * the same picks will never pass, so the screen asks for fewer.
+ * `unavailable` — every snap handed over is one the server can no longer use
+ * (deleted on another device or expired, or not ready); the same picks will
+ * never pass, so the screen asks for others.
  * `unreachable` — no usable answer came back (offline, a server error, a snap
  * the server would not take); asking again may.
  */
-export type DraftRefusal = 'limit' | 'too-many' | 'unreachable';
+export type DraftRefusal = 'limit' | 'too-many' | 'unavailable' | 'unreachable';
 
 export type DraftOutcome =
   | { movie: Movie; refused?: undefined }
@@ -295,6 +298,10 @@ export function useComposeMovie() {
           ...('trim' in cut && cut.trim ? { trim: cut.trim } : null),
         });
       }
+      // Nothing to cut because every snap is gone from the server: asking again
+      // would answer the same.
+      if (cutSnapIds.length === 0 && proposal.unavailable.length > 0)
+        return { refused: 'unavailable' };
       if (cutSnapIds.length === 0 || cutSnapIds.length > MovieSnapLimit)
         return { refused: 'unreachable' };
       const leftOut = proposal.leftOut.flatMap((key) => {
