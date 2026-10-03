@@ -81,9 +81,7 @@ export async function deleteRemoteMovie(id: string, signal?: AbortSignal): Promi
  * (`POST /movies/{id}/export`) and return the job to follow.
  *
  * The server reserves the run's 100 credits (402 `INSUFFICIENT_CREDITS` when
- * they do not fit — the server attaches `required`/`balance`, but this route's
- * contract does not declare them yet, so they do not survive serialization:
- * root backlog E-9), refuses a movie already
+ * they do not fit, carrying `required`/`balance`), refuses a movie already
  * generating with 409, and refuses with 400 a movie holding a cut whose snap
  * has expired or been deleted (`unavailable`) or no cuts at all. A remake
  * replaces the previous result rather than adding to it.
