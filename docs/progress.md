@@ -1943,3 +1943,21 @@ AI 편집 초안(MOV-21)을 시작했다. 상한·표시 시점·미업로드·�
 - 앱 기능 문서 [studio.md](../apps/mobile/docs/features/studio.md) · [snaps.md](../apps/mobile/docs/features/snaps.md) 갱신.
 - **자동 검증**: `npm run verify:mobile` 162 suites / 1309 tests(format · lint · typecheck 포함) · 새 테스트 중 `TOO_MANY_SNAPS` 두 경우는 고치기 전 코드에서 `unreachable` 로 실패하는
   것을 확인했다. 실기기 확인은 하지 않았다 — 서버 상한이 30 이라 지금 앱에서는 이 거절이 나지 않는다.
+
+## 2026-10-03 (이어서) — 서버가 쓸 수 없는 스냅을 따로 알린다(backlog E-14)
+
+`POST /movie-drafts` 는 넘긴 업로드 스냅 중 하나라도 `ready` · 삭제되지 않은 자기 스냅이 아니면 요청 전체를 403 으로 거절했다. 다른
+기기에서 지웠거나 보관 기간이 끝났는데 이 기기는 아직 `uploaded` 로 아는 스냅이 섞이면, 앱은 `다시 시도` 를 보여 줬지만 다시 물어도
+같은 거절이었다.
+
+- **API** — 남의 id · 없는 id 는 그대로 요청 전체가 403(어느 것인지 알리지 않는다). 자기 스냅이지만 지워졌거나 준비되지 않은 것은
+  빼고 응답의 새 필드 `unavailable` 로 알린다 — `excluded` 가 아니다, 앱이 다시 넣으라고 권하기 때문이다. 나머지로 초안을 만들고
+  재사용 키와 시드도 나머지만으로 따져, 스냅이 사라진 뒤에는 그 스냅을 담은 예전 제안이 재사용되지 않는다. 모두 쓸 수 없으면 컷
+  없이 돌려주고 기록하지 않는다(횟수에 세지 않는다). 계약 · `openapi.json` · [api-spec.md](./api-spec.md) · 스펙 MOV-21 ·
+  [edit-director.md](./decisions/edit-director.md) §8.2 갱신.
+- **앱** — `unavailable` 을 읽고(없는 예전 서버는 빈 목록), 넘긴 스냅을 서버가 하나도 쓸 수 없으면 `unavailable` 거절로
+  `고른 스냅을 자동 편집에 쓸 수 없어요. 다른 스냅을 골라 주세요.` 를 보이고 고르기가 바뀔 때까지 버튼을 끈다. 일부만 그렇다면
+  나머지로 무비를 만들고 그 스냅은 다시 넣기로 권하지 않는다. [studio.md](../apps/mobile/docs/features/studio.md) 갱신.
+- **자동 검증**: API 574개(5 신규) · typecheck · lint · `npm run verify:mobile` 162 suites / 1314 tests(5 신규). 새 API 테스트는 고치기 전
+  서비스에서 실패하고(403 · 계약의 `unavailable` 없음), 앱의 "모두 쓸 수 없음" 테스트는 고치기 전 코드에서 `unreachable` 로 실패했다.
+  실기기 확인은 하지 않았다.
