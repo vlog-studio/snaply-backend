@@ -1,6 +1,12 @@
 import { z } from 'zod';
 
-import { AUTHENTICATED_ERROR_RESPONSES, apiErrorSchema, apiSuccess, cursorPaginated } from './common.js';
+import {
+  AUTHENTICATED_ERROR_RESPONSES,
+  apiErrorSchema,
+  apiSuccess,
+  cursorPaginated,
+  paymentRequiredErrorSchema,
+} from './common.js';
 import { defineRoute } from './define-route.js';
 import {
   MOVIE_CLIP_MAX,
@@ -288,7 +294,8 @@ export const exportMovie = defineRoute({
     response: {
       202: apiSuccess(movieExportResultSchema),
       400: apiErrorSchema,
-      402: apiErrorSchema,
+      // `INSUFFICIENT_CREDITS` 의 `required`·`balance` 를 선언해야 직렬화에서 살아남는다 — 앱이 부족분 숫자를 그린다.
+      402: paymentRequiredErrorSchema,
       404: apiErrorSchema,
       409: apiErrorSchema,
       ...AUTHENTICATED_ERROR_RESPONSES,

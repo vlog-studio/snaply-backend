@@ -13,6 +13,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createHarness, type Harness, type TestUser } from './helpers/harness.js';
+import { MOVIE_EXPORT_COST } from '../src/services/billing/credit-policy.js';
 
 let h: Harness;
 
@@ -343,6 +344,30 @@ describe('POST /movies/:id/export', () => {
     });
 
     expect(res.statusCode).toBe(409);
+  });
+
+  it('크레딧이 모자라면 402 이고 필요량과 잔액을 함께 내린다 — 앱이 부족분 숫자를 그린다', async () => {
+    const user = await h.createUser();
+    const snapId = await createSnap(user);
+    const movieId = (await createMovie(user, { clips: [{ videoId: snapId }] })).json().data.id;
+    await h.prisma.creditLedger.create({
+      data: { userId: user.id, delta: MOVIE_EXPORT_COST - 1, reason: 'promo' },
+    });
+
+    const res = await h.app.inject({
+      method: 'POST',
+      url: `/movies/${movieId}/export`,
+      headers: user.auth,
+    });
+
+    expect(res.statusCode).toBe(402);
+    // 선언되지 않은 키는 직렬화에서 지워진다 — 이 라우트의 402 가 `apiErrorSchema` 였을 때는 두 숫자가 빠졌다(backlog E-9).
+    expect(res.json().error).toMatchObject({
+      code: 'INSUFFICIENT_CREDITS',
+      required: MOVIE_EXPORT_COST,
+      balance: MOVIE_EXPORT_COST - 1,
+    });
+    expect((await getMovie(user, movieId)).json().data.status).toBe('draft');
   });
 });
 
