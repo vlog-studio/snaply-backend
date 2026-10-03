@@ -94,8 +94,7 @@ MOV-16~19 다. 만료의 동작 구조(2단계 삭제 · 만료 스냅 식별 ·
 ([decisions/storage-and-subscription-policy.md](./decisions/storage-and-subscription-policy.md) §4.3).
 
 **앱에 전달할 것**: 잔액·차감·402 의 형태는 계약([`contract/billing.ts`](../packages/shared-types/src/contract/billing.ts) ·
-[`contract/movies.ts`](../packages/shared-types/src/contract/movies.ts))이 원천이다 — 무비 생성의 402 가 부족분
-숫자를 싣지 못하는 결함은 E-9.
+[`contract/movies.ts`](../packages/shared-types/src/contract/movies.ts))이 원천이다.
 
 **완료 조건**: 위 수량·가격 확정 → `credit-policy.ts` 값 교체 → 양 스토어에 동일 상품 ID로
 등록 + RevenueCat 프로젝트·웹훅 URL 연결 → 구독을 팔기로 하면 entitlement 반영(용량 한도를 남기기로
@@ -732,18 +731,6 @@ GHCR 패키지를 공개로 돌릴지도 정한다 — 공개면 새 개발자�
 **완료 조건**: 대체 여부 결정 → 바꾼다면 compose 3곳 + 문서 갱신 + `npm test -w apps/api`
 (통합 테스트가 MinIO 를 쓴다) 통과. 두기로 하면 이 항목을 "소스 빌드 미러 유지"로 좁혀 닫는다.
 
-### E-9. 무비 생성의 402 가 부족분 숫자를 싣지 못한다
-
-무비 생성 `POST /movies/{id}/export` 의 402 응답 스키마가 `apiErrorSchema` 라
-(`packages/shared-types/src/contract/movies.ts:241`) `INSUFFICIENT_CREDITS` 의 `required`·`balance` 가
-응답에서 빠진다. 두 필드는 `POST /edit-jobs` 의 `paymentRequiredErrorSchema`(`contract/edit-jobs.ts:151`)에만
-선언돼 있고, 선언되지 않은 키는 응답 직렬화에서 지워진다(`contract/common.ts` 의 `apiErrorWith` 주석).
-서버는 값을 싣는다(`apps/api/src/services/credit.service.ts:105`). 그래서 앱은 부족분 숫자 없이 일반
-문구만 보인다 — `features/compose-movie/lib/read-credit-shortfall.ts` 는 두 필드가 없으면 숫자를 그리지 않는다.
-
-**완료 조건**: export 의 402 를 `paymentRequiredErrorSchema` 로 선언 · `apps/api/test/movies.test.ts` 에 402
-`required`·`balance` 단언 추가 · `npm run openapi:write -w apps/api` 로 스냅샷 재생성 · `npm test -w apps/api` 통과.
-
 ### E-10. 재생 화면의 길이 표시가 라이트 테마에서 거의 보이지 않는다
 
 재생 화면의 길이 표시가 라이트 테마에서 검은 바탕 위 어두운 글자로 그려진다 — 2026-09-27 스냅 reconcile
@@ -832,6 +819,7 @@ GHCR 패키지를 공개로 돌릴지도 정한다 — 공개면 새 개발자�
 - **E-4** 빌드한 이미지의 스모크 검사(빌드 → 스모크 → 푸시) — 2026-09-11 → progress 2026-09-11 "이미지 스모크 검사 · e2e 무비 경로 전환"
 - **E-6** 낡은 Prisma 클라이언트 프리체크 — 2026-09-09 → progress 2026-09-09 "촬영 시각 저장 · 무비 서버 엔티티" ②
 - **E-8** 영상 삭제·정리가 자기 소유 객체만 지운다 — 2026-09-27 → progress 2026-09-27 "영상 삭제가 자기가 소유한 객체만 지운다"
+- **E-9** 무비 생성의 402 가 부족분 숫자를 싣지 못한다 — 2026-10-03 → progress 2026-10-03 "무비 생성의 402 가 부족분 숫자를 싣는다"
 - **E-13** 신호를 한 번 못 계산한 스냅은 다시 계산되지 않는다 — 2026-10-03 → progress 2026-10-03 "끝난 신호 작업을 다시 적재한다"
 - **E-14** 서버에서 사라진 스냅 하나가 편집 초안 전체를 막는다 — 2026-10-03 → progress 2026-10-03 "서버가 쓸 수 없는 스냅을 따로 알린다"
 - **E-15** 앱이 편집 초안의 스냅 상한(`max`)을 읽지 않는다 — 2026-10-03 → progress 2026-10-03 "편집 초안의 스냅 상한을 서버에서 배운다"

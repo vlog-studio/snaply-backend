@@ -1992,3 +1992,15 @@ AI 편집 초안(MOV-21)을 시작했다. 상한·표시 시점·미업로드·�
   것은 코드를 걷어 내지 않고 A-11 의 후속으로 적었다 — 결정 §6 의 규칙이고, editSpec 의 `cuts[].role` 로 싣기로 했던 일이 빠진
   것이다. 진행 기록의 두 "남은 것" 줄을 사실에 맞게 고쳤다(하나는 이미 실기기로 확인했고, 하나는 backlog 에 있다).
 - **자동 검증**: API 581개 · typecheck · lint · 새 테스트 2개(동시 요청 · 렌디션 대기)는 고치기 전 코드에서 세 번 모두 실패했다.
+
+## 2026-10-03 (이어서) — 무비 생성의 402 가 부족분 숫자를 싣는다(backlog E-9)
+
+무비 생성 `POST /movies/{id}/export` 의 402 응답이 계약에서 `apiErrorSchema` 로 선언돼, 서버가 `INSUFFICIENT_CREDITS` 에 싣는
+`required`·`balance` 가 응답 직렬화에서 지워졌다(선언되지 않은 키는 지워진다). 앱은 그 두 숫자로
+`크레딧이 부족해요 · {balance}/{required}.` 를 그리게 돼 있었지만 이 경로에서는 숫자 없는 문구만 나왔다.
+
+- **계약** — export 의 402 를 `POST /edit-jobs` 와 같은 `paymentRequiredErrorSchema` 로 선언했다. `openapi.json` · [api-spec.md](./api-spec.md) 갱신.
+- **앱** — 코드는 바꾸지 않았다(`readCreditShortfall` 가 이미 읽는다). 기능 문서
+  [credits-and-rewarded-ads.md](../apps/mobile/docs/features/credits-and-rewarded-ads.md) · [movie.md](../apps/mobile/docs/features/movie.md) 를
+  고치고 `Partial` 을 풀었다 — 이 경로로는 아직 실기기에서 숫자를 보지 않았다는 단서를 달았다.
+- **자동 검증**: API 582개 · typecheck · lint · `npm run verify:mobile` 162 suites / 1314 tests · 새 테스트(크레딧 하나 모자란 export → 402 + `required`·`balance`)는 고치기 전 계약에서 실패했다.
