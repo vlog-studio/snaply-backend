@@ -233,6 +233,28 @@ describe('신호가 없는 스냅', () => {
   });
 });
 
+describe('상한 — 동시에 온 요청', () => {
+  it(`남은 한 번을 동시에 다투면 하나만 받는다 — ${DAILY_DRAFT_LIMIT}번을 넘겨 쓰지 않는다`, async () => {
+    const user = await h.createUser();
+    await h.prisma.movieDraft.createMany({
+      data: Array.from({ length: DAILY_DRAFT_LIMIT - 1 }, (_, i) => ({
+        userId: user.id,
+        stylePreset: '일상',
+        snapHash: `seed-${i}`,
+        complete: true,
+        result: { stylePreset: '일상', cuts: [], excluded: [] },
+      })),
+    });
+    const snaps = await Promise.all(Array.from({ length: 5 }, (_, i) => createSnap(user, i)));
+
+    // 서로 다른 요청 다섯 — 모두 앞의 빠른 확인(9 < 10)을 지나 계산까지 간다.
+    const answers = await Promise.all(snaps.map((videoId) => requestDraft(user, { snaps: [{ videoId }] })));
+
+    expect(answers.map((res) => res.statusCode).sort()).toEqual([200, 429, 429, 429, 429]);
+    expect(await h.prisma.movieDraft.count({ where: { userId: user.id } })).toBe(DAILY_DRAFT_LIMIT);
+  });
+});
+
 describe('상한', () => {
   it('31개는 400 TOO_MANY_SNAPS 이고 max 를 알려준다', async () => {
     const user = await h.createUser();

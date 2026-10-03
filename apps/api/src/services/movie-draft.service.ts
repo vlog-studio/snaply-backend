@@ -127,12 +127,12 @@ export async function requestDraft(params: {
     return { ...(reusable.result as unknown as StoredDraft), unavailable };
   }
 
-  // 한도는 새 초안에만 건다. 재사용은 비용이 없다.
+  // 한도는 새 초안에만 건다. 재사용은 비용이 없다. 여기서는 계산을 아끼는 빠른 거절이고, 집행은 기록할 때 잠금 안에서 한다.
   const recent = await prisma.movieDraft.count({
     where: { userId: params.userId, createdAt: { gte: windowStart } },
   });
   if (recent >= DAILY_DRAFT_LIMIT) {
-    throw new AppError(429, 'DRAFT_LIMIT', '오늘 받을 수 있는 초안 수를 모두 썼습니다. 잠시 후 다시 시도하세요.');
+    throw draftLimitError();
   }
 
   const [signalRows, analysisRows] = await Promise.all([
@@ -214,16 +214,36 @@ export async function requestDraft(params: {
     excluded: direction.excluded.map((key) => (uploaded.has(key) ? { videoId: key } : { localId: key })),
   };
 
-  await prisma.movieDraft.create({
-    data: {
-      userId: params.userId,
-      stylePreset,
-      snapHash,
-      complete: waiting === 0,
-      result: draft as unknown as Prisma.InputJsonValue,
-    },
+  await recordDraft(params.userId, windowStart, {
+    stylePreset,
+    snapHash,
+    complete: waiting === 0,
+    result: draft as unknown as Prisma.InputJsonValue,
   });
   return { ...draft, unavailable };
+}
+
+function draftLimitError(): AppError {
+  return new AppError(429, 'DRAFT_LIMIT', '오늘 받을 수 있는 초안 수를 모두 썼습니다. 잠시 후 다시 시도하세요.');
+}
+
+/**
+ * 제안을 기록한다 — 하루 한도를 다시 센 뒤에. 사용자별 잠금 안에서 세고 쓰므로 동시에 온 요청들이 같은 남은 횟수를 보고
+ * 한도를 넘겨 쓰지 못한다. 잠금은 트랜잭션이 끝나면 풀린다(쿨다운 슬롯 `location.service.ts` 와 같은 방식).
+ */
+async function recordDraft(
+  userId: string,
+  windowStart: Date,
+  data: Omit<Prisma.MovieDraftUncheckedCreateInput, 'userId'>,
+): Promise<void> {
+  await getPrisma().$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`movie-draft:${userId}`}, 0))`;
+    const recent = await tx.movieDraft.count({ where: { userId, createdAt: { gte: windowStart } } });
+    if (recent >= DAILY_DRAFT_LIMIT) {
+      throw draftLimitError();
+    }
+    await tx.movieDraft.create({ data: { userId, ...data } });
+  });
 }
 
 /**
