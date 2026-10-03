@@ -21,7 +21,7 @@ for name in ("loguru", "bullmq", "asyncpg", "boto3", "botocore", "botocore.confi
 
 import rendition_worker  # noqa: E402
 from pipeline.rendition import RenditionOutcome  # noqa: E402
-from pipeline.snap_signals import SignalsError, SnapSignals  # noqa: E402
+from pipeline.snap_signals import SIGNALS_VERSION, SignalsError, SnapSignals  # noqa: E402
 
 SIGNALS = SnapSignals(3000, 0.5, 300.0, ("0" * 16,) * 3, (0.01,) * 29, False, ())
 
@@ -190,6 +190,8 @@ class SignalsOnlyJobTest(_WorkerCase):
         result = await rendition_worker.process_rendition_job(self._job(), None)
 
         self.assertEqual(result["status"], "failed")
+        # API 는 이 버전으로 읽지 못한 스냅을 다시 돌리지 않는다 — 버전이 없으면 매 초안 요청마다 다시 계산한다.
+        self.assertEqual(result["signalsVersion"], SIGNALS_VERSION)
 
 
 if __name__ == "__main__":

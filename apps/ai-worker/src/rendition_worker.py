@@ -30,7 +30,7 @@ import rendition_db
 import signals_db
 import storage
 from pipeline.rendition import RenditionError, build
-from pipeline.snap_signals import SignalsError, read_signals
+from pipeline.snap_signals import SIGNALS_VERSION, SignalsError, read_signals
 
 
 class RenditionSkipped(Exception):
@@ -166,9 +166,10 @@ async def process_signals_job(job) -> dict:
         logger.info("신호 건너뜀 video_id={} 이유={}", video_id, exc)
         return {"videoId": video_id, "status": "skipped"}
     except SignalsError as exc:
-        # 읽을 수 없는 파일이다. 다시 시도해도 같다.
+        # 읽을 수 없는 파일이다. 다시 시도해도 같다. 신호 버전을 함께 남겨, API 가 이 버전으로는 다시 돌리지 않고 그 스냅을
+        # "검사 없음"으로 확정하게 한다(apps/api/src/queue/rendition-queue.ts `enqueueSignals`). 버전이 바뀌면 다시 돌린다.
         logger.error("신호 실패 video_id={} 이유={}", video_id, exc)
-        return {"videoId": video_id, "status": "failed"}
+        return {"videoId": video_id, "status": "failed", "signalsVersion": SIGNALS_VERSION}
     except Exception as exc:  # noqa: BLE001 — 스토리지 장애 등은 재시도 대상이다
         logger.exception("신호 작업 중 예상치 못한 오류 video_id={}", video_id)
         _capture(exc)
