@@ -5,14 +5,15 @@
  *   ① 제안은 무비가 아니다 — 컷(촬영순)과 넣지 않은 스냅을 돌려주고, 앱이 그것으로 무비를 만든다
  *   ② 업로드되지 않은 스냅과 신호가 없는 스냅은 빼지 않고 구간 없이 놓는다. 신호가 없으면 신호 계산을 적재한다
  *   ③ 상한은 서버가 집행한다 — 한 번에 30개(400 `TOO_MANY_SNAPS` + max) · 24시간 10번(429 `DRAFT_LIMIT`)
- *   ④ 같은 요청은 24시간 안에서 같은 제안이고 횟수에 세지 않는다(신호가 다 있었던 제안만)
+ *   ④ 같은 요청은 24시간 안에서 같은 제안이고 횟수에 세지 않는다(신호를 기다리는 스냅이 없었던 제안만 — 이 신호 버전으로
+ *      읽을 수 없다고 끝난 스냅은 기다릴 것이 없다). 끝난 신호 작업은 지우고 다시 적재한다
  *   ⑤ 남의 스냅은 403. 자기 스냅이지만 지워졌거나 준비되지 않은 스냅은 거절하지 않고 `unavailable` 로 알린다
  *   ⑥ 분석 동의를 철회하면 초안 기록도 지운다
  * 고르는 규칙 자체는 edit-director.test.ts 가 고정한다.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createHash } from 'node:crypto';
-import { Queue } from 'bullmq';
+import { Queue, Worker } from 'bullmq';
 import { createHarness, type Harness, type TestUser } from './helpers/harness.js';
 import { createRedisConnection } from '../src/lib/redis.js';
 import { DAILY_DRAFT_LIMIT } from '../src/services/movie-draft.service.js';
@@ -80,6 +81,40 @@ async function signalJobs(videoIds: string[]): Promise<string[]> {
   try {
     const jobs = await Promise.all(videoIds.map((id) => queue.getJob(`signals-${id}`)));
     return jobs.filter((job) => job !== undefined && job.data.only === 'signals').map((job) => job!.data.videoId as string);
+  } finally {
+    await queue.close();
+  }
+}
+
+/**
+ * 신호 작업 하나를 워커가 끝낸 것처럼 만든다 — 결과를 돌려주며 끝났거나(`completed`) 재시도를 소진했다(`failed`).
+ * 테스트 큐에는 워커가 없어 앞선 테스트의 작업이 기다리고 있으므로, 맨 앞(lifo)에 넣고 바로 꺼낸다.
+ */
+async function finishSignalsJob(videoId: string, outcome: { returned: object } | { failed: string }): Promise<void> {
+  const name = process.env.RENDITION_QUEUE_NAME ?? '';
+  const queue = new Queue(name, { connection: createRedisConnection() });
+  const worker = new Worker(name, null, { connection: createRedisConnection(), autorun: false });
+  try {
+    await queue.add(
+      'signals',
+      { videoId, userId: 'u', s3Key: 'k', only: 'signals' },
+      { jobId: `signals-${videoId}`, lifo: true, attempts: 1 },
+    );
+    const token = crypto.randomUUID();
+    const job = await worker.getNextJob(token);
+    expect(job?.id).toBe(`signals-${videoId}`);
+    if ('failed' in outcome) await job!.moveToFailed(new Error(outcome.failed), token, false);
+    else await job!.moveToCompleted(outcome.returned, token, false);
+  } finally {
+    await worker.close();
+    await queue.close();
+  }
+}
+
+async function signalJobState(videoId: string): Promise<string | undefined> {
+  const queue = new Queue(process.env.RENDITION_QUEUE_NAME ?? '', { connection: createRedisConnection() });
+  try {
+    return (await queue.getJob(`signals-${videoId}`))?.getState();
   } finally {
     await queue.close();
   }
@@ -162,6 +197,39 @@ describe('신호가 없는 스냅', () => {
     await requestDraft(user, body);
 
     expect(await h.prisma.movieDraft.count({ where: { userId: user.id } })).toBe(2);
+  });
+
+  it.each([
+    ['재시도를 소진한 작업', { failed: 'storage down' }],
+    ['신호를 남기지 못하고 끝난 작업', { returned: { status: 'skipped' } }],
+    ['다른 신호 버전으로 읽지 못한 작업', { returned: { status: 'failed', signalsVersion: SIGNALS_VERSION + 1 } }],
+    ['버전 없이 읽지 못한 작업(이 규칙 전의 워커)', { returned: { status: 'failed' } }],
+  ] as const)('끝난 신호 작업은 지우고 다시 적재한다 — %s', async (_name, outcome) => {
+    // 큐가 끝난 작업을 남겨 두어 같은 job id 의 적재를 무시했다 — 한 번 끝난 스냅은 다시 계산되지 않았다(backlog E-13).
+    const user = await h.createUser();
+    const none = await createSnap(user, 0, null);
+    await finishSignalsJob(none, outcome);
+
+    await requestDraft(user, { snaps: [{ videoId: none }] });
+
+    expect(await signalJobState(none)).toBe('waiting');
+  });
+
+  it('이 신호 버전으로 읽을 수 없다고 끝난 스냅은 다시 돌리지 않고, 그 제안은 재사용한다 — 한도를 쓰지 않는다', async () => {
+    const user = await h.createUser();
+    const a = await createSnap(user, 0);
+    const unreadable = await createSnap(user, 1, null);
+    await finishSignalsJob(unreadable, { returned: { status: 'failed', signalsVersion: SIGNALS_VERSION } });
+    const body = { snaps: [{ videoId: a }, { videoId: unreadable }] };
+
+    const first = await requestDraft(user, body);
+    const second = await requestDraft(user, body);
+
+    expect(await signalJobState(unreadable)).toBe('completed');
+    expect(await h.prisma.movieDraft.count({ where: { userId: user.id } })).toBe(1);
+    expect(second.json().data).toEqual(first.json().data);
+    // 검사 없이 들어간다 — 구간 없이 스냅 전체.
+    expect(first.json().data.cuts).toContainEqual({ videoId: unreadable });
   });
 });
 
