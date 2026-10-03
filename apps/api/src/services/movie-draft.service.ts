@@ -9,7 +9,7 @@ import type { Prisma } from '@prisma/client';
 import { getPrisma } from '../db/client.js';
 import { AppError } from '../lib/errors.js';
 import { captureException } from '../lib/sentry.js';
-import { enqueueSignals } from '../queue/rendition-queue.js';
+import { enqueueSignals, type SignalsEnqueueOutcome } from '../queue/rendition-queue.js';
 import {
   EDIT_DIRECTOR_VERSION,
   SIGNALS_VERSION,
@@ -155,7 +155,7 @@ export async function requestDraft(params: {
   const videoOf = new Map(videos.map((video) => [video.id, video]));
 
   const missing = videos.filter((video) => !signalsOf.has(video.id));
-  await enqueueMissingSignals(params.userId, missing);
+  const waiting = await enqueueMissingSignals(params.userId, missing);
 
   const candidates = usable.map((snap): DraftCandidate => {
     if (!('videoId' in snap)) {
@@ -219,24 +219,34 @@ export async function requestDraft(params: {
       userId: params.userId,
       stylePreset,
       snapHash,
-      complete: missing.length === 0,
+      complete: waiting === 0,
       result: draft as unknown as Prisma.InputJsonValue,
     },
   });
   return { ...draft, unavailable };
 }
 
-/** 신호가 없는 스냅의 신호를 계산해 둔다. 실패해도 초안은 나간다 — 그 스냅은 검사 없이 들어갔을 뿐이다. */
+/**
+ * 신호가 없는 스냅의 신호를 계산해 둔다. 돌려주는 값은 **아직 신호를 기다리는** 스냅 수다 — 이 신호 버전으로 읽을 수 없다고 끝난
+ * 스냅과 원본이 없는 스냅은 기다릴 것이 없어 세지 않는다. 그런 스냅만 있었던 제안은 검사 없이 확정된 것이라 재사용한다 — 그러지
+ * 않으면 같은 요청이 매번 새 행을 만들어 하루 한도를 썼다(backlog E-13).
+ *
+ * 적재가 실패해도 초안은 나간다 — 그 스냅은 검사 없이 들어갔을 뿐이고, 기다리는 것으로 센다.
+ */
 async function enqueueMissingSignals(
   userId: string,
   videos: Array<{ id: string; s3Key: string | null }>,
-): Promise<void> {
-  for (const video of videos) {
-    if (video.s3Key === null) continue;
-    try {
-      await enqueueSignals({ videoId: video.id, userId, s3Key: video.s3Key });
-    } catch (err) {
-      captureException(err, { videoId: video.id, phase: 'signals-enqueue' });
-    }
-  }
+): Promise<number> {
+  const outcomes = await Promise.all(
+    videos.map(async (video): Promise<SignalsEnqueueOutcome> => {
+      if (video.s3Key === null) return 'unreadable';
+      try {
+        return await enqueueSignals({ videoId: video.id, userId, s3Key: video.s3Key }, SIGNALS_VERSION);
+      } catch (err) {
+        captureException(err, { videoId: video.id, phase: 'signals-enqueue' });
+        return 'queued';
+      }
+    }),
+  );
+  return outcomes.filter((outcome) => outcome !== 'unreadable').length;
 }
