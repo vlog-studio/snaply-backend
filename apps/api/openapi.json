@@ -1280,12 +1280,30 @@
               ]
             },
             "description": "넣지 않은 스냅, 촬영순. 이유는 주지 않는다 — 앱은 개수를 알리고 다시 넣을 수 있게 한다. 업로드되지 않은 스냅(`localId`)은 그런 스냅만 10개를 넘을 때만 빠진다."
+          },
+          "unavailable": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "videoId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                }
+              },
+              "required": [
+                "videoId"
+              ]
+            },
+            "description": "넘긴 스냅 중 서버가 더는 쓸 수 없는 자기 스냅 — 지워졌거나(다른 기기에서 지움 · 보관 기간 만료) 준비되지 않았다. 나머지로 초안을 만들고, 이 스냅은 `cuts` 에도 `excluded` 에도 넣지 않는다(다시 넣을 수 없으므로). 넘긴 스냅이 모두 이렇다면 `cuts` 가 비어 있다. 남의 id 는 여기 오지 않고 요청 전체가 403 이다."
           }
         },
         "required": [
           "stylePreset",
           "cuts",
-          "excluded"
+          "excluded",
+          "unavailable"
         ]
       },
       "MovieRecommendationInput": {
@@ -2682,12 +2700,31 @@
               ]
             },
             "description": "넣지 않은 스냅, 촬영순. 이유는 주지 않는다 — 앱은 개수를 알리고 다시 넣을 수 있게 한다. 업로드되지 않은 스냅(`localId`)은 그런 스냅만 10개를 넘을 때만 빠진다."
+          },
+          "unavailable": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "videoId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                }
+              },
+              "required": [
+                "videoId"
+              ],
+              "additionalProperties": false
+            },
+            "description": "넘긴 스냅 중 서버가 더는 쓸 수 없는 자기 스냅 — 지워졌거나(다른 기기에서 지움 · 보관 기간 만료) 준비되지 않았다. 나머지로 초안을 만들고, 이 스냅은 `cuts` 에도 `excluded` 에도 넣지 않는다(다시 넣을 수 없으므로). 넘긴 스냅이 모두 이렇다면 `cuts` 가 비어 있다. 남의 id 는 여기 오지 않고 요청 전체가 403 이다."
           }
         },
         "required": [
           "stylePreset",
           "cuts",
-          "excluded"
+          "excluded",
+          "unavailable"
         ],
         "additionalProperties": false
       },
@@ -7659,7 +7696,7 @@
         "tags": [
           "movies"
         ],
-        "description": "넘긴 스냅 중 쓸 것을 고르고(못 쓰는 것·중복은 뺀다), 촬영순으로 놓고, 컷마다 구간을 자른 **제안**을 돌려준다.\n**무비를 만들지 않는다** — 앱이 이 컷들로 무비를 만들고(`POST /movies`, `arranger: ai`, 컷마다\n`trimOwner: ai`) 업로드가 끝나면 지금처럼 보낸다. 전환은 그때 서버가 고른다.\n\n**업로드되지 않은 스냅도 넘긴다**(`localId` + `capturedAt`). 빼지 않고 촬영 시각 자리에 구간 없이 놓는다.\n업로드됐지만 신호가 아직 없는 스냅도 같다 — 서버가 신호 계산을 적재해 두고 다음 요청부터 쓴다.\n\n**기다리지 않는다.** 응답이 곧 결과다. 분석에 동의하지 않았거나 분석이 꺼져 있어도 초안은 나온다.\n\n**크레딧을 차감하지 않는다.** 비용은 상한으로 막는다 — 한 번에 스냅\n**30개**(넘으면 400 `TOO_MANY_SNAPS` + `max`), 최근 24시간 **10번**\n(넘으면 429 `DRAFT_LIMIT`). 같은 스타일 · 같은 스냅 집합이 24시간 안에 다시 오면 같은 제안을 돌려주고\n횟수에 세지 않는다.\n\n`excluded` 는 넣지 않은 스냅이다. **이유는 주지 않는다** — 앱은 개수를 알리고 다시 넣을 수 있게 한다.",
+        "description": "넘긴 스냅 중 쓸 것을 고르고(못 쓰는 것·중복은 뺀다), 촬영순으로 놓고, 컷마다 구간을 자른 **제안**을 돌려준다.\n**무비를 만들지 않는다** — 앱이 이 컷들로 무비를 만들고(`POST /movies`, `arranger: ai`, 컷마다\n`trimOwner: ai`) 업로드가 끝나면 지금처럼 보낸다. 전환은 그때 서버가 고른다.\n\n**업로드되지 않은 스냅도 넘긴다**(`localId` + `capturedAt`). 빼지 않고 촬영 시각 자리에 구간 없이 놓는다.\n업로드됐지만 신호가 아직 없는 스냅도 같다 — 서버가 신호 계산을 적재해 두고 다음 요청부터 쓴다.\n\n**기다리지 않는다.** 응답이 곧 결과다. 분석에 동의하지 않았거나 분석이 꺼져 있어도 초안은 나온다.\n\n**크레딧을 차감하지 않는다.** 비용은 상한으로 막는다 — 한 번에 스냅\n**30개**(넘으면 400 `TOO_MANY_SNAPS` + `max`), 최근 24시간 **10번**\n(넘으면 429 `DRAFT_LIMIT`). 같은 스타일 · 같은 스냅 집합이 24시간 안에 다시 오면 같은 제안을 돌려주고\n횟수에 세지 않는다.\n\n`excluded` 는 넣지 않은 스냅이다. **이유는 주지 않는다** — 앱은 개수를 알리고 다시 넣을 수 있게 한다.\n\n`unavailable` 은 넘긴 자기 스냅 중 지워졌거나 준비되지 않아 서버가 쓸 수 없는 것이다. 나머지로 초안을 만들고, 모두\n그렇다면 `cuts` 가 비어 있다(기록하지 않고 횟수에 세지 않는다). 남의 스냅이 섞이면 어느 것인지 알리지 않고 403 이다.",
         "requestBody": {
           "required": true,
           "content": {
