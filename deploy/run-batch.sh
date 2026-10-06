@@ -17,10 +17,14 @@ cd "$(dirname "$0")/.."
 export SNAPLY_ENV_FILE="${SNAPLY_ENV_FILE:-/etc/snaply/snaply.env}"
 # 이미지 태그는 배포가 기록해 둔 값을 쓴다 — 지금 돌고 있는 그 버전으로 배치를 돌려야
 # 스키마와 코드가 어긋나지 않는다.
+# 읽은 값은 내보내야 compose(자식 프로세스)가 본다 — `.` 만으로는 이 셸의 변수일 뿐이다.
 if [ -f deploy/.current-images ]; then
+  set -a
   # shellcheck disable=SC1091
   . deploy/.current-images
+  set +a
 fi
 
-exec docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+# `--env-file`: compose 파일의 `${…}` 치환은 서비스의 `env_file` 을 읽지 않는다 — 시크릿 파일을 직접 넘긴다.
+exec docker compose --env-file "$SNAPLY_ENV_FILE" -f docker-compose.yml -f docker-compose.prod.yml \
   run --rm --no-deps api npm run "$BATCH" -w apps/api -- --yes
