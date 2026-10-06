@@ -2004,3 +2004,26 @@ AI 편집 초안(MOV-21)을 시작했다. 상한·표시 시점·미업로드·�
   [credits-and-rewarded-ads.md](../apps/mobile/docs/features/credits-and-rewarded-ads.md) · [movie.md](../apps/mobile/docs/features/movie.md) 를
   고치고 `Partial` 을 풀었다 — 이 경로로는 아직 실기기에서 숫자를 보지 않았다는 단서를 달았다.
 - **자동 검증**: API 582개 · typecheck · lint · `npm run verify:mobile` 162 suites / 1314 tests · 새 테스트(크레딧 하나 모자란 export → 402 + `required`·`balance`)는 고치기 전 계약에서 실패했다.
+
+## 2026-10-06 — 운영 compose 호출이 시크릿 파일을 넘긴다(backlog B-1)
+
+사내 서버 배포(B-1)는 아직 켜지 않았다(`DEPLOY_ENABLED` 없음 — 서버 배포 잡은 매번 건너뛰었다). 켜기 전에 배포 경로를 다시 읽다가,
+켜는 순간 배포 · 배치 · 백업이 모두 멈출 결함 넷을 찾았다.
+
+- **`--env-file` 이 없었다** — `docker-compose.prod.yml` 의 `${POSTGRES_PASSWORD:?}` 같은 치환은 셸 환경과 `--env-file` 만 읽고,
+  서비스의 `env_file` 은 컨테이너 안의 값만 정한다. 배포 워크플로와 `deploy/run-batch.sh` · `deploy/backup-db.sh` 가 compose 를
+  `--env-file` 없이 불러, 시크릿 파일이 있어도 `required variable … is missing a value` 로 멈췄다. 모든 호출에 넘긴다.
+- **배치가 이미지 태그를 compose 에 넘기지 못했다** — `run-batch.sh` 가 `deploy/.current-images` 를 `.` 로 읽기만 하고 내보내지
+  않아 자식 프로세스인 compose 가 태그를 보지 못했다. `set -a` 로 읽는다. `backup-db.sh` 는 태그를 아예 읽지 않았는데, postgres 에
+  exec 만 해도 compose 는 파일 전체(`API_IMAGE:?` 포함)를 해석하므로 같은 방식으로 읽는다.
+- **태그 기록이 cron 이 읽는 곳에 없었다** — 워크플로가 `.current-images` 를 runner 의 작업 폴더에 써, cron 이 도는 `/opt/snaply`
+  에서는 찾을 수 없었다. `/opt/snaply/deploy/.current-images` 에 쓴다.
+- **시크릿 파일 권한** — 절차가 `600 root:root` 로 만들게 했는데 runner · cron 은 `snaply` 로 돌고 compose 는 이 파일을 부른 쪽에서
+  읽는다. `640 root:snaply` 로 바꿨다(`snaply` 는 `docker` 그룹이라 root 전용으로 둬도 막아 주는 것이 없다). 워크플로는 compose 를
+  부르기 전에 파일을 읽을 수 있는지 먼저 확인한다.
+- [deployment.md](./deployment.md) §1-2 · §2 · §4 · §5 와 backlog B-1 의 서버 작업 항목을 함께 고쳤다. 배포는 `/opt/snaply`
+  체크아웃을 갱신하지 않으므로 `deploy/` 를 고친 커밋이 들어오면 거기서 `git pull` 한다는 절차도 적었다.
+- **검증**: 더미 시크릿 파일로 `docker compose config` 를 돌려 `--env-file` 없이는 치환에서 멈추고 있으면 통과하는 것을 확인했다.
+  두 스크립트를 `docker` 대역(인자 · 환경을 기록하고 같은 인자로 `compose config` 를 돌린다)으로 실행해, main 의 스크립트는 태그 없이
+  치환에서 멈추고 고친 스크립트는 `--env-file` 과 태그를 넘겨 통과하는 것을 확인했다. `bash -n` · shellcheck 통과, actionlint 는
+  main 과 같은 기존 경고만 남는다. 실제 서버에서는 아직 돌려 보지 않았다(서버 준비 전).
