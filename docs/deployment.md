@@ -37,12 +37,21 @@ sudo -u snaply git clone <저장소 URL> /opt/snaply
 ### 1-2. 시크릿 파일
 
 **운영은 `.env` 파일을 쓰지 않는 것이 원칙이지만**([env-management.md](./decisions/env-management.md)),
-사내 서버에는 시크릿 저장소가 없다. root 만 읽는 파일 하나로 대신한다.
+사내 서버에는 시크릿 저장소가 없다. root 와 배포 계정(`snaply`)만 읽는 파일 하나로 대신한다.
 
 ```bash
-sudo install -m 600 -o root -g root /dev/null /etc/snaply/snaply.env
+sudo install -m 640 -o root -g snaply /dev/null /etc/snaply/snaply.env
 sudo vi /etc/snaply/snaply.env
 ```
+
+- **배포 계정이 읽을 수 있어야 한다.** runner 와 cron 은 `snaply` 로 돌고, compose 는 이 파일을
+  컨테이너 쪽이 아니라 **compose 를 부른 쪽**에서 읽는다. root 만 읽게 두면 배포·배치·백업이 모두
+  권한 오류로 멈춘다. `snaply` 는 `docker` 그룹이라 이미 root 와 같은 권한이므로, root 전용으로 둬도
+  막아 주는 것이 없다.
+- **compose 를 부를 때마다 `--env-file` 로 넘긴다.** 이 파일은 두 곳에 쓰인다 — 컨테이너에 넣을 값
+  (`docker-compose.prod.yml` 의 `env_file`)과 compose 파일의 `${…}` 치환값. 치환은 `env_file` 을 읽지
+  않으므로 `--env-file` 이 없으면 아래 `:?` 값이 비었다며 멈춘다. 배포 워크플로 · `deploy/run-batch.sh` ·
+  `deploy/backup-db.sh` 가 모두 넘기고, 손으로 부를 때도 같다(§2·§5).
 
 넣을 값은 [`apps/api/src/env-spec.ts`](../apps/api/src/env-spec.ts) 에서 **`origin !== 'local'`**
 인 항목 전부, 그리고 compose 가 치환에 쓰는 아래 값들이다.
@@ -97,6 +106,11 @@ main 머지
 
 - 이미지 태그는 **커밋 SHA 로 고정**한다. 재시작할 때마다 다른 버전이 뜨면 안 되고, 문제가
   생겼을 때 어느 커밋이 돌고 있었는지 말할 수 있어야 한다
+- 배포가 끝나면 돌고 있는 태그를 **`/opt/snaply/deploy/.current-images`** 에 남긴다. 배치·백업(cron)이
+  그 값으로 같은 버전을 쓴다. runner 는 자기 작업 폴더에 체크아웃하므로, 거기가 아니라 cron 이 도는
+  `/opt/snaply` 에 쓴다
+- **배포는 `/opt/snaply` 의 체크아웃을 갱신하지 않는다.** cron 은 거기 있는 `deploy/` 스크립트를 부르므로,
+  `deploy/` 를 고친 커밋이 들어오면 `sudo -u snaply git -C /opt/snaply pull --ff-only` 로 맞춘다
 - **마이그레이션이 먼저다.** 실패하면 거기서 멈추고 이전 버전이 계속 돈다 — 반쯤 적용된
   스키마 위에 새 코드가 뜨는 것이 제일 나쁘다
 - 헬스체크는 `db=connected` 까지 본다. `status:ok` 만 보면 DB 가 끊겨도 통과한다
@@ -153,14 +167,17 @@ sudo -u snaply /opt/snaply/deploy/run-batch.sh media:purge-expired
 복구:
 
 ```bash
+cd /opt/snaply && set -a && . deploy/.current-images && set +a   # compose 파일의 이미지 태그(`:?`)
 gunzip -c /var/backups/snaply/snaply-<날짜>.sql.gz \
-  | docker compose ... exec -T postgres psql -U postgres -d snaply
+  | docker compose --env-file /etc/snaply/snaply.env -f docker-compose.yml -f docker-compose.prod.yml \
+      exec -T postgres psql -U postgres -d snaply
 ```
 
 ## 5. 자주 볼 것
 
 ```bash
 cd /opt/snaply
+set -a && . deploy/.current-images && set +a   # compose 는 파일 전체를 해석하므로 이미지 태그(`:?`)도 필요하다
 C="docker compose --env-file /etc/snaply/snaply.env -f docker-compose.yml -f docker-compose.prod.yml"
 $C ps                     # 무엇이 떠 있나
 $C logs -f --tail=100 api # 로그

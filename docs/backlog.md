@@ -412,7 +412,7 @@ e2e 실검증.
 **남은 것은 서버에서 하는 일**이다(단계는 deployment.md §1):
 
 - [ ] **`서버작업`** Docker 설치 · `snaply` 계정 · 저장소 체크아웃(`/opt/snaply`)
-- [ ] **`서버작업`** 시크릿 파일 `/etc/snaply/snaply.env` 작성 (개발 기본 자격증명 금지). `OPENAI_API_KEY` 는 로컬
+- [ ] **`서버작업`** 시크릿 파일 `/etc/snaply/snaply.env` 작성 — `root:snaply` `640`(배포 계정이 읽어야 한다, deployment.md §1-2), 개발 기본 자격증명 금지. `OPENAI_API_KEY` 는 로컬
       개발 키와 다른 프로젝트 키로 받는다 — 한쪽을 폐기해도 다른 쪽이 살아 있다(C-7 에서 옮김)
 - [ ] **`서버작업`** self-hosted runner 설치 — 라벨에 `snaply` 포함, 서비스로 등록
 - [ ] **`서버작업`** `deploy/batches.cron` 등록 · 로그·백업 디렉터리 생성
