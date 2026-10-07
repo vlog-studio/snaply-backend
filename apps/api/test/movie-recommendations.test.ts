@@ -209,6 +209,39 @@ describe('POST /movie-recommendations', () => {
     expect(res.json().error.code).toBe('RECOMMENDATION_LIMIT');
   });
 
+  it(`남은 한 번을 동시에 다투면 하나만 받는다 — ${DAILY_RECOMMENDATION_LIMIT}번을 넘겨 쓰지 않는다`, async () => {
+    const user = await createConsentedUser(h);
+    await h.prisma.movieRecommendation.createMany({
+      data: Array.from({ length: DAILY_RECOMMENDATION_LIMIT - 1 }, (_, i) => ({
+        userId: user.id,
+        templateId: 'walk',
+        candidateHash: `filler-${i}`,
+        status: 'done' as const,
+      })),
+    });
+    const snaps = await Promise.all(Array.from({ length: 5 }, () => createSnap(user)));
+
+    // 서로 다른 후보 집합 다섯 — 모두 앞의 빠른 확인(19 < 20)을 지나 분석 적재까지 간다.
+    const answers = await Promise.all(snaps.map((id) => request(user, { templateId: 'cafe', candidates: [id] })));
+
+    expect(answers.map((res) => res.statusCode).sort()).toEqual([202, 429, 429, 429, 429]);
+    expect(await h.prisma.movieRecommendation.count({ where: { userId: user.id } })).toBe(
+      DAILY_RECOMMENDATION_LIMIT,
+    );
+  });
+
+  it('같은 후보 집합을 동시에 보내도 추천은 하나다', async () => {
+    const user = await createConsentedUser(h);
+    const candidates = [await createSnap(user), await createSnap(user)];
+
+    const answers = await Promise.all(
+      Array.from({ length: 3 }, () => request(user, { templateId: 'cafe', candidates })),
+    );
+
+    expect(new Set(answers.map((res) => res.json().data.id)).size).toBe(1);
+    expect(await h.prisma.movieRecommendation.count()).toBe(1);
+  });
+
   it('한도에 걸려도 이미 만든 추천의 재조회는 막지 않는다', async () => {
     const user = await createConsentedUser(h);
     const candidates = [await createSnap(user)];
