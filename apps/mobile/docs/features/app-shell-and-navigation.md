@@ -37,6 +37,7 @@ Snaply opens into a four-tab application — 스튜디오 (`/`), 스냅 (`/snaps
 | `/movie/[id]` | Headerless root-stack screen with its own `BackBar`, titled with the movie and carrying its rename action; one movie at any point of its life | `pages/movie` |
 | `/movie/[id]/add-snaps` | Headerless root-stack screen with its own `BackBar`; the movie's 스냅 더 넣기 picker, or with `?only=left-out` its 넣지 않은 스냅 (what the edit draft left out) | `pages/add-snaps` |
 | `/template/[id]` | Headerless root-stack screen with its own `BackBar`; a template matched against the library | `pages/movie-template` |
+| `/recently-deleted` | Root-stack screen with the stack's titled header (최근 삭제), pushed from the end of the Snap tab; deleted snaps that can still come back ([Snap library](snaps.md#bringing-a-snap-back)) | `pages/recently-deleted` |
 | `/settings/credits` | Root-stack screen with the stack's titled header (크레딧); the balance and rewarded-ad screen | `pages/me` |
 | `/settings/notifications` | Root-stack screen with the stack's titled header (알림); every notification preference | `pages/me` |
 | `/settings/analysis` | Root-stack screen with the stack's titled header (스냅 분석); the consent to snap analysis | `pages/me` |

@@ -98,6 +98,49 @@ describe('SnapDeleteDialog', () => {
     ).toBeTruthy();
   });
 
+  // SNAP-20: a delete everywhere leaves the server's copies in 최근 삭제 until
+  // their retention ends — the sheet says whether, and until when.
+  it.each<[string, Partial<SnapDeleteDialogProps>, string]>([
+    [
+      'nothing reached the server',
+      {},
+      '\uBAA8\uB4E0 \uAE30\uAE30\uC5D0\uC11C \uD30C\uC77C\uAE4C\uC9C0 \uC0AD\uC81C\uB418\uACE0, \uB418\uB3CC\uB9B4 \uC218 \uC5C6\uC5B4\uC694.', // 모든 기기에서 파일까지 삭제되고, 되돌릴 수 없어요.
+    ],
+    [
+      'one snap with its date',
+      { restorable: { count: 1, until: new Date(2026, 9, 14).getTime() } },
+      '\uBAA8\uB4E0 \uAE30\uAE30\uC5D0\uC11C \uC0AD\uC81C\uB3FC\uC694. 2026\uB144 10\uC6D4 14\uC77C\uAE4C\uC9C0\uB294 \uCD5C\uADFC \uC0AD\uC81C\uC5D0\uC11C \uB418\uC0B4\uB9B4 \uC218 \uC788\uC5B4\uC694.', // 모든 기기에서 삭제돼요. 2026년 10월 14일까지는 최근 삭제에서 되살릴 수 있어요.
+    ],
+    [
+      'several snaps',
+      { count: 2, restorable: { count: 2 } },
+      '\uBAA8\uB4E0 \uAE30\uAE30\uC5D0\uC11C \uC0AD\uC81C\uB3FC\uC694. \uBCF4\uAD00 \uAE30\uAC04\uC774 \uB05D\uB0A0 \uB54C\uAE4C\uC9C0\uB294 \uCD5C\uADFC \uC0AD\uC81C\uC5D0\uC11C \uB418\uC0B4\uB9B4 \uC218 \uC788\uC5B4\uC694.', // 모든 기기에서 삭제돼요. 보관 기간이 끝날 때까지는 최근 삭제에서 되살릴 수 있어요.
+    ],
+    [
+      'a mixed pick',
+      { count: 3, restorable: { count: 1 } },
+      '\uBAA8\uB4E0 \uAE30\uAE30\uC5D0\uC11C \uC0AD\uC81C\uB3FC\uC694. \uC62C\uB77C\uAC04 1\uAC1C\uB294 \uBCF4\uAD00 \uAE30\uAC04\uC774 \uB05D\uB0A0 \uB54C\uAE4C\uC9C0 \uCD5C\uADFC \uC0AD\uC81C\uC5D0\uC11C \uB418\uC0B4\uB9B4 \uC218 \uC788\uC5B4\uC694.', // 모든 기기에서 삭제돼요. 올라간 1개는 보관 기간이 끝날 때까지 최근 삭제에서 되살릴 수 있어요.
+    ],
+  ])('says whether %s can come back', async (_label, overrides, text) => {
+    await renderDialog(overrides);
+
+    expect(screen.getByText(text)).toBeTruthy();
+  });
+
+  it('says the same on the everywhere answer when it asks where', async () => {
+    await renderDialog({
+      deviceOnly: { count: 1 },
+      restorable: { count: 1 },
+      onConfirmDeviceOnly: jest.fn(),
+    });
+
+    expect(
+      screen.getByText(
+        '\uBCF4\uAD00 \uAE30\uAC04\uC774 \uB05D\uB0A0 \uB54C\uAE4C\uC9C0\uB294 \uCD5C\uADFC \uC0AD\uC81C\uC5D0\uC11C \uB418\uC0B4\uB9B4 \uC218 \uC788\uC5B4\uC694.', // 보관 기간이 끝날 때까지는 최근 삭제에서 되살릴 수 있어요.
+      ),
+    ).toBeTruthy();
+  });
+
   it('holds both answers while a delete runs', async () => {
     const props = await renderDialog({
       isDeleting: true,

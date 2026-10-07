@@ -14,6 +14,12 @@ import type { MovieDeleteImpact } from '../model/use-movie-delete-impact';
  */
 export type DeviceOnlyDelete = { count: number; keptUntil?: number };
 
+/**
+ * The picked snaps a delete everywhere leaves in 최근 삭제 (SNAP-20): how many,
+ * and — for a single one — until when it can be brought back.
+ */
+export type RestorableDelete = { count: number; until?: number };
+
 export type SnapDeleteDialogProps = {
   visible: boolean;
   count: number;
@@ -25,6 +31,8 @@ export type SnapDeleteDialogProps = {
    * as the second answer.
    */
   deviceOnly?: DeviceOnlyDelete;
+  /** Set when some picks can be brought back from 최근 삭제 after deleting everywhere. */
+  restorable?: RestorableDelete;
   isDeleting: boolean;
   errorMessage?: string;
   onCancel: () => void;
@@ -38,22 +46,25 @@ type Scope = 'device' | 'everywhere';
 /**
  * Confirms deleting originals, naming what else it takes with them.
  *
- * Deleting a snap everywhere is the one irreversible action in the app: the video
- * file goes with it on every device, and every movie holding that cut loses it.
- * The sheet therefore lists the movies by name and the count each drops to,
- * rather than warning in the abstract.
+ * Deleting a snap everywhere takes the video file off every device, and every
+ * movie holding that cut loses it — the cuts for good, even when the snap itself
+ * can come back from 최근 삭제 until its retention ends (SNAP-20). The sheet
+ * therefore lists the movies by name and the count each drops to, rather than
+ * warning in the abstract, and says whether the snaps can come back.
  *
  * When the server still keeps some of the picks, the sheet asks where to delete
  * instead (SNAP-19). The two answers differ in what survives, so each carries
  * its own consequence line: from this device only keeps the snap, its movies,
- * and its other devices, until the kept copy ends; everywhere keeps nothing. The
- * movie list belongs to the second answer — it is the only one that cuts movies.
+ * and its other devices, until the kept copy ends; everywhere keeps only what
+ * 최근 삭제 can bring back. The movie list belongs to the second answer — it is
+ * the only one that cuts movies.
  */
 export function SnapDeleteDialog({
   visible,
   count,
   impact,
   deviceOnly,
+  restorable,
   isDeleting,
   errorMessage,
   onCancel,
@@ -144,7 +155,7 @@ export function SnapDeleteDialog({
             </ThemedText>
           </Pressable>
           <ThemedText type="small" themeColor="textSecondary">
-            파일까지 모두 삭제되고, 되돌릴 수 없어요.
+            {everywhereConsequence(restorable, count)}
           </ThemedText>
           {impactList}
         </View>
@@ -175,7 +186,9 @@ export function SnapDeleteDialog({
       {/* SNAP-16: a delete reaches every device the account is on, the
           original another device still holds included. */}
       <ThemedText themeColor="textSecondary">
-        모든 기기에서 파일까지 삭제되고, 되돌릴 수 없어요.
+        {restorable
+          ? `모든 기기에서 삭제돼요. ${everywhereConsequence(restorable, count)}`
+          : '모든 기기에서 파일까지 삭제되고, 되돌릴 수 없어요.'}
       </ThemedText>
 
       {impactList}
@@ -217,6 +230,22 @@ export function SnapDeleteDialog({
       </View>
     </BottomSheet>
   );
+}
+
+/**
+ * What deleting everywhere leaves (SNAP-20): the snaps 최근 삭제 can bring back
+ * until their retention ends — all of them, or the uploaded ones of a mixed pick
+ * — or nothing, when none of them had reached the server or all had expired.
+ */
+function everywhereConsequence(restorable: RestorableDelete | undefined, count: number): string {
+  if (!restorable) return '파일까지 모두 삭제되고, 되돌릴 수 없어요.';
+  const until =
+    restorable.until !== undefined
+      ? `${formatFullDate(restorable.until)}까지`
+      : '보관 기간이 끝날 때까지';
+  return restorable.count < count
+    ? `올라간 ${restorable.count}개는 ${until} 최근 삭제에서 되살릴 수 있어요.`
+    : `${until}는 최근 삭제에서 되살릴 수 있어요.`;
 }
 
 /**

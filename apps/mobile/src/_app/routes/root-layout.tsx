@@ -138,6 +138,10 @@ function RootStack() {
             the same shape: it opens over the studio and leaves on the movie it
             made — headerless for the same reason. */}
         <Stack.Screen name="template/[id]" options={{ headerShown: false }} />
+        {/* 최근 삭제, reached from the end of the Snap tab: a list with the
+            stack's titled header, like the settings screens. On the root stack
+            rather than under the tab for the reason add-snaps is. */}
+        <Stack.Screen name="recently-deleted" options={{ title: '최근 삭제' }} />
         {/* The 나 tab's settings screens. Each holds the controls whose current
             state the tab shows as a one-line summary row; they are pushed
             screens with the stack's own titled header, because unlike the
