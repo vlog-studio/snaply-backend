@@ -403,7 +403,7 @@ describe('영상 삭제는 자기가 소유한 객체만 지운다', () => {
     expect(await getObjectSize(snap.s3Key)).not.toBeNull();
   });
 
-  it('사용자가 스냅을 지우면 렌디션도 사라진다', async () => {
+  it('사용자가 지운 스냅은 보관 기간이 끝날 때까지 파일이 남고, 끝나면 렌디션까지 사라진다(SNAP-20)', async () => {
     const user = await h.createUser();
     const snap = await snapWithRendition(user);
 
@@ -414,6 +414,33 @@ describe('영상 삭제는 자기가 소유한 객체만 지운다', () => {
     });
     expect(res.statusCode).toBe(200);
 
+    // 최근 삭제에서 되살릴 수 있어야 하므로 그날 밤의 정리 배치도 지우지 않는다.
+    await purgeOrphanedObjects();
+    expect(await getObjectSize(snap.s3Key)).not.toBeNull();
+    expect(await getObjectSize(snap.renditionS3Key)).not.toBeNull();
+
+    // 업로드 하루 뒤의 스냅이므로 보관 기간이 끝나는 날은 14일 뒤다.
+    const afterRetention = new Date(Date.now() + (SNAP_RETENTION_DAYS - 1) * 86_400_000 + 60_000);
+    await purgeOrphanedObjects(afterRetention);
+    expect(await getObjectSize(snap.renditionS3Key)).toBeNull();
+    expect(await getObjectSize(snap.s3Key)).toBeNull();
+    const row = await h.prisma.video.findUnique({ where: { id: snap.id } });
+    expect(row).toMatchObject({ removalReason: 'user', keptForRestore: true });
+    expect(row?.purgedAt).not.toBeNull();
+  });
+
+  it('보관 기간이 끝난 스냅을 지우면 정리 배치를 기다리지 않고 파일을 바로 지운다', async () => {
+    const user = await h.createUser();
+    // 기간은 끝났지만 그날 밤의 만료 정리가 아직 돌지 않은 스냅.
+    const snap = await snapWithRendition(user, SNAP_RETENTION_DAYS + 1);
+
+    const res = await h.app.inject({
+      method: 'DELETE',
+      url: `/videos/${snap.id}`,
+      headers: user.auth,
+    });
+
+    expect(res.json().data).toEqual({ deleted: true, restorableUntil: null });
     expect(await getObjectSize(snap.renditionS3Key)).toBeNull();
     expect(await getObjectSize(snap.s3Key)).toBeNull();
   });

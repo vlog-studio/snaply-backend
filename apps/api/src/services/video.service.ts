@@ -1,17 +1,19 @@
 import { randomUUID } from 'node:crypto';
-import type {
-  CursorPaginated,
-  StylePreset,
-  Video,
-  VideoKind,
-  VideoLookup,
-  VideoStatus,
+import {
+  TRASH_LIST_MAX,
+  type CursorPaginated,
+  type StylePreset,
+  type TrashList,
+  type Video,
+  type VideoKind,
+  type VideoLookup,
+  type VideoStatus,
 } from '@vlog-studio/shared-types';
 import { getPrisma } from '../db/client.js';
 import { AppError } from '../lib/errors.js';
 import { captureException } from '../lib/sentry.js';
-import { enqueueRendition } from '../queue/rendition-queue.js';
-import { snapExpiresAt } from './retention-policy.js';
+import { enqueueRendition, requeueRendition } from '../queue/rendition-queue.js';
+import { EXPIRY_TO_PURGE_DAYS, SNAP_RETENTION_DAYS, cutoffFor, snapExpiresAt } from './retention-policy.js';
 import {
   createDownloadUrl,
   createUploadUrl,
@@ -312,15 +314,36 @@ export async function purgeStalePendingVideos(
   return { purged, failed };
 }
 
-/** 영상이 소유한 S3 객체 삭제 + DB 소프트 삭제 */
-export async function deleteVideo(params: { userId: string; videoId: string }): Promise<void> {
+/**
+ * 영상 삭제. **올라간 스냅이 보관 기간 안이면 파일을 남긴다** — 최근 삭제(휴지통)에서 원래 보관 기간이 끝날 때까지
+ * 되살릴 수 있다(SNAP-20, docs/decisions/snap-trash.md). 남긴 파일은 그 기간이 끝나면 정리 배치가 지운다
+ * (`retention.service.ts` `findOrphanedObjects`). 그 밖의 영상 — 올라가는 중인 스냅, 보관 기간이 끝난 스냅,
+ * 결과물 — 은 지금처럼 파일을 바로 지운다. 어느 쪽이든 목록 · 상세 · 무비에서는 곧바로 사라지고, 다른 기기는
+ * `POST /videos/lookup` 의 `removed` 로 알아 자기 원본을 지운다(되살리면 서버 사본을 받는다).
+ *
+ * 돌려주는 `restorableUntil` 은 되살릴 수 있는 마지막 시각이고, 되살릴 수 없으면 `null` 이다.
+ */
+export async function deleteVideo(params: {
+  userId: string;
+  videoId: string;
+}): Promise<{ restorableUntil: string | null }> {
   const prisma = getPrisma();
   const video = await prisma.video.findFirst({
     where: { id: params.videoId, userId: params.userId, deletedAt: null },
-    select: VIDEO_ASSET_SELECT,
+    select: { ...VIDEO_ASSET_SELECT, status: true, createdAt: true },
   });
   if (!video) {
     throw AppError.notFound('영상을 찾을 수 없습니다.');
+  }
+
+  const now = new Date();
+  const restorableUntil = restorableUntilOf(video, now);
+  if (restorableUntil) {
+    await prisma.video.update({
+      where: { id: video.id },
+      data: { deletedAt: now, status: 'deleted', removalReason: 'user', keptForRestore: true },
+    });
+    return { restorableUntil: restorableUntil.toISOString() };
   }
 
   // 결과물이면 원본 스냅의 키는 건드리지 않는다 — 빌려 온 키다(video-assets.ts).
@@ -335,6 +358,118 @@ export async function deleteVideo(params: { userId: string; videoId: string }): 
   await prisma.video.update({
     where: { id: video.id },
     // 사유를 남긴다 — 사용자가 지운 것과 기간 만료로 사라진 것은 보여줄 문구가 다르다(SNAP-12).
-    data: { deletedAt: new Date(), status: 'deleted', removalReason: 'user' },
+    data: { deletedAt: now, status: 'deleted', removalReason: 'user' },
   });
+  return { restorableUntil: null };
+}
+
+/** 지우면 되살릴 수 있는가 — 서버에 사본이 있는 스냅(업로드가 끝났고 보관 기간 안)만. 되살릴 수 있는 마지막 시각을 준다. */
+function restorableUntilOf(
+  video: { kind: string; status: string; createdAt: Date },
+  now: Date,
+): Date | null {
+  if (video.kind !== 'source' || video.status !== 'ready') return null;
+  const until = snapExpiresAt(video.createdAt);
+  return until > now ? until : null;
+}
+
+/** 이 시각 뒤에 만든 스냅은 아직 보관 기간 안이다 — 휴지통에 있을 수 있다. */
+function restorableCutoff(now: Date): Date {
+  return cutoffFor(SNAP_RETENTION_DAYS + EXPIRY_TO_PURGE_DAYS, now);
+}
+
+/**
+ * 최근 삭제(휴지통) — 파일을 남기고 지운 스냅 중 보관 기간이 아직 끝나지 않은 것. 지운 순서로, 최근 것부터.
+ * 보관 기간이 끝난 것은 정리 배치가 지우기 전이라도 넣지 않는다(되살릴 수 없다).
+ */
+export async function listTrashedVideos(params: { userId: string }): Promise<TrashList> {
+  const now = new Date();
+  const rows = await getPrisma().video.findMany({
+    where: {
+      userId: params.userId,
+      kind: 'source',
+      deletedAt: { not: null },
+      keptForRestore: true,
+      purgedAt: null,
+      createdAt: { gt: restorableCutoff(now) },
+    },
+    orderBy: { deletedAt: 'desc' },
+    take: TRASH_LIST_MAX,
+    select: {
+      id: true,
+      clientId: true,
+      capturedAt: true,
+      durationMs: true,
+      width: true,
+      height: true,
+      thumbnailS3Key: true,
+      thumbnailUrl: true,
+      deletedAt: true,
+      createdAt: true,
+    },
+  });
+  return {
+    items: await Promise.all(
+      rows.map(async (row) => ({
+        id: row.id,
+        clientId: row.clientId,
+        capturedAt: row.capturedAt?.toISOString() ?? null,
+        durationMs: row.durationMs,
+        width: row.width,
+        height: row.height,
+        thumbnailUrl: row.thumbnailS3Key ? await createDownloadUrl(row.thumbnailS3Key) : row.thumbnailUrl,
+        // 조회 조건이 deletedAt 을 요구한다.
+        deletedAt: (row.deletedAt ?? now).toISOString(),
+        restorableUntil: snapExpiresAt(row.createdAt).toISOString(),
+      })),
+    ),
+  };
+}
+
+/**
+ * 휴지통의 스냅을 되살린다. 목록 · 무비 후보 · 다른 기기에 다시 나타난다 — 다른 기기는 서버 목록에서 그 스냅을 다시
+ * 들인다. 지울 때 무비에서 빠진 컷은 돌아오지 않는다(SNAP-20).
+ *
+ * 이미 살아 있는 스냅이면 그대로 돌려준다(되돌리기를 두 번 눌러도 된다). 보관 기간이 끝났거나 파일을 남기지 않고 지운
+ * 스냅이면 409 `NOT_RESTORABLE`, 없거나 남의 것이면 404 다.
+ *
+ * 지운 동안 렌디션 작업은 건너뛰었을 수 있다(지운 영상은 만들지 않는다). 배포본이 아직 없으면 다시 적재한다.
+ */
+export async function restoreVideo(params: { userId: string; videoId: string }): Promise<Video> {
+  const prisma = getPrisma();
+  const owned = await prisma.video.findFirst({
+    where: { id: params.videoId, userId: params.userId, kind: 'source' },
+    select: { ...SELECT, deletedAt: true },
+  });
+  if (!owned) {
+    throw AppError.notFound('영상을 찾을 수 없습니다.');
+  }
+  if (owned.deletedAt === null) {
+    return toDto(owned);
+  }
+
+  // 확인과 쓰기 사이에 보관 기간이 끝나 정리 배치가 지웠을 수 있다 — 조건을 쓰기에 건다.
+  const { count } = await prisma.video.updateMany({
+    where: {
+      id: owned.id,
+      deletedAt: { not: null },
+      keptForRestore: true,
+      purgedAt: null,
+      createdAt: { gt: restorableCutoff(new Date()) },
+    },
+    data: { deletedAt: null, status: 'ready', removalReason: null, keptForRestore: false },
+  });
+  if (count === 0) {
+    throw new AppError(409, 'NOT_RESTORABLE', '보관 기간이 끝나 되살릴 수 없습니다.');
+  }
+
+  const restored = await prisma.video.findUniqueOrThrow({ where: { id: owned.id }, select: SELECT });
+  if (restored.renditionStatus !== 'ready' && restored.s3Key) {
+    try {
+      await requeueRendition({ videoId: restored.id, userId: params.userId, s3Key: restored.s3Key });
+    } catch (err) {
+      captureException(err, { videoId: restored.id, phase: 'rendition-requeue-on-restore' });
+    }
+  }
+  return toDto(restored);
 }

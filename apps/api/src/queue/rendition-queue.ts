@@ -45,6 +45,19 @@ export async function enqueueRendition(data: RenditionJobData): Promise<void> {
   await getQueue().add('rendition', data, { jobId: data.videoId });
 }
 
+/**
+ * 렌디션을 다시 적재한다 — 같은 job id 로 이미 끝난 작업이 있으면 지우고 넣는다. 지운 스냅을 되살릴 때 쓴다: 지운 동안
+ * 워커가 그 작업을 건너뛰고 끝냈으면 그대로 add 는 무시된다(신호 작업의 E-13 과 같은 이유). 기다리거나 도는 중이면 둔다.
+ */
+export async function requeueRendition(data: RenditionJobData): Promise<void> {
+  const existing = await getQueue().getJob(data.videoId);
+  if (existing) {
+    if (isPending(await existing.getState())) return;
+    await existing.remove().catch(() => undefined);
+  }
+  await getQueue().add('rendition', data, { jobId: data.videoId });
+}
+
 /** 신호 작업을 적재한 결과. `unreadable` 은 이 신호 버전으로 이미 읽어 보고 실패한 파일이라 넣지 않았다는 뜻이다. */
 export type SignalsEnqueueOutcome = 'queued' | 'unreadable';
 

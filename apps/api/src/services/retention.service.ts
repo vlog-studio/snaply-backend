@@ -172,12 +172,20 @@ export async function purgeExpiredMovieResults(now: Date = new Date()): Promise<
  *
  * 계정 purge 는 유저 prefix 를 통째로 지우므로 이 배치가 필요 없지만, 영상 단건 삭제는
  * 여전히 필요하다.
+ *
+ * 최근 삭제(휴지통)의 스냅도 여기서 정리된다 — 사용자가 지울 때 일부러 파일을 남겼으므로(SNAP-20) 원래 보관 기간이
+ * 끝나기 전에는 건너뛰고, 끝난 뒤 첫 실행에서 지운다.
  */
-export async function findOrphanedObjects(): Promise<ExpiryCandidate[]> {
+export async function findOrphanedObjects(now: Date = new Date()): Promise<ExpiryCandidate[]> {
   const rows = await getPrisma().video.findMany({
     where: {
       deletedAt: { not: null },
       purgedAt: null,
+      // 최근 삭제(휴지통)의 스냅은 원래 보관 기간이 끝날 때까지 파일을 남긴다(SNAP-20). 끝나면 여기서 지운다.
+      NOT: {
+        keptForRestore: true,
+        createdAt: { gt: cutoffFor(SNAP_RETENTION_DAYS + EXPIRY_TO_PURGE_DAYS, now) },
+      },
       OR: [
         { s3Key: { not: null } },
         { editedS3Key: { not: null } },
@@ -193,12 +201,12 @@ export async function findOrphanedObjects(): Promise<ExpiryCandidate[]> {
   return rows.flatMap((row) => (row.deletedAt ? [{ id: row.id, since: row.deletedAt }] : []));
 }
 
-export async function purgeOrphanedObjects(): Promise<PurgeOutcome> {
+export async function purgeOrphanedObjects(now: Date = new Date()): Promise<PurgeOutcome> {
   const prisma = getPrisma();
   const purged: string[] = [];
   const failed: string[] = [];
 
-  for (const candidate of await findOrphanedObjects()) {
+  for (const candidate of await findOrphanedObjects(now)) {
     try {
       const video = await prisma.video.findUnique({
         where: { id: candidate.id },

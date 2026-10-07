@@ -68,7 +68,9 @@ import {
   getUploadUrl,
   getVideo,
   listVideos,
+  listTrashedVideos,
   lookupVideos,
+  restoreVideo,
 } from './videos.js';
 
 /**
@@ -91,6 +93,8 @@ export const apiContract = {
   lookupVideos,
   getVideo,
   deleteVideo,
+  listTrashedVideos,
+  restoreVideo,
   requestVideoAnalysis,
   getVideoAnalysis,
   createEditJob,

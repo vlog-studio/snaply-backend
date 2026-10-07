@@ -175,6 +175,10 @@ model Video {
   /// 파일을 실제로 지운 시각. 만료 "예정"이 아니라 일어난 사실이다 — 만료 판정 자체는
   /// 저장하지 않고 업로드 시각 + 정책 값으로 유도한다(services/retention-policy.ts).
   purgedAt        DateTime? @map("purged_at") @db.Timestamptz(6)
+  /// 사용자가 지웠지만 되살릴 수 있게 파일을 남겨 둔 스냅 — 최근 삭제(SNAP-20). 원래 보관 기간이 끝날 때까지만이고,
+  /// 그 뒤에는 정리 배치가 파일을 지우고 `purgedAt` 을 남긴다. 이 컬럼이 생기기 전에 지운 행은 파일을 그 자리에서
+  /// 지웠으므로 `false` 다 — 그 행을 되살리면 파일 없는 스냅이 된다.
+  keptForRestore  Boolean   @default(false) @map("kept_for_restore")
   createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(6)
 
