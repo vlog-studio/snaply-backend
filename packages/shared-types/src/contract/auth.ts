@@ -10,8 +10,8 @@ export const userProfileSchema = z
     avatarUrl: z.string().nullable(),
     interests: z.array(z.string()),
     notificationEnabled: z.boolean().describe('푸시 전체 스위치. 끄면 종류와 무관하게 오지 않는다.'),
-    locationNotificationEnabled: z.boolean().describe('위치 도착 알림을 받을지.'),
-    movieNotificationEnabled: z.boolean().describe('무비 완성 알림을 받을지.'),
+    locationNotificationEnabled: z.boolean().describe('위치 도착 알림을 받을지. 새 계정은 꺼짐.'),
+    movieNotificationEnabled: z.boolean().describe('무비 완성 알림을 받을지. 새 계정은 꺼짐.'),
     quietStart: z.int().min(0).max(23).describe('방해 금지 시작 시각(KST, 0-23).'),
     quietEnd: z.int().min(0).max(23).describe('방해 금지 종료 시각(KST, 0-23). 시작과 같으면 없음.'),
   })

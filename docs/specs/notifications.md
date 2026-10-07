@@ -21,7 +21,7 @@
 
 ## 무비 완성 알림
 
-- **NTF-6** `구현됨`(실기기 미검증) — 생성이 끝나면 **서버가 FCM 푸시로 알린다**
+- **NTF-6** `구현됨`(실기기 미검증) — 생성이 끝나면 무비 완성 알림을 켠 사용자에게(기본 꺼짐, NTF-7) **서버가 FCM 푸시로 알린다**
   ([decisions/movie-ready-notification.md](../decisions/movie-ready-notification.md)). 완성 알림은 이것
   하나다 — 앱이 따로 완료 알림을 띄우면 두 번 울린다. **실패** 안내는 서버가 보내지 않으므로 앱의 로컬
   알림으로 남는다. 조용한 시간대에는 보내지 않는다(놓쳐도 앱을 열면 무비가 있다).
@@ -31,11 +31,13 @@
 
 ## 알림 설정
 
-- **NTF-7** `부분`(서버는 구현됨 — 앱 설정 화면이 아직 서버에 쓰지 않아, 사용자가 바꾼 설정이 발송에
-  닿지 않는다) — 사용자는 알림을 **종류별로** 켜고 끌 수 있다.
-  스위치는 서버에 있고 `PATCH /auth/me` 로 쓴다: `notificationEnabled`(전체) ·
-  `locationNotificationEnabled` · `movieNotificationEnabled` · `quietStart`/`quietEnd`.
-  전체를 끄면 종류와 무관하게 아무것도 가지 않는다. 남은 일은 [backlog.md](../backlog.md) B-6.
+- **NTF-7** `구현됨`(실기기 미검증) — 사용자는 알림을 **종류별로** 켜고 끌 수 있다.
+  설정은 **계정에** 있어 기기를 바꾸거나 앱을 다시 설치해도 따라온다. 서버가 원천이고 앱은 `GET /auth/me` 로 읽고
+  `PATCH /auth/me` 로 쓴다: `notificationEnabled`(전체) · `locationNotificationEnabled` · `movieNotificationEnabled` ·
+  `quietStart`/`quietEnd`. 전체를 끄면 종류와 무관하게 아무것도 가지 않는다(앱에는 전체 스위치가 없다).
+  **위치 도착 · 무비 완성 알림은 기본 꺼짐**이다 — 켜는 순간 앱이 그 기기의 권한(위치 "항상 허용", 알림)을 묻고,
+  거절하면 켜지지 않는다. 켜져 있는데 지금 기기에 권한이 없으면 설정 화면이 그렇다고 알리고 기기 설정으로 안내한다
+  ([decisions/notification-preferences.md](../decisions/notification-preferences.md) "서버가 원천, 기본은 꺼짐").
 - **NTF-9** `구현됨` — **스냅 만료 예고에는 종류별 스위치가 없다.** 끌 수 있게 하면 사용자가
   모르는 채로 영상을 잃는다 — 만료에 유예가 없는 근거가 "미리 알린다" 였다. 전체 스위치를 끈
   경우에만 가지 않으며, 그때는 라이브러리의 남은 기간 표시(SNAP-13)가 유일한 안내다

@@ -29,12 +29,13 @@
 
 ## 인증 / 프로필 (`contract/auth.ts`)
 
-- `GET /auth/me` 🔒 — 첫 호출 시 유저가 자동 생성된다. 앱이 직접 부를 일은 없다: 인증된 첫 요청이 upsert 를 일으킨다. 정기 구독 제거로 `plan` 필드는 없다 — 잔액은 `GET /billing/credits`.
+- `GET /auth/me` 🔒 — 첫 호출 시 유저가 자동 생성된다(인증된 첫 요청이면 어느 것이든 upsert 를 일으킨다). 앱은 알림 설정을 읽으려고
+  부른다. 정기 구독 제거로 `plan` 필드는 없다 — 잔액은 `GET /billing/credits`.
 - `PATCH /auth/me` 🔒 — 보낸 필드만 바뀐다. `avatarUrl: null` 은 지우기다.
-  **알림 설정(전체 스위치 · 종류별 스위치 · 방해 금지 시간)이 사는 곳이다** — 필드는 계약. 기기에만
-  저장하면 서버 발송이 그대로 나간다. 전체를 끄면 종류와 무관하게 아무것도 가지 않고, **스냅 만료 예고에는 종류별
-  스위치가 없다**(끄면 모르는 채로 영상을 잃는다 —
-  [decisions/notification-preferences.md](./decisions/notification-preferences.md)).
+  **알림 설정(전체 스위치 · 종류별 스위치 · 방해 금지 시간)이 사는 곳이다** — 필드는 계약. 서버가 원천이라 앱은 기기에 사본을
+  두지 않는다. **위치 · 무비 알림은 기본 꺼짐**이고(앱의 스위치가 기기 권한을 물은 뒤 켠다), 전체 스위치는 켜짐 · 방해 금지는
+  22~08시가 기본이다. 전체를 끄면 종류와 무관하게 아무것도 가지 않고, **스냅 만료 예고에는 종류별 스위치가 없다**(끄면 모르는
+  채로 영상을 잃는다 — [decisions/notification-preferences.md](./decisions/notification-preferences.md)).
 - `DELETE /auth/me` 🔒 — 즉시: SNS 연동·FCM 토큰 삭제, 진행 중 편집 작업 취소(예약 크레딧 환급). 이후 **30일 유예** 동안 복구 가능하고, 유예가 지나면 배치가 S3 원본까지 영구 삭제한다. 응답의 `purgeAfter` 가 실삭제 예정 시각.
   삭제 대기 중에 다른 인증 API 를 부르면 `403 ACCOUNT_PENDING_DELETION` 이고 같은 `purgeAfter` 를 에러에 싣는다 — 앱은 삭제 응답을 저장해 두지 않아도 남은 유예를 보여줄 수 있다.
 - `POST /auth/me/restore` 🔒 — 유예 내 복구. FCM 토큰·SNS 연동은 되살아나지 않는다(재등록 필요). 크레딧 잔액은 보존된다. 삭제 대기 상태가 아니면 400.

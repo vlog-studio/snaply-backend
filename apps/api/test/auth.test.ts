@@ -203,15 +203,18 @@ describe('PATCH /auth/me — 알림 설정', () => {
     expect(res.json().data).toMatchObject({ nickname: '다연', movieNotificationEnabled: false });
   });
 
-  it('기본값은 전부 켜짐이다 — 설정한 적 없는 사용자에게는 알림이 간다', async () => {
+  it('위치 · 무비 알림은 기본 꺼짐이다 — 켜는 것은 기기 권한을 묻는 앱의 스위치다(NTF-7)', async () => {
     const user = await h.createUser();
 
     const res = await h.app.inject({ method: 'GET', url: '/auth/me', headers: user.auth });
 
     expect(res.json().data).toMatchObject({
+      // 전체 스위치는 켜짐 — 만료 예고는 이것만 따른다(NTF-9).
       notificationEnabled: true,
-      locationNotificationEnabled: true,
-      movieNotificationEnabled: true,
+      locationNotificationEnabled: false,
+      movieNotificationEnabled: false,
+      quietStart: 22,
+      quietEnd: 8,
     });
   });
 
