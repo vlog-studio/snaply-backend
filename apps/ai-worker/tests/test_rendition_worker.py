@@ -11,6 +11,7 @@ import asyncio
 import sys
 import time
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 from unittest import mock
 
@@ -27,13 +28,14 @@ SIGNALS = SnapSignals(3000, 0.5, 300.0, ("0" * 16,) * 3, (0.01,) * 29, False, ()
 
 VIDEO_ID = "11111111-1111-1111-1111-111111111111"
 USER_ID = "22222222-2222-2222-2222-222222222222"
+CAPTURED_AT = datetime(2026, 9, 29, 13, 14, 6, tzinfo=timezone.utc)
 
 
 class _WorkerCase(unittest.IsolatedAsyncioTestCase):
     def setUp(self) -> None:
         self.db = mock.patch.object(rendition_worker, "rendition_db").start()
         self.db.fetch_context = mock.AsyncMock(
-            return_value={"deleted_at": None, "rendition_status": "pending"}
+            return_value={"deleted_at": None, "rendition_status": "pending", "captured_at": CAPTURED_AT}
         )
         self.db.mark_processing = mock.AsyncMock(return_value=True)
         self.storage = mock.patch.object(rendition_worker, "storage").start()
@@ -77,6 +79,14 @@ class RunTest(_WorkerCase):
         self.storage.delete.assert_not_called()
         args = self.db.save_rendition.call_args.args
         self.assertEqual(args[-2:], (720, 1280))
+
+    async def test_conversion_gets_the_snaps_capture_time(self) -> None:
+        # 원본에 촬영 시각 태그가 없을 때 배포본에 적을 값이다(backlog E-12).
+        self.db.save_rendition = mock.AsyncMock(return_value=True)
+
+        await rendition_worker._run(VIDEO_ID, USER_ID, "uploads/x/source.mov", "/tmp")
+
+        self.assertEqual(rendition_worker.build.call_args.args[2], CAPTURED_AT)
 
     async def test_cleanup_failure_still_skips_the_job(self) -> None:
         # 정리 실패로 작업을 재시도하면 같은 변환을 다시 돌리게 된다 — 건너뜀은 그대로다.

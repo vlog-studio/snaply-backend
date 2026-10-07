@@ -7,7 +7,13 @@
 `durationMs` 도 여기서 실측한다. 클라이언트가 보고한 길이는 캡처 옵션에서 온 값이라 실제
 파일과 어긋날 수 있다. 치수는 **배포본에서** 잰다 — 다른 기기가 받아 재생하는 파일이 이것이고,
 ffmpeg 이 변환하면서 회전을 픽셀에 적용하므로 세로 영상이 세로 치수로 나온다.
+
+촬영 시각(`creation_time`)은 배포본에 다시 적는다. ffmpeg 은 원본의 전역 메타데이터를 옮기면서
+`creation_time` 만은 일부러 지운다 — 그대로 두면 서버 사본을 앨범에 저장했을 때 갤러리가 촬영한 날이
+아니라 **저장한 날** 자리에 놓는다(SNAP-17, backlog E-12).
 """
+
+from datetime import datetime, timezone
 
 import json
 import os
@@ -58,6 +64,31 @@ def probe_duration_ms(path: str) -> int | None:
         return int(round(seconds * 1000))
     except Exception:  # noqa: BLE001 — 길이는 있으면 좋은 값이지 필수가 아니다
         return None
+
+
+def probe_creation_time(path: str) -> str | None:
+    """원본 컨테이너의 `creation_time` 태그. 없거나 읽을 수 없으면 None."""
+    try:
+        out = subprocess.run(
+            ["ffprobe", "-v", "error", "-show_entries", "format_tags=creation_time", "-of", "json", path],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        value = json.loads(out.stdout).get("format", {}).get("tags", {}).get("creation_time")
+        return value or None
+    except Exception:  # noqa: BLE001 — 촬영 시각은 있으면 좋은 값이지 필수가 아니다
+        return None
+
+
+def _creation_time(source_path: str, captured_at: datetime | None) -> str | None:
+    """배포본에 적을 촬영 시각. 원본의 태그가 먼저고, 없으면 앱이 보낸 촬영 시각(`captured_at`)이다."""
+    tagged = probe_creation_time(source_path)
+    if tagged:
+        return tagged
+    if captured_at is None:
+        return None
+    return captured_at.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
 
 def probe_dimensions(path: str) -> tuple[int, int] | None:
@@ -115,7 +146,7 @@ def _video_filter(source_path: str | None = None) -> str:
     )
 
 
-def build(source_path: str, work_dir: str) -> RenditionOutcome:
+def build(source_path: str, work_dir: str, captured_at: datetime | None = None) -> RenditionOutcome:
     """원본에서 배포본과 썸네일을 만든다. 썸네일 실패는 삼킨다 — 표지는 장식이다."""
     duration_ms = probe_duration_ms(source_path)
     video_path = os.path.join(work_dir, "rendition.mp4")
@@ -125,6 +156,9 @@ def build(source_path: str, work_dir: str) -> RenditionOutcome:
            "-profile:v", "high", "-pix_fmt", "yuv420p",
            # 스트리밍 재생을 위해 moov 를 앞으로 — 없으면 플레이어가 전체를 받고서야 시작한다.
            "-movflags", "+faststart"]
+    creation_time = _creation_time(source_path, captured_at)
+    if creation_time:
+        cmd += ["-metadata", f"creation_time={creation_time}"]
     if _has_audio(source_path):
         cmd += ["-c:a", "aac", "-b:a", "128k", "-ar", "48000", "-ac", "2"]
     else:
