@@ -43,8 +43,12 @@ jest.mock('@/features/analysis-consent', () => ({
 }));
 
 jest.mock('@/features/notification-settings', () => ({
-  useMovieReadyEnabled: () => true,
-  useNotificationEnabled: () => false,
+  useNotificationPreferences: () => ({
+    locationAlerts: false,
+    movieReady: true,
+    quietStart: 22,
+    quietEnd: 8,
+  }),
 }));
 
 let mockAlbumAutoSave = false;

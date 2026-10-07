@@ -11,6 +11,10 @@ export function requestLocalNotificationPermission(): Promise<boolean> {
   return Promise.resolve(false);
 }
 
+export function hasLocalNotificationPermission(): Promise<boolean> {
+  return Promise.resolve(false);
+}
+
 export function presentLocalNotification(_input: {
   title?: string;
   body?: string;

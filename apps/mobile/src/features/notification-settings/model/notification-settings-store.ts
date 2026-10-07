@@ -3,19 +3,16 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { secureStorage } from '@/shared/lib/secure-storage';
 
+import type { NotificationPreferences } from './notification-preferences';
+
 /**
- * Owns the user's notification preferences.
+ * Owns the notification state that lives on this device only.
  *
- * The location-alert switch, the quiet hours, and `movieReady` have backend
- * counterparts (`locationNotificationEnabled`, `quietStart`/`quietEnd`,
- * `movieNotificationEnabled`, under the `notificationEnabled` master switch) that
- * `PATCH /auth/me` accepts and the server's pushes are judged by. The app still
- * persists them locally only (root backlog B-6), so a switch here does not yet
- * reach those pushes; once the app writes them, they become a server-backed
- * query/mutation and the local copies are dropped. `movieReady` also gates the
- * app's own failure notice.
- *
- * Quiet hours are stored as integer hours (0–23), matching the backend.
+ * The alert switches and the quiet hours are not here: they are the account's,
+ * held by the server and read through `useNotificationPreferences` (NTF-7,
+ * docs/decisions/notification-preferences.md). Builds before that kept them
+ * here; what such a build stored and the user had actually chosen waits in
+ * `legacyChoices` until `useLegacyChoicesUpload` hands it to the server once.
  *
  * The capture-reminder fields (`reminderWindows`, `reminderFrequency`) persist
  * the user's choice only — no scheduler consumes them yet, and they have no
@@ -31,90 +28,97 @@ const REMINDER_WINDOW_IDS = ['morning', 'lunch', 'evening'] as const;
 
 export type ReminderWindowId = (typeof REMINDER_WINDOW_IDS)[number];
 
+/** Preferences an older build kept on this device and the user had changed. */
+export type LegacyChoices = Partial<NotificationPreferences>;
+
 type NotificationSettingsState = {
-  enabled: boolean;
-  quietStart: number;
-  quietEnd: number;
   interests: string[];
-  movieReady: boolean;
   reminderWindows: Record<ReminderWindowId, boolean>;
   reminderFrequency: number;
-  setEnabled: (enabled: boolean) => void;
-  setQuietStart: (hour: number) => void;
-  setQuietEnd: (hour: number) => void;
+  /** Set only by the v2 migration; cleared once the server has them. */
+  legacyChoices: LegacyChoices | null;
   toggleInterest: (interest: string) => void;
-  setMovieReady: (enabled: boolean) => void;
   setReminderWindow: (window: ReminderWindowId, enabled: boolean) => void;
   setReminderFrequency: (count: number) => void;
+  clearLegacyChoices: () => void;
 };
+
+/** What a pre-v2 build stored for the preferences that moved to the server. */
+type V1Preferences = {
+  enabled?: boolean;
+  movieReady?: boolean;
+  quietStart?: number;
+  quietEnd?: number;
+};
+
+/**
+ * The v1 values the user chose, in the server's terms. A value still at that
+ * build's default (both switches off, quiet 22–08) was never chosen, so it is
+ * left out — uploading it would overwrite what another device set.
+ */
+export function legacyChoicesFrom(v1: V1Preferences): LegacyChoices | null {
+  const choices: LegacyChoices = {
+    ...(v1.enabled === true ? { locationAlerts: true } : null),
+    ...(v1.movieReady === true ? { movieReady: true } : null),
+    ...(v1.quietStart !== undefined && v1.quietStart !== 22 ? { quietStart: v1.quietStart } : null),
+    ...(v1.quietEnd !== undefined && v1.quietEnd !== 8 ? { quietEnd: v1.quietEnd } : null),
+  };
+  return Object.keys(choices).length > 0 ? choices : null;
+}
+
+/** The persisted state of an older version, brought to the current one. */
+export function migrateNotificationSettings(
+  persisted: unknown,
+  version: number,
+): Partial<NotificationSettingsState> {
+  const { enabled, movieReady, quietStart, quietEnd, ...rest } = (persisted ??
+    {}) as V1Preferences & Partial<NotificationSettingsState>;
+  if (version >= 2) return rest;
+  return {
+    ...rest,
+    legacyChoices: legacyChoicesFrom({
+      // A v0 `enabled: true` was that build's default, not a choice.
+      enabled: version < 1 ? false : enabled,
+      movieReady,
+      quietStart,
+      quietEnd,
+    }),
+  };
+}
 
 const useNotificationSettingsStore = create<NotificationSettingsState>()(
   persist(
     (set) => ({
-      // Off until asked for, like movieReady: enabling is what runs the location
-      // permission flow, so a default of on would prompt cold at first launch.
-      enabled: false,
-      quietStart: 22,
-      quietEnd: 8,
       interests: [],
-      // Off until asked for: turning it on is what raises the OS permission
-      // prompt, and a default that prompts on the first generation would ask at
-      // the worst possible moment.
-      movieReady: false,
       reminderWindows: { morning: true, lunch: true, evening: true },
       reminderFrequency: 2,
-      setEnabled: (enabled) => set({ enabled }),
-      setQuietStart: (quietStart) => set({ quietStart }),
-      setQuietEnd: (quietEnd) => set({ quietEnd }),
+      legacyChoices: null,
       toggleInterest: (interest) =>
         set((state) => ({
           interests: state.interests.includes(interest)
             ? state.interests.filter((item) => item !== interest)
             : [...state.interests, interest],
         })),
-      setMovieReady: (movieReady) => set({ movieReady }),
       setReminderWindow: (window, enabled) =>
         set((state) => ({ reminderWindows: { ...state.reminderWindows, [window]: enabled } })),
       setReminderFrequency: (reminderFrequency) => set({ reminderFrequency }),
+      clearLegacyChoices: () => set({ legacyChoices: null }),
     }),
     {
       name: 'snaply.notification-settings',
       storage: createJSONStorage(() => secureStorage),
       // v1: `enabled` stopped defaulting to true. A persisted `true` from v0 was
       // that default, not a choice the user made (the opt-in switch didn't gate
-      // the value yet), so it resets to off; opting back in is one tap.
-      version: 1,
-      migrate: (persisted, version) => {
-        const state = persisted as Partial<NotificationSettingsState>;
-        return version < 1 ? { ...state, enabled: false } : state;
-      },
+      // the value yet), so it reads as off.
+      // v2: the switches and quiet hours moved to the server (NTF-7). The ones
+      // the user had changed become `legacyChoices` for one upload; the device
+      // copies are dropped.
+      version: 2,
+      migrate: (persisted, version) =>
+        migrateNotificationSettings(persisted, version) as NotificationSettingsState,
     },
   ),
 );
-
-export function useNotificationEnabled(): boolean {
-  return useNotificationSettingsStore((state) => state.enabled);
-}
-
-export function useSetNotificationEnabled(): (enabled: boolean) => void {
-  return useNotificationSettingsStore((state) => state.setEnabled);
-}
-
-export function useQuietStart(): number {
-  return useNotificationSettingsStore((state) => state.quietStart);
-}
-
-export function useQuietEnd(): number {
-  return useNotificationSettingsStore((state) => state.quietEnd);
-}
-
-export function useSetQuietStart(): (hour: number) => void {
-  return useNotificationSettingsStore((state) => state.setQuietStart);
-}
-
-export function useSetQuietEnd(): (hour: number) => void {
-  return useNotificationSettingsStore((state) => state.setQuietEnd);
-}
 
 export function useInterests(): string[] {
   return useNotificationSettingsStore((state) => state.interests);
@@ -140,11 +144,10 @@ export function useSetReminderFrequency(): (count: number) => void {
   return useNotificationSettingsStore((state) => state.setReminderFrequency);
 }
 
-/** Whether a finished (or broken) generation should raise a notification. */
-export function useMovieReadyEnabled(): boolean {
-  return useNotificationSettingsStore((state) => state.movieReady);
+export function useLegacyChoices(): LegacyChoices | null {
+  return useNotificationSettingsStore((state) => state.legacyChoices);
 }
 
-export function useSetMovieReadyEnabled(): (enabled: boolean) => void {
-  return useNotificationSettingsStore((state) => state.setMovieReady);
+export function useClearLegacyChoices(): () => void {
+  return useNotificationSettingsStore((state) => state.clearLegacyChoices);
 }

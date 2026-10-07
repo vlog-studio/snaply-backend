@@ -54,6 +54,15 @@ export async function requestLocalNotificationPermission(): Promise<boolean> {
   return requested.granted;
 }
 
+/**
+ * Whether this app may present a notification right now. Check-only — never
+ * prompts — for a screen that has to say a preference is on but this device
+ * will not show it.
+ */
+export async function hasLocalNotificationPermission(): Promise<boolean> {
+  return (await Notifications.getPermissionsAsync()).granted;
+}
+
 type LocalNotification = {
   title?: string;
   body?: string;

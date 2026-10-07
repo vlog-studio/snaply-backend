@@ -4,10 +4,7 @@ import { Linking, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-
 import {
   useLocationAlerts,
   useMovieReadyAlerts,
-  useQuietEnd,
-  useQuietStart,
-  useSetQuietEnd,
-  useSetQuietStart,
+  useQuietHours,
 } from '@/features/notification-settings';
 import { MaxContentWidth, Radius, Spacing, useTheme } from '@/shared/ui/theme';
 import { ThemedText } from '@/shared/ui/themed-text';
@@ -20,6 +17,10 @@ import { RowDivider, SettingRow, SettingsSection } from './rows';
  * preference in one place: the capture-reminder placeholders (준비 중), the
  * movie-completion and location alerts, and the quiet hours that bound them
  * all. The 나 tab keeps only the one-line summary of what is set here.
+ *
+ * The alerts and the quiet hours are the account's, held by the server (NTF-7):
+ * the controls hold still until it has answered, and a change it refuses goes
+ * back with a line saying so.
  */
 export function MeNotificationsPage() {
   const theme = useTheme();
@@ -28,10 +29,10 @@ export function MeNotificationsPage() {
   // The OS prompts run only after the in-app sheet's yes; flipping the switch
   // on just opens the sheet, so a dismissal costs nothing and can be re-asked.
   const [locationSheetVisible, setLocationSheetVisible] = useState(false);
-  const quietStart = useQuietStart();
-  const quietEnd = useQuietEnd();
-  const setQuietStart = useSetQuietStart();
-  const setQuietEnd = useSetQuietEnd();
+  const quietHours = useQuietHours();
+  // Every control writes the same account record, so one refusal line serves
+  // them all; the last control touched is the one it is about.
+  const saveError = movieReadyAlerts.error ?? locationAlerts.error ?? quietHours.error;
 
   return (
     <ScrollView
@@ -64,6 +65,7 @@ export function MeNotificationsPage() {
           right={
             <Switch
               accessibilityLabel="무비 완성 알림 받기"
+              disabled={!movieReadyAlerts.ready}
               value={movieReadyAlerts.enabled}
               onValueChange={movieReadyAlerts.setEnabled}
               trackColor={{ false: theme.border, true: theme.primary }}
@@ -97,6 +99,7 @@ export function MeNotificationsPage() {
           right={
             <Switch
               accessibilityLabel="위치 알림 받기"
+              disabled={!locationAlerts.ready}
               value={locationAlerts.enabled}
               onValueChange={(value) => {
                 if (value) setLocationSheetVisible(true);
@@ -121,16 +124,32 @@ export function MeNotificationsPage() {
       </SettingsSection>
 
       <SettingsSection title="조용한 시간">
-        <HourStepper label="시작" value={quietStart} onChange={setQuietStart} />
+        <HourStepper
+          label="시작"
+          value={quietHours.start}
+          disabled={!quietHours.ready}
+          onChange={quietHours.setStart}
+        />
         <RowDivider />
-        <HourStepper label="종료" value={quietEnd} onChange={setQuietEnd} />
+        <HourStepper
+          label="종료"
+          value={quietHours.end}
+          disabled={!quietHours.ready}
+          onChange={quietHours.setEnd}
+        />
         <RowDivider />
         <View style={styles.quietHint}>
           <ThemedText type="small" themeColor="textSecondary">
-            {`${formatHour(quietStart)}부터 ${formatHour(quietEnd)}까지는 알림을 보내지 않아요.`}
+            {`${formatHour(quietHours.start)}부터 ${formatHour(quietHours.end)}까지는 알림을 보내지 않아요.`}
           </ThemedText>
         </View>
       </SettingsSection>
+
+      {saveError ? (
+        <ThemedText type="small" themeColor="danger" style={styles.saveError}>
+          {saveError}
+        </ThemedText>
+      ) : null}
 
       <LocationAlertsSheet
         visible={locationSheetVisible}
@@ -151,10 +170,12 @@ function formatHour(hour: number): string {
 function HourStepper({
   label,
   value,
+  disabled,
   onChange,
 }: {
   label: string;
   value: number;
+  disabled: boolean;
   onChange: (hour: number) => void;
 }) {
   const theme = useTheme();
@@ -167,8 +188,13 @@ function HourStepper({
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={`${label} 시간 줄이기`}
+            accessibilityState={{ disabled }}
+            disabled={disabled}
             onPress={() => onChange((value + 23) % 24)}
-            style={[styles.stepperButton, { borderColor: theme.border }]}
+            style={[
+              styles.stepperButton,
+              { borderColor: theme.border, opacity: disabled ? 0.4 : 1 },
+            ]}
           >
             <ThemedText selectable={false} type="smallBold">
               −
@@ -180,8 +206,13 @@ function HourStepper({
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={`${label} 시간 늘리기`}
+            accessibilityState={{ disabled }}
+            disabled={disabled}
             onPress={() => onChange((value + 1) % 24)}
-            style={[styles.stepperButton, { borderColor: theme.border }]}
+            style={[
+              styles.stepperButton,
+              { borderColor: theme.border, opacity: disabled ? 0.4 : 1 },
+            ]}
           >
             <ThemedText selectable={false} type="smallBold">
               +
@@ -214,4 +245,5 @@ const styles = StyleSheet.create({
   },
   stepperValue: { minWidth: 56, textAlign: 'center' },
   quietHint: { paddingHorizontal: Spacing.four, paddingVertical: Spacing.three },
+  saveError: { paddingHorizontal: Spacing.four },
 });
