@@ -1,8 +1,9 @@
-# 결정 요청 — 스냅 휴지통의 세부 규칙
+# 스냅 휴지통의 세부 규칙
 
 **작성일**: 2026-10-07
-**상태**: 미결 — 결정 대기. 방향(soft delete + 유예 후 실삭제)은 [snap-source-of-truth.md](./snap-source-of-truth.md) §1 에서
-정해졌고, 이 문서는 구현 전에 정할 세부만 묻는다
+**상태**: 결정(2026-10-07) — 권장안 그대로(① C · ② A · ③ A · ④ A · ⑤ C). 방향(soft delete + 유예 후 실삭제)은
+[snap-source-of-truth.md](./snap-source-of-truth.md) §1 에서 정해졌고, 이 문서는 그 세부를 정했다. 현행 요구는
+[specs/snap-library.md](../specs/snap-library.md) SNAP-16 · SNAP-20
 **출처**: [backlog.md](../backlog.md) A-4 "스냅 휴지통(삭제 유예)"
 **관련 문서**: [specs/snap-library.md](../specs/snap-library.md) SNAP-5 · SNAP-9 · SNAP-16 · SNAP-19 ·
 [snap-sync-across-devices.md](./snap-sync-across-devices.md) ① · [snap-retention-period.md](./snap-retention-period.md) ·
@@ -90,7 +91,7 @@
 
 | 항목 | 기록 |
 |---|---|
-| 결정 | |
-| 결정일 / 결정자 | |
-| 기각한 선택지와 이유 | |
+| 결정 | **① C · ② A · ③ A · ④ A · ⑤ C** — 서버에 사본이 있던 스냅만, 원래 보관 기간이 끝날 때까지 되살린다. 스냅만 돌아오고 무비의 컷은 돌아오지 않는다. 휴지통에 있는 동안 다른 기기의 원본은 지금처럼 지운다. 삭제 직후 "되돌리기"와 스냅 탭의 "최근 삭제"에서 되살린다 |
+| 결정일 / 결정자 | 2026-10-07 / 오너(권장안 채택) |
+| 기각한 선택지와 이유 | ① A · B · D — 따로 정한 기간은 늦게 지운 스냅을 보관 기간 너머로 남겨 "지워 두기"가 보관 수단이 된다(D 는 상한을 두지만 숫자를 하나 더 정해야 한다). ② B — 지운 뒤 무비가 바뀌었으면 컷이 돌아갈 자리가 없다. ③ B — 기기마다 휴지통 상태를 맞춰야 하고, 서버 사본이 올라간 원본 그대로라 잃는 것이 없다. ④ B — 기기 휴지통이 따로 생긴다. ⑤ A · B — 하나만 두면 나중의 후회나 바로 직후의 실수 중 하나를 놓친다 |
 | 함께 고칠 문서 | SNAP-16(문구 · 되돌릴 수 있음) · 휴지통 요구 신설(specs/snap-library.md) · 계약 `contract/videos.ts`(되살리기 · lookup 상태)와 `openapi.json` · [api-spec.md](../api-spec.md) · 앱 기능 문서 [snaps.md](../../apps/mobile/docs/features/snaps.md) · 법률 문서(`routes/legal.ts` "보관 및 파기") |
