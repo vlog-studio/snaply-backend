@@ -1,74 +1,113 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
+import { createElement, type ReactNode } from 'react';
 
-import { requestLocalNotificationPermission } from '@/shared/lib/notifications';
+import {
+  hasLocalNotificationPermission,
+  requestLocalNotificationPermission,
+} from '@/shared/lib/notifications';
 
-import { useSetMovieReadyEnabled } from './notification-settings-store';
+import type { NotificationPreferences } from './notification-preferences';
 import { useMovieReadyAlerts } from './use-movie-ready-alerts';
 
 jest.mock('@/shared/lib/notifications', () => ({
   requestLocalNotificationPermission: jest.fn(),
+  hasLocalNotificationPermission: jest.fn(),
 }));
 
-jest.mock('@/shared/lib/secure-storage', () => ({
-  secureStorage: {
-    getItem: jest.fn().mockResolvedValue(null),
-    setItem: jest.fn().mockResolvedValue(undefined),
-    removeItem: jest.fn().mockResolvedValue(undefined),
-  },
+jest.mock('@/entities/session', () => ({
+  useIsAuthenticated: () => true,
 }));
 
-const mockRequestPermission = requestLocalNotificationPermission as jest.MockedFunction<
-  typeof requestLocalNotificationPermission
->;
+const mockGet = jest.fn<Promise<NotificationPreferences>, []>();
+const mockUpdate = jest.fn<Promise<NotificationPreferences>, [Partial<NotificationPreferences>]>();
+jest.mock('../api/get-notification-preferences', () => ({
+  getNotificationPreferences: () => mockGet(),
+}));
+jest.mock('../api/update-notification-preferences', () => ({
+  updateNotificationPreferences: (change: Partial<NotificationPreferences>) => mockUpdate(change),
+}));
 
-function useAlertsWithReset() {
-  return {
-    alerts: useMovieReadyAlerts(),
-    resetStoredPreference: useSetMovieReadyEnabled(),
-  };
+const mockRequestPermission = jest.mocked(requestLocalNotificationPermission);
+const mockHasPermission = jest.mocked(hasLocalNotificationPermission);
+
+const server: NotificationPreferences = {
+  locationAlerts: false,
+  movieReady: false,
+  quietStart: 22,
+  quietEnd: 8,
+};
+
+async function render(stored: Partial<NotificationPreferences> = {}) {
+  mockGet.mockResolvedValue({ ...server, ...stored });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: Infinity } },
+  });
+  const wrapper = ({ children }: { children: ReactNode }) =>
+    createElement(QueryClientProvider, { client }, children);
+  const rendered = await renderHook(() => useMovieReadyAlerts(), { wrapper });
+  await waitFor(() => expect(rendered.result.current.ready).toBe(true));
+  return rendered;
 }
 
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockHasPermission.mockResolvedValue(true);
+  mockUpdate.mockImplementation((change) => Promise.resolve({ ...server, ...change }));
+});
+
 describe('useMovieReadyAlerts', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it('stores the opt-in only after the operating system grants permission', async () => {
+  it('turns the account’s switch on only after the operating system grants permission', async () => {
     mockRequestPermission.mockResolvedValue(true);
-    const { result } = await renderHook(useAlertsWithReset);
+    const { result } = await render();
 
-    await act(async () => {
-      result.current.alerts.setEnabled(true);
-    });
+    await act(async () => result.current.setEnabled(true));
 
-    await waitFor(() => expect(result.current.alerts.enabled).toBe(true));
-    expect(result.current.alerts.blocked).toBe(false);
-
-    await act(async () => result.current.resetStoredPreference(false));
+    await waitFor(() => expect(result.current.enabled).toBe(true));
+    expect(mockUpdate).toHaveBeenCalledWith({ movieReady: true });
+    expect(result.current.blocked).toBe(false);
   });
 
-  it('leaves the preference off and exposes the denial', async () => {
+  it('leaves the switch off, writes nothing, and exposes the denial', async () => {
     mockRequestPermission.mockResolvedValue(false);
-    const { result } = await renderHook(useAlertsWithReset);
+    const { result } = await render();
 
-    await act(async () => {
-      result.current.alerts.setEnabled(true);
-    });
+    await act(async () => result.current.setEnabled(true));
 
-    await waitFor(() => expect(result.current.alerts.blocked).toBe(true));
-    expect(result.current.alerts.enabled).toBe(false);
+    await waitFor(() => expect(result.current.blocked).toBe(true));
+    expect(result.current.enabled).toBe(false);
+    expect(mockUpdate).not.toHaveBeenCalled();
   });
 
-  it('turns off synchronously without asking the operating system again', async () => {
-    const { result } = await renderHook(useAlertsWithReset);
-    await act(async () => result.current.resetStoredPreference(true));
+  it('turns off without asking the operating system again', async () => {
+    const { result } = await render({ movieReady: true });
 
-    await act(async () => {
-      result.current.alerts.setEnabled(false);
-    });
+    await act(async () => result.current.setEnabled(false));
 
-    expect(result.current.alerts.enabled).toBe(false);
-    expect(result.current.alerts.blocked).toBe(false);
+    await waitFor(() => expect(result.current.enabled).toBe(false));
+    expect(mockUpdate).toHaveBeenCalledWith({ movieReady: false });
     expect(mockRequestPermission).not.toHaveBeenCalled();
+  });
+
+  it('says so when the account has it on but this device has no notification grant', async () => {
+    // A new device, or notifications turned off in the OS settings.
+    mockHasPermission.mockResolvedValue(false);
+    const { result } = await render({ movieReady: true });
+
+    await waitFor(() => expect(result.current.blocked).toBe(true));
+    expect(result.current.enabled).toBe(true);
+    expect(mockRequestPermission).not.toHaveBeenCalled();
+  });
+
+  it('holds still until the preferences have loaded', async () => {
+    mockGet.mockReturnValue(new Promise(() => {}));
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: Infinity } },
+    });
+    const wrapper = ({ children }: { children: ReactNode }) =>
+      createElement(QueryClientProvider, { client }, children);
+    const { result } = await renderHook(() => useMovieReadyAlerts(), { wrapper });
+
+    expect(result.current).toMatchObject({ ready: false, enabled: false, blocked: false });
   });
 });

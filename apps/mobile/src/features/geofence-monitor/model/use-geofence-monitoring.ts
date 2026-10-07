@@ -20,16 +20,20 @@ import {
  * so no arrivals are reported. A grant revoked in OS settings just means
  * monitoring silently does not start. Native-only (web has no geofencing). The
  * `enabled` value is supplied by the caller so this feature does not depend on
- * the notification-settings feature.
+ * the notification-settings feature; `undefined` means the caller does not know
+ * yet (the preference is still loading), and monitoring is left as it is —
+ * neither started nor stopped — so a cold start without network does not drop
+ * the regions the OS is watching.
  */
-export function useGeofenceMonitoring({ enabled }: { enabled: boolean }): void {
+export function useGeofenceMonitoring({ enabled }: { enabled: boolean | undefined }): void {
   const isAuthenticated = useIsAuthenticated();
   const queryClient = useQueryClient();
 
   useEffect(() => {
     if (Platform.OS === 'web') return;
+    if (isAuthenticated && enabled === undefined) return;
 
-    const shouldMonitor = isAuthenticated && enabled;
+    const shouldMonitor = isAuthenticated && enabled === true;
     let cancelled = false;
 
     void (async () => {

@@ -1,14 +1,29 @@
 import { useState } from 'react';
 
-import { requestLocalNotificationPermission } from '@/shared/lib/notifications';
+import {
+  hasLocalNotificationPermission,
+  requestLocalNotificationPermission,
+} from '@/shared/lib/notifications';
 
-import { useMovieReadyEnabled, useSetMovieReadyEnabled } from './notification-settings-store';
+import { useDeviceGrant } from './use-device-grant';
+import { useNotificationPreferences } from './use-notification-preferences';
+import { useUpdateNotificationPreferences } from './use-update-notification-preferences';
 
 export type MovieReadyAlerts = {
+  /** The account's switch. False until the preferences have loaded. */
   enabled: boolean;
-  /** True when the OS refused the last attempt to turn the preference on. */
+  /** False until the preferences have loaded — the switch holds still. */
+  ready: boolean;
+  /**
+   * True when this device will not show what the switch allows: the OS refused
+   * the last attempt to turn it on, or it is on for the account but this
+   * device has no notification grant (a new device, or one turned off in the
+   * OS settings).
+   */
   blocked: boolean;
   setEnabled: (next: boolean) => void;
+  /** Set when the server did not take the last change. */
+  error: string | null;
 };
 
 /**
@@ -16,29 +31,38 @@ export type MovieReadyAlerts = {
  *
  * Turning it on is the moment to ask the OS: it is a control the user just
  * touched, so the system prompt has a reason the user can see, and there is no
- * point storing a preference the device will never honor. A refusal leaves the
- * switch off and says so rather than looking on and staying silent.
+ * point turning on a preference the device will never honor. A refusal leaves
+ * the switch off and says so rather than looking on and staying silent. The
+ * switch itself is the account's (NTF-7) — off for a new account.
  *
  * Turning it off never asks anything — a denied grant is the OS's to change, and
- * the user can still stop the app from announcing anything.
+ * the user can still stop the server from announcing anything.
  */
 export function useMovieReadyAlerts(): MovieReadyAlerts {
-  const enabled = useMovieReadyEnabled();
-  const setStoredEnabled = useSetMovieReadyEnabled();
-  const [blocked, setBlocked] = useState(false);
+  const preferences = useNotificationPreferences();
+  const { update, error } = useUpdateNotificationPreferences();
+  const [refused, setRefused] = useState(false);
+  const enabled = preferences?.movieReady === true;
+  const granted = useDeviceGrant(hasLocalNotificationPermission, enabled);
 
   const setEnabled = (next: boolean) => {
     if (!next) {
-      setBlocked(false);
-      setStoredEnabled(false);
+      setRefused(false);
+      void update({ movieReady: false });
       return;
     }
     void (async () => {
-      const granted = await requestLocalNotificationPermission();
-      setBlocked(!granted);
-      setStoredEnabled(granted);
+      const allowed = await requestLocalNotificationPermission();
+      setRefused(!allowed);
+      if (allowed) await update({ movieReady: true });
     })();
   };
 
-  return { enabled, blocked, setEnabled };
+  return {
+    enabled,
+    ready: preferences !== undefined,
+    blocked: refused || (enabled && granted === false),
+    setEnabled,
+    error,
+  };
 }

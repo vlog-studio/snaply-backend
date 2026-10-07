@@ -8,6 +8,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { MovieSyncGate } from '@/features/compose-movie';
 import { DeletedLibraryPurgeGate } from '@/features/delete-account';
+import { LegacyChoicesUploadGate } from '@/features/notification-settings';
 import { SnapReconcileGate } from '@/features/reconcile-snaps';
 import { SnapUploadGate } from '@/features/upload-snap';
 import { Colors, useResolvedColorScheme } from '@/shared/ui/theme';
@@ -59,6 +60,10 @@ export function AppProviders({ children }: PropsWithChildren) {
             or the query cache, and none of it may run against the account that
             just signed out. */}
         <LibraryScopeGate />
+        {/* Notification choices an older build kept on this device go up to
+            the account once (NTF-7). After the scope gate, so they reach the
+            account that is signed in. */}
+        <LegacyChoicesUploadGate />
         {/* Deleted accounts leave their library behind for the length of the
             grace period; this is what collects it once that has run out. */}
         <DeletedLibraryPurgeGate />

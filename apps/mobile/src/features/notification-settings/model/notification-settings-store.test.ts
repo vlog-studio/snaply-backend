@@ -1,17 +1,11 @@
 import { act, renderHook } from '@testing-library/react-native';
 
 import {
+  legacyChoicesFrom,
+  migrateNotificationSettings,
   useInterests,
-  useMovieReadyEnabled,
-  useNotificationEnabled,
-  useQuietEnd,
-  useQuietStart,
   useReminderFrequency,
   useReminderWindows,
-  useSetMovieReadyEnabled,
-  useSetNotificationEnabled,
-  useSetQuietEnd,
-  useSetQuietStart,
   useSetReminderFrequency,
   useSetReminderWindow,
   useToggleInterest,
@@ -29,38 +23,16 @@ jest.mock('@/shared/lib/secure-storage', () => ({
 
 function useSettings() {
   return {
-    enabled: useNotificationEnabled(),
-    quietStart: useQuietStart(),
-    quietEnd: useQuietEnd(),
     interests: useInterests(),
-    movieReady: useMovieReadyEnabled(),
     reminderWindows: useReminderWindows(),
     reminderFrequency: useReminderFrequency(),
-    setEnabled: useSetNotificationEnabled(),
-    setQuietStart: useSetQuietStart(),
-    setQuietEnd: useSetQuietEnd(),
     toggleInterest: useToggleInterest(),
-    setMovieReady: useSetMovieReadyEnabled(),
     setReminderWindow: useSetReminderWindow(),
     setReminderFrequency: useSetReminderFrequency(),
   };
 }
 
-describe('notification settings', () => {
-  it('starts with every prompting preference off until the user opts in', async () => {
-    const { result } = await renderHook(useSettings);
-
-    expect(result.current).toMatchObject({
-      enabled: false,
-      quietStart: 22,
-      quietEnd: 8,
-      interests: [],
-      movieReady: false,
-      reminderWindows: { morning: true, lunch: true, evening: true },
-      reminderFrequency: 2,
-    });
-  });
-
+describe('notification settings on this device', () => {
   it('persists a reminder window and the daily frequency across updates', async () => {
     const { result } = await renderHook(useSettings);
 
@@ -79,38 +51,79 @@ describe('notification settings', () => {
     });
   });
 
-  it('updates product preferences and toggles an interest without duplicates', async () => {
+  it('toggles an interest without duplicates', async () => {
     const { result } = await renderHook(useSettings);
 
     await act(async () => {
-      result.current.setEnabled(false);
-      result.current.setQuietStart(23);
-      result.current.setQuietEnd(7);
       result.current.toggleInterest('travel');
       result.current.toggleInterest('food');
-      result.current.setMovieReady(true);
     });
-
-    expect(result.current).toMatchObject({
-      enabled: false,
-      quietStart: 23,
-      quietEnd: 7,
-      interests: ['travel', 'food'],
-      movieReady: true,
-    });
+    expect(result.current.interests).toEqual(['travel', 'food']);
 
     await act(async () => {
       result.current.toggleInterest('travel');
-    });
-    expect(result.current.interests).toEqual(['food']);
-    expect(mockStorageSetItem).toHaveBeenCalled();
-
-    await act(async () => {
-      result.current.setEnabled(true);
-      result.current.setQuietStart(22);
-      result.current.setQuietEnd(8);
       result.current.toggleInterest('food');
-      result.current.setMovieReady(false);
     });
+    expect(result.current.interests).toEqual([]);
+  });
+});
+
+describe('legacyChoicesFrom', () => {
+  it.each([
+    // Only what the user changed goes up — a default left alone would overwrite
+    // what another device set on the account.
+    [
+      'both switches on and new quiet hours',
+      { enabled: true, movieReady: true, quietStart: 23, quietEnd: 7 },
+      { locationAlerts: true, movieReady: true, quietStart: 23, quietEnd: 7 },
+    ],
+    [
+      'one switch on',
+      { enabled: false, movieReady: true, quietStart: 22, quietEnd: 8 },
+      { movieReady: true },
+    ],
+    [
+      'only the start hour moved',
+      { enabled: false, movieReady: false, quietStart: 0, quietEnd: 8 },
+      { quietStart: 0 },
+    ],
+    [
+      'everything at the old defaults',
+      { enabled: false, movieReady: false, quietStart: 22, quietEnd: 8 },
+      null,
+    ],
+    ['nothing stored', {}, null],
+  ])('%s', (_label, v1, expected) => {
+    expect(legacyChoicesFrom(v1)).toEqual(expected);
+  });
+});
+
+describe('migrateNotificationSettings', () => {
+  const v1 = {
+    enabled: true,
+    quietStart: 23,
+    quietEnd: 8,
+    movieReady: false,
+    interests: ['travel'],
+    reminderWindows: { morning: false, lunch: true, evening: true },
+    reminderFrequency: 3,
+  };
+
+  it('turns a v1 build’s chosen preferences into the one-time upload and keeps the device state', () => {
+    expect(migrateNotificationSettings(v1, 1)).toEqual({
+      interests: ['travel'],
+      reminderWindows: { morning: false, lunch: true, evening: true },
+      reminderFrequency: 3,
+      legacyChoices: { locationAlerts: true, quietStart: 23 },
+    });
+  });
+
+  it('does not upload a v0 location switch — on was that build’s default, not a choice', () => {
+    expect(migrateNotificationSettings(v1, 0)).toMatchObject({ legacyChoices: { quietStart: 23 } });
+  });
+
+  it('leaves a current state as it is', () => {
+    const v2 = { interests: [], legacyChoices: { movieReady: true } };
+    expect(migrateNotificationSettings(v2, 2)).toEqual(v2);
   });
 });

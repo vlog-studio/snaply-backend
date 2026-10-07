@@ -10,7 +10,7 @@ import { useMovies } from '@/entities/movie';
 import { useClearSession, useCurrentUser } from '@/entities/session';
 import { useSnaps } from '@/entities/snap';
 import { useAnalysisConsent } from '@/features/analysis-consent';
-import { useMovieReadyEnabled, useNotificationEnabled } from '@/features/notification-settings';
+import { useNotificationPreferences } from '@/features/notification-settings';
 import { useAlbumAutoSaveEnabled } from '@/features/save-snap-to-album';
 import {
   MaxContentWidth,
@@ -57,8 +57,7 @@ export function MePage() {
   const clearSession = useClearSession();
   const snaps = useSnaps();
   const movies = useMovies();
-  const movieReadyAlerts = useMovieReadyEnabled();
-  const locationAlerts = useNotificationEnabled();
+  const notificationPreferences = useNotificationPreferences();
   const albumAutoSave = useAlbumAutoSaveEnabled();
   const themeMode = useThemeMode();
   const creditBalance = useQuery(creditQueries.balance());
@@ -78,11 +77,17 @@ export function MePage() {
   const recordedDays = recordedDayCount(days);
 
   // Reminders are 준비 중, so the read-out summarizes only the alerts that
-  // actually arrive.
-  const enabledAlerts = [movieReadyAlerts && '무비 완성', locationAlerts && '위치'].filter(
-    (label): label is string => Boolean(label),
-  );
-  const alertSummary = enabledAlerts.length ? enabledAlerts.join(' · ') : '모두 꺼짐';
+  // actually arrive. Until the account's preferences load it says nothing
+  // rather than guessing 모두 꺼짐.
+  const enabledAlerts = [
+    notificationPreferences?.movieReady && '무비 완성',
+    notificationPreferences?.locationAlerts && '위치',
+  ].filter((label): label is string => Boolean(label));
+  const alertSummary = notificationPreferences
+    ? enabledAlerts.length
+      ? enabledAlerts.join(' · ')
+      : '모두 꺼짐'
+    : undefined;
 
   return (
     <ScrollView

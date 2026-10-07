@@ -130,6 +130,26 @@ describe('useGeofenceMonitoring', () => {
     expect(mockStart).not.toHaveBeenCalled();
   });
 
+  it('leaves monitoring as it is while the setting is not known yet', async () => {
+    // The preference lives on the server; a cold start without network must not
+    // drop the regions the OS is watching.
+    mockHasStarted.mockResolvedValue(true);
+    const { wrapper } = createQueryWrapper();
+
+    const { rerender } = await renderHook(
+      ({ enabled }: { enabled: boolean | undefined }) => useGeofenceMonitoring({ enabled }),
+      { wrapper, initialProps: { enabled: undefined } },
+    );
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(mockStop).not.toHaveBeenCalled();
+    expect(mockStart).not.toHaveBeenCalled();
+    expect(mockForegroundPermission).not.toHaveBeenCalled();
+
+    await rerender({ enabled: true });
+    await waitFor(() => expect(mockStart).toHaveBeenCalled());
+  });
+
   it('stops active monitoring when the session is signed out', async () => {
     mockIsAuthenticated.mockReturnValue(false);
     mockHasStarted.mockResolvedValue(true);

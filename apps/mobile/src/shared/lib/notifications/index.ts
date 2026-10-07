@@ -11,6 +11,7 @@ export {
   configureForegroundNotifications,
   ensureNotificationChannel,
   getOpeningLocalNotificationResponse,
+  hasLocalNotificationPermission,
   onLocalNotificationResponse,
   presentLocalNotification,
   requestLocalNotificationPermission,
