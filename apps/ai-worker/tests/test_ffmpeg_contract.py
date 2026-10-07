@@ -27,7 +27,7 @@ from datetime import datetime, timedelta, timezone
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from pipeline import rendition  # noqa: E402
+from pipeline import music, rendition, subtitle  # noqa: E402
 from pipeline.editor import ClipSource, edit, edit_timeline, get_preset  # noqa: E402
 from pipeline.transition import Transition  # noqa: E402
 from pipeline.render_spec import DEFAULT_RENDER_SPEC  # noqa: E402
@@ -106,6 +106,57 @@ class EditOutputContract(unittest.TestCase):
 
             self.assertEqual(info["codec_name"], "h264")
             self.assertEqual(info["pix_fmt"], "yuv420p")
+
+    def test_the_movie_leaves_without_where_the_source_was_shot(self) -> None:
+        """
+        휴대폰 원본에는 찍은 곳(`location`) · 기기 · 소프트웨어 태그가 있다. ffmpeg 은 첫 입력의 전역 메타데이터를
+        옮기므로, 그대로 두면 무비가 공유 · SNS 게시로 첫 컷을 찍은 좌표를 싣고 나갔다(backlog E-17). 컷 편집 → BGM →
+        자막까지 거친 마지막 파일을 본다.
+        """
+        with tempfile.TemporaryDirectory() as work:
+            plain = os.path.join(work, "plain.mp4")
+            make_clip(plain, width=720, height=1280, seconds=2.0)
+            src = os.path.join(work, "tagged.mp4")
+            subprocess.run(
+                [
+                    "ffmpeg", "-y", "-i", plain, "-c", "copy",
+                    "-metadata", "location=+37.5665+126.9780/",
+                    "-metadata", "make=samsung", "-metadata", "model=SM-S908N",
+                    src,
+                ],
+                capture_output=True,
+                check=True,
+            )
+            self.assertIn("location", probe(src)["format"].get("tags", {}))
+
+            edited = edit([ClipSource(src, 0, 1500)], get_preset("일상"), DEFAULT_RENDER_SPEC, work)
+            v3_work = os.path.join(work, "v3")
+            os.makedirs(v3_work)
+            timeline = edit_timeline(
+                [ClipSource(src, 0, 1000), ClipSource(src, 500, 1500)],
+                [Transition("crossfade", 300)],
+                get_preset("일상"),
+                DEFAULT_RENDER_SPEC,
+                v3_work,
+            )
+            bgm = os.path.join(work, "bgm.m4a")
+            subprocess.run(
+                ["ffmpeg", "-y", "-f", "lavfi", "-i", "sine=frequency=220:duration=3", "-c:a", "aac", bgm],
+                capture_output=True,
+                check=True,
+            )
+            with_bgm = os.path.join(work, "with_bgm.mp4")
+            music.mix(edited, bgm, with_bgm, 1.5)
+            srt = os.path.join(work, "captions.srt")
+            with open(srt, "w", encoding="utf-8") as f:
+                f.write("1\n00:00:00,000 --> 00:00:01,000\n안녕\n")
+            final = os.path.join(work, "final.mp4")
+            subtitle.embed_soft(with_bgm, srt, final)
+
+            for out in (edited, timeline, final):
+                tags = probe(out)["format"].get("tags", {})
+                leaked = {key for key in tags if key.split("-")[0] in {"location", "make", "model"}}
+                self.assertEqual(leaked, set(), out)
 
 
 def make_color_clip(path: str, color: str, *, seconds: float = 3.0, box: str | None = None) -> None:
