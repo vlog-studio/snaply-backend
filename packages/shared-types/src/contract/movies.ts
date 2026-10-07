@@ -15,6 +15,7 @@ import {
   movieStatusSchema,
   stylePresetSchema,
   transitionKindSchema,
+  videoRemovalReasonSchema,
 } from './vocab.js';
 
 export const MOVIE_LIST_DEFAULT_LIMIT = 20;
@@ -78,6 +79,15 @@ export const movieClipSchema = z
     unavailable: z
       .boolean()
       .describe('참조하던 스냅이 사라진 컷. `true` 면 재생할 수 없고 편집에서 빼야 한다.'),
+    /**
+     * 사라진 이유. 앱은 이것으로 "보관 기간이 끝났어요" 와 "스냅이 삭제됐어요" 를 가른다 — 다른 기기에서 지운
+     * 스냅의 컷이 만료로 보이면 안 된다(SNAP-12).
+     */
+    unavailableReason: videoRemovalReasonSchema
+      .nullable()
+      .describe(
+        '`unavailable` 일 때 스냅이 사라진 이유 — `user`=사용자가 지움, `expired`=보관 기간 만료. 쓸 수 있는 컷이나 이유를 모르는 컷은 `null`.',
+      ),
     transition: movieTransitionSchema
       .nullable()
       .describe('이 컷에서 다음 컷으로 넘어가는 전환. 마지막 컷은 `null`.'),

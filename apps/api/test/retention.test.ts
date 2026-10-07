@@ -110,7 +110,7 @@ describe('스냅 만료', () => {
     });
     expect(res.statusCode).toBe(200);
     expect(res.json().data.clips).toHaveLength(1);
-    expect(res.json().data.clips[0].unavailable).toBe(true);
+    expect(res.json().data.clips[0]).toMatchObject({ unavailable: true, unavailableReason: 'expired' });
   });
 
   it('이미 사용자가 지운 스냅은 다시 만료 처리하지 않는다', async () => {
