@@ -45,7 +45,7 @@
 | [ad-reward-credits.md](ad-reward-credits.md) | 보상형 광고 크레딧 지급 규칙 | 완료, 기본 꺼짐(C-6) |
 | [snap-retention-period.md](snap-retention-period.md) | 스냅 서버 보관은 기간 기준 — 업로드 후 15일 만료 (구독 혜택으로 연장할지는 미확정, A-2) | 완료(서버 2026-09-09 · 앱 만료 표시 2026-09-27). 용량 한도 존치는 A-2 |
 | [expiry-notice-schedule.md](expiry-notice-schedule.md) | 스냅 만료 예고는 삭제 전 두 번, 정리 배치와 분리된 낮 시간 배치가 보낸다 | 완료(서버 2026-09-09). 앱의 남은 기간 표시는 SNAP-13 |
-| [notification-preferences.md](notification-preferences.md) | 알림 설정은 서버에 종류별로 둔다. 스냅 만료 예고에는 종류별 스위치가 없다 | 서버 완료(2026-09-15), 앱 연결 대기(B-6) |
+| [notification-preferences.md](notification-preferences.md) | 알림 설정은 서버에 종류별로 둔다. 스냅 만료 예고에는 종류별 스위치가 없다. 서버가 원천이고 위치 · 무비 알림은 기본 꺼짐(2026-10-07) | 완료(서버 2026-09-15, 앱 2026-10-07) |
 | [local-copy-after-upload.md](local-copy-after-upload.md) | 로컬은 최종적으로 캐시. 삭제를 켜는 것은 렌디션·동기화 검증 후로 연기 | 결정만, 전환 전. reconcile 은 Android 실기기에서 검증됐고 렌디션은 iPhone HEVC 원본의 실기기 확인이 남음. 켤 때 15일 만료와 함께 판단(A-4) |
 | [snap-sync-across-devices.md](snap-sync-across-devices.md) | 기기 간 동기화 — 삭제는 모든 기기로 전파(원본 포함), 만료 스냅은 촬영한 기기에 남되 무비에 못 담음, 새 기기는 만료분을 되살리지 않음 | 완료(2026-09-27, Android 실기기 검증) — iPhone 실기기는 iOS 출시 전(A-4) |
 | [snap-album-save-and-device-delete.md](snap-album-save-and-device-delete.md) | 스냅의 사용자 사본은 기기 앨범 — 하나씩 저장 + 자동 저장(기본 꺼짐). 보관 중인 스냅은 삭제할 때 "이 기기에서만"(목록에 남고 파일만 지움)과 "모든 기기에서"를 고른다 | 완료(2026-09-29, Android 에뮬레이터 확인) — 휴대폰·iOS 확인은 A-4 |

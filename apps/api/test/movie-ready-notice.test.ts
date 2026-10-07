@@ -45,9 +45,13 @@ const daytime = new Date('2026-09-11T06:00:00.000Z');
 /** KST 새벽 3시 — 조용한 시간대 안. */
 const nighttime = new Date('2026-09-11T18:00:00.000Z');
 
+/** 무비 완성 알림을 켜고(기본 꺼짐, NTF-7) 토큰을 등록한 사용자. */
 async function userWithToken() {
   const user = await h.createUser();
-  await h.prisma.user.update({ where: { id: user.id }, data: { fcmToken: 'tok-1' } });
+  await h.prisma.user.update({
+    where: { id: user.id },
+    data: { fcmToken: 'tok-1', movieNotificationEnabled: true },
+  });
   return user;
 }
 
@@ -143,6 +147,7 @@ describe('보내지 않는 경우', () => {
 
   it('토큰이 없으면 no_token 으로 끝난다 — 예외를 던지지 않는다', async () => {
     const user = await h.createUser();
+    await h.prisma.user.update({ where: { id: user.id }, data: { movieNotificationEnabled: true } });
     const { videoId } = await readyMovie(user.id);
 
     const result = await notifyMovieReady({ logger, userId: user.id, videoId, now: daytime });
@@ -162,6 +167,17 @@ describe('보내지 않는 경우', () => {
 });
 
 describe('종류별 스위치', () => {
+  it('켠 적이 없으면 보내지 않는다 — 무비 완성 알림은 기본 꺼짐이다(NTF-7)', async () => {
+    const user = await h.createUser();
+    await h.prisma.user.update({ where: { id: user.id }, data: { fcmToken: 'tok-1' } });
+    const { videoId } = await readyMovie(user.id);
+
+    const result = await notifyMovieReady({ logger, userId: user.id, videoId, now: daytime });
+
+    expect(result).toEqual({ notified: false, reason: 'notifications_disabled' });
+    expect(send).not.toHaveBeenCalled();
+  });
+
   it('무비 알림만 꺼도 보내지 않는다 — 전체를 끌 필요가 없다', async () => {
     const user = await userWithToken();
     await h.prisma.user.update({

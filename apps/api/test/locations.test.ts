@@ -48,7 +48,7 @@ async function createLocation(
 }
 
 /**
- * 알림이 나갈 수 있는 상태로 유저를 준비한다.
+ * 알림이 나갈 수 있는 상태로 유저를 준비한다 — 위치 알림을 켜고(기본 꺼짐, NTF-7) 토큰을 등록한다.
  * quiet_hours 는 테스트 실행 "시각"에 좌우되므로 항상 명시적으로 지정한다.
  */
 async function makeNotifiable(user: TestUser, opts: { quiet?: boolean } = {}): Promise<void> {
@@ -63,7 +63,10 @@ async function makeNotifiable(user: TestUser, opts: { quiet?: boolean } = {}): P
     headers: user.auth,
     payload: { fcmToken: `fcm-test-${user.sub.slice(0, 8)}` },
   });
-  await h.prisma.user.update({ where: { id: user.id }, data: quiet });
+  await h.prisma.user.update({
+    where: { id: user.id },
+    data: { ...quiet, locationNotificationEnabled: true },
+  });
 }
 
 function enterGeofence(user: TestUser, locationId: string) {
@@ -228,6 +231,27 @@ describe('POST /notifications/geofence-enter', () => {
     expect(await h.prisma.notificationLog.count()).toBe(0);
   });
 
+  it('켠 적이 없으면 미발송 — 위치 알림은 기본 꺼짐이다(NTF-7)', async () => {
+    const user = await h.createUser();
+    // 토큰과 조용한 시간만 갖춘 새 계정 — 위치 알림 스위치는 건드리지 않는다.
+    await h.app.inject({
+      method: 'POST',
+      url: '/auth/fcm-token',
+      headers: user.auth,
+      payload: { fcmToken: 'fcm-fresh' },
+    });
+    const kstHour = (new Date().getUTCHours() + 9) % 24;
+    await h.prisma.user.update({
+      where: { id: user.id },
+      data: { quietStart: (kstHour + 2) % 24, quietEnd: (kstHour + 3) % 24 },
+    });
+    const location = await createLocation();
+
+    const res = await enterGeofence(user, location.id);
+
+    expect(res.json().data).toEqual({ notified: false, reason: 'notifications_disabled' });
+  });
+
   it('위치 알림만 꺼도 미발송 — 전체 알림을 끌 필요가 없다', async () => {
     const user = await h.createUser();
     await makeNotifiable(user);
@@ -263,7 +287,11 @@ describe('POST /notifications/geofence-enter', () => {
     const kstHour = (new Date().getUTCHours() + 9) % 24;
     await h.prisma.user.update({
       where: { id: user.id },
-      data: { quietStart: (kstHour + 2) % 24, quietEnd: (kstHour + 3) % 24 },
+      data: {
+        quietStart: (kstHour + 2) % 24,
+        quietEnd: (kstHour + 3) % 24,
+        locationNotificationEnabled: true,
+      },
     });
     const location = await createLocation();
 
@@ -279,7 +307,11 @@ describe('POST /notifications/geofence-enter', () => {
     const kstHour = (new Date().getUTCHours() + 9) % 24;
     await h.prisma.user.update({
       where: { id: user.id },
-      data: { quietStart: (kstHour + 2) % 24, quietEnd: (kstHour + 3) % 24 },
+      data: {
+        quietStart: (kstHour + 2) % 24,
+        quietEnd: (kstHour + 3) % 24,
+        locationNotificationEnabled: true,
+      },
     });
     const location = await createLocation();
 

@@ -72,11 +72,11 @@
           },
           "locationNotificationEnabled": {
             "type": "boolean",
-            "description": "위치 도착 알림을 받을지."
+            "description": "위치 도착 알림을 받을지. 새 계정은 꺼짐."
           },
           "movieNotificationEnabled": {
             "type": "boolean",
-            "description": "무비 완성 알림을 받을지."
+            "description": "무비 완성 알림을 받을지. 새 계정은 꺼짐."
           },
           "quietStart": {
             "type": "integer",
@@ -1471,11 +1471,11 @@
           },
           "locationNotificationEnabled": {
             "type": "boolean",
-            "description": "위치 도착 알림을 받을지."
+            "description": "위치 도착 알림을 받을지. 새 계정은 꺼짐."
           },
           "movieNotificationEnabled": {
             "type": "boolean",
-            "description": "무비 완성 알림을 받을지."
+            "description": "무비 완성 알림을 받을지. 새 계정은 꺼짐."
           },
           "quietStart": {
             "type": "integer",

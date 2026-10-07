@@ -177,7 +177,11 @@ describe('geofence 연동', () => {
     const kstHour = (new Date().getUTCHours() + 9) % 24;
     await h.prisma.user.update({
       where: { id: user.id },
-      data: { quietStart: (kstHour + 2) % 24, quietEnd: (kstHour + 3) % 24 },
+      data: {
+        quietStart: (kstHour + 2) % 24,
+        quietEnd: (kstHour + 3) % 24,
+        locationNotificationEnabled: true,
+      },
     });
     const location = await h.prisma.location.create({
       data: { name: 'fcm-geo', lat: 37.5, lng: 127.0 },
