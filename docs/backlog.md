@@ -171,12 +171,10 @@ MOV-16~19 다. 만료의 동작 구조(2단계 삭제 · 만료 스냅 식별 ·
       오너에게 iOS 기기가 없어 쓰지 못했다([apps/mobile/AGENTS.md](../apps/mobile/AGENTS.md) "Planned documentation").
       그때까지는 시뮬레이터 절차로 대신하고 실기기 미검증을 밝힌다. iPhone 실기기가 생기면 절차를 써서
       AGENTS.md 의 문서 표에 올린다
-- [ ] **스냅 휴지통(삭제 유예)** — soft delete + 유예 후 실삭제는 결정돼 있지만
-      ([snap-source-of-truth.md](./decisions/snap-source-of-truth.md) §1) 스냅 삭제에는 구현되지 않았다.
-      지금 서버는 삭제 즉시 파일을 지운다. reconcile 이 삭제를 모든 기기로 전파하므로
-      ([snap-sync-across-devices.md](./decisions/snap-sync-across-devices.md) ①) 한 번의 실수 삭제가 모든
-      기기에서 되돌릴 수 없게 된다. 구현 전에 정할 세부(유예 기간 · 되살리는 범위 · 다른 기기 원본 · 대상 · 되살리는 곳)는
-      결정 요청 [decisions/snap-trash.md](./decisions/snap-trash.md)(2026-10-07)
+- [ ] **`앱`** **최근 삭제의 실기기 확인**(SNAP-20 `구현됨(실기기 미검증)`) — 서버 · 앱 자동 테스트와 Android 에뮬레이터(개발 DB 의
+      복사본)로만 확인했다([progress.md](./progress.md) 2026-10-07). 휴대폰 두 대(또는 휴대폰 + 에뮬레이터)에서: ① 한 기기에서 모든 기기에서 삭제 →
+      다른 기기에서도 사라진다 ② 되돌리기 → 두 기기 모두에 다시 나타나고, 지운 기기에서는 처음 재생할 때 받아 온다 ③ 최근 삭제에서 되살리기도 같다
+      ④ 지울 때 빠진 무비의 컷은 돌아오지 않는다. **완료 조건**: 네 가지가 통과하면 SNAP-20 의 `(실기기 미검증)` 을 지운다
 - [ ] **전환을 켤 때 함께 볼 것**: 로컬이 캐시가 되는 순간 서버 만료(SNAP-9, 15일)가 곧 영상의
       소멸이 된다. 보관 기간·구독 연장과 **같은 자리에서** 판단한다. 사용자가 고르는 "이 기기에서만 삭제"는
       2026-09-29 에 들였고(SNAP-19, [snap-album-save-and-device-delete.md](./decisions/snap-album-save-and-device-delete.md)),
@@ -657,7 +655,8 @@ URL prefix 소유권 검증을 다시 등록해야 한다.**
       세 곳 모두에 들어가야 한다. 어떤 식별자가 실제로 나가는지는 맞춤 광고 설정과 동의(UMP) 처리 방식에
       달렸으므로 그 정책을 먼저 정하고 쓴다. 스토어 신고(App Store 개인정보·Play 데이터 안전성)는 C-6
 - [ ] **스냅 보관 기간이 법률 문서에 없다** — 개인정보처리방침의 "보관 및 파기"와 이용약관 어디에도 스냅의 서버
-      보관(업로드 후 15일, SNAP-9)과 끝내지 않은 결과물의 보관 상한(30일, MOV-16)이 없다. 보관 기간을 정할 때 고지가
+      보관(업로드 후 15일, SNAP-9)과 끝내지 않은 결과물의 보관 상한(30일, MOV-16)이 없다. 사용자가 지운 스냅도 원래 보관 기간이
+      끝날 때까지 서버가 파일을 남긴다는 것(최근 삭제, SNAP-20)도 함께 적어야 한다. 보관 기간을 정할 때 고지가
       필요하다고 적어 두었다([snap-retention-period.md](./decisions/snap-retention-period.md) §이 결정이 영향을 주는 곳).
       사본을 남기는 방법(앨범 저장, SNAP-17)을 함께 적는다
 - [ ] `LEGAL_CONTACT_EMAIL` 이 미설정이면 `support@snaply.app` 로 표시된다 — 실제 주소로 교체
@@ -775,6 +774,7 @@ GHCR 패키지를 공개로 돌릴지도 정한다 — 공개면 새 개발자�
 - **A-4** reconcile 착수 전 제품 결정 셋 — 2026-09-27 → [snap-sync-across-devices.md](./decisions/snap-sync-across-devices.md)
 - **A-4** 3단계 reconcile(구현 · Android 실기기 검증) — 2026-09-27 → progress 2026-09-27 "스냅이 기기와 재설치를 넘어 보인다" · "스냅 reconcile 실기기 검증"
 - **A-4** 무비 컷의 `unavailable` 에 사유가 없다(SNAP-12) — 2026-10-07 → progress 2026-10-07 "무비 컷이 사라진 사유를 싣는다"
+- **A-4** 스냅 휴지통(삭제 유예) — 2026-10-07 → [decisions/snap-trash.md](./decisions/snap-trash.md) · progress 2026-10-07 "지운 스냅을 보관 기간이 끝날 때까지 되살린다"(실기기 확인은 A-4 에 남음)
 - **A-5** FE-BE 연동 범위 · 일정 확정 — 2026-09-02, 같은 개발자가 FE·BE 를 함께 맡게 되어 따로 둘 이유가 없어졌다
 - **A-7** CI 의 ffmpeg 설치(골든 프레임 · ffprobe 계약 테스트) — 2026-09-15 → progress 2026-09-15 "산출물 계약 테스트와 CI 의 ffmpeg"
 - **B-5** API 계약 스키마 우선 1~5단계 — 2026-09-05 → progress 2026-09-05 · [api-contract-schema-first.md](./decisions/api-contract-schema-first.md)(남은 다듬기는 B-5)
