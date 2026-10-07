@@ -152,6 +152,9 @@ Fixed product vocabulary. Use exactly these words; never introduce a synonym.
 | 앨범 | The device's own photo gallery, where a snap's copy is the user's to keep (`앨범에 저장`, `앨범에 저장했어요`, `찍은 스냅을 앨범에도 저장`). The OS permission is named for the OS's own app (`사진 권한`, `사진 추가`) | 갤러리, 사진첩, 카메라 롤, 내려받기, 다운로드 |
 | 이 기기에서만 삭제 | Deleting a snap's file on this device while the server still keeps it; the opposite answer is `모든 기기에서 삭제` | 로컬 삭제, 서버에 남기기, 공간 정리 |
 | 삭제 | Removing something: `…삭제할까요?` / `삭제` / `삭제하는 중…` | 지우기, 지울까요 |
+| 최근 삭제 | Where a snap deleted everywhere waits until its retention ends, and the screen that lists it (`최근 삭제에서 되살릴 수 있어요`) | 휴지통, 쓰레기통, 삭제한 항목, 보관함 |
+| 되살리기 | Bringing a snap back from 최근 삭제 (`되살리기`, `되살리는 중…`, `스냅을 되살렸어요`) | 복구, 복원, 되찾기 |
+| 되돌리기 | Undoing the action just taken, on its toast (`되돌리기`, `스냅 N개를 되돌렸어요`) — never a place or a later act | 실행 취소, 취소, 원래대로 |
 | 정리 | Removing a finished movie's server copy once the user saved it (`무비 정리`, `정리하기`) | 끝내기, 서버에서 삭제 |
 | 전환 | How one 컷 hands over to the next (`전환`, `컷 1 → 2 전환`). The five are named by what they look like: `바로 넘기기`, `겹쳐 녹이기`, `검게 넘기기`, `번쩍 넘기기`, `확대하며 넘기기` | 트랜지션, 효과, 장면 전환 |
 | 자동 편집 | Handing picked snaps over to be chosen among, ordered, and cut into a draft movie (`스냅 골라 자동 편집`, `자동으로 편집하기`, `편집하는 중…`, `스냅 N개는 넣지 않았어요`) | AI 편집, AI 초안, 자동 생성, 추천 |

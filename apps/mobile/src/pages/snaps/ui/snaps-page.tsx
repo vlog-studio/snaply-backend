@@ -14,12 +14,15 @@ import {
   type SnapSyncEntry,
 } from '@/entities/snap';
 import { useComposeMovie } from '@/features/compose-movie';
-import { canDeleteFromDevice, useDeleteSnaps } from '@/features/delete-snap';
+import { canDeleteFromDevice, restorableAfterDelete, useDeleteSnaps } from '@/features/delete-snap';
+import { requestSnapReconcile } from '@/features/reconcile-snaps';
+import { useRestoreSnaps } from '@/features/restore-snap';
 import { useSaveSnapToAlbum } from '@/features/save-snap-to-album';
 import { formatDuration, formatSeconds } from '@/shared/lib/datetime';
 import { movieHref } from '@/shared/routes';
 import { pickVideoFromLibrary } from '@/shared/lib/video-picker';
 import { useSetTabBarHidden } from '@/shared/ui/tab-bar-chrome';
+import { Toast } from '@/shared/ui/toast';
 import {
   MaxContentWidth,
   Radius,
@@ -35,7 +38,11 @@ import { SnapDayGrid, SnapSelectionBar, useSnapDays, useSnapPicking } from '@/wi
 import { draftConfirmation, useEditDraft } from '../model/use-edit-draft';
 import { playerAlbumAction } from '../model/player-album-action';
 import { useMovieDeleteImpact } from '../model/use-movie-delete-impact';
-import { SnapDeleteDialog, type DeviceOnlyDelete } from './snap-delete-dialog';
+import {
+  SnapDeleteDialog,
+  type DeviceOnlyDelete,
+  type RestorableDelete,
+} from './snap-delete-dialog';
 
 /**
  * What a selection is for. `movie` — the user's own cut list, in pick order,
@@ -94,6 +101,10 @@ export function SnapsPage({ startSelecting, selectionRequest }: SnapsPageProps) 
   const { days, totalCount, totalDurationSec, isHydrated } = useSnapDays();
   const { startMovieFromSnaps } = useComposeMovie();
   const { deleteSnaps, deleteFromDevice, deletingIds, errorMessage, clearError } = useDeleteSnaps();
+  const { restoreSnaps, restoringIds } = useRestoreSnaps();
+  // The notice after a delete everywhere: what went, and the server copies a
+  // 되돌리기 can bring back (SNAP-20).
+  const [deleted, setDeleted] = useState<{ message: string; videoIds: string[] }>();
   const albumSave = useSaveSnapToAlbum();
   const syncEntries = useSnapSyncEntries();
   const setTabBarHidden = useSetTabBarHidden();
@@ -202,6 +213,22 @@ export function SnapsPage({ startSelecting, selectionRequest }: SnapsPageProps) 
   const deviceOnly: DeviceOnlyDelete | undefined =
     deviceOnlySnaps.length > 0
       ? { count: deviceOnlySnaps.length, keptUntil: keptUntilOf(deviceOnlySnaps, syncEntries) }
+      : undefined;
+  // What a delete everywhere would leave in 최근 삭제, judged at the same moment.
+  const restorablePicks = useMemo(
+    () =>
+      pickedSnaps.flatMap((snap) => {
+        const copy = restorableAfterDelete(syncEntries[snap.id], deleteOpenedAt);
+        return copy ? [{ snapId: snap.id, ...copy }] : [];
+      }),
+    [pickedSnaps, syncEntries, deleteOpenedAt],
+  );
+  const restorable: RestorableDelete | undefined =
+    restorablePicks.length > 0
+      ? {
+          count: restorablePicks.length,
+          until: restorablePicks.length === 1 ? restorablePicks[0].until : undefined,
+        }
       : undefined;
 
   // Arriving with `?select=1` (the studio sending the user to pick for a new
@@ -331,7 +358,13 @@ export function SnapsPage({ startSelecting, selectionRequest }: SnapsPageProps) 
       .filter((snap) => picked.includes(snap.id))
       .map((snap) => ({ id: snap.id, uri: snap.uri }));
 
+    // Read before the delete retires the sync entries they come from.
+    const copies = new Map(restorablePicks.map((pick) => [pick.snapId, pick.videoId]));
     const deletedIds = await deleteSnaps(targets);
+    const undoable = deletedIds.flatMap((snapId) => copies.get(snapId) ?? []);
+    if (undoable.length > 0) {
+      setDeleted({ message: `스냅 ${deletedIds.length}개를 삭제했어요`, videoIds: undoable });
+    }
     if (deletedIds.length === targets.length) {
       setDeleteOpen(false);
       exitSelection();
@@ -352,6 +385,19 @@ export function SnapsPage({ startSelecting, selectionRequest }: SnapsPageProps) 
     const untouched = picked.length - removedIds.length;
     if (untouched === 0) exitSelection();
     else announce(`스냅 ${untouched}개는 이 기기에서만 삭제할 수 없어 그대로 뒀어요.`);
+  };
+
+  const undoDelete = async () => {
+    if (!deleted) return;
+    const outcome = await restoreSnaps(deleted.videoIds);
+    if (outcome.restored.length > 0) requestSnapReconcile();
+    setDeleted({
+      message:
+        outcome.restored.length === deleted.videoIds.length
+          ? `스냅 ${outcome.restored.length}개를 되돌렸어요`
+          : '되돌리지 못했어요. 최근 삭제에서 되살릴 수 있어요.',
+      videoIds: [],
+    });
   };
 
   const closeDelete = () => {
@@ -464,6 +510,23 @@ export function SnapsPage({ startSelecting, selectionRequest }: SnapsPageProps) 
           // over under the user's finger.
           onImport={isHydrated ? () => void openExtract() : undefined}
         />
+
+        {/* Deleted everywhere is not gone at once: 최근 삭제 keeps what the
+            server held until its retention ends (SNAP-20). Always offered,
+            quietly, at the end of the library — whether anything waits there
+            is the next screen's to say. */}
+        {!selecting ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="최근 삭제"
+            onPress={() => router.push('/recently-deleted')}
+            style={({ pressed }) => [styles.trashRow, { opacity: pressed ? 0.7 : 1 }]}
+          >
+            <ThemedText selectable={false} type="small" themeColor="textSecondary">
+              최근 삭제
+            </ThemedText>
+          </Pressable>
+        ) : null}
       </ScrollView>
 
       {selecting ? (
@@ -496,11 +559,28 @@ export function SnapsPage({ startSelecting, selectionRequest }: SnapsPageProps) 
         onClose={closePlayer}
       />
 
+      <Toast
+        message={deleted?.message}
+        action={
+          deleted && deleted.videoIds.length > 0
+            ? {
+                label: '되돌리기',
+                accessibilityLabel: `삭제한 스냅 ${deleted.videoIds.length}개 되돌리기`,
+                disabled: restoringIds.size > 0,
+                onPress: () => void undoDelete(),
+              }
+            : undefined
+        }
+        onDismiss={() => setDeleted(undefined)}
+        bottomOffset={tabBarHeight + Spacing.three}
+      />
+
       <SnapDeleteDialog
         visible={deleteOpen}
         count={picked.length}
         impact={impact}
         deviceOnly={deviceOnly}
+        restorable={restorable}
         isDeleting={deletingIds.size > 0}
         errorMessage={errorMessage}
         onCancel={closeDelete}
@@ -560,4 +640,5 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
   },
   uploadNoticeText: { flexShrink: 1 },
+  trashRow: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
 });

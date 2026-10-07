@@ -6,6 +6,7 @@ import { useSnapsHydrated, useSnapSyncHydrated } from '@/entities/snap';
 import { USE_MOCK_API } from '@/shared/config/api';
 
 import { runSnapReconcile } from './run-snap-reconcile';
+import { onSnapReconcileRequest } from './snap-reconcile-requests';
 
 /**
  * Keeps this device's snap library in step with the account's snaps on the
@@ -13,8 +14,9 @@ import { runSnapReconcile } from './run-snap-reconcile';
  * reinstall come in, snaps deleted elsewhere go, and snaps whose server copy
  * expired are marked so (SNAP-12).
  *
- * Runs when an account's library is bound and on every return to the
- * foreground — the same moments the movie sync reads the server's movies. A
+ * Runs when an account's library is bound, on every return to the foreground —
+ * the same moments the movie sync reads the server's movies — and whenever a
+ * screen asks for a pass (`requestSnapReconcile`, after a restore). A
  * pass is serial by construction: one runs at a time, and a trigger landing
  * mid-pass queues exactly one more. A pass that fails leaves everything as it
  * was, and the next trigger starts over.
@@ -64,12 +66,14 @@ export function useSnapReconcile(): void {
     const subscription = AppState.addEventListener('change', (status) => {
       if (status === 'active') void reconcile();
     });
+    const unsubscribeRequests = onSnapReconcileRequest(() => void reconcile());
     void reconcile();
 
     return () => {
       cancelled = true;
       controller.abort();
       subscription.remove();
+      unsubscribeRequests();
     };
   }, [enabled]);
 }

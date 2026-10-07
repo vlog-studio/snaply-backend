@@ -37,12 +37,14 @@ export function RecordingLibrary({
 
   // A recording whose snap the server still keeps gets the same question as the
   // snap tab: from this device only, or everywhere. The system alert holds both
-  // answers — a sheet here would open over this modal.
+  // answers — a sheet here would open over this modal. Either way the snap can
+  // still come back from 최근 삭제 until its retention ends (SNAP-20); the
+  // other recordings never reached the server, so their delete is final.
   const confirmDelete = (recording: LocalRecording) => {
     if (canDeleteFromDevice(recording)) {
       Alert.alert(
         '스냅을 삭제할까요?',
-        '이 기기에서만 삭제하면 보관 기간 동안 스냅 탭에 남아요. 모든 기기에서 삭제하면 되돌릴 수 없어요.',
+        '이 기기에서만 삭제하면 보관 기간 동안 스냅 탭에 남아요. 모든 기기에서 삭제해도 그동안은 최근 삭제에서 되살릴 수 있어요.',
         [
           { text: '취소', style: 'cancel' },
           { text: '이 기기에서만 삭제', onPress: () => void onDeleteFromDevice(recording) },
