@@ -1,7 +1,7 @@
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Radius, Spacing } from '@/shared/ui/theme';
+import { Radius, Spacing, ThemeScope } from '@/shared/ui/theme';
 import { ThemedText } from '@/shared/ui/themed-text';
 import { VideoPreview } from '@/shared/ui/video-preview';
 
@@ -58,7 +58,9 @@ export type VideoPlayerModalProps = {
  *
  * The overlay text is drawn against arbitrary video rather than an app surface,
  * so the muted line is a white wash instead of `textSecondary` — the palette's
- * warm brown disappears over a bright frame.
+ * warm brown disappears over a bright frame. The ground is black in either app
+ * theme, so the screen pins the dark scheme: under the light theme the edge
+ * print took the light palette's near-black ink and all but vanished.
  */
 export function VideoPlayerModal({
   uri,
@@ -79,67 +81,72 @@ export function VideoPlayerModal({
       presentationStyle="fullScreen"
       visible={uri !== undefined || placeholder !== undefined}
     >
-      <View style={styles.screen}>
-        {uri ? (
-          // Keyed on the URI so switching videos remounts the player instead of
-          // re-pointing a running one, which carries the old playhead over.
-          <VideoPreview key={uri} contentFit="contain" muted={false} nativeControls uri={uri} />
-        ) : placeholder ? (
-          <View style={styles.placeholder}>
-            <ThemedText style={styles.placeholderText}>{placeholder.text}</ThemedText>
-            {placeholder.actionLabel && placeholder.onAction ? (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={placeholder.actionLabel}
-                hitSlop={Spacing.two}
-                onPress={placeholder.onAction}
-                style={({ pressed }) => [styles.placeholderAction, { opacity: pressed ? 0.7 : 1 }]}
-              >
-                <ThemedText selectable={false} type="smallBold" style={styles.placeholderText}>
-                  {placeholder.actionLabel}
-                </ThemedText>
-              </Pressable>
-            ) : null}
-          </View>
-        ) : null}
-        <Pressable
-          accessibilityLabel={closeLabel}
-          accessibilityRole="button"
-          onPress={onClose}
-          style={[styles.close, { top: insets.top + Spacing.three }]}
-        >
-          <ThemedText selectable={false} style={styles.closeText}>
-            ×
-          </ThemedText>
-        </Pressable>
-        {action ? (
+      <ThemeScope scheme="dark">
+        <View style={styles.screen}>
+          {uri ? (
+            // Keyed on the URI so switching videos remounts the player instead of
+            // re-pointing a running one, which carries the old playhead over.
+            <VideoPreview key={uri} contentFit="contain" muted={false} nativeControls uri={uri} />
+          ) : placeholder ? (
+            <View style={styles.placeholder}>
+              <ThemedText style={styles.placeholderText}>{placeholder.text}</ThemedText>
+              {placeholder.actionLabel && placeholder.onAction ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={placeholder.actionLabel}
+                  hitSlop={Spacing.two}
+                  onPress={placeholder.onAction}
+                  style={({ pressed }) => [
+                    styles.placeholderAction,
+                    { opacity: pressed ? 0.7 : 1 },
+                  ]}
+                >
+                  <ThemedText selectable={false} type="smallBold" style={styles.placeholderText}>
+                    {placeholder.actionLabel}
+                  </ThemedText>
+                </Pressable>
+              ) : null}
+            </View>
+          ) : null}
           <Pressable
+            accessibilityLabel={closeLabel}
             accessibilityRole="button"
-            accessibilityLabel={action.accessibilityLabel ?? action.label}
-            accessibilityState={{ disabled: actionDisabled }}
-            disabled={actionDisabled}
-            onPress={action.onPress}
-            style={({ pressed }) => [
-              styles.action,
-              { top: insets.top + Spacing.three, opacity: pressed && !actionDisabled ? 0.7 : 1 },
-            ]}
+            onPress={onClose}
+            style={[styles.close, { top: insets.top + Spacing.three }]}
           >
-            <ThemedText selectable={false} type="smallBold" style={styles.actionText}>
-              {action.label}
+            <ThemedText selectable={false} style={styles.closeText}>
+              ×
             </ThemedText>
           </Pressable>
-        ) : null}
-        {uri && (edgeLabel !== undefined || caption !== undefined) ? (
-          <View style={[styles.meta, { bottom: insets.bottom + Spacing.four }]}>
-            {edgeLabel !== undefined ? <ThemedText type="note">{edgeLabel}</ThemedText> : null}
-            {caption !== undefined ? (
-              <ThemedText type="small" style={styles.caption}>
-                {caption}
+          {action ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={action.accessibilityLabel ?? action.label}
+              accessibilityState={{ disabled: actionDisabled }}
+              disabled={actionDisabled}
+              onPress={action.onPress}
+              style={({ pressed }) => [
+                styles.action,
+                { top: insets.top + Spacing.three, opacity: pressed && !actionDisabled ? 0.7 : 1 },
+              ]}
+            >
+              <ThemedText selectable={false} type="smallBold" style={styles.actionText}>
+                {action.label}
               </ThemedText>
-            ) : null}
-          </View>
-        ) : null}
-      </View>
+            </Pressable>
+          ) : null}
+          {uri && (edgeLabel !== undefined || caption !== undefined) ? (
+            <View style={[styles.meta, { bottom: insets.bottom + Spacing.four }]}>
+              {edgeLabel !== undefined ? <ThemedText type="note">{edgeLabel}</ThemedText> : null}
+              {caption !== undefined ? (
+                <ThemedText type="small" style={styles.caption}>
+                  {caption}
+                </ThemedText>
+              ) : null}
+            </View>
+          ) : null}
+        </View>
+      </ThemeScope>
     </Modal>
   );
 }
