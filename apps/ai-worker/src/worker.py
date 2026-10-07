@@ -23,6 +23,7 @@ from pipeline import anchor, editor, invalidation, music, seed, subtitle, transi
 from pipeline.edit_spec import parse_job_clips, parse_timeline
 from pipeline.editor import get_preset
 from pipeline.render_spec import parse_render_spec
+from queue_connection import worker_connection
 
 _publisher: aioredis.Redis | None = None
 
@@ -228,7 +229,7 @@ async def main() -> None:
     # 두 큐를 같은 처리기로 소비한다. edit-v3 에는 v3 스펙만 오고, 기존 큐에는 v1/v2 가 온다.
     # 큐를 나눈 이유는 구버전 워커가 v3 를 받지 않게 하는 것뿐이라 처리 경로는 스펙 버전이 가른다.
     workers = [
-        Worker(queue_name, process_edit_job, {"connection": config.REDIS_URL})
+        Worker(queue_name, process_edit_job, {"connection": worker_connection(config.REDIS_URL, queue_name)})
         for queue_name in (config.EDIT_QUEUE_NAME, config.EDIT_V3_QUEUE_NAME)
     ]
     # 이미지에 어떤 사전이 들어 있는지는 렌더 결과를 되짚을 때 첫 단서라 기동 로그에 남긴다.

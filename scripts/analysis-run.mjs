@@ -282,10 +282,13 @@ async function main() {
       process.exitCode = 1;
       return;
     }
-    // 워커가 없으면 작업은 큐에 쌓이기만 한다 — 폴링으로 기다리기 전에 알려준다.
-    const workers = await queue.getWorkers().catch(() => []);
-    console.log(`연결된 분석 워커: ${workers.length}개`);
-    if (workers.length === 0) {
+    // 워커가 없으면 작업은 큐에 쌓이기만 한다 — 폴링으로 기다리기 전에 알려준다. getWorkers() 는 워커의
+    // **연결**을 돌려준다. 워커 하나가 연결을 여럿 열므로 연결 이름(프로세스마다 다르다)을 중복 없이 센다
+    // (apps/ai-worker/src/queue_connection.py).
+    const connections = await queue.getWorkers().catch(() => []);
+    const workers = new Set(connections.map((client) => client.rawname)).size;
+    console.log(`연결된 분석 워커: ${workers}개`);
+    if (workers === 0) {
       console.log('⚠ 이 Redis 에 분석 워커가 없습니다. 작업이 쌓이기만 합니다.');
       console.log('  로컬 스택: --redis redis://localhost:6380 / 원격 스택: --host <ip>');
     }

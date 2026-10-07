@@ -24,6 +24,7 @@ import db
 import storage
 from pipeline.video_analysis.analyzer import analyze
 from pipeline.video_analysis.errors import AnalysisError
+from queue_connection import worker_connection
 
 
 class AnalysisSkipped(Exception):
@@ -152,7 +153,10 @@ async def main() -> None:
     worker = Worker(
         config.VIDEO_ANALYSIS_QUEUE_NAME,
         process_analysis_job,
-        {"connection": config.REDIS_URL, "concurrency": config.VIDEO_ANALYSIS_CONCURRENCY},
+        {
+            "connection": worker_connection(config.REDIS_URL, config.VIDEO_ANALYSIS_QUEUE_NAME),
+            "concurrency": config.VIDEO_ANALYSIS_CONCURRENCY,
+        },
     )
     logger.info(
         "video-analysis 워커 시작 (queue={} model={} concurrency={})",
