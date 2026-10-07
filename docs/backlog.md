@@ -175,7 +175,8 @@ MOV-16~19 다. 만료의 동작 구조(2단계 삭제 · 만료 스냅 식별 ·
       ([snap-source-of-truth.md](./decisions/snap-source-of-truth.md) §1) 스냅 삭제에는 구현되지 않았다.
       지금 서버는 삭제 즉시 파일을 지운다. reconcile 이 삭제를 모든 기기로 전파하므로
       ([snap-sync-across-devices.md](./decisions/snap-sync-across-devices.md) ①) 한 번의 실수 삭제가 모든
-      기기에서 되돌릴 수 없게 된다
+      기기에서 되돌릴 수 없게 된다. 구현 전에 정할 세부(유예 기간 · 되살리는 범위 · 다른 기기 원본 · 대상 · 되살리는 곳)는
+      결정 요청 [decisions/snap-trash.md](./decisions/snap-trash.md)(2026-10-07)
 - [ ] **전환을 켤 때 함께 볼 것**: 로컬이 캐시가 되는 순간 서버 만료(SNAP-9, 15일)가 곧 영상의
       소멸이 된다. 보관 기간·구독 연장과 **같은 자리에서** 판단한다. 사용자가 고르는 "이 기기에서만 삭제"는
       2026-09-29 에 들였고(SNAP-19, [snap-album-save-and-device-delete.md](./decisions/snap-album-save-and-device-delete.md)),

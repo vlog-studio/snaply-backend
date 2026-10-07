@@ -19,6 +19,7 @@
 | [sticker-asset-sourcing.md](sticker-asset-sourcing.md) | 스티커 조달 경로 · 등록 경로(관리자 페이지 시점) | A-7 | 2026-08-31 회의 |
 | [bgm-sourcing.md](bgm-sourcing.md) | BGM 조달(AI 생성 · 라이선스 구독 · 커미션) — 법적 검토 6항목 선행 | A-7 · E-5 | 2026-08-31 회의 |
 | [movie-snap-expiry-exemption.md](movie-snap-expiry-exemption.md) | 무비가 참조 중인 스냅의 만료 예외 — 잠정 결정은 "예외 없음"(현행 유지), 다음 회의에서 다시 본다 | A-1 · A-2 | 2026-09-15 잠정 결정 |
+| [snap-trash.md](snap-trash.md) | 스냅 휴지통의 세부 — 유예 기간 · 되살리는 범위 · 다른 기기 원본 · 대상 · 되살리는 곳 | A-4 | 2026-10-07 결정 요청 |
 
 각 결정의 착수 순서와, 결정을 기다리지 않고 시작할 수 있는 일:
 
@@ -30,6 +31,7 @@
   라이선스 조사는 결정 전에 시작할 수 있다.
 - **subtitle-rendering** — 다른 결정과 독립이다.
 - **movie-snap-expiry-exemption** — 요금제 설계(A-2)와 같은 자리에서 본다.
+- **snap-trash** — 다른 결정과 독립이다. 권장안(① C)은 보관 기간에 묶이므로 구독으로 보관 기간을 팔게 되면(A-2) 함께 늘어난다.
 
 ## 결정 완료 — 현행 정책의 근거
 
