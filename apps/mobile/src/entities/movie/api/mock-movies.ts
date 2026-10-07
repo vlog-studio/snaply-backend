@@ -111,6 +111,7 @@ function toFields(body: MovieBody) {
     clips: body.clips.map(({ transition, ...clip }, index) => ({
       ...clip,
       unavailable: false,
+      unavailableReason: null,
       transition:
         index === body.clips.length - 1
           ? null

@@ -33,7 +33,7 @@ function makeCut(
       ...(options.transition ? { transition: options.transition } : null),
     },
     snap,
-    unavailable: false,
+    gone: snap ? undefined : 'deleted',
     usedSec: snap
       ? options.trim
         ? options.trim.endSec - options.trim.startSec

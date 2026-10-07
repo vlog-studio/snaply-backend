@@ -126,6 +126,14 @@ export type SnapRef = {
    */
   unavailable?: boolean;
   /**
+   * Why the server's copy is gone, when it said: `user` — deleted, on this
+   * device or another — or `expired` past retention. The two are worded apart
+   * (SNAP-12). Absent on a cut the server sent no reason for (a server older
+   * than the field, or a movie cached before it), which reads as expired, as
+   * every unavailable cut did before.
+   */
+  unavailableReason?: 'user' | 'expired';
+  /**
    * The transition into the next cut. Absent on the last cut, on a boundary the
    * server has not picked for yet (a draft not yet synced, or an edit not yet
    * read back), and on movies stored before transitions existed — all of which

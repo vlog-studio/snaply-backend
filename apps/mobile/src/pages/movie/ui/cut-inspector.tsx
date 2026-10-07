@@ -105,7 +105,7 @@ export function CutInspector({
             style={styles.readout}
           >
             {missing
-              ? cut.unavailable
+              ? cut.gone === 'expired'
                 ? '보관 기간이 끝났어요 · 빼 주세요'
                 : '스냅이 삭제됐어요 · 빼 주세요'
               : `사용 ${formatSeconds(cut.usedSec)}`}

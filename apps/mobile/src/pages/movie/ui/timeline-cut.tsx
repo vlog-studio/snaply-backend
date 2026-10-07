@@ -203,11 +203,12 @@ export function TimelineCut({
   const reducedMotion = useReducedMotion();
   const snap = cut.snap;
   const missing = snap === undefined;
-  // The server copy is gone (expired, or deleted there): no run can be made
-  // from it (SNAP-12). With the original here it still previews. Without it,
-  // it still reads as expired rather than deleted — a new device never brings
-  // an expired snap in, so there every expired cut has no original (2026-09-27).
-  const expired = cut.unavailable === true;
+  // No run can be made from a gone cut (SNAP-12); with the original here it
+  // still previews. An expired one reads as expired even without the original —
+  // a new device never brings an expired snap in, so there every expired cut has
+  // no original (2026-09-27). A snap deleted on another device reads as
+  // deleted, like one deleted here, not as expired.
+  const expired = cut.gone === 'expired';
   const durationSec = snap?.durationSec ?? 0;
   /** The full snap's width — what the tiles fill and the trim drags along. */
   const reelWidth = snap ? durationSec * pxPerSec : width;
@@ -315,7 +316,7 @@ export function TimelineCut({
 
       <AnimatedPressable
         accessibilityRole="button"
-        accessibilityLabel={`컷 ${index + 1}${expired ? ' · 보관 기간 끝남' : missing ? ' · 스냅 삭제됨' : ''} · ${formatSeconds(shown.endSec - shown.startSec)}`}
+        accessibilityLabel={`컷 ${index + 1}${expired ? ' · 보관 기간 끝남' : cut.gone === 'deleted' ? ' · 스냅 삭제됨' : ''} · ${formatSeconds(shown.endSec - shown.startSec)}`}
         accessibilityHint={focused ? '다시 탭하면 선택을 해제해요' : undefined}
         accessibilityState={{ selected }}
         onPress={() => onSelect(index)}
@@ -323,8 +324,8 @@ export function TimelineCut({
           styles.clip,
           {
             backgroundColor: theme.media,
-            borderColor: missing || expired ? theme.danger : selected ? theme.amber : theme.border,
-            borderWidth: missing || expired || selected ? 2 : 1,
+            borderColor: cut.gone ? theme.danger : selected ? theme.amber : theme.border,
+            borderWidth: cut.gone || selected ? 2 : 1,
           },
           // Square while the handles are on: the rounded corners belong to the
           // handles' outer edges, so the three pieces read as one frame rather

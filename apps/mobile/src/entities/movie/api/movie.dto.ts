@@ -21,6 +21,9 @@ const clipDtoSchema = z.object({
   // Optional: a server older than trim owners sends none, which reads as the user's.
   trimOwner: z.string().optional(),
   unavailable: z.boolean(),
+  // Optional: a server older than removal reasons sends none. A string, so a
+  // reason this build has not heard of is dropped in the mapper.
+  unavailableReason: z.string().nullable().optional(),
   // Optional: a server older than per-boundary transitions sends none. `kind`
   // and `owner` stay strings — a kind this build has not heard of is dropped in
   // the mapper rather than failing the read.
@@ -109,7 +112,12 @@ export function mapRemoteMovie(dto: MovieDto, snapIdOf: SnapIdResolver): RemoteM
         ref.trim = { startSec: clip.startMs / 1000, endSec: clip.endMs / 1000 };
       }
       if (clip.trimOwner === 'ai') ref.trimOwner = 'ai';
-      if (clip.unavailable) ref.unavailable = true;
+      if (clip.unavailable) {
+        ref.unavailable = true;
+        if (clip.unavailableReason === 'user' || clip.unavailableReason === 'expired') {
+          ref.unavailableReason = clip.unavailableReason;
+        }
+      }
       const next = dto.clips[order + 1];
       if (clip.transition && next && isTransitionKind(clip.transition.kind)) {
         ref.transition = {

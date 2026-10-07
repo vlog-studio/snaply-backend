@@ -163,7 +163,7 @@ export function MovieWatch({
           <View style={[styles.empty, { borderColor: theme.border }]}>
             <ThemedText type="heading">재생할 컷이 없어요</ThemedText>
             <ThemedText themeColor="textSecondary" style={styles.centerText}>
-              {cuts.every((cut) => cut.unavailable)
+              {cuts.every((cut) => cut.gone === 'expired')
                 ? '이 무비가 쓰던 스냅의 보관 기간이 끝났어요.'
                 : '이 무비가 쓰던 스냅이 모두 삭제됐어요.'}
             </ThemedText>

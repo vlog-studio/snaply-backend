@@ -59,6 +59,40 @@ describe('reading transitions back', () => {
   });
 });
 
+describe('unavailable cuts', () => {
+  it('keeps why the server lost the snap, so a deletion does not read as expiry', () => {
+    const remote = mapRemoteMovie(
+      dto([
+        { videoId: 'v1', unavailable: true, unavailableReason: 'user' },
+        { videoId: 'v2', unavailable: true, unavailableReason: 'expired' },
+        { videoId: 'v3', unavailable: false, unavailableReason: null },
+      ]),
+      snapIdOf,
+    );
+
+    expect(
+      remote.snapRefs.map(({ unavailable, unavailableReason }) => ({
+        unavailable,
+        unavailableReason,
+      })),
+    ).toEqual([
+      { unavailable: true, unavailableReason: 'user' },
+      { unavailable: true, unavailableReason: 'expired' },
+      { unavailable: undefined, unavailableReason: undefined },
+    ]);
+  });
+
+  it.each([
+    ['an older server sends no reason', {}],
+    ['a reason this build has never heard of', { unavailableReason: 'moderated' }],
+  ])('still marks the cut unavailable when %s', (_label, reason) => {
+    const remote = mapRemoteMovie(dto([{ videoId: 'v1', unavailable: true, ...reason }]), snapIdOf);
+
+    expect(remote.snapRefs[0]).toMatchObject({ unavailable: true });
+    expect(remote.snapRefs[0].unavailableReason).toBeUndefined();
+  });
+});
+
 describe('sending transitions', () => {
   const movie = (snapRefs: Movie['snapRefs']) => ({
     title: '무비',
