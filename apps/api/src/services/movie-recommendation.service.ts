@@ -157,47 +157,92 @@ export async function requestRecommendation(params: {
   const now = Date.now();
   const windowStart = new Date(now - REUSE_WINDOW_MS);
   const candidateHash = candidateHashOf(params.templateId, candidates);
+  const key = { userId: params.userId, templateId: params.templateId, candidateHash, windowStart };
 
-  const existing = await prisma.movieRecommendation.findFirst({
-    where: {
-      userId: params.userId,
-      templateId: params.templateId,
-      candidateHash,
-      createdAt: { gte: windowStart },
-    },
-    orderBy: { createdAt: 'desc' },
-    select: SELECT,
-  });
+  const existing = await findReusable(prisma, key);
   if (existing) {
     return { recommendation: toDto(existing), created: false };
   }
 
-  // 한도는 새 추천에만 건다. 재사용은 비용이 0이므로 막을 이유가 없다.
-  const recent = await prisma.movieRecommendation.count({
-    where: { userId: params.userId, createdAt: { gte: windowStart } },
-  });
-  if (recent >= DAILY_RECOMMENDATION_LIMIT) {
-    throw new AppError(
-      429,
-      'RECOMMENDATION_LIMIT',
-      '오늘 받을 수 있는 추천 수를 모두 썼습니다. 잠시 후 다시 시도하세요.',
-    );
+  // 한도는 새 추천에만 건다. 재사용은 비용이 0이므로 막을 이유가 없다. 여기서 세는 것은 분석을
+  // 적재하기 전의 빠른 거절이고, 집행은 기록할 때 잠금 안에서 다시 센다(`recordRecommendation`).
+  if ((await countRecent(prisma, params.userId, windowStart)) >= DAILY_RECOMMENDATION_LIMIT) {
+    throw recommendationLimitError();
   }
 
   await enqueueCandidateAnalyses(params.userId, candidates);
 
-  const created = await prisma.movieRecommendation.create({
-    data: {
-      userId: params.userId,
-      templateId: params.templateId,
-      candidateVideoIds: candidates,
-      candidateHash,
-      status: 'processing',
+  return recordRecommendation(key, candidates);
+}
+
+interface RecommendationKey {
+  userId: string;
+  templateId: string;
+  candidateHash: string;
+  windowStart: Date;
+}
+
+function findReusable(
+  client: Prisma.TransactionClient,
+  key: RecommendationKey,
+): Promise<RecommendationRow | null> {
+  return client.movieRecommendation.findFirst({
+    where: {
+      userId: key.userId,
+      templateId: key.templateId,
+      candidateHash: key.candidateHash,
+      createdAt: { gte: key.windowStart },
     },
+    orderBy: { createdAt: 'desc' },
     select: SELECT,
   });
+}
 
-  return { recommendation: toDto(created), created: true };
+function countRecent(client: Prisma.TransactionClient, userId: string, windowStart: Date): Promise<number> {
+  return client.movieRecommendation.count({ where: { userId, createdAt: { gte: windowStart } } });
+}
+
+function recommendationLimitError(): AppError {
+  return new AppError(
+    429,
+    'RECOMMENDATION_LIMIT',
+    '오늘 받을 수 있는 추천 수를 모두 썼습니다. 잠시 후 다시 시도하세요.',
+  );
+}
+
+/**
+ * 추천을 기록한다 — 재사용할 추천을 다시 찾고 하루 한도를 다시 센 뒤에. 사용자별 잠금 안에서 찾고
+ * 세고 쓰므로, 동시에 온 요청들이 같은 남은 횟수를 보고 한도를 넘겨 쓰거나 같은 후보 집합으로 추천을
+ * 둘 만들지 못한다. 잠금은 트랜잭션이 끝나면 풀린다(편집 초안 `movie-draft.service.ts` 와 같은 방식).
+ *
+ * 여기서 거절된 요청도 후보 분석은 이미 적재했다. 앞의 빠른 확인을 함께 지난 요청에서만 생기고,
+ * 분석은 스냅마다 한 번이라 다음 추천이 그 결과를 그대로 쓴다.
+ */
+function recordRecommendation(
+  key: RecommendationKey,
+  candidates: string[],
+): Promise<{ recommendation: MovieRecommendation; created: boolean }> {
+  return getPrisma().$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`movie-recommendation:${key.userId}`}, 0))`;
+    const existing = await findReusable(tx, key);
+    if (existing) {
+      return { recommendation: toDto(existing), created: false };
+    }
+    if ((await countRecent(tx, key.userId, key.windowStart)) >= DAILY_RECOMMENDATION_LIMIT) {
+      throw recommendationLimitError();
+    }
+    const created = await tx.movieRecommendation.create({
+      data: {
+        userId: key.userId,
+        templateId: key.templateId,
+        candidateVideoIds: candidates,
+        candidateHash: key.candidateHash,
+        status: 'processing',
+      },
+      select: SELECT,
+    });
+    return { recommendation: toDto(created), created: true };
+  });
 }
 
 /**
