@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { cutDurationSec, type Movie, type SnapRef } from '@/entities/movie';
 import { useSnapIndex } from '@/entities/snap';
 
+import { cutGone } from './cut-gone';
 import type { Cut } from './use-movie-cuts';
 
 /**
@@ -64,7 +65,7 @@ export function useWatchCuts(movie: Movie | undefined): Cut[] {
         ref,
         snap,
         usedSec: snap ? cutDurationSec(ref, snap.durationSec) : 0,
-        unavailable: ref.unavailable === true,
+        gone: cutGone(ref, snap !== undefined),
       };
     });
   }, [movie, snapIndex]);

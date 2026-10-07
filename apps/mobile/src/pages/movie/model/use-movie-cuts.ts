@@ -19,6 +19,8 @@ import {
 import { useSnapIndex, type Snap } from '@/entities/snap';
 import { canEditMovie, useComposeMovie, type CutsRefusal } from '@/features/compose-movie';
 
+import { cutGone, type CutGone } from './cut-gone';
+
 /** One row of the cut list: the cut, the snap behind it, and its position. */
 export type Cut = {
   ref: SnapRef;
@@ -30,12 +32,13 @@ export type Cut = {
   /** How long this cut plays: its trim window, or the whole snap. */
   usedSec: number;
   /**
-   * The server says this cut's snap is gone there — expired past its retention
-   * or deleted — so a run cannot be made from it, even though the original may
-   * still play on this device. Distinct from `snap === undefined`, which is the
-   * original deleted *here*; the two are worded apart (SNAP-12).
+   * Set when the cut cannot be run any more, and why (`cutGone`): `expired` past
+   * the server's retention, or `deleted` — the original deleted here, or the snap
+   * deleted on another device. An expired or server-deleted cut may still play
+   * from an original on this device; `snap` says whether one is here. The two
+   * reasons are worded apart (SNAP-12).
    */
-  unavailable: boolean;
+  gone: CutGone | undefined;
 };
 
 export type MovieCuts = {
@@ -152,7 +155,7 @@ export function useMovieCuts(movieId: string | undefined): MovieCuts {
           ref,
           snap,
           usedSec: snap ? cutDurationSec(ref, snap.durationSec) : 0,
-          unavailable: ref.unavailable === true,
+          gone: cutGone(ref, snap !== undefined),
         };
       }),
     [storedRefs, snapIndex],
