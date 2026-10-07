@@ -13,6 +13,7 @@ import {
   type StylePreset,
   type Transition,
   type TransitionKind,
+  type VideoRemovalReason,
   TransitionError,
   defaultTransition,
   isTransitionKind,
@@ -63,7 +64,7 @@ interface ClipRow {
   transitionKind: string | null;
   transitionMs: number | null;
   transitionOwner: string;
-  video: { deletedAt: Date | null; status: string };
+  video: { deletedAt: Date | null; status: string; removalReason: VideoRemovalReason | null };
 }
 
 interface MovieRow {
@@ -112,7 +113,7 @@ const SELECT = {
       transitionKind: true,
       transitionMs: true,
       transitionOwner: true,
-      video: { select: { deletedAt: true, status: true } },
+      video: { select: { deletedAt: true, status: true, removalReason: true } },
     },
   },
 } as const;
@@ -137,6 +138,15 @@ function transitionDto(clip: ClipRow): MovieTransition {
   return { ...transition, owner: clip.transitionOwner as MovieArranger };
 }
 
+/**
+ * 컷의 스냅이 사라진 이유. 지워지지 않았는데 쓸 수 없는 스냅(`ready` 가 아닌)은 이유를 모른다 — 컷에 넣을 때 `ready` 만
+ * 받으므로 생기지 않아야 하는 상태다. 사유 컬럼이 생기기 전에 지워진 행은 사용자가 지운 것이다(schema.prisma VideoRemovalReason).
+ */
+function unavailableReason(video: ClipRow['video']): VideoRemovalReason | null {
+  if (video.deletedAt === null) return null;
+  return video.removalReason ?? 'user';
+}
+
 function toDto(row: MovieRowWithJob): Movie {
   return {
     id: row.id,
@@ -152,6 +162,7 @@ function toDto(row: MovieRowWithJob): Movie {
       ...(clip.endMs !== null ? { endMs: clip.endMs } : {}),
       trimOwner: clip.trimOwner as MovieArranger,
       unavailable: clip.video.deletedAt !== null || clip.video.status !== 'ready',
+      unavailableReason: unavailableReason(clip.video),
       transition: index === row.clips.length - 1 ? null : transitionDto(clip),
     })),
     resultVideoId: row.resultVideoId,

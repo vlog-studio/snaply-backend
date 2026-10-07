@@ -224,8 +224,9 @@ describe('GET /movies/:id', () => {
     expect(res.statusCode).toBe(200);
     const clips = res.json().data.clips;
     expect(clips).toHaveLength(2);
-    expect(clips[0]).toMatchObject({ videoId: kept, unavailable: false });
-    expect(clips[1]).toMatchObject({ videoId: lost, unavailable: true });
+    expect(clips[0]).toMatchObject({ videoId: kept, unavailable: false, unavailableReason: null });
+    // 사유 컬럼이 비어 있는 툼스톤은 사용자가 지운 것으로 읽는다 — 앱은 "만료" 가 아니라 "삭제됨" 으로 그린다.
+    expect(clips[1]).toMatchObject({ videoId: lost, unavailable: true, unavailableReason: 'user' });
   });
 });
 

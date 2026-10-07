@@ -983,6 +983,15 @@
             "type": "boolean",
             "description": "참조하던 스냅이 사라진 컷. `true` 면 재생할 수 없고 편집에서 빼야 한다."
           },
+          "unavailableReason": {
+            "nullable": true,
+            "description": "`unavailable` 일 때 스냅이 사라진 이유 — `user`=사용자가 지움, `expired`=보관 기간 만료. 쓸 수 있는 컷이나 이유를 모르는 컷은 `null`.",
+            "type": "string",
+            "enum": [
+              "user",
+              "expired"
+            ]
+          },
           "transition": {
             "nullable": true,
             "description": "이 컷에서 다음 컷으로 넘어가는 전환. 마지막 컷은 `null`.",
@@ -997,6 +1006,7 @@
           "videoId",
           "trimOwner",
           "unavailable",
+          "unavailableReason",
           "transition"
         ]
       },
@@ -2393,6 +2403,15 @@
             "type": "boolean",
             "description": "참조하던 스냅이 사라진 컷. `true` 면 재생할 수 없고 편집에서 빼야 한다."
           },
+          "unavailableReason": {
+            "nullable": true,
+            "description": "`unavailable` 일 때 스냅이 사라진 이유 — `user`=사용자가 지움, `expired`=보관 기간 만료. 쓸 수 있는 컷이나 이유를 모르는 컷은 `null`.",
+            "type": "string",
+            "enum": [
+              "user",
+              "expired"
+            ]
+          },
           "transition": {
             "nullable": true,
             "description": "이 컷에서 다음 컷으로 넘어가는 전환. 마지막 컷은 `null`.",
@@ -2407,6 +2426,7 @@
           "videoId",
           "trimOwner",
           "unavailable",
+          "unavailableReason",
           "transition"
         ],
         "additionalProperties": false
