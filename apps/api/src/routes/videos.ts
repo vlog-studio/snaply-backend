@@ -6,10 +6,13 @@ import {
   createVideo,
   deleteVideo,
   getUploadUrl,
+  TRASH_LIST_MAX,
   getVideo,
+  listTrashedVideos,
   listVideos,
   lookupVideos,
   ok,
+  restoreVideo,
 } from '@vlog-studio/shared-types';
 import {
   createUploadTarget,
@@ -17,7 +20,9 @@ import {
   listVideos as listVideosForUser,
   getVideo as getVideoForUser,
   deleteVideo as deleteVideoForUser,
+  listTrashedVideos as listTrashedVideosForUser,
   lookupVideos as lookupVideosForUser,
+  restoreVideo as restoreVideoForUser,
 } from '../services/video.service.js';
 
 export async function videoRoutes(app: FastifyInstance): Promise<void> {
@@ -206,7 +211,7 @@ export async function videoRoutes(app: FastifyInstance): Promise<void> {
     },
   );
 
-  // DELETE /videos/:id — S3 삭제 + 소프트 삭제
+  // DELETE /videos/:id — 소프트 삭제. 보관 기간 안의 스냅은 파일을 남겨 되살릴 수 있다(SNAP-20)
   routes.delete(
     deleteVideo.fastifyPath,
     {
@@ -216,15 +221,58 @@ export async function videoRoutes(app: FastifyInstance): Promise<void> {
         tags: ['videos'],
         summary: '영상 삭제',
         description: [
-          'S3 원본 객체를 **실제로 삭제**하고 DB 레코드는 소프트 삭제(`deletedAt` 기록)한다. 되돌릴 수 없다.',
+          '목록·상세·무비에서 곧바로 사라지고 다른 기기는 `POST /videos/lookup` 의 `removed` 로 안다. 남의 영상은 404.',
           '',
-          '삭제 후 목록·상세에서 사라지고, 남의 영상은 404. 응답: `{ "success": true, "data": { "deleted": true } }`',
+          '**업로드가 끝났고 보관 기간 안인 스냅은 파일을 남긴다** — 원래 보관 기간이 끝날 때까지 `POST /videos/{id}/restore` 로',
+          '되살릴 수 있고(`restorableUntil`), 그 뒤 정리 배치가 지운다. 그 밖의 영상(올라가는 중 · 보관 기간이 끝난 스냅 · 결과물)은',
+          '파일을 바로 지우고 `restorableUntil: null` — 되돌릴 수 없다.',
         ].join('\n'),
       },
     },
     async (request) => {
-      await deleteVideoForUser({ userId: request.user.id, videoId: request.params.id });
-      return ok({ deleted: true });
+      const { restorableUntil } = await deleteVideoForUser({
+        userId: request.user.id,
+        videoId: request.params.id,
+      });
+      return ok({ deleted: true as const, restorableUntil });
     },
+  );
+
+  // GET /videos/trash — 최근 삭제(휴지통)
+  routes.get(
+    listTrashedVideos.fastifyPath,
+    {
+      preHandler: app.authenticate,
+      schema: {
+        ...listTrashedVideos.schema,
+        tags: ['videos'],
+        summary: '최근 삭제한 스냅',
+        description: [
+          '지웠지만 아직 되살릴 수 있는 스냅 — 원래 보관 기간이 끝나지 않은 것만, 지운 순서로 최근 것부터',
+          `최대 ${TRASH_LIST_MAX}개. 보관 기간이 끝난 스냅과 파일을 남기지 않고 지운 영상은 나오지 않는다.`,
+        ].join('\n'),
+      },
+    },
+    async (request) => ok(await listTrashedVideosForUser({ userId: request.user.id })),
+  );
+
+  // POST /videos/:id/restore — 휴지통에서 되살리기
+  routes.post(
+    restoreVideo.fastifyPath,
+    {
+      preHandler: app.authenticate,
+      schema: {
+        ...restoreVideo.schema,
+        tags: ['videos'],
+        summary: '지운 스냅 되살리기',
+        description: [
+          '목록·무비 후보·다른 기기에 다시 나타난다. 지울 때 무비에서 빠진 컷은 돌아오지 않는다.',
+          '이미 살아 있는 스냅이면 그대로 돌려준다(멱등). 보관 기간이 끝났거나 파일을 남기지 않고 지운 영상은',
+          '409 `NOT_RESTORABLE`, 없거나 남의 영상은 404.',
+        ].join('\n'),
+      },
+    },
+    async (request) =>
+      ok(await restoreVideoForUser({ userId: request.user.id, videoId: request.params.id })),
   );
 }

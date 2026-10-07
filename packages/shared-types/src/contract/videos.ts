@@ -76,7 +76,37 @@ export const uploadTargetSchema = z.object({
 });
 export type UploadTarget = z.infer<typeof uploadTargetSchema>;
 
-export const deletedSchema = z.object({ deleted: z.literal(true) });
+export const deletedSchema = z.object({
+  deleted: z.literal(true),
+  restorableUntil: z.iso
+    .datetime()
+    .nullable()
+    .describe(
+      '되살릴 수 있는 마지막 시각 — 원래 보관 기간이 끝나는 때(SNAP-20). 서버에 사본이 없던 영상(올라가지 않은 스냅 · 보관 기간이 끝난 스냅 · 결과물)은 `null` 이고 되살릴 수 없다.',
+    ),
+});
+
+/** 지운 스냅 하나 — 최근 삭제(휴지통)에 있는 동안만 보인다. 앱이 목록에 그릴 만큼만 싣는다. */
+export const trashedSnapSchema = z
+  .object({
+    id: z.uuid(),
+    clientId: z.string().nullable(),
+    capturedAt: z.iso.datetime().nullable(),
+    durationMs: z.int().nullable(),
+    width: z.int().nullable(),
+    height: z.int().nullable(),
+    thumbnailUrl: z.string().nullable(),
+    deletedAt: z.iso.datetime(),
+    restorableUntil: z.iso.datetime().describe('이 시각이 지나면 정리 배치가 파일을 지우고 되살릴 수 없다.'),
+  })
+  .meta({ id: 'TrashedSnap' });
+export type TrashedSnap = z.infer<typeof trashedSnapSchema>;
+
+/** 휴지통은 원래 보관 기간(15일) 안의 스냅뿐이라 짧다. 그래도 한 번에 이만큼까지만 준다(지운 순서, 최근 것부터). */
+export const TRASH_LIST_MAX = 200;
+
+export const trashListSchema = z.object({ items: z.array(trashedSnapSchema) });
+export type TrashList = z.infer<typeof trashListSchema>;
 
 export const uploadUrlQuerySchema = z.object({
   filename: z
@@ -250,6 +280,32 @@ export const deleteVideo = defineRoute({
     response: {
       200: apiSuccess(deletedSchema),
       404: apiErrorSchema,
+      ...AUTHENTICATED_ERROR_RESPONSES,
+    },
+  },
+});
+
+export const listTrashedVideos = defineRoute({
+  method: 'GET',
+  path: '/videos/trash',
+  schema: {
+    response: {
+      200: apiSuccess(trashListSchema),
+      ...AUTHENTICATED_ERROR_RESPONSES,
+    },
+  },
+});
+
+export const restoreVideo = defineRoute({
+  method: 'POST',
+  path: '/videos/{id}/restore',
+  schema: {
+    params: videoIdParamsSchema,
+    response: {
+      200: apiSuccess(videoSchema),
+      404: apiErrorSchema,
+      // NOT_RESTORABLE — 보관 기간이 끝났거나 파일을 남기지 않고 지운 영상이다.
+      409: apiErrorSchema,
       ...AUTHENTICATED_ERROR_RESPONSES,
     },
   },

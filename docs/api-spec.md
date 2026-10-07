@@ -68,7 +68,15 @@
 - `POST /videos/lookup` 🔒 — `{ ids: uuid[] }`(최대 100개)가 아직 있는지(`live`), 지워졌다면 왜인지(`removed` + `removalReason: user | expired` + `removedAt`) 알려 준다. 목록에서 사라진 스냅의 이유를 앱이 구분할 때 쓴다. 남의 id 와 없는 id 는 똑같이 응답에서 빠진다.
 - `originalUrls`·`editedUrl`·`thumbnailUrl`·`playbackUrl` 은 **presigned GET URL**(기본 1시간 유효). 만료되면 목록/상세를 다시 호출해 갱신한다.
 - `status` 의미: `pending`(URL 만 발급) → `ready`(편집 가능) / 결과물은 `processing` → `done`(`editedUrl` 사용 가능) | `failed`.
-- `DELETE /videos/{id}` 🔒 — 그 영상이 소유한 S3 객체(원본·썸네일·렌디션, 결과물이면 편집본·썸네일) 실삭제 + 소프트 삭제. 되돌릴 수 없다. 결과물을 지워도 원본 스냅의 파일은 남는다.
+- `DELETE /videos/{id}` 🔒 — 소프트 삭제. 목록·상세·무비에서 곧바로 사라지고 다른 기기는 `POST /videos/lookup` 의 `removed`(`user`)로 안다.
+  **업로드가 끝났고 보관 기간 안인 스냅은 파일을 남긴다** — 응답의 `restorableUntil`(원래 보관 기간이 끝나는 때)까지 되살릴 수 있고, 그 뒤
+  정리 배치가 지운다(SNAP-20). 그 밖의 영상(올라가는 중인 스냅 · 보관 기간이 끝난 스냅 · 결과물)은 그 영상이 소유한 S3 객체(원본·썸네일·렌디션,
+  결과물이면 편집본·썸네일)를 바로 지우고 `restorableUntil: null` — 되돌릴 수 없다. 결과물을 지워도 원본 스냅의 파일은 남는다.
+- `GET /videos/trash` 🔒 — 최근 삭제: 되살릴 수 있는 스냅을 지운 순서로 최근 것부터 최대 200개(`{ items: [{ id, clientId, capturedAt,
+  durationMs, width, height, thumbnailUrl, deletedAt, restorableUntil }] }`). 보관 기간이 끝난 스냅은 나오지 않는다.
+- `POST /videos/{id}/restore` 🔒 — 지운 스냅 되살리기. 응답은 되살린 `Video`. 목록에 돌아오고 다른 기기의 reconcile 이 다시 들인다(그 기기의
+  원본은 이미 지웠으므로 서버 사본을 받는다). 지울 때 무비에서 빠진 컷은 돌아오지 않는다. 이미 살아 있으면 그대로 돌려준다(멱등).
+  보관 기간이 끝났거나 파일을 남기지 않고 지운 영상(이 변경 전의 삭제 포함)은 409 `NOT_RESTORABLE`, 없거나 남의 영상은 404.
 
 ---
 
