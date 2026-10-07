@@ -99,7 +99,13 @@ def normalize_clip(
     start_ms: int = 0,
     end_ms: int | None = None,
 ) -> None:
-    """Trim and normalize one clip while keeping its audio aligned."""
+    """Trim and normalize one clip while keeping its audio aligned.
+
+    The source's own tags stay behind (`-map_metadata -1`). ffmpeg copies the first input's global metadata into
+    every output, and a phone's original carries where it was shot (`location`), the device, and its software —
+    which would leave in the movie through sharing and SNS posts (backlog E-17). Every later step (joining, BGM,
+    subtitles) starts from these files, so stopping it here keeps the whole movie clean.
+    """
     cmd = ["ffmpeg", "-y"]
     has_audio = _has_audio(src)
     source_duration = probe_duration(src)
@@ -133,6 +139,7 @@ def normalize_clip(
         "-map", "[a]",
         "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p",
         "-c:a", "aac", "-ar", "48000", "-ac", "2",
+        "-map_metadata", "-1",
         dst,
     ]
     _run(cmd)
