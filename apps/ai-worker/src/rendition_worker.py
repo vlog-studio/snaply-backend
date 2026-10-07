@@ -31,6 +31,7 @@ import signals_db
 import storage
 from pipeline.rendition import RenditionError, build
 from pipeline.snap_signals import SIGNALS_VERSION, SignalsError, read_signals
+from queue_connection import worker_connection
 
 
 class RenditionSkipped(Exception):
@@ -216,7 +217,10 @@ async def main() -> None:
     worker = Worker(
         config.RENDITION_QUEUE_NAME,
         process_rendition_job,
-        {"connection": config.REDIS_URL, "concurrency": config.RENDITION_CONCURRENCY},
+        {
+            "connection": worker_connection(config.REDIS_URL, config.RENDITION_QUEUE_NAME),
+            "concurrency": config.RENDITION_CONCURRENCY,
+        },
     )
     logger.info("renditions 워커 시작 (queue={})", config.RENDITION_QUEUE_NAME)
 
