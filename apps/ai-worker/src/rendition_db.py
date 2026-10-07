@@ -13,10 +13,10 @@ import db
 
 
 async def fetch_context(video_id: str) -> dict | None:
-    """변환 대상의 원본 키와 현재 상태. 삭제된 영상은 None."""
+    """변환 대상의 원본 키와 현재 상태, 촬영 시각. 삭제된 영상은 None."""
     async with db.pool().acquire() as conn:
         row = await conn.fetchrow(
-            "SELECT id, s3_key, kind, status, rendition_status, deleted_at "
+            "SELECT id, s3_key, kind, status, rendition_status, deleted_at, captured_at "
             "  FROM videos WHERE id=$1",
             video_id,
         )

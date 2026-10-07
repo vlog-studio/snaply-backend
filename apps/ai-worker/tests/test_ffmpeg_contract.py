@@ -23,6 +23,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from datetime import datetime, timedelta, timezone
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
@@ -279,6 +280,39 @@ class RenditionContract(unittest.TestCase):
             self.assertEqual((outcome.width, outcome.height), (720, 1280))
             info = probe(outcome.video_path)["video"]
             self.assertEqual((info["width"], info["height"]), (outcome.width, outcome.height))
+
+    def test_rendition_keeps_the_sources_capture_time(self) -> None:
+        """
+        ffmpeg 은 전역 메타데이터를 옮기면서 `creation_time` 만 지운다. 그러면 서버 사본을 앨범에 저장했을 때
+        갤러리가 저장한 날 자리에 놓는다(backlog E-12). 앱이 보낸 촬영 시각보다 원본의 태그가 먼저다.
+        """
+        with tempfile.TemporaryDirectory() as work:
+            src = os.path.join(work, "tagged.mp4")
+            make_clip(src, width=360, height=640)
+            tagged = os.path.join(work, "tagged-src.mp4")
+            subprocess.run(
+                ["ffmpeg", "-y", "-i", src, "-c", "copy", "-metadata", "creation_time=2026-09-29T13:14:06Z", tagged],
+                capture_output=True,
+                check=True,
+            )
+
+            outcome = rendition.build(tagged, work, datetime(2026, 1, 1, tzinfo=timezone.utc))
+
+            tags = probe(outcome.video_path)["format"].get("tags", {})
+            self.assertEqual(tags.get("creation_time"), "2026-09-29T13:14:06.000000Z")
+
+    def test_rendition_without_a_tag_takes_the_snaps_capture_time(self) -> None:
+        """원본에 태그가 없으면(합성 클립이 그렇다) 앱이 보낸 촬영 시각을 UTC 로 적는다."""
+        with tempfile.TemporaryDirectory() as work:
+            src = os.path.join(work, "untagged.mp4")
+            make_clip(src, width=360, height=640)
+            self.assertNotIn("creation_time", probe(src)["format"].get("tags", {}))
+            seoul = timezone(timedelta(hours=9))
+
+            outcome = rendition.build(src, work, datetime(2026, 9, 29, 22, 14, 6, tzinfo=seoul))
+
+            tags = probe(outcome.video_path)["format"].get("tags", {})
+            self.assertEqual(tags.get("creation_time"), "2026-09-29T13:14:06.000000Z")
 
     def test_silent_source_still_produces_a_rendition(self) -> None:
         """오디오가 없는 원본도 있다(무음 촬영). 그때 변환이 실패하면 안 된다."""

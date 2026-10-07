@@ -123,7 +123,7 @@ async def _render(video_id: str, user_id: str, s3_key: str, work_dir: str) -> tu
     local = os.path.join(work_dir, f"source{os.path.splitext(s3_key)[1] or '.mp4'}")
     await asyncio.to_thread(storage.download, s3_key, local)
 
-    outcome = await asyncio.to_thread(build, local, work_dir)
+    outcome = await asyncio.to_thread(build, local, work_dir, ctx["captured_at"])
 
     rendition_key = storage.rendition_key(user_id, video_id)
     await asyncio.to_thread(storage.upload, outcome.video_path, rendition_key, "video/mp4")
