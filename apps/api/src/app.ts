@@ -47,6 +47,11 @@ export async function buildApp(
   options: BuildAppOptions = {},
 ): Promise<FastifyInstance> {
   const app = Fastify({
+    // 앞단 프록시(ALB) 뒤에서는 소켓 주소가 프록시라, 그대로 두면 모든 사용자가 한 IP 로 보여
+    // 전역 rate limit 을 나눠 쓴다 — `/health` 까지 429 가 되면 ALB 가 대상을 빼 전체가 502 다.
+    // `true` 가 아니라 프록시 주소로 믿는다: 믿는 주소에서 온 요청만 X-Forwarded-For 를 맨 뒤부터
+    // 거슬러 읽으므로, 클라이언트가 앞쪽에 끼워 넣은 값은 쓰이지 않는다.
+    trustProxy: config.trustProxy.length > 0 ? config.trustProxy : false,
     logger: {
       level: process.env.LOG_LEVEL ?? 'info',
       // 개인정보/자격증명 로그 마스킹

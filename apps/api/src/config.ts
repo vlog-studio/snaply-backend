@@ -3,6 +3,11 @@ import type { RequiredEnvKey } from './env-spec.js';
 export interface AppConfig {
   port: number;
   host: string;
+  /**
+   * 믿을 앞단 프록시 주소(IP·CIDR·프리셋). 비어 있으면 X-Forwarded-For 를 믿지 않는다
+   * (프록시 없이 직접 받는 서버).
+   */
+  trustProxy: string[];
   databaseUrl: string;
   supabaseUrl: string;
   /** Swagger 개발 로그인에서 사용하는 공개 API 키. */
@@ -161,12 +166,35 @@ function loadStorageConfig(): StorageConfig {
   };
 }
 
+const TRUST_PROXY_PRESETS = new Set(['loopback', 'linklocal', 'uniquelocal']);
+
+/**
+ * 홉 수(`1`)나 `true` 는 받지 않는다. Fastify 는 홉 수만으로는 직접 접속한 클라이언트의 위조를
+ * 막을 수 없어 숫자를 주면 아무것도 믿지 않는다 — 조용히 프록시 IP 하나로 묶인 채 뜬다. `true` 는
+ * 누구의 X-Forwarded-For 든 믿는다. 주소 형식 자체의 검사는 Fastify 가 기동 시점에 한다.
+ */
+function loadTrustProxy(): string[] {
+  const entries = (process.env.TRUST_PROXY ?? '')
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+  for (const entry of entries) {
+    if (!TRUST_PROXY_PRESETS.has(entry) && !/[.:]/.test(entry)) {
+      throw new Error(
+        `TRUST_PROXY 는 프록시의 IP·CIDR 또는 loopback·linklocal·uniquelocal 이어야 합니다: ${entry}`,
+      );
+    }
+  }
+  return entries;
+}
+
 export function loadConfig(): AppConfig {
   const supabaseUrl = requireEnv('SUPABASE_URL').replace(/\/$/, '');
 
   return {
     port: Number(process.env.API_PORT ?? 3000),
     host: process.env.API_HOST ?? '0.0.0.0',
+    trustProxy: loadTrustProxy(),
     databaseUrl: requireEnv('DATABASE_URL'),
     supabaseUrl,
     supabasePublishableKey:

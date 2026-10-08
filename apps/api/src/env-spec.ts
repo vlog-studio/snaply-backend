@@ -485,6 +485,13 @@ export const ENV_VARS = [
     origin: 'shared',
     description: '전역 IP당 분당 요청 수. /billing/webhook 은 제외',
   },
+  {
+    key: 'TRUST_PROXY',
+    required: false,
+    origin: 'production',
+    description:
+      '믿을 앞단 프록시(ALB 등) 주소. 쉼표로 구분한 IP·CIDR 또는 loopback·linklocal·uniquelocal. 비우면 X-Forwarded-For 를 믿지 않는다',
+  },
 
   // ── 공개 페이지 / 플랫폼 검증 ────────────────────────
   {
