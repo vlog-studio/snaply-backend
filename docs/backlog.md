@@ -421,6 +421,10 @@ e2e 실검증.
 - [ ] **DB 백업의 외부 보관** — 지금 덤프는 같은 서버에 쌓인다. 서버가 통째로 죽으면 함께 사라진다
 - [ ] **실사용 서버** — 사내망 전용이라 이 서버로는 사용자를 받을 수 없다. 외부 접속이 되는
       곳이 생기면 고정 도메인(D-1)과 SNS·결제·광고 mock 해제만 추가하면 된다
+- [ ] **운영 오버레이가 base 의 개발용 값을 지우지 못한다** — `docker compose config` 로 풀면 postgres · redis 포트가
+      `127.0.0.1` 과 모든 주소에 둘 다 잡힌다(compose 는 `ports` 를 덮지 않고 합친다 — DB 가 사내망에 열리거나 같은 포트를
+      두 번 잡다 기동 실패). base 의 `SENTRY_DSN: ""` 도 남아 시크릿의 Sentry 를 끈다. `!reset` 으로 지우거나
+      `docker-compose.aws.yml` 처럼 단독 파일로 만든다
 
 **API 만 띄우면 안 된다** — 상주 프로세스와 스케줄 배치를 하나라도 빠뜨리면 배포는 성공하고 에러도 없이
 알림이 영영 안 가거나 파일이 무한히 쌓인다. 특히 만료 예고가 빠진 채 정리만 돌면 사용자가 예고 없이
@@ -486,6 +490,36 @@ API 라우트 `movies`·`video-analyses`, 모바일 `features/{finish-movie,rena
 `entities/{capture-session,session}`. 누가 맡을지는 두 트랙이 합의해야 한다.
 
 **완료 조건**: 각 모듈의 담당을 합의해 team.md §1 표에 적는다.
+
+### B-8. AWS 공모전 서버 가동 ★
+
+**2026-10-08**: 사내 공모전 테스트용으로 회사 AWS 계정에 서버가 생겼다 — 사내 위키 "snaply — AWS 구성 · 인프라 접속"
+(인프라팀)과 우리가 낸 "AWS 서비스 요청서 — snaply". EC2 한 대(`t3.large`, 공인 IP 없음) 앞에 공용 ALB
+(`https://snaply-api.dweaxai.com` → 인스턴스 3000), 영상은 S3, 시크릿은 Secrets Manager `dweax/service/snaply/env`,
+접속은 Session Manager. 바깥에서 닿으므로 SNS · 결제 · 광고를 실제로 켤 수 있다(D-1 의 도메인 조건을 이 서버가 채운다).
+공모전이 끝나면 내린다.
+
+저장소 쪽은 키 없이 인스턴스 역할로 S3 에 붙기 · ALB 뒤 클라이언트 IP(`TRUST_PROXY`) · 단독 compose
+`docker-compose.aws.yml` 까지 끝났다([progress.md](./progress.md) 2026-10-08). 남은 것:
+
+- [ ] **배포 방식 확인(인프라)** — 요청서는 GitHub self-hosted runner + GHCR 을 물었는데 인프라 문서 6-5 는 사내 GitLab runner 로
+      적혀 있다. 허용되면 runner 를 `main` 배포 잡 전용으로 묶는 방법도 정한다(인프라 문서는 보호된 브랜치 전용을 요구한다 —
+      지금은 다른 브랜치의 워크플로도 `[self-hosted, snaply]` 로 이 호스트에서 돌 수 있다)
+- [ ] **배포 잡** — Secrets Manager → `/data/compose/.env` 변환 뒤 `docker-compose.aws.yml` 로 pull · migrate · up · 헬스체크.
+      변환에서 **빈 값은 뺀다**: 인프라가 키를 빈 값으로 만들어 두었고, 코드에는 빈 문자열을 미설정으로 보지 않는 곳이 있다 —
+      빈 `LOG_LEVEL` 은 기동 실패, 빈 `RATE_LIMIT_GLOBAL_MAX` 는 모든 요청 429(`/health` 포함 → 502), 빈 큐 이름은 이름 없는 큐
+- [ ] **설치 스크립트**(인스턴스 교체 대비, 인프라 문서 6-6) — Docker data-root `/data/docker` 와 마운트 대기(6-2), runner 등록, cron.
+      `deploy/run-batch.sh` · `deploy/backup-db.sh` 는 사내 서버 compose 에 고정이라 compose 파일을 고를 수 있어야 하고,
+      백업은 `SNAPLY_BACKUP_DIR=/data/backup`
+- [ ] **시크릿 채우기** — 요청서 4장 목록. `POSTGRES_PASSWORD` 는 접속 URL 에 들어가므로 영숫자만
+- [ ] **사내 서버(B-1)와의 관계** — 대체인지 공모전 동안 병행인지 정하고, 결정 문서와 배포 절차를 그에 맞춘다
+- [ ] **TikTok 게시** — 버킷이 퍼블릭 차단이고 CloudFront 가 없어 미디어 호스트의 URL prefix 검증(D-3) 파일을 둘 곳이 없다.
+      공모전 시연에 필요하면 인프라에 CloudFront(또는 검증 경로 공개)를 요청하거나 C-3(직접 업로드)으로 간다
+- [ ] **수명** — 요청서의 종료일이 비어 있다
+- [ ] **용량 실측** — `t3.large`(2 vCPU · 8GiB, 24시간 평균 CPU 30% 를 넘으면 추가 요금)에 편집 · 렌디션 · 분석 워커가 함께 돈다.
+      이미지가 배포마다 약 3GB 라 `/data`(50GB)의 이미지 정리 주기도 함께 본다
+
+**완료 조건**: main 머지가 이 서버에 자동 배포되고 배치가 돌며, 테스터 폰이 도메인으로 업로드 → 편집 → 재생까지 된다.
 
 ---
 

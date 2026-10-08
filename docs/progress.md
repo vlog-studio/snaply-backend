@@ -2151,3 +2151,33 @@ ffmpeg 은 첫 입력의 전역 메타데이터를 출력에 옮긴다. 휴대�
   `kept_for_restore` 로 남았다. 최근 삭제에 `3초 · 9일 남음` 으로 나타났고 되살리자 `스냅을 되살렸어요` · 목록이 비고 스냅 탭이 6개로 돌아왔다.
   다른 스냅을 지운 직후 되돌리기를 누르자 `스냅 1개를 되돌렸어요` 로 돌아왔다. 개발 DB 에는 아무 변화가 없었다.
 - **남은 것**: 휴대폰 두 대 사이의 전파와 되살림은 보지 않았다 — backlog A-4 "최근 삭제의 실기기 확인". 법률 문서의 보관 · 파기에 적을 일은 D-2 에 더했다.
+
+## 2026-10-08 — AWS 공모전 서버에 올릴 준비: 키 없는 S3 · ALB 뒤 클라이언트 IP · 단독 compose(backlog B-8)
+
+인프라팀이 공모전 테스트용 AWS 서버를 만들었다(backlog B-8). 저장소 그대로는 거기서 뜨지 않거나 뜨더라도 막혀서 세 가지를 고쳤고,
+확인하다 사내 서버와 같이 쓰는 배치 결함을 하나 찾았다.
+
+- **키 없이 인스턴스 역할로 S3** — API 는 `AWS_ACCESS_KEY_ID` 를 필수로 요구했고, 워커는 빈 키를 빈 문자열로 넘겨 boto3 가 기본 체인을
+  타지 않고 빈 키로 서명했다. 이제 둘 다 키가 비면 SDK 기본 체인(→ 인스턴스 메타데이터)을 쓴다. API 는 키가 한쪽만 있거나, MinIO
+  (`S3_ENDPOINT`)인데 키가 없으면 기동을 거부한다. 워커의 S3 클라이언트는 리전 호스트(`버킷.s3.ap-northeast-2.amazonaws.com`)로
+  고정했다 — 기본값은 presigned URL 을 전역 호스트로 만들어 새 버킷에서 307 을 받을 수 있고 API 가 만드는 URL 과 호스트가 갈렸다.
+  env-spec 에서 두 키를 선택 · `local` 로 바꿨다.
+- **ALB 뒤 클라이언트 IP** — Fastify 가 프록시를 믿지 않아 모든 요청이 ALB 주소로 보였다. 전역 rate limit(IP당 분당 60)을 사용자 전체가
+  나눠 쓰고, `/health` 도 그 한도에 걸려 ALB 가 대상을 빼면 도메인 전체가 502 가 된다. 새 변수 `TRUST_PROXY`(믿을 프록시의 IP · CIDR ·
+  프리셋)를 두었다. 홉 수(`1`)와 `true` 는 기동을 거부한다 — Fastify 5.12 는 홉 수만으로는 직접 접속한 클라이언트의 위조를 막을 수
+  없어 숫자를 주면 아무것도 믿지 않는다(처음 홉 수로 만든 구현이 새 테스트에서 실패해 드러났다). `true` 는 누구의 헤더든 믿는다.
+- **`docker-compose.aws.yml`** — base 에 겹치지 않는 단독 파일이다. 같은 방식인 사내 서버 오버레이를 `docker compose config` 로 풀어 보니
+  postgres · redis 포트가 `127.0.0.1` 과 모든 주소에 둘 다 잡히고 base 의 `SENTRY_DSN: ""` 가 시크릿을 덮었다(backlog B-1 에 적었다).
+  MinIO 없음, S3 키와 MinIO 주소는 ""로 덮어 인스턴스 역할만, `TRUST_PROXY: uniquelocal`, DB 는 `127.0.0.1:5433`(담당자 포트 포워딩)만,
+  Redis 볼륨, 컨테이너 로그 상한(20MB × 5), SHA 태그라 `pull_policy` 기본값.
+- **배치가 하나도 돌지 않던 결함(사내 서버 공통)** — `deploy/run-batch.sh` 가 API 이미지 안에서 `npm run <배치> -w apps/api` 를 불렀는데
+  이미지의 작업 디렉터리가 이미 `apps/api` 라 `No workspaces found` 로 끝났다. `-w` 를 뺐다. 2026-10-06 검증은 docker 대역으로 인자만
+  봐서 드러나지 않았다.
+- **자동 검증**: API 612개(새 `config.test.ts` · `trust-proxy.test.ts`) · tsc · lint · `storage.service.test.mjs`(키 없이 기본 체인으로
+  서명 · 리전 호스트 · 세션 토큰). 워커 212개(새 `test_storage.py` — 깨끗한 하위 프로세스에서 compose 처럼 키를 빈 값으로 주고 기본
+  체인으로 서명하는지 본다. 같은 프로세스에서는 다른 테스트가 boto3 를 MagicMock 으로 바꿔 끼운다).
+- **로컬 실행**: 작업 트리로 이미지를 빌드해 `docker-compose.aws.yml` 을 띄웠다(분석 워커는 OpenAI 키가 없어 뺐다). migrate 뒤 api healthy ·
+  `/health` 가 `db=connected`. 시크릿 파일에 넣은 키와 MinIO 주소가 네 컨테이너 모두에서 ""로 덮였다. Docker 포트 매핑을 거친 요청에서
+  X-Forwarded-For 별로 한도가 갈리고 앞쪽에 끼운 위조 주소는 무시됐다. 배치 4종 dry-run 과 `--yes`, `pg_dump` 가 돌았다. 확인 뒤
+  스택 · 볼륨 · 이미지를 지웠다.
+- **남은 것**: 실제 인스턴스 역할로 S3 에 붙는 것은 AWS 서버에서만 볼 수 있다. 배포 잡 · 설치 스크립트 · 배포 방식 확인은 backlog B-8.
