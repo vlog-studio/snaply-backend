@@ -18,13 +18,12 @@ let cfg: StorageConfig | null = null;
 
 export function initStorage(config: StorageConfig): void {
   cfg = config;
+  // credentials 가 없으면 SDK 기본 체인(환경변수 → … → 인스턴스 메타데이터)을 쓴다.
+  // 인스턴스 역할 자격증명은 주기적으로 바뀌고 SDK 가 알아서 갱신한다.
   const clientOptions = {
     region: config.region,
     forcePathStyle: config.forcePathStyle,
-    credentials: {
-      accessKeyId: config.accessKeyId,
-      secretAccessKey: config.secretAccessKey,
-    },
+    credentials: config.credentials,
   };
   client = new S3Client({ ...clientOptions, endpoint: config.endpoint });
   presignClient = new S3Client({

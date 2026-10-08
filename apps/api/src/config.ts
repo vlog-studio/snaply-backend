@@ -85,8 +85,11 @@ export interface RedisConfig {
 export interface StorageConfig {
   region: string;
   bucket: string;
-  accessKeyId: string;
-  secretAccessKey: string;
+  /**
+   * 정적 키. 없으면 SDK 기본 체인을 쓴다 — AWS 서버는 키 없이 인스턴스 역할로 붙는다.
+   * MinIO(endpoint)는 기본 체인이 줄 자격증명이 없으므로 반드시 있다(loadStorageConfig 가 강제).
+   */
+  credentials: { accessKeyId: string; secretAccessKey: string } | undefined;
   /** MinIO 등 S3 호환 서버용 커스텀 endpoint. 미설정 시 실제 AWS S3. */
   endpoint: string | undefined;
   /** Client-reachable S3-compatible endpoint used to create presigned URLs. */
@@ -129,11 +132,23 @@ function loadStorageConfig(): StorageConfig {
         ? `${endpoint}/${bucket}`
         : `https://${bucket}.s3.amazonaws.com`);
 
+  // 빈 문자열도 미설정이다 — AWS 서버의 compose 가 키를 ""로 덮어 인스턴스 역할만 쓰게 한다.
+  const accessKeyId = process.env.AWS_ACCESS_KEY_ID || undefined;
+  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY || undefined;
+  // 한쪽만 있으면 오타이거나 반쯤 지운 것이다. 기본 체인으로 넘어가면 엉뚱한 자격증명으로 뜬다.
+  if (Boolean(accessKeyId) !== Boolean(secretAccessKey)) {
+    throw new Error('AWS_ACCESS_KEY_ID 와 AWS_SECRET_ACCESS_KEY 는 둘 다 넣거나 둘 다 비워야 합니다.');
+  }
+  // MinIO 는 기본 체인으로 붙을 수 없다. 키 없이 뜨면 첫 업로드에서야 실패하므로 기동을 거부한다.
+  if (endpoint && !accessKeyId) {
+    throw new Error('S3_ENDPOINT(MinIO 등)를 쓰면 AWS_ACCESS_KEY_ID·AWS_SECRET_ACCESS_KEY 가 필요합니다.');
+  }
+
   return {
     region: process.env.AWS_REGION ?? 'ap-northeast-2',
     bucket,
-    accessKeyId: requireEnv('AWS_ACCESS_KEY_ID'),
-    secretAccessKey: requireEnv('AWS_SECRET_ACCESS_KEY'),
+    credentials:
+      accessKeyId && secretAccessKey ? { accessKeyId, secretAccessKey } : undefined,
     endpoint,
     publicEndpoint,
     forcePathStyle: Boolean(endpoint),

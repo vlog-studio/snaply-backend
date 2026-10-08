@@ -91,17 +91,19 @@ export const ENV_VARS = [
   },
 
   // ── S3 스토리지 ──────────────────────────────────────
+  // 키는 MinIO(S3_ENDPOINT)를 쓸 때만 필수다. AWS 서버는 비워 두고 인스턴스 역할로 붙는다 —
+  // 비우면 SDK 기본 체인이 인스턴스 메타데이터에서 자격증명을 받는다(docker-compose.aws.yml).
   {
     key: 'AWS_ACCESS_KEY_ID',
-    required: true,
-    origin: 'shared',
-    description: '개발은 MinIO 루트 계정, 운영은 IAM',
+    required: false,
+    origin: 'local',
+    description: '개발은 MinIO 루트 계정. AWS 서버는 비워 두고 인스턴스 역할을 쓴다',
   },
   {
     key: 'AWS_SECRET_ACCESS_KEY',
-    required: true,
-    origin: 'shared',
-    description: '개발은 MinIO 루트 비밀번호, 운영은 IAM',
+    required: false,
+    origin: 'local',
+    description: '개발은 MinIO 루트 비밀번호. AWS 서버는 비워 두고 인스턴스 역할을 쓴다',
   },
   {
     key: 'AWS_REGION',
