@@ -26,5 +26,7 @@ if [ -f deploy/.current-images ]; then
 fi
 
 # `--env-file`: compose 파일의 `${…}` 치환은 서비스의 `env_file` 을 읽지 않는다 — 시크릿 파일을 직접 넘긴다.
+# `-w apps/api` 를 붙이지 않는다: 이미지의 작업 디렉터리가 이미 /app/apps/api 라, 붙이면 npm 이
+# 그 아래에서 워크스페이스를 찾다가 `No workspaces found` 로 배치가 하나도 돌지 않는다.
 exec docker compose --env-file "$SNAPLY_ENV_FILE" -f docker-compose.yml -f docker-compose.prod.yml \
-  run --rm --no-deps api npm run "$BATCH" -w apps/api -- --yes
+  run --rm --no-deps api npm run "$BATCH" -- --yes
