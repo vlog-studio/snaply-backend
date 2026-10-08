@@ -1,0 +1,187 @@
+# AWS 서버(사내 공모전 테스트 서버)용 — base compose 에 겹치지 않는 **단독 파일**이다.
+#
+#   docker compose --env-file /data/compose/.env -f docker-compose.aws.yml up -d
+#
+# 구성은 사내 위키 "snaply — AWS 구성 · 인프라 접속": EC2 한 대(공인 IP 없음) 앞에 공용 ALB 가 있고
+# (`https://snaply-api.dweaxai.com` → 인스턴스 3000, TLS 는 ALB 가 끝낸다), 영상은 S3 버킷에 둔다.
+#
+# 왜 base(docker-compose.yml)에 겹치지 않는가: base 는 로컬 개발 스택이다 — MinIO, 개발용 계정,
+# `build:`, 개인 `apps/api/.env`, 모든 주소에 열린 DB 포트가 들어 있다. 겹쳐서 지우려 해도 compose 는
+# 포트 목록을 덮지 않고 합치고, base 의 `SENTRY_DSN: ""` 같은 빈 값은 시크릿 값을 그대로 덮는다.
+#
+# S3 는 **키 없이 인스턴스 역할**로 붙는다(IMDSv2 홉 제한 2 — 컨테이너에서도 메타데이터에 닿는다).
+# 그래서 아래에서 키와 MinIO 주소를 ""로 덮는다. 시크릿에 그런 값이 들어가도 쓰이지 않는다.
+#
+# 값은 Secrets Manager `dweax/service/snaply/env` 하나에서 온다. 배포가 그것을 compose 용 파일로
+# 옮기고(기본 /data/compose/.env), 그 파일을 컨테이너 값(`env_file`)과 이 파일의 `${...}` 치환값으로
+# 함께 쓴다 — 치환은 `env_file` 을 읽지 않으므로 실행할 때 `--env-file` 로도 같은 파일을 넘긴다.
+# 외부 연동(SNS·결제·광고 보상)은 시크릿으로 켠다. 키가 비어 있으면 mock·꺼짐으로 뜬다.
+#
+# 데이터(Postgres·Redis·whisper 캐시)는 named volume 이다. Docker data-root 를 /data/docker 로 옮겨야
+# 매일 스냅샷되는 /data 볼륨에 남는다 — 루트 볼륨은 인스턴스를 교체하면 함께 사라진다.
+#
+# `pull_policy` 는 기본값(없을 때만 받기)이다. 태그가 커밋 SHA 라 바뀌지 않고, 배포가 `pull` 을 따로
+# 부른다. `always` 로 두면 cron 배치의 `run` 도 매번 레지스트리에 다녀오고, 로그인이 없으면 멈춘다.
+
+name: snaply
+
+x-secrets: &secrets
+  - path: ${SNAPLY_ENV_FILE:-/data/compose/.env}
+    required: true
+
+# 기본 json-file 로그는 끝없이 쌓인다. data-root 가 /data(50GB)라 컨테이너마다 100MB 로 묶는다.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "5"
+
+x-runtime-env: &runtime-env
+  DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/snaply
+  DIRECT_URL: postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/snaply
+  REDIS_URL: redis://redis:6379
+  # 인스턴스 역할만 쓴다. API·워커 모두 빈 값을 미설정으로 본다.
+  AWS_ACCESS_KEY_ID: ""
+  AWS_SECRET_ACCESS_KEY: ""
+  S3_ENDPOINT: ""
+  S3_PUBLIC_ENDPOINT: ""
+  CLOUDFRONT_DOMAIN: ""
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?시크릿에 지정할 것 (접속 URL 에 들어가므로 영숫자만)}
+      POSTGRES_DB: snaply
+    # 담당자 포트 포워딩용(Session Manager → 인스턴스 127.0.0.1:5433). 인스턴스 밖으로는 열지 않는다.
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    logging: *logging
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # 작업 큐(BullMQ)가 여기 있다. 볼륨이 없으면 컨테이너를 새로 만들 때 대기 중인 작업이 사라진다.
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    logging: *logging
+
+  # 배포 때 한 번 돌고 끝난다. 실패하면 api·워커가 뜨지 않는다 — 반쯤 적용된 스키마 위에 새 코드를
+  # 올리지 않는다.
+  migrate:
+    image: ${API_IMAGE:?배포가 커밋 SHA 태그를 넣는다}
+    command: ["npx", "prisma", "migrate", "deploy", "--schema", "prisma/schema.prisma"]
+    restart: "no"
+    env_file: *secrets
+    environment:
+      <<: *runtime-env
+      NODE_ENV: production
+    depends_on:
+      postgres: { condition: service_healthy }
+    logging: *logging
+
+  api:
+    image: ${API_IMAGE}
+    restart: unless-stopped
+    env_file: *secrets
+    environment:
+      <<: *runtime-env
+      NODE_ENV: production
+      # 포트 매핑과 ALB 대상 포트가 3000 이다. 시크릿 값이 이것을 바꾸지 못하게 박는다.
+      API_PORT: "3000"
+      # ALB 를 믿어 X-Forwarded-For 로 클라이언트 IP 를 정한다. 안 믿으면 모든 사용자가 ALB 주소
+      # 하나로 보여 전역 rate limit 을 나눠 쓰고, `/health` 까지 429 가 되면 도메인 전체가 502 다.
+      # ALB 는 VPC 사설 대역에 있고, 보안그룹이 ALB 에서 오는 3000 만 받는다.
+      TRUST_PROXY: uniquelocal
+    # 보안그룹이 ALB 에서 오는 3000 만 받으므로 모든 주소에 열어도 인터넷에서 직접 닿지 않는다.
+    ports:
+      - "3000:3000"
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    logging: *logging
+
+  # 알림 발송. API 와 같은 이미지, 커맨드만 다르다(FCM 자격증명이 Node 에만 있다).
+  notification-worker:
+    image: ${API_IMAGE}
+    command: ["node", "dist/notification-worker.js"]
+    restart: unless-stopped
+    env_file: *secrets
+    environment:
+      <<: *runtime-env
+      NODE_ENV: production
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+    logging: *logging
+
+  # 편집(FFmpeg·whisper). whisper 모델은 첫 자막 작업에서 내려받으므로(~1GB) 볼륨에 남긴다.
+  ai-worker:
+    image: ${WORKER_IMAGE:?배포가 커밋 SHA 태그를 넣는다}
+    command: ["python", "worker.py"]
+    restart: unless-stopped
+    env_file: *secrets
+    environment:
+      <<: *runtime-env
+    volumes:
+      - whisper-cache:/root/.cache/huggingface
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+    logging: *logging
+
+  # 스냅 내용 분석. OPENAI_API_KEY 가 없으면 기동 단계에서 스스로 종료한다(의도된 동작) —
+  # 그러면 `unless-stopped` 가 재시작을 반복하므로, 키를 넣지 않을 거면 이 서비스는 빼고 올린다.
+  analysis-worker:
+    image: ${WORKER_IMAGE}
+    command: ["python", "analysis_worker.py"]
+    restart: unless-stopped
+    env_file: *secrets
+    environment:
+      <<: *runtime-env
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+    logging: *logging
+
+  # 업로드 영상의 H.264/SDR 사본. 실패해도 스냅은 쓸 수 있다.
+  rendition-worker:
+    image: ${WORKER_IMAGE}
+    command: ["python", "rendition_worker.py"]
+    restart: unless-stopped
+    env_file: *secrets
+    environment:
+      <<: *runtime-env
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+    logging: *logging
+
+volumes:
+  pgdata:
+  redisdata:
+  whisper-cache:
