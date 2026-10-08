@@ -2209,3 +2209,15 @@ Session Manager 셸에서 GitHub · GHCR · Docker Hub · 외부 API 로 나가�
   일곱 서비스 기동 → `db=connected`, 두 번째도 같고 태그 기록이 남았다. 빈 키는 빠져 `/health` 가 429 없이 200 이었다. 이어서 cron 환경 그대로
   배치 4종과 백업이 돌았다(만료 예고는 FCM 키가 없어 의도대로 멈췄고, 그 안내 문구가 위 결함이었다). 확인 뒤 스택 · 볼륨 · 이미지를 지웠다.
 - **남은 것**: runner 설치 · 시크릿 · `DEPLOY_AWS_ENABLED` 는 서버에서 하는 일이다 — backlog B-8. 실제 runner 위의 첫 배포는 아직이다.
+
+## 2026-10-08 (이어서) — AWS 공모전 서버 첫 배포(backlog B-8)
+
+인스턴스에서 `deploy/aws/install.sh` 로 runner(`dweax-snaply`, 라벨 `snaply-aws`)를 등록하고, 시크릿을 채우고(필수 10개 — 외부 연동 키는
+비워 둠), 저장소 Variables 에 `DEPLOY_AWS_ENABLED=true`, 포크 PR 워크플로 승인을 "모든 외부 협업자"로 올렸다. `97e7f7c` 의 Deploy 를
+다시 돌려 첫 배포가 끝까지 갔다 — 작업 전 검사 통과 → 시크릿 10개 키(빈 값 15개 제외) → GHCR 로그인 → 마이그레이션 30개 → 일곱
+서비스 기동 → `db=connected`. 공개 도메인 `https://snaply-api.dweaxai.com/health` 가 ALB 를 거쳐 200 · `db=connected` 를 돌려줬다.
+
+- **알게 된 것** — snaply 역할에 `DescribeSecret` · `ListSecrets` 가 없어 콘솔의 Secrets Manager 화면이 열리지 않고 CloudShell 도 막혀 있다.
+  CLI 프로필로는 읽기 · 쓰기가 되고 인스턴스 역할로도 읽힌다. 절차를 [deployment-aws.md](./deployment-aws.md) §2 에 적었다. 첫 배포
+  전에는 `/data/compose/deploy` 가 비어 있어 시크릿 형식 확인은 체크아웃의 스크립트로 한다(같은 절).
+- **남은 것**: 테스터 앱 빌드로 폰에서 업로드 → 편집 → 재생 확인, 외부 연동 켜기 — backlog B-8.

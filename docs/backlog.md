@@ -502,14 +502,14 @@ API 라우트 `movies`·`video-analyses`, 모바일 `features/{finish-movie,rena
 저장소 쪽은 끝났다 — 키 없이 인스턴스 역할로 S3 에 붙기 · ALB 뒤 클라이언트 IP(`TRUST_PROXY`) · 단독 compose
 `docker-compose.aws.yml` · 배포 잡(`deploy.yml` 의 `deploy-aws`) · 설치 스크립트(`deploy/aws/install.sh`). 왜 이렇게 했는지는
 [decisions/aws-contest-server.md](./decisions/aws-contest-server.md), 절차는 [deployment-aws.md](./deployment-aws.md),
-기록은 [progress.md](./progress.md) 2026-10-08. 배포 방식(GitHub runner + GHCR)은 인프라 담당이 그대로 가도 된다고 답했다. 남은 것:
+기록은 [progress.md](./progress.md) 2026-10-08. 배포 방식(GitHub runner + GHCR)은 인프라 담당이 그대로 가도 된다고 답했다.
+**2026-10-08 첫 배포 완료** — runner 설치 · 시크릿 · `DEPLOY_AWS_ENABLED` 를 마쳤고 main 머지가 이 서버로 배포된다
+(`https://snaply-api.dweaxai.com/health` → `db=connected`). 남은 것:
 
-- [ ] **`서버작업`** `deploy/aws/install.sh` 실행 — runner 등록 토큰이 필요하다. Runners 화면에 `dweax-snaply` 가 Idle 이면 끝
-      (deployment-aws.md §1)
-- [ ] **`서버작업`** 시크릿 채우기 — 요청서 4장 목록. `POSTGRES_PASSWORD` 는 영숫자만, `FIREBASE_SERVICE_ACCOUNT_KEY` 는 base64 한 줄
-      (deployment-aws.md §2)
-- [ ] **`설정`** 저장소 Variables 에 `DEPLOY_AWS_ENABLED=true` → 첫 배포 확인. 포크 PR 워크플로 승인을 "모든 외부 협업자"로
-      올리기(저장소가 public — deployment-aws.md §3)
+- [ ] **테스터 앱 빌드** — `EXPO_PUBLIC_API_BASE_URL=https://snaply-api.dweaxai.com` 으로 빌드해 폰에서 업로드 → 편집 → 재생을 확인한다
+      (완료 조건)
+- [ ] **외부 연동 켜기** — RevenueCat · AdMob · Instagram · TikTok 콘솔에 콜백 · 웹훅 주소를 등록한 뒤 시크릿을 채운다
+      (deployment-aws.md §2). 지금은 비어 있어 mock · 꺼짐이다
 - [ ] **사내 서버(B-1)와의 관계** — 대체인지 공모전 동안 병행인지 정하고, 결정 문서와 배포 절차를 그에 맞춘다
 - [ ] **TikTok 게시** — 버킷이 퍼블릭 차단이고 CloudFront 가 없어 미디어 호스트의 URL prefix 검증(D-3) 파일을 둘 곳이 없다.
       공모전 시연에 필요하면 인프라에 CloudFront(또는 검증 경로 공개)를 요청하거나 C-3(직접 업로드)으로 간다

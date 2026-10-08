@@ -59,6 +59,20 @@
 값은 Secrets Manager `dweax/service/snaply/env` 하나(키-값 JSON)에 둔다. 넣고 바꾸는 법은 인프라 문서 5-5 —
 **받아서 고친 뒤 통째로 올린다.** 한 키만 보내면 나머지가 모두 사라진다.
 
+**콘솔에서는 고칠 수 없다.** snaply 역할에 `DescribeSecret`·`ListSecrets` 가 없어 Secrets Manager 화면이 열리지 않고 CloudShell
+도 막혀 있다(2026-10-08). 인프라 문서 4장의 CLI 프로필(`dweax-snaply`)로 내 컴퓨터에서 한다 — 읽기 · 쓰기는 된다.
+
+```bash
+(umask 077; aws secretsmanager get-secret-value --profile dweax-snaply --secret-id dweax/service/snaply/env --query SecretString --output text | jq . > ~/snaply-env.json)
+nano ~/snaply-env.json        # 값만 고친다. TextEdit 은 따옴표를 바꿔 JSON 을 깨뜨린다
+jq -r 'keys[]' ~/snaply-env.json
+aws secretsmanager put-secret-value --profile dweax-snaply --secret-id dweax/service/snaply/env --secret-string file://$HOME/snaply-env.json && rm ~/snaply-env.json
+```
+
+인프라가 요청서 4장의 키를 빈 값으로 만들어 두었다(`LEGAL_CONTACT_EMAIL` 은 없어 더해야 한다). `POSTGRES_PASSWORD` 와
+`SNS_TOKEN_ENCRYPTION_KEY` 는 한 번 정하면 바꾸지 않는다 — Postgres 는 첫 기동 때만 비밀번호를 정하고, 암호화 키가 바뀌면
+저장된 SNS 토큰을 못 읽는다.
+
 - **넣는 키**: [`env-spec.ts`](../apps/api/src/env-spec.ts) 에서 `origin` 이 `local` 이 아닌 것 중 쓰는 것과
   `POSTGRES_PASSWORD`(접속 URL 에 들어가므로 영숫자만). 목록은 요청서 4장.
 - **넣지 않는 키**: compose 가 정한다 — `DATABASE_URL` · `DIRECT_URL` · `REDIS_URL` · `NODE_ENV` · `API_PORT` ·
@@ -73,6 +87,9 @@
 
 바꾼 값은 다음 배포에 반영된다. 기다리지 않으려면 셸에서 env 파일을 다시 만들고 컨테이너를 다시 올린다(§6 의 셸에서
 `deploy/aws/write-env.sh` → `docker compose --env-file .env up -d`).
+
+첫 배포 전에는 `/data/compose/deploy` 가 비어 있다(배포가 채운다). 그때 형식을 미리 보려면 §1 에서 받은 체크아웃의 스크립트를
+쓴다 — `sudo -u snaply /tmp/snaply/deploy/aws/write-env.sh` 가 "N개 키를 … 썼다"를 내면 된다.
 
 ## 3. 배포
 
