@@ -1,0 +1,136 @@
+{
+  "_note": "스냅 내용 어휘의 초안이다 — 계획 docs/plans/content-vocabulary.md. 채택 전에는 packages/shared-types/src 로 옮기지 않는다: 워커의 tests/test_vocabulary.py 가 그 디렉터리의 *-vocabulary.json 을 기동 필수 목록(REQUIRED)과 맞추므로, 옮기는 순간 워커가 이 파일을 검증하며 뜬다. 채택하면 content-vocabulary.json 으로 옮기고 TS 로더·정합성 테스트·REQUIRED 를 같은 변경에서 더한다.",
+
+  "contentVocabularyVersion": 1,
+
+  "_fieldsNote": "분석 결과의 목록 필드와 같은 이름이다. 개념 id 는 필드 안에서만 유일하다 — places 의 car(차)와 objects 의 tea(차)는 다른 개념이고, 매칭도 같은 필드끼리만 한다. moods 는 매칭에 쓰지 않아 넣지 않았다.",
+  "fields": ["places", "objects", "actions", "topics"],
+
+  "_normalizeNote": "분석의 자유 문자열 하나를 개념 하나로 바꾸는 규칙(계획 §3). ① 앞뒤 공백을 지우고 연속 공백을 하나로 만든 값 전체가 별칭이면 그 개념. ② 아니면 공백으로 나눈 낱말을 오른쪽(한국어 명사구·동사구의 머리)부터 보며 처음 맞는 하나. 머리가 아닌 낱말은 별칭이 아니면 끝의 조사를 하나 떼어 남은 것이 별칭인지 본다 — 떼어 낸 결과가 별칭일 때만 받는다. 머리 낱말은 조사를 떼지 않는다(머리에는 조사가 거의 붙지 않고, 떼면 '강의'가 '강'이 된다). ③ 맞는 것이 없으면 사전 밖이다(매칭에 쓰지 않고 집계에만 남긴다). 부분 문자열은 보지 않는다. label 도 별칭으로 친다.",
+  "normalize": {
+    "particles": ["에서", "으로", "에게", "까지", "부터", "에", "을", "를", "이", "가", "은", "는", "과", "와", "의", "로", "도", "만"]
+  },
+
+  "_matchNote": "슬롯 힌트의 개념 H 와 스냅의 개념 A 를 잰다. A 가 H 이거나 H 의 하위 개념이면 narrower(카페는 가게다 — 가게 슬롯을 온전히 채운다), A 가 H 의 상위 개념이면 broader(가게라고만 했으면 카페일 수도 있다), 그 밖은 0. 힌트 하나의 점수는 스냅 개념 중 가장 높은 값이고, keyword 점수는 지금처럼 힌트 점수의 평균이다. broader 0.5 는 잠정값이다.",
+  "match": { "exact": 1, "narrower": 1, "broader": 0.5 },
+
+  "_roleNote": "roleAffinity 는 이 개념이 보이는 컷이 맡기 좋은 컷 역할(cut-role-vocabulary.json 의 역할 이름)이다. 하위 개념은 상위의 값을 물려받고, 자기 값이 있으면 그것을 쓴다. 매칭에는 쓰지 않는다 — edit-director 의 역할 판정을 바꾸는 계획 §6 의 단계에서 쓴다.",
+
+  "concepts": {
+    "places": {
+      "home": { "label": "집", "aliases": ["자택", "우리 집"] },
+      "entrance_hall": { "label": "현관", "parent": "home", "aliases": ["현관 앞"] },
+      "living_room": { "label": "거실", "parent": "home", "aliases": [] },
+      "bedroom": { "label": "침실", "parent": "home", "aliases": ["방", "침대"] },
+      "kitchen": { "label": "주방", "parent": "home", "aliases": ["부엌"] },
+      "office": { "label": "사무실", "aliases": ["회사", "사무 공간"] },
+      "school": { "label": "학교", "aliases": ["교실", "강의실", "캠퍼스"] },
+
+      "street": { "label": "거리", "roleAffinity": "establish", "aliases": ["길", "길거리", "도심"] },
+      "alley": { "label": "골목", "parent": "street", "aliases": ["골목길"] },
+      "residential_area": { "label": "주택가", "parent": "street", "aliases": ["동네"] },
+      "road": { "label": "도로", "parent": "street", "aliases": ["차도", "고속도로", "교차로"] },
+      "square": { "label": "광장", "parent": "street", "aliases": [] },
+      "entrance": { "label": "입구", "aliases": ["출입구", "정문"] },
+
+      "station": { "label": "역", "roleAffinity": "establish", "aliases": ["전철역"] },
+      "subway_station": { "label": "지하철역", "parent": "station", "aliases": ["지하철 역"] },
+      "train_station": { "label": "기차역", "parent": "station", "aliases": ["기차 역"] },
+      "bus_stop": { "label": "버스 정류장", "parent": "station", "aliases": ["정류장", "버스정류장"] },
+
+      "vehicle": { "label": "교통수단", "aliases": ["탈것"] },
+      "train": { "label": "기차", "parent": "vehicle", "aliases": ["열차", "기차 안", "KTX"] },
+      "bus": { "label": "버스", "parent": "vehicle", "aliases": ["버스 안"] },
+      "car": { "label": "차", "parent": "vehicle", "aliases": ["자동차", "차 안", "택시"] },
+      "subway": { "label": "지하철", "parent": "vehicle", "aliases": ["전철", "지하철 안"] },
+
+      "shop": { "label": "가게", "aliases": ["상점", "매장", "점포"] },
+      "cafe": { "label": "카페", "parent": "shop", "aliases": ["커피숍", "커피 전문점"] },
+      "restaurant": { "label": "식당", "parent": "shop", "aliases": ["음식점", "레스토랑", "맛집", "분식집"] },
+      "bakery": { "label": "빵집", "parent": "shop", "aliases": ["베이커리", "제과점"] },
+      "convenience_store": { "label": "편의점", "parent": "shop", "aliases": [] },
+      "market": { "label": "시장", "parent": "shop", "aliases": ["전통시장", "재래시장"] },
+
+      "scenery": { "label": "풍경", "roleAffinity": "establish", "aliases": ["경치", "전망", "야경", "뷰"] },
+      "viewpoint": { "label": "전망대", "parent": "scenery", "aliases": [] },
+      "park": { "label": "공원", "parent": "scenery", "aliases": [] },
+      "trail": { "label": "산책로", "parent": "park", "aliases": ["둘레길"] },
+      "river": { "label": "강", "parent": "scenery", "aliases": ["강변", "한강", "하천", "개울"] },
+      "sea": { "label": "바다", "parent": "scenery", "aliases": ["바닷가", "해변", "해수욕장", "해안"] },
+      "mountain": { "label": "산", "parent": "scenery", "aliases": ["등산로", "산길"] },
+
+      "tourist_spot": { "label": "관광지", "roleAffinity": "establish", "aliases": ["명소", "랜드마크"] },
+      "exhibition": { "label": "전시", "parent": "tourist_spot", "aliases": ["전시장", "전시회", "미술관", "박물관", "갤러리"] }
+    },
+
+    "objects": {
+      "door": { "label": "문", "aliases": ["현관문", "출입문"] },
+      "stairs": { "label": "계단", "aliases": ["층계"] },
+      "exit": { "label": "출구", "aliases": ["지하철 출구"] },
+      "wall": { "label": "벽", "aliases": ["담", "담장", "벽면", "외벽", "돌담"] },
+      "signboard": { "label": "간판", "roleAffinity": "detail", "aliases": ["네온사인"] },
+      "display_window": { "label": "진열장", "roleAffinity": "detail", "aliases": ["쇼윈도", "진열대", "쇼케이스"] },
+      "building": { "label": "건물", "aliases": ["빌딩", "건축물", "아파트"] },
+      "tree": { "label": "나무", "aliases": ["가로수", "나뭇잎"] },
+      "sky": { "label": "하늘", "aliases": ["구름"] },
+      "sunset": { "label": "노을", "parent": "sky", "aliases": ["일몰", "석양", "해질녘"] },
+      "window": { "label": "창", "aliases": ["창문", "창가", "차창"] },
+      "bedding": { "label": "이불", "aliases": ["침구", "담요", "베개"] },
+      "lighting": { "label": "조명", "aliases": ["전등", "무드등", "스탠드"] },
+      "menu": { "label": "메뉴판", "roleAffinity": "detail", "aliases": ["메뉴", "가격표", "칠판", "메뉴 보드"] },
+
+      "drink": { "label": "음료", "roleAffinity": "detail", "aliases": ["음료수", "주스"] },
+      "coffee": { "label": "커피", "parent": "drink", "aliases": ["아메리카노", "라떼", "카페라떼", "에스프레소", "카푸치노"] },
+      "tea": { "label": "차", "parent": "drink", "aliases": ["녹차", "홍차"] },
+      "food": { "label": "음식", "roleAffinity": "detail", "aliases": ["요리"] },
+      "dessert": { "label": "디저트", "parent": "food", "aliases": ["후식", "마카롱", "쿠키", "아이스크림"] },
+      "cake": { "label": "케이크", "parent": "dessert", "aliases": ["조각 케이크"] },
+      "bread": { "label": "빵", "parent": "food", "aliases": ["베이글", "크루아상"] },
+      "tableware": { "label": "식기", "roleAffinity": "detail", "aliases": [] },
+      "cup": { "label": "잔", "parent": "tableware", "aliases": ["컵", "머그", "머그잔", "유리잔", "텀블러"] },
+      "bowl": { "label": "그릇", "parent": "tableware", "aliases": ["접시"] },
+
+      "seat": { "label": "좌석", "aliases": ["자리"] },
+      "chair": { "label": "의자", "parent": "seat", "aliases": [] },
+      "sofa": { "label": "소파", "parent": "seat", "aliases": ["카우치"] },
+      "table": { "label": "테이블", "aliases": ["탁자", "식탁"] },
+      "desk": { "label": "책상", "aliases": [] },
+      "hand": { "label": "손", "aliases": ["손가락"] },
+      "person": { "label": "사람", "roleAffinity": "people", "aliases": ["인물", "행인"] },
+      "child": { "label": "아이", "parent": "person", "aliases": ["어린이", "아기"] },
+
+      "device": { "label": "전자기기", "aliases": ["기기"] },
+      "smartphone": { "label": "스마트폰", "parent": "device", "aliases": ["휴대폰", "핸드폰"] },
+      "tablet": { "label": "태블릿", "parent": "device", "aliases": [] },
+      "computer": { "label": "컴퓨터", "parent": "device", "aliases": ["노트북", "데스크톱", "본체", "모니터"] },
+      "television": { "label": "텔레비전", "parent": "device", "aliases": ["TV", "티비"] }
+    },
+
+    "actions": {
+      "move": { "label": "이동", "roleAffinity": "action", "aliases": ["이동하기", "이동 중"] },
+      "walk": { "label": "걷기", "parent": "move", "aliases": ["걷는 중", "걸어가기", "산책하기", "산책"] },
+      "ride": { "label": "타기", "parent": "move", "aliases": ["탑승하기", "타고 가기"] },
+      "drink": { "label": "마시기", "aliases": ["마시는 중", "홀짝이기"] },
+      "eat": { "label": "먹기", "aliases": ["먹는 중", "식사하기", "식사", "시식"] },
+      "hold": { "label": "들기", "aliases": ["들고 있기", "손에 들기", "쥐기"] },
+      "show": { "label": "보여주기", "aliases": ["카메라에 보여주기"] },
+      "look_around": { "label": "구경하기", "aliases": ["구경", "둘러보기", "돌아보기", "관람하기", "관람"] },
+      "sit": { "label": "앉기", "aliases": ["앉아 있기", "앉아 있음"] },
+      "stand": { "label": "서 있기", "aliases": ["서 있음"] },
+      "talk": { "label": "대화하기", "aliases": ["대화", "이야기하기"] },
+      "take_photo": { "label": "촬영", "aliases": ["촬영하기", "사진 찍기"] },
+      "watch_screen": { "label": "시청", "aliases": ["시청하기"] }
+    },
+
+    "topics": {
+      "walk": { "label": "산책", "aliases": ["동네 산책"] },
+      "cafe": { "label": "카페", "aliases": ["카페 투어"] },
+      "dessert": { "label": "디저트", "aliases": [] },
+      "travel": { "label": "여행", "aliases": ["나들이"] },
+      "sightseeing": { "label": "관광", "parent": "travel", "aliases": ["투어"] },
+      "food_spot": { "label": "맛집", "aliases": ["맛집 탐방", "먹방"] },
+      "daily_life": { "label": "일상", "aliases": [] },
+      "family": { "label": "가족", "aliases": ["육아"] }
+    }
+  }
+}
