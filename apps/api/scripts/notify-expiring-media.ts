@@ -39,7 +39,7 @@ try {
   if (apply && isFcmDryRun()) {
     // 여기서 멈춘다. 계속 돌면 "발송 실패" 만 잔뜩 세고 끝나 원인이 묻힌다.
     console.error(
-      'FCM 이 dry-run 이다 (FIREBASE_SERVICE_ACCOUNT_JSON 미설정). 실제 발송은 불가능하다.',
+      'FCM 이 dry-run 이다 (FIREBASE_SERVICE_ACCOUNT_KEY 미설정). 실제 발송은 불가능하다.',
     );
     process.exitCode = 1;
   } else {
