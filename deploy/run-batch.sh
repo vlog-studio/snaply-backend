@@ -15,6 +15,9 @@ BATCH="${1:?실행할 배치 이름 (예: media:purge-expired)}"
 cd "$(dirname "$0")/.."
 
 export SNAPLY_ENV_FILE="${SNAPLY_ENV_FILE:-/etc/snaply/snaply.env}"
+# 어느 서버의 compose 인가 — 사내 서버는 base + 운영 오버레이(기본값), AWS 서버는 단독 파일이라 cron 이
+# `COMPOSE_FILE=docker-compose.aws.yml` 을 준다(deploy/aws/render-cron.sh). compose 가 이 변수를 직접 읽는다.
+export COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yml:docker-compose.prod.yml}"
 # 이미지 태그는 배포가 기록해 둔 값을 쓴다 — 지금 돌고 있는 그 버전으로 배치를 돌려야
 # 스키마와 코드가 어긋나지 않는다.
 # 읽은 값은 내보내야 compose(자식 프로세스)가 본다 — `.` 만으로는 이 셸의 변수일 뿐이다.
@@ -28,5 +31,4 @@ fi
 # `--env-file`: compose 파일의 `${…}` 치환은 서비스의 `env_file` 을 읽지 않는다 — 시크릿 파일을 직접 넘긴다.
 # `-w apps/api` 를 붙이지 않는다: 이미지의 작업 디렉터리가 이미 /app/apps/api 라, 붙이면 npm 이
 # 그 아래에서 워크스페이스를 찾다가 `No workspaces found` 로 배치가 하나도 돌지 않는다.
-exec docker compose --env-file "$SNAPLY_ENV_FILE" -f docker-compose.yml -f docker-compose.prod.yml \
-  run --rm --no-deps api npm run "$BATCH" -- --yes
+exec docker compose --env-file "$SNAPLY_ENV_FILE" run --rm --no-deps api npm run "$BATCH" -- --yes

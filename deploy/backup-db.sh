@@ -11,6 +11,9 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 export SNAPLY_ENV_FILE="${SNAPLY_ENV_FILE:-/etc/snaply/snaply.env}"
+# 어느 서버의 compose 인가 — 사내 서버는 base + 운영 오버레이(기본값), AWS 서버는 단독 파일이라 cron 이
+# `COMPOSE_FILE=docker-compose.aws.yml` 을 준다(deploy/aws/render-cron.sh). compose 가 이 변수를 직접 읽는다.
+export COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yml:docker-compose.prod.yml}"
 # postgres 에 exec 만 해도 compose 는 파일 전체를 해석한다 — 이미지 태그(`:?`)도 있어야 한다.
 # 읽은 값은 내보내야 compose(자식 프로세스)가 본다.
 if [ -f deploy/.current-images ]; then
@@ -27,8 +30,7 @@ STAMP=$(date +%Y%m%d-%H%M%S)
 OUT="$DEST/snaply-$STAMP.sql.gz"
 
 # `--env-file`: compose 파일의 `${…}` 치환은 서비스의 `env_file` 을 읽지 않는다 — 시크릿 파일을 직접 넘긴다.
-docker compose --env-file "$SNAPLY_ENV_FILE" -f docker-compose.yml -f docker-compose.prod.yml \
-  exec -T postgres pg_dump -U postgres -d snaply | gzip > "$OUT"
+docker compose --env-file "$SNAPLY_ENV_FILE" exec -T postgres pg_dump -U postgres -d snaply | gzip > "$OUT"
 
 # 비어 있는 덤프를 성공으로 치지 않는다 — pg_dump 가 죽어도 gzip 은 0 을 돌려줄 수 있다.
 if [ ! -s "$OUT" ] || [ "$(stat -c%s "$OUT")" -lt 1024 ]; then
