@@ -10,6 +10,15 @@ _client = None
 _public_client = None
 
 
+def _s3_config(endpoint):
+    """MinIO 는 path-style 이 필요하다. AWS S3 는 리전 호스트(버킷.s3.<리전>.amazonaws.com)로 고정한다.
+
+    기본값(auto)은 presigned URL 을 전역 호스트(버킷.s3.amazonaws.com)로 만든다. 만든 지 얼마 안 된
+    버킷은 거기서 307 리다이렉트를 돌려줄 수 있고, API(JS SDK)가 만드는 URL 과도 호스트가 갈린다.
+    """
+    return Config(s3={"addressing_style": "path" if endpoint else "virtual"})
+
+
 def get_client():
     global _client
     if _client is None:
@@ -19,8 +28,7 @@ def get_client():
             region_name=config.AWS_REGION,
             aws_access_key_id=config.AWS_ACCESS_KEY_ID,
             aws_secret_access_key=config.AWS_SECRET_ACCESS_KEY,
-            # MinIO는 path-style 필요
-            config=Config(s3={"addressing_style": "path"} if config.S3_ENDPOINT else {}),
+            config=_s3_config(config.S3_ENDPOINT),
         )
     return _client
 
@@ -36,7 +44,7 @@ def get_public_client():
             region_name=config.AWS_REGION,
             aws_access_key_id=config.AWS_ACCESS_KEY_ID,
             aws_secret_access_key=config.AWS_SECRET_ACCESS_KEY,
-            config=Config(s3={"addressing_style": "path"} if public_endpoint else {}),
+            config=_s3_config(public_endpoint),
         )
     return _public_client
 

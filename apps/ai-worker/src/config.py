@@ -68,8 +68,10 @@ RENDITION_CONCURRENCY = int(os.environ.get("RENDITION_CONCURRENCY", "2"))
 S3_ENDPOINT = os.environ.get("S3_ENDPOINT") or None
 S3_PUBLIC_ENDPOINT = (os.environ.get("S3_PUBLIC_ENDPOINT") or "").rstrip("/") or None
 S3_BUCKET_NAME = os.environ.get("S3_BUCKET_NAME", "")
-AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID", "")
-AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY", "")
+# 키는 MinIO(S3_ENDPOINT)용이다. AWS 서버는 비워 두고 인스턴스 역할로 붙는다 — None 이어야 boto3 가
+# 기본 체인(…→ 인스턴스 메타데이터)을 탄다. 빈 문자열을 넘기면 체인을 타지 않고 빈 키로 서명한다.
+AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID") or None
+AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY") or None
 AWS_REGION = os.environ.get("AWS_REGION", "ap-northeast-2")
 CLOUDFRONT_DOMAIN = (os.environ.get("CLOUDFRONT_DOMAIN") or "").rstrip("/") or None
 S3_DOWNLOAD_URL_EXPIRY_SECONDS = int(
