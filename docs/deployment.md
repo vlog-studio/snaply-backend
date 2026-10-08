@@ -197,3 +197,7 @@ cat deploy/.current-images  # 지금 돌고 있는 이미지 태그
 이 서버로는 사용자를 받을 수 없다. 외부 접속이 되는 곳이 생기면 추가로 필요한 것은
 **고정 HTTPS 도메인**([backlog.md](./backlog.md) D-1)과 §0 의 세 가지를 실제로 켜는 일뿐이다.
 이미지·마이그레이션·배치 구성은 그대로 간다.
+
+**2026-10-08**: 외부 접속이 되는 서버가 사내 공모전용으로 생겼다 — AWS 공모전 서버([deployment-aws.md](./deployment-aws.md)).
+이미지 · 마이그레이션 · 배치는 그대로 쓰고, compose 는 단독 파일 · 시크릿은 Secrets Manager · runner 는 그 인스턴스에 따로 둔다.
+이 서버와의 관계(대체인지 병행인지)는 [backlog.md](./backlog.md) B-8.

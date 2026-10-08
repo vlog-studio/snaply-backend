@@ -2181,3 +2181,31 @@ ffmpeg 은 첫 입력의 전역 메타데이터를 출력에 옮긴다. 휴대�
   X-Forwarded-For 별로 한도가 갈리고 앞쪽에 끼운 위조 주소는 무시됐다. 배치 4종 dry-run 과 `--yes`, `pg_dump` 가 돌았다. 확인 뒤
   스택 · 볼륨 · 이미지를 지웠다.
 - **남은 것**: 실제 인스턴스 역할로 S3 에 붙는 것은 AWS 서버에서만 볼 수 있다. 배포 잡 · 설치 스크립트 · 배포 방식 확인은 backlog B-8.
+
+## 2026-10-08 (이어서) — AWS 공모전 서버의 배포 잡과 설치 스크립트(backlog B-8)
+
+인프라 담당이 배포 방식(GitHub self-hosted runner + GHCR)을 그대로 가도 된다고 답했고, 그 전에 인스턴스에서 직접 확인했다 —
+Session Manager 셸에서 GitHub · GHCR · Docker Hub · 외부 API 로 나가는 연결이 모두 열려 있고, 인스턴스 역할로 S3 에 붙고, 컨테이너에서
+메타데이터에 닿고(IMDS 홉 2), Compose 가 v2.32.4, `/data` 가 별도 볼륨이다. 결정과 기각한 대안은
+[decisions/aws-contest-server.md](./decisions/aws-contest-server.md), 절차는 [deployment-aws.md](./deployment-aws.md).
+
+- **배포 잡** — `deploy.yml` 에 `deploy-aws` 를 더했다(`runs-on: [self-hosted, snaply-aws]`, `DEPLOY_AWS_ENABLED` 일 때만). 배포 파일을
+  `/data/compose` 로 덮어쓰고 → Secrets Manager 를 env 파일로 → GHCR 로그인(패키지가 비공개라 필요하다) → pull → 마이그레이션 → up →
+  태그 기록 → `/health` 의 `db=connected` → 72시간 넘은 이미지 정리. GitHub 에 AWS 키를 두지 않는다. 사내 서버 잡은 그대로다.
+- **`deploy/aws/`** — `install.sh`(인스턴스마다 한 번, 멱등: cron 패키지 — Amazon Linux 2023 에 기본으로 없다 —, `snaply` 계정, Docker
+  data-root 를 `/data/docker` 로 옮기고 `/data` 마운트 대기, runner 2.338.0 해시 검증 · 등록 · 서비스, cron) · `runner-job-started.sh`(작업 전
+  검사 — main 의 `deploy.yml` push 만 받는다. 저장소가 public 이고 GitHub Free 플랜에는 runner 를 워크플로로 묶는 설정이 없다) ·
+  `write-env.sh`(빈 값은 빼고 값은 작은따옴표로 — compose 가 글자 그대로 읽는다. 작은따옴표 · 줄바꿈이 든 값은 거부) · `render-cron.sh`
+  (`batches.cron` 에서 경로만 바꾼다 — 배치 시각의 원천은 하나다).
+- **배치 · 백업 스크립트가 compose 파일을 고른다** — `run-batch.sh` · `backup-db.sh` 가 `-f` 대신 `COMPOSE_FILE`(기본값은 사내 서버의 두 파일)을
+  쓴다. AWS cron 이 `docker-compose.aws.yml` 을 준다.
+- **만료 예고 배치의 안내 문구** — FCM 이 꺼져 멈출 때 `FIREBASE_SERVICE_ACCOUNT_JSON` 미설정이라고 했는데 그런 변수는 없다.
+  `FIREBASE_SERVICE_ACCOUNT_KEY` 로 고쳤다.
+- **검증**: shellcheck 통과. actionlint 는 새 잡에서도 사용자 정의 라벨(`snaply-aws`) 경고만 — main 의 `snaply` 와 같은 종류다.
+  Amazon Linux 2023 컨테이너에서 스크립트 동작 29건(작업 전 검사가 브랜치 · 다른 워크플로 · PR · 수동 실행 · 포크 · 변수 없음을 거부, cron
+  시각이 `batches.cron` 과 같음, env 변환이 빈 값 · null 을 빼고 숫자 · 불리언을 문자열로, `$` · `#` · 공백을 보존, 한 줄 JSON 키가 PEM 으로
+  풀림, 권한 600, 작은따옴표 · 줄바꿈 · 잘못된 키 이름 · 빈 `POSTGRES_PASSWORD` · 객체가 아닌 시크릿 거부). 같은 컨테이너에 서버와 같은
+  Compose v2.32.4 를 깔고 `deploy-aws` 단계를 그대로 두 번 돌렸다(인프라처럼 빈 키 9개를 섞은 시크릿, 로컬 빌드 이미지): 마이그레이션 →
+  일곱 서비스 기동 → `db=connected`, 두 번째도 같고 태그 기록이 남았다. 빈 키는 빠져 `/health` 가 429 없이 200 이었다. 이어서 cron 환경 그대로
+  배치 4종과 백업이 돌았다(만료 예고는 FCM 키가 없어 의도대로 멈췄고, 그 안내 문구가 위 결함이었다). 확인 뒤 스택 · 볼륨 · 이미지를 지웠다.
+- **남은 것**: runner 설치 · 시크릿 · `DEPLOY_AWS_ENABLED` 는 서버에서 하는 일이다 — backlog B-8. 실제 runner 위의 첫 배포는 아직이다.

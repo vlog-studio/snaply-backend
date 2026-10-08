@@ -59,7 +59,8 @@
 | [product-concept.md](product-concept.md) | 제품 방향 — 필름 은유를 걷고 스튜디오(작업대형)를 채택, 이름(스냅·무비·컷·초안 무비·스튜디오·나), 원본/조합 모델, 무비 한 화면·실행 밖 편집·순서 고정 | 완료 |
 | [movie-model.md](movie-model.md) | 영상 묶음은 평면 `Video`를 참조하는 `Movie` 엔티티 | 완료(서버 2026-09-09 · 앱 전환 2026-09-12). 세부 규칙은 movie-export-policy |
 | [on-prem-deployment.md](on-prem-deployment.md) | 팀 공용 통합 서버를 사내 물리 서버 한 대에 compose 로 올린다 — DB 는 서버 컨테이너(Supabase 는 Auth 전용), 배포는 self-hosted runner | 저장소 쪽 완료(2026-09-15). 서버 작업은 B-1 |
-| [env-management.md](env-management.md) | 로컬은 `apps/api/.env`, 운영은 서버 측 주입(플랫폼 시크릿 — 사내 서버는 root 전용 파일) | 완료 |
+| [aws-contest-server.md](aws-contest-server.md) | 공모전 테스트 서버를 인프라팀 EC2 에 올린다 — GitHub self-hosted runner + GHCR(main 배포만 받음), S3 는 인스턴스 역할, 단독 compose, Secrets Manager → 배포 때 env 파일 | 저장소 쪽 완료(2026-10-08). 서버 작업은 B-8 |
+| [env-management.md](env-management.md) | 로컬은 `apps/api/.env`, 운영은 서버 측 주입(플랫폼 시크릿 — 사내 서버는 root 전용 파일, AWS 서버는 Secrets Manager 에서 배포 때 만든 파일) | 완료 |
 
 ## 과거 결정 — 일부 또는 전부 대체됨
 

@@ -499,19 +499,17 @@ API 라우트 `movies`·`video-analyses`, 모바일 `features/{finish-movie,rena
 접속은 Session Manager. 바깥에서 닿으므로 SNS · 결제 · 광고를 실제로 켤 수 있다(D-1 의 도메인 조건을 이 서버가 채운다).
 공모전이 끝나면 내린다.
 
-저장소 쪽은 키 없이 인스턴스 역할로 S3 에 붙기 · ALB 뒤 클라이언트 IP(`TRUST_PROXY`) · 단독 compose
-`docker-compose.aws.yml` 까지 끝났다([progress.md](./progress.md) 2026-10-08). 남은 것:
+저장소 쪽은 끝났다 — 키 없이 인스턴스 역할로 S3 에 붙기 · ALB 뒤 클라이언트 IP(`TRUST_PROXY`) · 단독 compose
+`docker-compose.aws.yml` · 배포 잡(`deploy.yml` 의 `deploy-aws`) · 설치 스크립트(`deploy/aws/install.sh`). 왜 이렇게 했는지는
+[decisions/aws-contest-server.md](./decisions/aws-contest-server.md), 절차는 [deployment-aws.md](./deployment-aws.md),
+기록은 [progress.md](./progress.md) 2026-10-08. 배포 방식(GitHub runner + GHCR)은 인프라 담당이 그대로 가도 된다고 답했다. 남은 것:
 
-- [ ] **배포 방식 확인(인프라)** — 요청서는 GitHub self-hosted runner + GHCR 을 물었는데 인프라 문서 6-5 는 사내 GitLab runner 로
-      적혀 있다. 허용되면 runner 를 `main` 배포 잡 전용으로 묶는 방법도 정한다(인프라 문서는 보호된 브랜치 전용을 요구한다 —
-      지금은 다른 브랜치의 워크플로도 `[self-hosted, snaply]` 로 이 호스트에서 돌 수 있다)
-- [ ] **배포 잡** — Secrets Manager → `/data/compose/.env` 변환 뒤 `docker-compose.aws.yml` 로 pull · migrate · up · 헬스체크.
-      변환에서 **빈 값은 뺀다**: 인프라가 키를 빈 값으로 만들어 두었고, 코드에는 빈 문자열을 미설정으로 보지 않는 곳이 있다 —
-      빈 `LOG_LEVEL` 은 기동 실패, 빈 `RATE_LIMIT_GLOBAL_MAX` 는 모든 요청 429(`/health` 포함 → 502), 빈 큐 이름은 이름 없는 큐
-- [ ] **설치 스크립트**(인스턴스 교체 대비, 인프라 문서 6-6) — Docker data-root `/data/docker` 와 마운트 대기(6-2), runner 등록, cron.
-      `deploy/run-batch.sh` · `deploy/backup-db.sh` 는 사내 서버 compose 에 고정이라 compose 파일을 고를 수 있어야 하고,
-      백업은 `SNAPLY_BACKUP_DIR=/data/backup`
-- [ ] **시크릿 채우기** — 요청서 4장 목록. `POSTGRES_PASSWORD` 는 접속 URL 에 들어가므로 영숫자만
+- [ ] **`서버작업`** `deploy/aws/install.sh` 실행 — runner 등록 토큰이 필요하다. Runners 화면에 `dweax-snaply` 가 Idle 이면 끝
+      (deployment-aws.md §1)
+- [ ] **`서버작업`** 시크릿 채우기 — 요청서 4장 목록. `POSTGRES_PASSWORD` 는 영숫자만, `FIREBASE_SERVICE_ACCOUNT_KEY` 는 base64 한 줄
+      (deployment-aws.md §2)
+- [ ] **`설정`** 저장소 Variables 에 `DEPLOY_AWS_ENABLED=true` → 첫 배포 확인. 포크 PR 워크플로 승인을 "모든 외부 협업자"로
+      올리기(저장소가 public — deployment-aws.md §3)
 - [ ] **사내 서버(B-1)와의 관계** — 대체인지 공모전 동안 병행인지 정하고, 결정 문서와 배포 절차를 그에 맞춘다
 - [ ] **TikTok 게시** — 버킷이 퍼블릭 차단이고 CloudFront 가 없어 미디어 호스트의 URL prefix 검증(D-3) 파일을 둘 곳이 없다.
       공모전 시연에 필요하면 인프라에 CloudFront(또는 검증 경로 공개)를 요청하거나 C-3(직접 업로드)으로 간다
