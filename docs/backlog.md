@@ -819,14 +819,6 @@ Supabase 로 DB 에 직접 닿을 수 있는 공유 Supabase DB 를 쓸 때뿐�
 2026-10-09 문서 전수 감사에서 나온, 코드 동작은 그대로이고 **규칙이나 문서를 어느 쪽으로 맞출지만 정하면 되는** 판단이다.
 각 항목에 배경 · 선택지 · 권장(있으면) · 완료 조건을 적었다. 정하면 해당 문서(와 필요한 경우 코드 · 테스트)를 고치고 닫는다.
 
-### H-6. 모바일 로컬 개발 문서의 환경 프로필
-
-[local-development-and-testing.md](../apps/mobile/docs/workflows/local-development-and-testing.md)의 명령 예시가 구형 Intel Mac 기준이다
-(Xcode 16.4, `iPhone 16` 시뮬레이터, AVD `Pixel_API_35`, `~/.expo` 캐시의 `Expo-Go-57.0.4`). 지금 작업하는 Mac 은 Xcode 27 ·
-`iPhone 17` · AVD `snaply_api35` 이고 Expo Go 를 api.expo.dev 에서 받는다. 코드로는 확인할 수 없어 정리 때 고치지 않았다.
-
-**완료 조건**: 지금 프로필을 기본으로 바꾸거나 두 프로필을 함께 적는다(구형 장비가 더는 없으면 구형 절을 걷는다).
-
 ### H-8. `runOnJS` 와 `scheduleOnRN`
 
 [animations-and-gestures.md](../apps/mobile/docs/frameworks/animations-and-gestures.md)는 UI 스레드에서 JS 로 넘길 때 `runOnJS` 를
@@ -956,6 +948,7 @@ Supabase 로 DB 에 직접 닿을 수 있는 공유 Supabase DB 를 쓸 때뿐�
 - **H-3** `movie-snap-expiry-exemption.md` 의 형식(잠정 결정 유지 + 결정 기록 표, 인덱스는 결정 완료로) — 2026-10-10 → progress 2026-10-10 "만료 예외 결정 문서에 결정 기록을 채운다"
 - **H-4** 테스트의 한국어 문자열 이스케이프 관례(리터럴 · 이스케이프 둘 다 허용) — 2026-10-10 → progress 2026-10-10 "테스트의 한국어는 리터럴도 된다"
 - **H-5** 배포 문서 두 개를 합칠지 — 2026-10-09 사내 서버를 접으며 `docs/deployment.md` 가 보관돼 [deployment-aws.md](./deployment-aws.md) 하나가 됐다 → progress 2026-10-09 "사내 서버를 접고 배포 대상을 AWS 하나로"
+- **H-6** 모바일 로컬 개발 문서의 환경 프로필(지금 Mac 을 기본으로, 구형 프로필은 표에) — 2026-10-10 → progress 2026-10-10 "모바일 로컬 개발 문서를 지금 Mac 에 맞춘다"
 - **H-7** 모바일 런타임 에셋의 위치 규칙(이미지 · 폰트는 루트 `assets`, `@/assets/*`) — 2026-10-10 → progress 2026-10-10 "모바일 에셋은 루트 assets 에 둔다"
 - **H-9** ONBOARDING 의 "모노레포 통합 이전에 분기한 브랜치" 절(한 줄로) — 2026-10-10 → progress 2026-10-10 "ONBOARDING 의 통합 전 브랜치 절을 걷는다"
 - **H-10** 결정 문서의 결정 ID 가 백로그 ID 와 같은 모양이다(`V3-A1` 꼴로) — 2026-10-10 → progress 2026-10-10 "editSpec v3 결정 ID 에 접두를 붙인다"

@@ -35,31 +35,37 @@ The project does not prohibit `expo run:ios` on every development machine. The r
 
 On a legacy machine limited to Xcode 16.4, use **Expo Go** ([below](#ios-simulator--expo-go)) as the iOS runtime; Android runs a dev build on every machine ([below](#android-emulator--dev-build)). Use **EAS Build** when a feature depends on native modules that Expo Go does not include.
 
-The command examples below were validated with this legacy-machine profile. Adjust simulator names, SDK paths, and AVD names for the machine in use:
+The command examples below use the **current machine's** names; substitute the legacy names where they differ. Expo CLI 57.x on both.
 
-- iOS: Xcode 16.4 + iOS 18.6 simulators, CocoaPods 1.17.0 (via Homebrew).
-- Android: Android SDK at `~/Library/Android/sdk`, Android Studio, JDK 17, system image `system-images;android-35;default;x86_64`, and the AVD **`Pixel_API_35`**.
-- Expo CLI 57.x.
+| | Current — Apple silicon Mac mini (2026-09) | Legacy — Intel Mac |
+| --- | --- | --- |
+| iOS | Xcode 27 (Swift 6.4) + iOS 27 simulators, device `iPhone 17` (402×874 pt). No CocoaPods, so iOS still runs in Expo Go here. There is no `Simulator.app`: open the device window with `open /Applications/Xcode.app/Contents/Applications/DeviceHub.app` | Xcode 16.4 + iOS 18.6 simulators, device `iPhone 16` (393×852 pt), CocoaPods 1.17.0 (Homebrew); `open -a Simulator` |
+| Android | SDK at `~/Library/Android/sdk`, image `system-images/android-35/google_apis/arm64-v8a`, AVD **`snaply_api35`** — written by hand under `~/.android/avd/`, since this SDK has no cmdline-tools (`avdmanager`) | Same SDK path with Android Studio and JDK 17, image `system-images;android-35;default;x86_64`, AVD **`Pixel_API_35`** |
+| Expo Go (iOS) | Not in the CLI's cache — download the SDK 57 client ([below](#first-time-expo-go-install)) | `~/.expo/ios-simulator-app-cache/Expo-Go-57.0.4.tar.app` |
 
 ## iOS Simulator — Expo Go
 
 Expo Go is the iOS Simulator path (and the only iOS path on a legacy machine, [above](#environment-and-legacy-macos-limitation)). Android does not use it ([Expo Go limitations](#expo-go-limitations)); the Android emulator runs a dev build ([below](#android-emulator--dev-build)).
 
 ```bash
-xcrun simctl boot "iPhone 16"; open -a Simulator
+xcrun simctl boot "iPhone 17"; open /Applications/Xcode.app/Contents/Applications/DeviceHub.app
 npx expo start --go                                      # Metro in Expo Go mode
-xcrun simctl openurl "iPhone 16" "exp://127.0.0.1:8081"
+xcrun simctl openurl "iPhone 17" "exp://127.0.0.1:8081"
 ```
 
-Pressing `i` in the Metro terminal opens the app on the booted simulator; the `openurl` line is the non-interactive equivalent.
+Pressing `i` in the Metro terminal opens the app on the booted simulator; the `openurl` line is the non-interactive equivalent, and the simulator asks to confirm opening it in Expo Go (tap 열기).
 
 ### First-time Expo Go install
 
-Expo Go must be present on the simulator before the app can open, and it only needs installing once per simulator (from the CLI's cached client):
+Expo Go must be present on the simulator before the app can open, and it only needs installing once per simulator. On the current machine the CLI has no cached client, so download the SDK 57 one named by Expo's versions API — the tarball holds the *contents* of the app, so extract it into an `Expo Go.app` directory:
 
 ```bash
-xcrun simctl install "iPhone 16" ~/.expo/ios-simulator-app-cache/Expo-Go-57.0.4.tar.app
+URL=$(curl -s https://api.expo.dev/v2/versions | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s).sdkVersions["57.0.0"].iosClientUrl))')
+mkdir -p "/tmp/expo-go/Expo Go.app" && curl -sL "$URL" | tar -xz -C "/tmp/expo-go/Expo Go.app"
+xcrun simctl install "iPhone 17" "/tmp/expo-go/Expo Go.app"
 ```
+
+On the legacy machine, install the CLI's cached client instead: `xcrun simctl install "iPhone 16" ~/.expo/ios-simulator-app-cache/Expo-Go-57.0.4.tar.app`.
 
 After install, Expo Go stays on the simulator across sessions; just re-run `npx expo start --go` and reopen the app.
 
@@ -73,12 +79,12 @@ After install, Expo Go stays on the simulator across sessions; just re-run `npx 
 ```bash
 IDB=~/.venvs/fb-idb/bin/idb
 $IDB list-targets                                   # find the booted simulator UDID
-$IDB ui tap 285 723 --udid <UDID>                   # coordinates in device points (iPhone 16: 393x852)
+$IDB ui tap 285 723 --udid <UDID>                   # coordinates in device points (iPhone 17: 402x874)
 $IDB ui swipe 200 600 200 300 --udid <UDID>         # scroll
 $IDB ui text "hello" --udid <UDID>                  # type into the focused field
 ```
 
-Verify each interaction with `xcrun simctl io "iPhone 16" screenshot <path>`. To bypass permission dialogs during automation, grant them directly: `xcrun simctl privacy booted grant camera host.exp.Exponent` (same for `microphone`).
+Verify each interaction with `xcrun simctl io "iPhone 17" screenshot <path>`. To bypass permission dialogs during automation, grant them directly: `xcrun simctl privacy booted grant camera host.exp.Exponent` (same for `microphone`).
 
 ### Expo Go limitations
 
@@ -93,7 +99,7 @@ Reanimated `entering` presets never start on iOS in Expo Go; the rule, `FadeInVi
 Boot the emulator, then build, install, and open the dev build with `npm run android` (`expo run:android`):
 
 ```bash
-~/Library/Android/sdk/emulator/emulator -avd Pixel_API_35 -no-snapshot-save &
+~/Library/Android/sdk/emulator/emulator -avd snaply_api35 -no-snapshot-save &
 # wait until the emulator reports boot complete:
 until ~/Library/Android/sdk/platform-tools/adb -s emulator-5554 shell getprop sys.boot_completed 2>/dev/null | grep -q 1; do sleep 3; done
 npm run android
@@ -109,7 +115,7 @@ If physical Android devices are also connected over adb, target the emulator exp
 - iOS reload: `Cmd+R`; dev menu: `Ctrl+D`. Android reload: `R` `R`; dev menu: `Cmd+M`.
 - Capture screens to confirm a change rendered:
   ```bash
-  xcrun simctl io "iPhone 16" screenshot /tmp/ios.png
+  xcrun simctl io "iPhone 17" screenshot /tmp/ios.png
   ~/Library/Android/sdk/platform-tools/adb -s emulator-5554 exec-out screencap -p > /tmp/android.png
   ```
 
@@ -146,4 +152,4 @@ When Expo Go is insufficient, build a simulator/emulator dev client in the cloud
 ## Notes
 
 - `ios/` and `android/` are git-ignored (managed workflow). A `prebuild` may generate `ios/`; do not commit it.
-- To stop: Android — `adb -s emulator-5554 emu kill`; iOS — `xcrun simctl shutdown "iPhone 16"`. Never free port 8081 without asking (see [Verification surfaces](#verification-surfaces-read-first)): the Metro on it may be the one the owner started for their own device session.
+- To stop: Android — `adb -s emulator-5554 emu kill`; iOS — `xcrun simctl shutdown "iPhone 17"`. Never free port 8081 without asking (see [Verification surfaces](#verification-surfaces-read-first)): the Metro on it may be the one the owner started for their own device session.
