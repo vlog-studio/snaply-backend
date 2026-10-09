@@ -2302,6 +2302,22 @@ Session Manager 셸에서 GitHub · GHCR · Docker Hub · 외부 API 로 나가�
 `render-cron.sh` 실행 확인. `README.md` 문서 지도에 현행 배포 런북 행을 추가했다 — 전에는 배포
 문서가 지도에 아예 없었다.
 
+## 2026-10-09 (이어서) — 지운 스냅의 분석 결과를 지운다(ANA-3 `구현됨`, backlog E-18 닫음)
+
+개인정보처리방침은 "영상을 삭제하면 그 영상의 분석 결과도 함께 삭제됩니다"라고 고지하는데, 서버는 지운 스냅(최근 삭제)과 만료된
+스냅의 `videos` 행을 툼스톤으로 남기고 `video_analyses` 는 행이 실제로 지워질 때만 Cascade 로 사라져서 분석 결과가 계정 삭제 때까지
+남았다(2026-10-09 문서 감사에서 발견). 고지에 코드를 맞췄다(오너 결정).
+
+- **지우는 순간 파기한다** — `deleteVideo`(`apps/api/src/services/video.service.ts`)가 휴지통에 보내는 경우와 파일을 바로 지우는 경우
+  모두 같은 트랜잭션에서 그 영상의 분석 결과를 지운다. 되살린 스냅은 분석이 필요해질 때 다시 분석된다(분석은 요청 시점에만 돈다,
+  ANA-1). 진행 중이던 분석은 워커가 결과를 쓸 행이 없어 버린다(`apps/ai-worker/src/analysis_db.py` `save_result`).
+- **정리 배치도 거둔다** — 만료 정리(`purgeVideoAssets`)와 남은 객체 회수(`purgeOrphanedObjects`, `apps/api/src/services/retention.service.ts`)가
+  로컬 신호와 함께 분석 결과를 지운다. 지우는 순간과 겹친 분석 요청이 남긴 행을 회수 배치가 거둔다.
+- **API 설명** — `DELETE /videos/{id}` 의 description 이 "무비에서 곧바로 사라진다"고 했는데 무비의 컷은 `unavailable` 로 남는다.
+  함께 고치고 분석 결과 파기를 적었다(`openapi.json` 재생성, [api-spec.md](./api-spec.md)).
+- **검증**: `video-trash.test.ts` 3건(휴지통으로 가도 · 되돌릴 수 없는 삭제도 · 되살려도 결과가 돌아오지 않는다)과 `retention.test.ts` 2건
+  (만료 정리 · 회수 배치)을 더했다. 수정을 빼면 다섯 건 모두 실패하는 것을 확인했다. `npm test -w apps/api` 41개 파일 624건 통과.
+
 ## 2026-10-09 (이어서) — 문서 전수 정리 · constitution 확정 · 팀 분담(backlog B-7 닫음)
 
 저장소 문서 약 130개를 영역 10개로 나눠 코드와 대조했다(2026-09-27 정리 이후 두 번째).

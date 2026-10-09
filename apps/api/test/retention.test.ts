@@ -34,6 +34,7 @@ import {
   ensureBucketForDev,
   getObjectSize,
 } from '../src/services/storage.service.js';
+import { ANALYSIS_VERSION } from '../src/services/video-analysis.service.js';
 import { createHarness, type Harness, type TestUser } from './helpers/harness.js';
 
 let h: Harness;
@@ -257,6 +258,47 @@ describe('로컬 신호는 파일과 함께 사라진다', () => {
     await purgeOrphanedObjects();
 
     expect(await h.prisma.videoSignals.findUnique({ where: { videoId: deleted.id } })).toBeNull();
+  });
+});
+
+/** 끝난 분석 결과 한 건 — 개인정보처리방침은 영상과 함께 파기한다고 고지한다(ANA-3). */
+async function addAnalysis(userId: string, videoId: string): Promise<void> {
+  await h.prisma.videoAnalysis.create({
+    data: { videoId, userId, analysisVersion: ANALYSIS_VERSION, status: 'done', usableForEdit: true },
+  });
+}
+
+describe('분석 결과는 파일과 함께 사라진다(ANA-3)', () => {
+  it('만료로 파일을 지우면 분석 결과도 지운다', async () => {
+    const user = await h.createUser();
+    const snapId = await snapUploadedDaysAgo(user, SNAP_RETENTION_DAYS + 1);
+    const freshId = await snapUploadedDaysAgo(user, SNAP_RETENTION_DAYS - 1);
+    await addAnalysis(user.id, snapId);
+    await addAnalysis(user.id, freshId);
+
+    await purgeExpiredSnaps();
+
+    expect(await h.prisma.videoAnalysis.count({ where: { videoId: snapId } })).toBe(0);
+    expect(await h.prisma.videoAnalysis.count({ where: { videoId: freshId } })).toBe(1);
+  });
+
+  it('지운 스냅의 파일을 회수할 때 남아 있던 분석 결과도 거둔다 — 지우는 순간과 겹친 분석 요청', async () => {
+    const user = await h.createUser();
+    const deleted = await h.prisma.video.create({
+      data: {
+        userId: user.id,
+        kind: 'source',
+        status: 'deleted',
+        s3Key: `uploads/${user.id}/${crypto.randomUUID()}.mp4`,
+        deletedAt: new Date(),
+        removalReason: 'user',
+      },
+    });
+    await addAnalysis(user.id, deleted.id);
+
+    await purgeOrphanedObjects();
+
+    expect(await h.prisma.videoAnalysis.count({ where: { videoId: deleted.id } })).toBe(0);
   });
 });
 

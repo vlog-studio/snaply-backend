@@ -6,11 +6,13 @@
  *   ② 휴지통의 스냅은 목록 · 상세에서 사라지고, 다른 기기에는 지금처럼 `removed` 로 보인다(새 상태를 만들면 예전 앱이
  *      스냅을 잘못 다룬다)
  *   ③ 되살리면 목록에 돌아오고, 보관 기간이 지났거나 파일을 남기지 않고 지운 행은 되살리지 않는다
+ *   ④ 지우면 휴지통에 가든 아니든 분석 결과는 바로 파기한다(ANA-3 — 개인정보처리방침의 고지)
  */
 import { Queue, Worker } from 'bullmq';
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { createRedisConnection } from '../src/lib/redis.js';
 import { SNAP_RETENTION_DAYS, cutoffFor, snapExpiresAt } from '../src/services/retention-policy.js';
+import { ANALYSIS_VERSION } from '../src/services/video-analysis.service.js';
 import { ensureBucketForDev } from '../src/services/storage.service.js';
 import { createHarness, type Harness, type TestUser } from './helpers/harness.js';
 
@@ -103,6 +105,63 @@ describe('DELETE /videos/:id — 휴지통에 보내기', () => {
 
     expect(res.json().data).toEqual({ deleted: true, restorableUntil: null });
     expect((await trash(user)).json().data.items).toEqual([]);
+  });
+});
+
+/** 끝난 분석 결과 한 건. */
+async function analyze(user: TestUser, videoId: string): Promise<void> {
+  await h.prisma.videoAnalysis.create({
+    data: {
+      videoId,
+      userId: user.id,
+      analysisVersion: ANALYSIS_VERSION,
+      status: 'done',
+      summary: '카페에서 음료를 든 손',
+      usableForEdit: true,
+    },
+  });
+}
+
+describe('DELETE /videos/:id — 분석 결과 파기(ANA-3)', () => {
+  it('휴지통에 가는 스냅도 분석 결과는 바로 지운다 — 남의 것과 다른 스냅의 결과는 그대로다', async () => {
+    const user = await h.createUser();
+    const other = await h.createUser();
+    const id = await snap(user, { createdAt: cutoffFor(3) });
+    const kept = await snap(user, { createdAt: cutoffFor(3) });
+    const othersId = await snap(other, { createdAt: cutoffFor(3) });
+    await analyze(user, id);
+    await analyze(user, kept);
+    await analyze(other, othersId);
+
+    const res = await del(user, id);
+
+    expect(res.json().data.restorableUntil).not.toBeNull();
+    expect(await h.prisma.videoAnalysis.count({ where: { videoId: id } })).toBe(0);
+    expect(await h.prisma.videoAnalysis.count({ where: { videoId: kept } })).toBe(1);
+    expect(await h.prisma.videoAnalysis.count({ where: { videoId: othersId } })).toBe(1);
+  });
+
+  it('되돌릴 수 없는 삭제도 분석 결과를 지운다', async () => {
+    const user = await h.createUser();
+    const id = await snap(user, { createdAt: cutoffFor(SNAP_RETENTION_DAYS + 1) });
+    await analyze(user, id);
+
+    const res = await del(user, id);
+
+    expect(res.json().data.restorableUntil).toBeNull();
+    expect(await h.prisma.videoAnalysis.count({ where: { videoId: id } })).toBe(0);
+  });
+
+  it('되살린 스냅에는 지운 분석 결과가 돌아오지 않는다 — 필요해지면 다시 분석한다', async () => {
+    const user = await h.createUser();
+    const id = await snap(user, { createdAt: cutoffFor(3) });
+    await analyze(user, id);
+
+    await del(user, id);
+    const res = await restore(user, id);
+
+    expect(res.statusCode).toBe(200);
+    expect(await h.prisma.videoAnalysis.count({ where: { videoId: id } })).toBe(0);
   });
 });
 
