@@ -2491,3 +2491,12 @@ C-7 에서 받은 회사 OpenAI 키를 로컬 개발과 AWS 서버가 함께 쓰
 [capture-flow.md](../apps/mobile/docs/features/capture-flow.md)에 적었다. 이 화면에는 테스트가 없고 문구 하나만 바뀌어 새로 더하지 않았다.
 
 - **검증**: `npm run verify:mobile` 통과(175개 스위트 1398건, lint 경고 1건은 원래 있던 것). 기기에서는 보지 않았다.
+
+## 2026-10-09 (이어서) — `API_HOST_PORT` 를 환경변수 원천에 선언한다(backlog E-22 닫음)
+
+컨테이너 스택(`docker-compose.yml`)의 api 호스트 포트 `API_HOST_PORT` 가 [`env-spec.ts`](../apps/api/src/env-spec.ts)에 없었다(AGENTS.md: 새 변수는
+env-spec 부터). `POSTGRES_HOST_PORT` 처럼 `origin: 'local'` 로 선언하고 [`.env.example`](../.env.example)에 빈 예시와 설명을 넣었다. 지금 이 값을
+읽는 곳은 `docker-compose.yml` 과, 값을 스스로 정해 넘기는 `scripts/smoke-images.sh` 다 — 백로그가 들던 배포 잡의 헬스체크는 AWS 로 옮기며 고정
+3000 을 쓰게 되어 더는 읽지 않는다.
+
+- **검증**: `npm test -w apps/api` 41개 파일 624건 통과(`env-spec.test.ts` 포함).

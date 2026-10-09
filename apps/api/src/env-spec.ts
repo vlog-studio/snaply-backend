@@ -450,6 +450,13 @@ export const ENV_VARS = [
     description: 'bind 주소. 기본 0.0.0.0',
   },
   {
+    key: 'API_HOST_PORT',
+    required: false,
+    origin: 'local',
+    description:
+      'docker-compose.yml(컨테이너 스택)의 api 호스트 포트. 기본 3000. 코드가 아니라 compose 가 읽는다 — scripts/smoke-images.sh 는 스스로 정해 넘긴다',
+  },
+  {
     key: 'API_BASE_URL',
     required: false,
     origin: 'local',
