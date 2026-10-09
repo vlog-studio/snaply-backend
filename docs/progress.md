@@ -2221,3 +2221,14 @@ Session Manager 셸에서 GitHub · GHCR · Docker Hub · 외부 API 로 나가�
   CLI 프로필로는 읽기 · 쓰기가 되고 인스턴스 역할로도 읽힌다. 절차를 [deployment-aws.md](./deployment-aws.md) §2 에 적었다. 첫 배포
   전에는 `/data/compose/deploy` 가 비어 있어 시크릿 형식 확인은 체크아웃의 스크립트로 한다(같은 절).
 - **남은 것**: 테스터 앱 빌드로 폰에서 업로드 → 편집 → 재생 확인, 외부 연동 켜기 — backlog B-8.
+
+## 2026-10-09 — 편집 진행률 WebSocket 이 ALB 유휴 제한을 넘기지 않는다(backlog B-8)
+
+인프라 문서("snaply — AWS 구성 · 인프라 접속")를 요청서·저장소와 대조했다. 보안그룹 · 포트 · 인스턴스 역할 · 시크릿의 빈 값 ·
+`/health` 200 · `/data` 배치는 이미 `main` 이 맞춰 두었고, 남은 불일치는 하나였다 — **공용 ALB 의 유휴 제한이 180초**인데
+진행률 WebSocket 은 ping 이 없어 편집 단계 사이가 길면 끊겼다.
+
+- **고침** — `/edit-jobs/{id}/progress` 가 열려 있는 동안 서버가 30초마다 프로토콜 ping 을 보낸다(`edit-jobs.ts`). 제어 프레임이라
+  메시지 계약은 그대로다. [api-spec.md](./api-spec.md) WebSocket 절 · [deployment-aws.md](./deployment-aws.md) §6 갱신.
+- **검증**: `npm test -w apps/api` 612 통과 · `typecheck` · `lint` 통과. ALB 뒤에서 180초 넘게 열어 두는 실측은 하지 않았다
+  (테스터 앱 빌드 뒤 긴 편집으로 확인 — backlog B-8).
