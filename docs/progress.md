@@ -2336,3 +2336,22 @@ Session Manager 셸에서 GitHub · GHCR · Docker Hub · 외부 API 로 나가�
   team.md 의 "담당 배정의 근거"에 있다.
 - **검증**: 깨진 상대 링크 · 앵커 0, 헤더 규격 위반 0(스크립트), 문서에 적힌 `npm run` 스크립트가 모두 실재. 코드 · 설정에서 발견해
   고치지 않은 것은 백로그 E-19~E-23 · G 에 있다.
+
+## 2026-10-09 (이어서) — 무비는 한 번에 하나씩 만든다(MOV-11 `구현됨(실기기 미검증)`, backlog A-10)
+
+MOV-11 은 사용자당 진행 중 생성을 한 번에 하나로 요구하는데, 앱은 한 무비의 중복 생성만 막고 서버도 무비당 하나만 막아 서로 다른
+무비는 동시에 생성됐다(2026-10-09 문서 감사에서 발견). 요구를 유지하고 구현했다(오너 결정).
+
+- **서버가 강제한다** — `createEditJob`(`apps/api/src/services/edit-job.service.ts`)이 크레딧 확인과 같은 유저 행 잠금 안에서 같은 사용자의
+  `queued` · `processing` 작업을 찾아, 있으면 `409 GENERATION_IN_PROGRESS` 와 그 작업의 무비 id(`error.movieId`, 무비 없는 작업이면 `null`)를
+  돌려준다. 무비 생성과 `POST /edit-jobs` 가 같은 길을 지나므로 둘 다 막힌다. 크레딧 부족(402)이 먼저다. 갇힌 작업은 그 무비에서 취소하면
+  풀린다. 계약: `packages/shared-types/src/contract/common.ts` 의 `generationConflictErrorSchema` 를 두 라우트의 409 에 선언했다(`openapi.json` 재생성).
+- **앱이 미리 막고 안내한다** — `startGeneration`(`apps/mobile/src/features/compose-movie/model/use-compose-movie.ts`)이 이 기기가 아는 다른
+  `generating` 무비가 있으면 아무것도 보내지 않고 `busy` 로 거절하고, 다른 기기에서 시작한 생성은 서버의 409 를 같은 사유로 읽는다
+  (`lib/read-generating-movie.ts`). 무비 화면은 "다른 무비를 만드는 중이에요. 다 만들어지거나 취소하면 만들 수 있어요."와
+  `만드는 중인 무비 보기` 를 보인다(`pages/movie/ui/refusal-notice.tsx`). 기능 문서 [movie.md](../apps/mobile/docs/features/movie.md) · studio.md.
+- **검증**: API — `movies.test.ts` 에 다른 무비가 생성 중이면 409 · 동시에 두 무비를 보내도 하나 · 앞선 작업이 `done` · `failed` · `canceled`
+  면 다음을 만든다 · 다른 사용자는 막지 않는다 · 무비 없는 작업이면 `movieId: null` 을 더했다. 검사를 빼면 셋이 실패한다.
+  `npm test -w apps/api` 41개 파일 624건 통과. 앱 — 거절 사유 · 409 매핑 · 문구 테스트를 더했고 `npm run verify:mobile` 통과
+  (173개 스위트 1390건, lint 경고 1건은 원래 있던 `notification-settings-store.ts` 의 것). 실기기는 확인하지 않았다 — backlog F.
+- **남은 것**: 보드 · 그리드의 `다시 시도` 는 거절 이유를 말하지 않는다(원래 있던 한계, 이제 더 자주 보인다) — backlog E-24.

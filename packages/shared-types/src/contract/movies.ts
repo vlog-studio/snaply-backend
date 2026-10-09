@@ -5,6 +5,7 @@ import {
   apiErrorSchema,
   apiSuccess,
   cursorPaginated,
+  generationConflictErrorSchema,
   paymentRequiredErrorSchema,
 } from './common.js';
 import { defineRoute } from './define-route.js';
@@ -307,7 +308,8 @@ export const exportMovie = defineRoute({
       // `INSUFFICIENT_CREDITS` 의 `required`·`balance` 를 선언해야 직렬화에서 살아남는다 — 앱이 부족분 숫자를 그린다.
       402: paymentRequiredErrorSchema,
       404: apiErrorSchema,
-      409: apiErrorSchema,
+      // 이 무비가 이미 생성 중이면 `CONFLICT`, 다른 무비가 생성 중이면 `GENERATION_IN_PROGRESS` + `movieId`(MOV-11).
+      409: generationConflictErrorSchema,
       ...AUTHENTICATED_ERROR_RESPONSES,
     },
   },

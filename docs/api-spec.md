@@ -113,6 +113,9 @@ OpenAPI 로 표현되지 않아 아래 [WebSocket](#websocket-edit-jobsidprogres
   - 소유·`source`·`ready` 영상만 허용(아니면 403). `outputProfile`·`fitMode` 는 생략하면 서버 기본값(계약의 `.default()` — 세로 숏폼 · 흐린 배경). 무비 생성은 이 기본값으로만 만든다.
   - **크레딧 100 을 예약(차감)한다.** 잔액이 모자라면 `402 INSUFFICIENT_CREDITS` 이며 작업이 만들어지지 않는다(예약과 생성이 한 트랜잭션). 에러의 `required`·`balance` 로 부족분을 그린다. 작업이 **실패하거나 취소되면 전액 자동 환급**, 자동 재시도로 추가 차감 없음. 해상도·워터마크 차등은 없다.
   - 큐 적재가 실패하면 요청은 500 이고, 이미 만든 작업은 `failed`(`errorCode: QUEUE_FAILED`)로 남으며 예약은 환급된다.
+  - **사용자당 진행 중 생성은 하나다**(MOV-11). 같은 사용자의 `queued`·`processing` 작업이 있으면 `409 GENERATION_IN_PROGRESS` 이고
+    `error.movieId` 가 지금 생성 중인 무비다(무비 없이 이 라우트로 만든 작업이면 `null`). 크레딧 확인(402)이 먼저다. 그 작업이
+    끝나거나(`done`·`failed`) 취소되면 다시 만들 수 있다 — 갇힌 작업은 그 무비에서 취소하면 풀린다.
 - `GET /edit-jobs/{id}` 🔒 — 폴링용. `videoId` 는 **결과물** 영상 id 다(원본이 아니다). 완료 후 `GET /videos/{videoId}` 로 `editedUrl` 을 얻는다.
   - `errorMessage` 는 서버 진단용 원문 — **사용자 노출 문구가 아니다.** 화면 문구는 `errorCode` 로 분기해 앱이 만든다. `errorCode` 는 append-only 라 앱은 모르는 코드를 `INTERNAL` 처럼 다룬다. `TIMEOUT` 은 작업이 워커 제한 시간(`EDIT_TIMEOUT_SECONDS`, 기본 10분)을 넘긴 것이다 — 멈춘 ffmpeg·whisper 가 워커를 붙잡아 두지 않게 한다.
   - `pipelineVersion`·`editSpec`·`renderSpec` 은 재현 가능한 작업 스냅샷이다.
@@ -201,6 +204,9 @@ FE 가 알아야 할 동작:
   앱은 이것으로 "보관 기간이 끝났어요" 와 "스냅이 삭제됐어요" 를 가른다(SNAP-12).
 - **생성 중(`generating`)에는 수정·재생성·끝내기가 모두 409**다. 작업이 끝나면 무비는 읽는
   시점에 따라잡힌다 — 완료는 `ready`, 실패는 `failed`, **취소는 `draft`**(결과물 포인터도 비워진다).
+- **다른 무비가 생성 중이면 `export` 는 `409 GENERATION_IN_PROGRESS`** 이고 `error.movieId` 로 그 무비를 알린다 —
+  사용자당 진행 중 생성은 하나다(MOV-11, 위 [AI 편집](#ai-편집-contractedit-jobsts)의 같은 규칙). 앱은 그 무비로 안내한다. 이 무비 자체가
+  생성 중이면 위처럼 `409 CONFLICT` 다.
 - `export` 는 크레딧 **100** 을 예약한다(잔액 부족 시 402). 진행률은 `GET /edit-jobs/{id}` 와
   WebSocket 으로 본다 — 무비 API 는 진행률을 주지 않는다. 그 작업의 id 는 `export` 응답과
   **무비의 `jobId`** 양쪽에 있다(2026-09-12) — 앱이 재시작으로 응답의 값을 잃어도 무비를 다시

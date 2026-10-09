@@ -1,6 +1,7 @@
 export {
   applyMovieScope,
   applyRemoteMovies,
+  getGeneratingMovies,
   getLatestMovieStyle,
   getMovieById,
   getMovieOutbox,

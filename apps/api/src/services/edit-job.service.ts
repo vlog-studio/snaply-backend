@@ -1,3 +1,4 @@
+import type { Prisma } from '@prisma/client';
 import {
   createRenderSpec,
   type ClipSpec,
@@ -305,6 +306,7 @@ export async function createEditJob(params: {
     // 잔액 확인 겸 유저 행 잠금이 먼저다 — 아래 INSERT 들이 FK 검사로 같은 행에 share 락을
     // 걸기 때문에, 순서를 바꾸면 동시 요청끼리 데드락이 난다 (credit.service 주석 참고).
     await assertCreditsForExport(tx, { userId: params.userId });
+    await assertNoGenerationInProgress(tx, params.userId);
 
     const video = await tx.video.create({
       data: {
@@ -366,6 +368,34 @@ export async function createEditJob(params: {
 
   // 결과물 영상 id 도 함께 돌려준다 — 무비 내보내기가 이 id 를 무비에 걸어 둔다.
   return { jobId: job.id, videoId: outputVideo.id };
+}
+
+/**
+ * 사용자당 진행 중 생성은 하나다(specs/movie.md MOV-11). `assertCreditsForExport` 가 유저 행을 잠근 뒤에 보므로
+ * 동시에 온 두 요청 중 하나만 통과한다. 막힌 쪽에는 지금 생성 중인 무비를 알려 앱이 그 무비로 안내하게 한다 —
+ * 무비 없이 `POST /edit-jobs` 로 만든 작업이면 `movieId: null`. 갇힌 작업은 사용자가 그 무비에서 취소하면 풀린다.
+ */
+async function assertNoGenerationInProgress(
+  tx: Prisma.TransactionClient,
+  userId: string,
+): Promise<void> {
+  const running = await tx.editJob.findFirst({
+    where: { userId, status: { in: ['queued', 'processing'] } },
+    select: { videoId: true },
+  });
+  if (!running) {
+    return;
+  }
+  const movie = await tx.movie.findFirst({
+    where: { userId, resultVideoId: running.videoId, deletedAt: null },
+    select: { id: true },
+  });
+  throw new AppError(
+    409,
+    'GENERATION_IN_PROGRESS',
+    '다른 무비를 만드는 중입니다. 끝나거나 취소한 뒤에 다시 시도하세요.',
+    { movieId: movie?.id ?? null },
+  );
 }
 
 export async function getEditJob(params: { userId: string; jobId: string }): Promise<EditJob> {

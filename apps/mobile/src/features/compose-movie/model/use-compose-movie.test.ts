@@ -11,6 +11,7 @@ const mockUpdateMovieStyle = jest.fn();
 const mockBeginMovieJob = jest.fn();
 const mockSetMovieArranger = jest.fn();
 const mockGetMovieById = jest.fn<Movie | undefined, [string]>();
+const mockGeneratingMovies = jest.fn<Movie[], []>();
 const mockSnapIndex = jest.fn<[string, { capturedAt: number }][], []>();
 const mockSyncEntries = jest.fn<Record<string, { status: string; videoId?: string }>, []>();
 const mockExportMovie = jest.fn();
@@ -31,6 +32,7 @@ jest.mock('@/entities/movie', () => {
     MovieSnapLimit: 10,
     MovieDraftSnapLimit: 30,
     getMovieById: (id: string) => mockGetMovieById(id),
+    getGeneratingMovies: () => mockGeneratingMovies(),
     getLatestMovieStyle: () => mockLatestStyle(),
     movieStyleOrDefault: style.movieStyleOrDefault,
     requestMovieDraft: (...args: unknown[]) => mockRequestMovieDraft(...args),
@@ -96,6 +98,7 @@ beforeEach(() => {
     ['s2', { capturedAt: 200 }],
   ]);
   mockGetMovieById.mockReturnValue(makeMovie());
+  mockGeneratingMovies.mockReturnValue([]);
   // Both cuts have reached the backend, which is what a run needs.
   mockSyncEntries.mockReturnValue({
     s1: { status: 'uploaded', videoId: 'v1' },
@@ -795,6 +798,72 @@ describe('startGeneration', () => {
       expect(mockBeginMovieJob).not.toHaveBeenCalled();
     },
   );
+
+  // One run per account at a time (MOV-11). The run this device knows about is
+  // answered before anything is written or sent, so a refused start changes
+  // nothing — not even the AI's arrangement.
+  it('refuses while another movie is being made, naming it, and writes or sends nothing', async () => {
+    mockGetMovieById.mockReturnValue(
+      makeMovie({
+        status: 'draft',
+        arranger: 'ai',
+        snapRefs: [
+          { snapId: 's2', order: 0 },
+          { snapId: 's1', order: 1 },
+        ],
+      }),
+    );
+    mockGeneratingMovies.mockReturnValue([makeMovie({ id: 'm2', status: 'generating' })]);
+    const { result } = await renderHook(() => useComposeMovie());
+
+    let outcome;
+    await act(async () => {
+      outcome = await result.current.startGeneration('m1');
+    });
+
+    expect(outcome).toEqual({ started: false, refused: 'busy', generatingMovieId: 'm2' });
+    expect(mockUpdateMovieCuts).not.toHaveBeenCalled();
+    expect(mockSendMovie).not.toHaveBeenCalled();
+    expect(mockExportMovie).not.toHaveBeenCalled();
+    expect(mockBeginMovieJob).not.toHaveBeenCalled();
+  });
+
+  // A run this device has not heard of — started on another device — is the
+  // backend's to refuse; its 409 names the movie when the run has one.
+  it.each([
+    ['names the running movie', 'm-other', { generatingMovieId: 'm-other' }],
+    ['names none for a run with no movie', null, {}],
+  ])(
+    'reports the backend\u2019s GENERATION_IN_PROGRESS as busy and %s',
+    async (_label, movieId, named) => {
+      mockExportMovie.mockRejectedValue(
+        new ApiError('GENERATION_IN_PROGRESS', 'busy', { status: 409, details: { movieId } }),
+      );
+      const { result } = await renderHook(() => useComposeMovie());
+
+      let outcome;
+      await act(async () => {
+        outcome = await result.current.startGeneration('m1');
+      });
+
+      expect(outcome).toEqual({ started: false, refused: 'busy', ...named });
+      expect(mockBeginMovieJob).not.toHaveBeenCalled();
+    },
+  );
+
+  it('reads a GENERATION_IN_PROGRESS that names this very movie as frozen', async () => {
+    mockExportMovie.mockRejectedValue(
+      new ApiError('GENERATION_IN_PROGRESS', 'busy', { status: 409, details: { movieId: 'm1' } }),
+    );
+    const { result } = await renderHook(() => useComposeMovie());
+
+    let outcome;
+    await act(async () => {
+      outcome = await result.current.startGeneration('m1');
+    });
+
+    expect(outcome).toEqual({ started: false, refused: 'frozen' });
+  });
 
   it('reports a run the server says is already going as frozen', async () => {
     mockExportMovie.mockRejectedValue(new ApiError('CONFLICT', 'busy', { status: 409 }));

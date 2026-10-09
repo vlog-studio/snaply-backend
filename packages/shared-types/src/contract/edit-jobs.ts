@@ -4,6 +4,7 @@ import {
   AUTHENTICATED_ERROR_RESPONSES,
   apiErrorSchema,
   apiSuccess,
+  generationConflictErrorSchema,
   paymentRequiredErrorSchema,
 } from './common.js';
 import { defineRoute } from './define-route.js';
@@ -185,6 +186,8 @@ export const createEditJob = defineRoute({
       202: apiSuccess(jobCreatedSchema),
       400: apiErrorSchema,
       402: paymentRequiredErrorSchema,
+      // 사용자당 진행 중 생성은 하나다 — `GENERATION_IN_PROGRESS` + 생성 중인 무비 id(MOV-11).
+      409: generationConflictErrorSchema,
       ...AUTHENTICATED_ERROR_RESPONSES,
     },
   },

@@ -77,6 +77,18 @@ export const paymentRequiredErrorSchema = apiErrorWith({
   balance: z.int().optional(),
 });
 
+/**
+ * 생성 시작의 409. 사용자당 진행 중 생성은 하나라(specs/movie.md MOV-11) `GENERATION_IN_PROGRESS` 는 지금 생성 중인
+ * 무비를 함께 내린다 — 앱은 그 무비로 안내한다. 같은 무비를 다시 보낸 409(`CONFLICT`)에는 이 값이 없다.
+ */
+export const generationConflictErrorSchema = apiErrorWith({
+  movieId: z
+    .uuid()
+    .nullable()
+    .optional()
+    .describe('GENERATION_IN_PROGRESS — 지금 생성 중인 무비 id. 무비 없이 `POST /edit-jobs` 로 만든 작업이면 null'),
+});
+
 export const COMMON_ERROR_RESPONSES = {
   429: apiErrorSchema,
   500: apiErrorSchema,

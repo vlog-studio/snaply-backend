@@ -11,6 +11,7 @@ import {
   transitionAfter,
   useClearMovieLeftOut,
   useDeleteMovie,
+  useMovieById,
   type TransitionKind,
 } from '@/entities/movie';
 import { useSnapFiles, useSnapIndex, type Snap } from '@/entities/snap';
@@ -19,6 +20,7 @@ import { FinishMovieConfirm } from '@/features/finish-movie';
 import { RenameMovieSheet } from '@/features/rename-movie';
 import { useShareMovie } from '@/features/share-movie';
 import { adRewardQueries } from '@/features/watch-reward-ad';
+import { movieHref } from '@/shared/routes';
 import { BackBar } from '@/shared/ui/back-bar';
 import { BottomSheet } from '@/shared/ui/bottom-sheet';
 import { MaxContentWidth, Radius, Spacing, useTheme } from '@/shared/ui/theme';
@@ -40,7 +42,13 @@ import { GenerationProgress } from './generation-progress';
 import { LeftOutNotice } from './left-out-notice';
 import { MovieActionsSheet } from './movie-actions-sheet';
 import { MovieWatch } from './movie-watch';
-import { CutsRefusalMessages, generationRefusalMessage, RefusalNotice } from './refusal-notice';
+import {
+  CutsRefusalMessages,
+  generationRefusalMessage,
+  OpenGeneratingMovieLabel,
+  RefusalNotice,
+  type RefusalAction,
+} from './refusal-notice';
 import { StylePickerSheet } from './style-picker-sheet';
 import { TransitionPickerSheet } from './transition-picker-sheet';
 import { TimelineStrip } from './timeline-strip';
@@ -136,6 +144,12 @@ export function MoviePage({ movieId }: MoviePageProps) {
   // rather than by the footer that draws it: a credit refusal names the ad
   // top-up only when the server says that door is open, which is read then.
   const [refusalMessage, setRefusalMessage] = useState<string>();
+  // The movie a `busy` refusal named — the run in the way (MOV-11). Read from
+  // the store rather than kept from the outcome, so the way to it appears once
+  // a movie started on another device is read back, and goes once its run ends:
+  // a link to "the movie being made" must not outlive the making.
+  const [busyMovieId, setBusyMovieId] = useState<string>();
+  const busyMovie = useMovieById(busyMovieId);
 
   // Which cut is being *worked on* — the strip's held clip and the inspector's
   // subject. Only an explicit pick sets it (a strip tap, or a move carrying its
@@ -255,6 +269,12 @@ export function MoviePage({ movieId }: MoviePageProps) {
   const reAddLeftOut = () =>
     router.push({ pathname: '/movie/[id]/add-snaps', params: { id: movie.id, only: 'left-out' } });
   const leftOut = offerableLeftOut(movie, (snapId) => snapIndex.has(snapId));
+  // A `busy` refusal's way out: the running movie, where the user can watch it
+  // finish or cancel it. Pushed, so back returns to the movie that was refused.
+  const refusalAction: RefusalAction | undefined =
+    busyMovie?.status === 'generating'
+      ? { label: OpenGeneratingMovieLabel, onPress: () => router.push(movieHref(busyMovie.id)) }
+      : undefined;
 
   // Asynchronous now: the run is queued on the backend and the movie only enters
   // `generating` once there is a job to follow, so a refusal can be reported
@@ -276,6 +296,7 @@ export function MoviePage({ movieId }: MoviePageProps) {
         ? generationRefusalMessage(outcome.refused, outcome.shortfall, adsEnabled)
         : undefined,
     );
+    setBusyMovieId(outcome.refused === 'busy' ? outcome.generatingMovieId : undefined);
     // The result of this run should open as a result: back to watch mode when
     // the job lands on `ready`.
     if (!outcome.refused) setEditing(false);
@@ -536,6 +557,7 @@ export function MoviePage({ movieId }: MoviePageProps) {
                 movie={movie}
                 cutCount={cuts.length}
                 refusalMessage={refusalMessage}
+                refusalAction={refusalAction}
                 cutsRefusal={refusal}
                 editedSinceRender={list.editedSinceRender}
                 onRestoreCuts={list.restoreRenderCuts}
