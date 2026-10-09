@@ -819,15 +819,6 @@ Supabase 로 DB 에 직접 닿을 수 있는 공유 Supabase DB 를 쓸 때뿐�
 2026-10-09 문서 전수 감사에서 나온, 코드 동작은 그대로이고 **규칙이나 문서를 어느 쪽으로 맞출지만 정하면 되는** 판단이다.
 각 항목에 배경 · 선택지 · 권장(있으면) · 완료 조건을 적었다. 정하면 해당 문서(와 필요한 경우 코드 · 테스트)를 고치고 닫는다.
 
-### H-12. 모바일 UX 문서 체계의 두 군데
-
-- [guardrails.md](../apps/mobile/docs/ux/guardrails.md)는 자체 규칙 없이 "잘못된 수 → 원천 규칙 링크" 22개로 된 색인이 됐다.
-  그대로 둘지 [agent-protocol.md](../apps/mobile/docs/ux/agent-protocol.md)의 한 절로 합칠지 — 짧고 중복이 없어 **유지 권장**
-- [principle-priority.md](../apps/mobile/docs/ux/principle-priority.md)의 목표 문장이 [philosophy.md](../apps/mobile/docs/ux/philosophy.md)의
-  같은 문장과 표현이 다르다(능력 · 통제를 잃게 하지 않는다는 조건이 더해졌다). 하나로 통일할지
-
-**완료 조건**: 정한 대로 두 문서를 맞추고 [ux/README.md](../apps/mobile/docs/ux/README.md)의 라우팅 표를 확인한다.
-
 ### H-13. 모바일 기능 문서의 상태 라벨 두 개와 앱 맵 순서
 
 - [snap-extract.md](../apps/mobile/docs/features/snap-extract.md)의 `Partial` 근거가 "Android 실기기 검증 대기, iOS 미빌드"인데 추출
@@ -938,3 +929,4 @@ Supabase 로 DB 에 직접 닿을 수 있는 공유 Supabase DB 를 쓸 때뿐�
 - **H-9** ONBOARDING 의 "모노레포 통합 이전에 분기한 브랜치" 절(한 줄로) — 2026-10-10 → progress 2026-10-10 "ONBOARDING 의 통합 전 브랜치 절을 걷는다"
 - **H-10** 결정 문서의 결정 ID 가 백로그 ID 와 같은 모양이다(`V3-A1` 꼴로) — 2026-10-10 → progress 2026-10-10 "editSpec v3 결정 ID 에 접두를 붙인다"
 - **H-11** `env-management.md` 의 "후속 연계" 절(헤더 배너로) — 2026-10-10 → progress 2026-10-10 "env-management 의 후속 연계를 배너로 옮긴다"
+- **H-12** 모바일 UX 문서 체계의 두 군데(guardrails 유지, 목표 문장은 philosophy 하나로) — 2026-10-10 → progress 2026-10-10 "UX 목표 문장을 하나로 맞춘다"
