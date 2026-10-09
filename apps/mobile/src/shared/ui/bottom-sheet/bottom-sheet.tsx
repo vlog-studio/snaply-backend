@@ -10,12 +10,12 @@ import {
 } from 'react-native';
 import Animated, {
   Easing,
-  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
   type SharedValue,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Radius, Spacing, useReducedMotion, useTheme } from '@/shared/ui/theme';
@@ -85,7 +85,7 @@ function driveClose(
       // Interrupted by a re-open: keep the measurement and leave the mount alone.
       if (!finished) return;
       panelHeight.value = 0;
-      runOnJS(onClosed)();
+      scheduleOnRN(onClosed);
     },
   );
 }

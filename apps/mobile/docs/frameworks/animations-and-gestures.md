@@ -26,10 +26,10 @@ Imitate the closest existing implementation instead of inventing a new shape.
 | Need | Canonical file | Shape |
 | --- | --- | --- |
 | Mount fade/slide-in | `src/shared/ui/fade-in-view/fade-in-view.tsx` | Shared value driven by `withTiming` in a mount effect; reusable wrapper with `delay`/`duration` props |
-| One-shot choreography with a completion callback | `src/pages/capture-record/ui/capture-flight.tsx` | `withTiming` + `runOnJS` completion; callback held in a ref so the worklet never captures a stale closure |
+| One-shot choreography with a completion callback | `src/pages/capture-record/ui/capture-flight.tsx` | `withTiming` + `scheduleOnRN` completion; callback held in a ref so the worklet never captures a stale closure |
 | Gesture/state-driven progress indicator | `src/pages/capture-record/ui/hold-ring.tsx` | Shared value + `useAnimatedProps` on an SVG element; fills while a prop is true, rewinds on release |
 | Positional reflow of in-flow items (FLIP) | `src/pages/movie/ui/timeline-cut.tsx` (`shiftX`) | Flex still owns placement; when an item's slot index changes it is pulled back by `oldX - newX` via a translate shared value and sprung to 0. The comparison and the write happen **inside `useAnimatedStyle`**, not in a JS effect: the worklet re-evaluates on the UI thread in the same update that delivers the new layout, where an effect runs after paint and flashes the item at its destination for a frame first. Keyed to the *slot* changing — not the coordinate — so layout shifts that already animated live (a neighbour's trim drag) are not replayed |
-| Sheet enter/exit inside a `Modal` | `src/shared/ui/bottom-sheet/bottom-sheet.tsx` | Two independent shared values over `animationType="none"`: the panel slides on `translateY` while the backdrop only fades, because the Modal's own `slide` animates the whole window and drags the dimming layer up with the panel. The travel distance is the panel's own `onLayout` height, so the panel holds `opacity: 0` until the first layout pass and the slide starts from the layout callback; the measurement is cleared when the close completes so the next open re-measures. Mount outlives `visible` — the Modal unmounts from the close animation's completion callback (`runOnJS`), while opening (and a reduced-motion close) adjust mount state during render rather than in an effect, which the compiler lint rejects |
+| Sheet enter/exit inside a `Modal` | `src/shared/ui/bottom-sheet/bottom-sheet.tsx` | Two independent shared values over `animationType="none"`: the panel slides on `translateY` while the backdrop only fades, because the Modal's own `slide` animates the whole window and drags the dimming layer up with the panel. The travel distance is the panel's own `onLayout` height, so the panel holds `opacity: 0` until the first layout pass and the slide starts from the layout callback; the measurement is cleared when the close completes so the next open re-measures. Mount outlives `visible` — the Modal unmounts from the close animation's completion callback (`scheduleOnRN`), while opening (and a reduced-motion close) adjust mount state during render rather than in an effect, which the compiler lint rejects |
 | Splash exit | `src/_app/routes/animated-splash-overlay.tsx` | The one `Keyframe`/`entering` usage in the app (see the Expo Go caveat below before adding another) |
 
 ## Rules
@@ -55,8 +55,13 @@ screen. Verify on iOS before adding another.
 
 ### Keep per-frame state on the UI thread
 
+Crossing from a worklet to JS is `scheduleOnRN` from `react-native-worklets`, never Reanimated's `runOnJS` —
+Reanimated 4 deprecates `runOnJS` in its favor (`scheduleOnRN(fn, ...args)` replaces `runOnJS(fn)(...args)`).
+Gesture Handler's `.runOnJS(true)` is a different thing — a gesture option that runs its callbacks on JS — and stays.
+
 State that changes every frame (drag position, progress) lives in shared values,
-mutated by worklets. Mirror it to React state via `runOnJS` only at meaningful
+mutated by worklets. Mirror it to React state via `scheduleOnRN` (from
+`react-native-worklets`, `scheduleOnRN(fn, ...args)`) only at meaningful
 boundaries (a step change, a completion) — for labels, badges, or commit payloads —
 never per frame. The commit itself stays a plain store/feature call made from the JS
 side (`timeline-cut.tsx`'s trim handle reports its window on a step change and when
@@ -87,7 +92,7 @@ are the same fix for plain animation starters). Writes inside `useEffect`,
 `react-hooks` rule against synchronous `setState` in an effect bites the same
 components: a mount flag that must flip in the same commit as the animation start
 is adjusted during render (`if (visible && !mounted) setMounted(true)`), and the
-deferred unmount comes from the animation's `runOnJS` completion callback.
+deferred unmount comes from the animation's `scheduleOnRN` completion callback.
 
 ### Gestures inside scrollables
 
@@ -100,7 +105,7 @@ gesture be told apart from the scroll by direction?**
 - Use `.activateAfterLongPress(...)` so the scroll gesture keeps working; on
   activation give haptic feedback (`impactFeedback('medium')` from `@/shared/lib/haptics`,
   which plays on iOS only — the established lift/collect cue) and lock the scroll (`scrollEnabled={!dragActive}` via a
-  `runOnJS` state flip) until the gesture settles.
+  `scheduleOnRN` state flip) until the gesture settles.
 - Match the long-press delay to the sibling `Pressable`'s `delayLongPress` so
   gesture entries feel like one family.
 
@@ -111,7 +116,7 @@ horizontally, so no offset-based or long-press arbitration can separate them,
 and a handle that needed a long press before it moved would not feel like a
 handle:
 
-- Lock the scroll from `.onTouchesDown(...)` (`runOnJS` a `setTrimming(true)`
+- Lock the scroll from `.onTouchesDown(...)` (`scheduleOnRN` a `setTrimming(true)`
   the scrollable reads as `scrollEnabled={!trimming}`), before either gesture
   can claim the axis. Pair it with `.minDistance(0)` so the pan owns the finger
   immediately.
