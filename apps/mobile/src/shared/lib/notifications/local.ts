@@ -6,6 +6,10 @@ import { Platform } from 'react-native';
 // while the app is foregrounded, so the owning feature uses these to present one
 // itself. A `.web.ts` sibling provides inert stubs for platform-agnostic callers.
 
+// The one Android channel every notification goes to — the server's pushes name
+// it too (apps/api/src/services/fcm.service.ts). Not split by kind: turning a
+// kind off is the account's notification settings, and the expiry notice is
+// deliberately not something a device can silence on its own.
 const ANDROID_CHANNEL_ID = 'default';
 
 /**
@@ -32,7 +36,7 @@ export function configureForegroundNotifications(): void {
 export async function ensureNotificationChannel(): Promise<void> {
   if (Platform.OS !== 'android') return;
   await Notifications.setNotificationChannelAsync(ANDROID_CHANNEL_ID, {
-    name: '기본 알림',
+    name: '알림',
     importance: Notifications.AndroidImportance.DEFAULT,
   });
 }
@@ -70,8 +74,10 @@ type LocalNotification = {
 };
 
 /**
- * Present a notification immediately (`trigger: null`). Used to surface a
- * foreground FCM message as a visible banner. Returns the notification id.
+ * Present a notification immediately. Used to surface a foreground FCM message
+ * as a visible banner, and for the app's own notices. On Android it names the
+ * app's channel — an immediate notification with no channel lands in the
+ * library's fallback one. Returns the notification id.
  */
 export function presentLocalNotification({
   title,
@@ -80,7 +86,7 @@ export function presentLocalNotification({
 }: LocalNotification): Promise<string> {
   return Notifications.scheduleNotificationAsync({
     content: { title: title ?? null, body: body ?? null, data: data ?? {} },
-    trigger: null,
+    trigger: Platform.OS === 'android' ? { channelId: ANDROID_CHANNEL_ID } : null,
   });
 }
 

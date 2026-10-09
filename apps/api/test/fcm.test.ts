@@ -120,6 +120,8 @@ describe('sendToUser', () => {
       token: 'device-token-1',
       notification: { title: 'Snaply', body: '테스트 알림' },
       data: { locationId: 'loc-1' },
+      // 앱이 만드는 채널 하나(backlog E-25). 빠지면 Android 가 FCM 기본 채널에 넣는다
+      android: { notification: { channelId: 'default' } },
     });
   });
 

@@ -2529,3 +2529,17 @@ env-spec 부터). `POSTGRES_HOST_PORT` 처럼 `origin: 'local'` 로 선언하고
   (`entities/movie/lib/movie-sync.ts`). 기능 문서 [movie.md](../apps/mobile/docs/features/movie.md) Watch mode.
 - **검증**: 러너 테스트(서버의 종료 시각으로 날짜를 매긴다 — 수정 전 실패)와 `get-edit-job` 테스트(읽기 · 없을 때 빼기)를 더했다. `npm run verify:mobile` 통과
   (175개 스위트 1403건, lint 경고 1건은 원래 있던 것). 기기에서는 보지 않았다 — 테스터 앱을 다시 빌드해 두 기기로 보면 된다.
+
+## 2026-10-09 (이어서) — 모든 알림을 앱의 채널 하나로 보낸다(backlog E-25 닫음)
+
+휴대폰 확인에서 어떤 알림도 앱이 만든 Android 채널(`default`)로 가지 않는 것이 드러났다 — 서버 푸시는 채널을 지정하지 않아 FCM 기본 채널로,
+앱이 띄우는 알림은 채널을 넘기지 않아 expo 기본 채널로 들어갔다. 오너 결정으로 채널은 **하나**로 둔다(종류별 끄기는 계정의 알림 설정이 맡고,
+만료 예고는 기기에서 따로 끌 수 없게 둔다). 결정은 [notification-preferences.md](./decisions/notification-preferences.md) §Android 알림 채널은 하나.
+
+- **서버** — `sendToUser`(`apps/api/src/services/fcm.service.ts`)가 FCM 메시지에 `android.notification.channelId: 'default'` 를 싣는다.
+- **앱** — `presentLocalNotification` 이 Android 에서 같은 채널을 지정하고, 채널 이름을 "기본 알림"에서 "알림"으로 바꿨다
+  (`apps/mobile/src/shared/lib/notifications/local.ts` — 같은 id 라 이미 있는 채널은 이름만 바뀐다). 기능 문서
+  [location-and-push-notifications.md](../apps/mobile/docs/features/location-and-push-notifications.md).
+- **검증**: `fcm.test.ts` 의 발송 형태에 채널을 더했고(수정 전 실패), 앱에 `local.test.ts` 를 새로 두어 Android 의 채널 지정 · iOS 의 즉시 표시 ·
+  같은 채널 생성을 본다(수정 전 Android 사례 실패). 기기에서는 아직 보지 않았다 — 테스터 앱을 다시 빌드한 뒤 `dumpsys notification` 으로
+  세 경로(꺼짐 · 뒤 · 연 채로)의 채널을 본다. 서버 쪽은 배포된 뒤에야 휴대폰에서 효과가 보인다.
