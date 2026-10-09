@@ -2616,3 +2616,9 @@ env-spec 부터). `POSTGRES_HOST_PORT` 처럼 `origin: 'local'` 로 선언하고
 묻는 질문에만 걸고, 결과를 설명하는 문장의 `지워요`(분석 동의 문구 등)는 허용한다. `촬영` 금지는 카메라 컨트롤의 보이는 라벨과 접근성 라벨에만
 걸고 메시지(`촬영을 완료하지 못했어요`)는 둔다 — 그래서 캡처 화면 ✕ 의 접근성 라벨 두 곳을 `촬영 닫기` 에서 `카메라 닫기` 로 바꿨다
 (`apps/mobile/src/pages/capture-record/ui/capture-record-page.tsx`). 템플릿 힌트의 `장면`(`처음 본 장면`)은 컷이 아니라 찍을 대상을 말하므로 허용한다.
+
+## 2026-10-10 (이어서) — 결정이 끝난 결정 문서의 제목을 바꾼다(backlog H-2 닫음)
+
+오너가 권장안을 골랐다. "결정 요청 —"으로 시작하던 네 문서(`snap-retention-period` · `local-copy-after-upload` · `movie-cleanup-after-export` ·
+`movie-export-policy`)와 구독을 들인 것처럼 읽히던 `storage-and-subscription-policy` 의 제목을 결정을 말하는 제목으로 바꿨다. 옛 제목을 인용하거나
+앵커로 가리키는 곳은 없었고, [decisions/README.md](./decisions/README.md)는 파일 이름과 요약으로 적혀 있어 그대로 맞다.
