@@ -10,7 +10,7 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
-export SNAPLY_ENV_FILE="${SNAPLY_ENV_FILE:-/etc/snaply/snaply.env}"
+export SNAPLY_ENV_FILE="${SNAPLY_ENV_FILE:-/data/compose/.env}"
 # 어느 서버의 compose 인가. 지금 배포 대상은 AWS 서버 하나이고 cron 이
 # `COMPOSE_FILE=docker-compose.aws.yml` 을 준다(deploy/aws/render-cron.sh) — 기본값도 같은 파일로 둔다.
 # compose 가 이 변수를 직접 읽는다.

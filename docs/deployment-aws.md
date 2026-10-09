@@ -99,7 +99,7 @@ General** 의 포크 PR 워크플로 승인도 "모든 외부 협업자"로 올�
 
 ```
 main 머지
-  ↓  GitHub 이 빌려주는 컴퓨터 — 이미지 빌드 → 스모크 검사 → GHCR(커밋 SHA 태그)       (build-and-push, 사내 서버와 같다)
+  ↓  GitHub 이 빌려주는 컴퓨터 — 이미지 빌드 → 스모크 검사 → GHCR(커밋 SHA 태그)       (build-and-push)
   ↓  이 인스턴스의 runner — deploy.yml 의 deploy-aws
      배포 파일을 /data/compose 로 → 시크릿을 env 파일로 → GHCR 로그인 → pull → 마이그레이션 → up → 태그 기록
      → /health 가 db=connected 인지 → 72시간 넘은 이미지 정리
@@ -108,7 +108,7 @@ main 머지
 - **GitHub 에 AWS 키를 두지 않는다.** runner 가 GitHub 쪽으로 먼저 연결해 일을 받아오고(나가는 연결만), 시크릿은
   인스턴스 역할로 읽는다. GHCR 패키지는 비공개라 잡마다 주어지는 토큰으로 받는다.
 - **마이그레이션이 먼저다.** 실패하면 거기서 멈추고 이전 버전이 계속 돈다.
-- **`deploy/` 를 고친 커밋도 서버에서 따로 할 일이 없다** — 배포가 `/data/compose` 로 덮어쓴다(사내 서버와 다른 점).
+- **`deploy/` 를 고친 커밋도 서버에서 따로 할 일이 없다** — 배포가 `/data/compose` 로 덮어쓴다(서버에서 `git pull` 하지 않는다).
 - **되돌리기**: 이전 커밋의 Deploy 실행에서 `Deploy to the AWS server` 잡을 Re-run 한다. 마이그레이션은 되돌아가지
   않으므로 스키마를 바꾼 배포라면 이전 코드와 호환되는지 먼저 본다.
 

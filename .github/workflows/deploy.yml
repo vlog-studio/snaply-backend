@@ -174,10 +174,7 @@ jobs:
           docker compose --env-file "$SNAPLY_ENV_FILE" logs --tail=120 api
           exit 1
 
-      # /data 는 50GB 이고 이미지는 배포마다 약 3GB 다 — 사내 서버(7일)보다 짧게 둔다. 돌고 있는 것은 남는다.
+      # /data 는 50GB 이고 이미지는 배포마다 약 3GB 다 — 7일보다 짧게 둔다. 돌고 있는 것은 남는다.
       - name: Prune old images
         if: always()
         run: docker image prune -af --filter "until=72h"
-
-  # (구) migrate-and-deploy 잡은 제거했다. DB 가 사내망 안으로 들어가면서 GitHub 이 빌려주는
-  # 컴퓨터에서는 닿을 수 없게 됐고, 마이그레이션은 위 deploy 잡이 서버 안에서 실행한다.
