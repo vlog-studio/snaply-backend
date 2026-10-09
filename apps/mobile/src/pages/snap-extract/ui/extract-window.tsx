@@ -3,12 +3,12 @@ import { StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   Easing,
-  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
   type SharedValue,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 
 import { formatSeconds } from '@/shared/lib/datetime';
 import {
@@ -84,13 +84,13 @@ function buildWindowGesture(
     const signature = windowSignature(startSec, endSec);
     if (!settled && signature === handles.reported.value) return;
     handles.reported.value = signature;
-    runOnJS(report)(startSec, endSec, settled);
+    scheduleOnRN(report, startSec, endSec, settled);
   };
 
   return Gesture.Pan()
     .minDistance(0)
     .onTouchesDown(() => {
-      runOnJS(setDragging)(true);
+      scheduleOnRN(setDragging, true);
     })
     .onStart(() => {
       handles.origin.value = part === 'end' ? handles.endX.value : handles.startX.value;
@@ -116,7 +116,7 @@ function buildWindowGesture(
       // `onFinalize` rather than `onEnd`: it also runs when the gesture is
       // cancelled, which must still commit the window and hand the scroll back.
       publish(true);
-      runOnJS(setDragging)(false);
+      scheduleOnRN(setDragging, false);
     });
 }
 

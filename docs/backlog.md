@@ -819,14 +819,6 @@ Supabase 로 DB 에 직접 닿을 수 있는 공유 Supabase DB 를 쓸 때뿐�
 2026-10-09 문서 전수 감사에서 나온, 코드 동작은 그대로이고 **규칙이나 문서를 어느 쪽으로 맞출지만 정하면 되는** 판단이다.
 각 항목에 배경 · 선택지 · 권장(있으면) · 완료 조건을 적었다. 정하면 해당 문서(와 필요한 경우 코드 · 테스트)를 고치고 닫는다.
 
-### H-8. `runOnJS` 와 `scheduleOnRN`
-
-[animations-and-gestures.md](../apps/mobile/docs/frameworks/animations-and-gestures.md)는 UI 스레드에서 JS 로 넘길 때 `runOnJS` 를
-처방하고 코드 5개 파일이 그렇게 쓰는데, `apps/mobile/src/_app/routes/animated-splash-overlay.tsx` 만 `react-native-worklets` 의
-`scheduleOnRN` 을 쓴다.
-
-**완료 조건**: Reanimated 4.5 · worklets 의 권장에 맞춰 하나로 통일하고 문서와 코드를 맞춘다.
-
 ### H-11. `env-management.md` 의 "후속 연계" 절
 
 [decisions/env-management.md](./decisions/env-management.md)의 "후속 연계"는 작성 뒤에 덧붙인 내용인데 배너가 아니라 본문 절로 남아
@@ -950,5 +942,6 @@ Supabase 로 DB 에 직접 닿을 수 있는 공유 Supabase DB 를 쓸 때뿐�
 - **H-5** 배포 문서 두 개를 합칠지 — 2026-10-09 사내 서버를 접으며 `docs/deployment.md` 가 보관돼 [deployment-aws.md](./deployment-aws.md) 하나가 됐다 → progress 2026-10-09 "사내 서버를 접고 배포 대상을 AWS 하나로"
 - **H-6** 모바일 로컬 개발 문서의 환경 프로필(지금 Mac 을 기본으로, 구형 프로필은 표에) — 2026-10-10 → progress 2026-10-10 "모바일 로컬 개발 문서를 지금 Mac 에 맞춘다"
 - **H-7** 모바일 런타임 에셋의 위치 규칙(이미지 · 폰트는 루트 `assets`, `@/assets/*`) — 2026-10-10 → progress 2026-10-10 "모바일 에셋은 루트 assets 에 둔다"
+- **H-8** `runOnJS` 와 `scheduleOnRN`(`scheduleOnRN` 으로 통일 — Reanimated 4 가 `runOnJS` 를 폐기 예정으로) — 2026-10-10 → progress 2026-10-10 "워크릿에서 JS 로 넘길 때는 scheduleOnRN 을 쓴다"
 - **H-9** ONBOARDING 의 "모노레포 통합 이전에 분기한 브랜치" 절(한 줄로) — 2026-10-10 → progress 2026-10-10 "ONBOARDING 의 통합 전 브랜치 절을 걷는다"
 - **H-10** 결정 문서의 결정 ID 가 백로그 ID 와 같은 모양이다(`V3-A1` 꼴로) — 2026-10-10 → progress 2026-10-10 "editSpec v3 결정 ID 에 접두를 붙인다"

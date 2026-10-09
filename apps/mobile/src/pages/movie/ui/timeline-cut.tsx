@@ -3,12 +3,12 @@ import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
-  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
   type SharedValue,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 import Svg, { Path } from 'react-native-svg';
 
 import { CutTrimStepSec, MinCutSec } from '@/entities/movie';
@@ -112,13 +112,13 @@ function buildTrimGesture(
     const signature = windowSignature(startSec, endSec);
     if (!settled && signature === handles.reported.value) return;
     handles.reported.value = signature;
-    runOnJS(report)(startSec, endSec, settled);
+    scheduleOnRN(report, startSec, endSec, settled);
   };
 
   return Gesture.Pan()
     .minDistance(0)
     .onTouchesDown(() => {
-      runOnJS(setTrimming)(true);
+      scheduleOnRN(setTrimming, true);
     })
     .onStart(() => {
       handles.origin.value = moving.value;
@@ -133,7 +133,7 @@ function buildTrimGesture(
       // `onFinalize` rather than `onEnd`: it also runs when the gesture is
       // cancelled, which must still commit the window and hand the scroll back.
       publish(true);
-      runOnJS(setTrimming)(false);
+      scheduleOnRN(setTrimming, false);
     });
 }
 

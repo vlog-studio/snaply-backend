@@ -2674,3 +2674,12 @@ C 부터"라고 밝혔다. 다시 볼 안건은 그대로 backlog A-1 에 있다
 AVD `Pixel_API_35` · 캐시의 Expo Go)을 기준으로 했다. 지금 작업하는 Mac(Xcode 27 · `iPhone 17` · 손으로 만든 AVD `snaply_api35` · Expo Go 를
 api.expo.dev 에서 받는다)을 기본으로 바꾸고, 두 프로필을 표로 나란히 적었다. 구형 장비가 아직 쓰이는지 알 수 없어 구형 절은 걷지 않았다.
 Expo Go 를 받는 명령은 `https://api.expo.dev/v2/versions` 의 응답(`sdkVersions["57.0.0"].iosClientUrl` → `Expo-Go-57.0.9.tar.gz`)으로 확인했다.
+
+## 2026-10-10 (이어서) — 워크릿에서 JS 로 넘길 때는 scheduleOnRN 을 쓴다(backlog H-8 닫음)
+
+[animations-and-gestures.md](../apps/mobile/docs/frameworks/animations-and-gestures.md)는 `runOnJS` 를 처방하고 다섯 파일이 그렇게 썼는데, 스플래시만
+`react-native-worklets` 의 `scheduleOnRN` 을 썼다. 설치된 Reanimated 4.5.1 이 `runOnJS` 를 `@deprecated` 로 표시하고 `scheduleOnRN` 을 쓰라고
+안내하므로 그쪽으로 통일했다 — `bottom-sheet.tsx` · `timeline-cut.tsx` · `extract-window.tsx` · `capture-flight.tsx` 의 `runOnJS(fn)(...args)` 를
+`scheduleOnRN(fn, ...args)` 로 바꾸고, 문서에 규칙과 이유를 적었다. Gesture Handler 의 `.runOnJS(true)`(`extract-strip.tsx`)는 다른 API 라 그대로다.
+
+- **검증**: `npm run verify:mobile` 통과(176개 스위트 1412건, lint 경고 1건은 원래 있던 것). 기기에서는 보지 않았다 — 바텀 시트 닫기 · 컷 다듬기 · 추출 창 · 촬영 비행 애니메이션의 완료 콜백이 대상이다.

@@ -3,11 +3,11 @@ import { useCallback, useEffect, useRef } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, {
   Easing,
-  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 
 import { Radius } from '@/shared/ui/theme';
 
@@ -37,7 +37,7 @@ export function CaptureFlight({ uri, onArrive }: CaptureFlightProps) {
     onArriveRef.current = onArrive;
   }, [onArrive]);
 
-  // A stable JS-runtime reference for runOnJS: the withTiming worklet cannot
+  // A stable JS-runtime reference for scheduleOnRN: the withTiming worklet cannot
   // schedule a function defined inside itself, so notify through this instead.
   const notifyArrive = useCallback(() => {
     onArriveRef.current();
@@ -53,7 +53,7 @@ export function CaptureFlight({ uri, onArrive }: CaptureFlightProps) {
       1,
       { duration: FLIGHT_MS, easing: Easing.in(Easing.cubic) },
       (finished) => {
-        if (finished) runOnJS(notifyArrive)();
+        if (finished) scheduleOnRN(notifyArrive);
       },
     );
   }, [progress, notifyArrive]);
