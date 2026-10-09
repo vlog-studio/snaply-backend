@@ -13,7 +13,8 @@ type Props = {
 /**
  * Shown after account creation: the user must tap the confirmation link in
  * their email, which deep-links back into the app and signs them in. No code
- * entry — confirmation is handled globally by the deep-link handler.
+ * entry — confirmation is completed by the auth callback screen the link opens
+ * (`pages/auth-callback`).
  */
 export function EmailSentNotice({ email, onResend, isPending, error }: Props) {
   return (

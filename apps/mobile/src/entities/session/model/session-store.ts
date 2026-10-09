@@ -112,8 +112,8 @@ export function clearPendingDeletion(): void {
 }
 
 /**
- * Enter/leave the password-recovery state. `setRecovering` is called by the
- * deep-link handler when a reset link lands; `finishPasswordRecovery` is called
+ * Enter/leave the password-recovery state. `setRecovering` is called by
+ * `exchangeAuthCode` when the `/auth/reset` callback screen lands; `finishPasswordRecovery` is called
  * by the update-password action once the new password is saved.
  */
 function setRecovering(value: boolean): void {

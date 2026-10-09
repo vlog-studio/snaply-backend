@@ -20,7 +20,7 @@ type SignUpResult = {
 /**
  * Sign-up seam. Behind an interface so the Supabase implementation swaps for the
  * offline mock in development. Confirmation is completed by tapping the emailed
- * link (deep link → `exchangeCodeForSession`, handled globally), so this seam
+ * link (deep link → the auth callback screen, `pages/auth-callback`), so this seam
  * only creates the account and re-sends the confirmation email.
  */
 export interface SignUpProvider {

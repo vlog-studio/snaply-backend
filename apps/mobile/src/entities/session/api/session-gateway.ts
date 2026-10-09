@@ -39,7 +39,7 @@ export function subscribeToSession(listener: (change: SessionChange) => void): (
     listener({
       user: session ? mapSupabaseUser(session.user) : null,
       // Belt-and-suspenders: some flows emit this event on a recovery landing.
-      // The deep-link handler also flags recovery from the callback URL.
+      // The `/auth/reset` callback screen also flags recovery (`exchangeAuthCode`).
       isRecovery: event === 'PASSWORD_RECOVERY',
     });
   });

@@ -1,6 +1,7 @@
 name: Deploy
 
-# main 브랜치 머지 시 자동 배포. 실제 배포 대상/자격증명은 리포지토리 Secrets로 주입.
+# main 브랜치 머지 시 자동 배포. 대상은 AWS 공모전 서버의 self-hosted runner 이고, 시크릿은 배포 때
+# Secrets Manager 에서 읽어 env 파일로 만든다(docs/deployment-aws.md §2·§3).
 on:
   push:
     branches: [main]

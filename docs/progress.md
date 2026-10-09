@@ -2500,3 +2500,20 @@ env-spec 부터). `POSTGRES_HOST_PORT` 처럼 `origin: 'local'` 로 선언하고
 3000 을 쓰게 되어 더는 읽지 않는다.
 
 - **검증**: `npm test -w apps/api` 41개 파일 624건 통과(`env-spec.test.ts` 포함).
+
+## 2026-10-09 (이어서) — 낡은 코드 주석 · 설명을 고친다(backlog G 항목 닫음)
+
+동작은 맞고 글만 낡았던 곳을 한 번에 고쳤다(2026-10-09 문서 감사에서 모은 목록).
+
+- `.github/workflows/deploy.yml` 머리 주석 — 배포 대상은 AWS 서버의 self-hosted runner, 시크릿은 Secrets Manager 에서 배포 때 만든 env 파일이다.
+  주석만 바뀌었지만 이 파일은 `deploy.yml` 의 `paths` 에 들어 있어 머지하면 같은 코드로 배포가 한 번 돈다.
+- `DELETE /auth/me/analysis-consent` 설명 — 파기 대상에 편집 초안 기록을 더했다(`withdrawAnalysisConsent` 가 `movieDraft` 도 지운다).
+  `openapi.json` 은 그 한 줄만 바뀌었고, [api-spec.md](./api-spec.md)는 이미 맞게 적혀 있었다.
+- `schema.prisma` `AdReward.status` 주석에 `abandoned` 를 더했다(`npm run db:generate` 로 클라이언트를 다시 만들었다, 마이그레이션 없음).
+- `.env.example` Redis 머리말의 "운영: Upstash" 를 걷었다 — AWS 서버도 compose 의 redis 컨테이너다.
+- `scripts/media-cleanup.mjs` 머리 주석 — 정리 대상은 `media:e2e` 가 공유 DB 에 만든 데이터이고, 통합 테스트는 `snaply_test` 만 쓴다.
+- `retention-policy.ts` `EXPIRY_NOTICE_HOUR_KST` — 배치 로그용 표시값이고 실제 시각은 `deploy/batches.cron` 이 정한다고 적었다.
+- 앱의 "(global) deep-link handler" 주석 9곳 — 인증 메일의 링크는 Expo Router 가 `pages/auth-callback` 화면으로 보내 그 화면이 코드를 교환한다.
+  백로그 목록의 7개 파일에 같은 표현을 쓰던 `use-sign-up-flow.ts` · `sign-up-provider.ts` 를 더했다.
+- `apps/mobile/.prettierignore` — 없는 대상(`src/shared/api/schema.d.ts` · `docs/api/openapi.json` · `docs/guides/**/*.html`)과 없는 스크립트를 가리키던 줄을 지웠다.
+- **검증**: `npm test -w apps/api` 41개 파일 624건 · API typecheck · `npm run verify:mobile`(175개 스위트 1398건, lint 경고 1건은 원래 있던 것) 통과.

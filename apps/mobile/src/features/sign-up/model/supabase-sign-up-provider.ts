@@ -5,8 +5,9 @@ import { EmailAlreadyRegisteredError, type SignUpProvider } from './sign-up-prov
 /**
  * Real sign-up over Supabase Auth. `signUp` creates the user and, with email
  * confirmation enabled (this project's setting), sends a confirmation email
- * whose link deep-links back to the app (`authCallbackUrl`); the global
- * deep-link handler exchanges the returned code for a session.
+ * whose link deep-links back to the app (`authCallbackUrl`); Expo Router opens
+ * the auth callback screen (`pages/auth-callback`), which exchanges the returned
+ * code for a session.
  */
 export const supabaseSignUpProvider: SignUpProvider = {
   async signUp(email, password) {

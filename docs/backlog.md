@@ -844,24 +844,6 @@ Supabase 로 DB 에 직접 닿을 수 있는 공유 Supabase DB 를 쓸 때뿐�
 - [ ] **자동 편집 실기기 확인에 쓴 시험 데이터** — 2026-10-01 실기기 확인에서 만든 시험 무비 두 편과 지급한 크레딧 100 은
       "정리는 오너 확인 뒤"로 남았다([progress.md](./progress.md) 2026-10-01 "자동 편집 실기기 확인"). 이미 정리했는지 확인하고
       남았으면 지운다
-- [ ] **낡은 코드 주석·설명** — 동작은 맞고 글만 낡았다. 한 번에 고친다(API 설명을 바꾸면 `npm run openapi:write -w apps/api`):
-  - `.github/workflows/deploy.yml` 머리 주석의 "실제 배포 대상/자격증명은 리포지토리 Secrets로 주입" — 지금은 self-hosted runner 와
-    Secrets Manager 에서 배포 때 만든 env 파일이다([deployment-aws.md](./deployment-aws.md) §2)
-  - `apps/api/src/routes/auth.ts` 분석 동의 철회(`DELETE /auth/me/analysis-consent`)의 description — 파기 대상에 편집 초안 기록이 빠졌다
-    (`withdrawAnalysisConsent` 는 `movieDraft` 도 지운다)
-  - `apps/api/prisma/schema.prisma` `AdReward.status` 주석이 `pending | granted | expired | rejected` — `abandoned` 가 빠졌다
-    (`apps/api/src/services/ad-reward.service.ts` `AD_REWARD_STATUS`)
-  - `.env.example` Redis 섹션 머리말의 "운영: Upstash" — AWS 서버도 compose 의 redis 컨테이너를 쓴다
-  - `scripts/media-cleanup.mjs` 상단 주석 "공유 Supabase 라 통합 테스트 후 자기 데이터를 정리" — 통합 테스트는 `snaply_test` 만 쓰고,
-    정리 대상은 `media:e2e` 가 만든 데이터다
-  - `apps/api/src/services/retention-policy.ts` `EXPIRY_NOTICE_HOUR_KST`(10) 는 로그 표시용이고 실제 시각은 `deploy/batches.cron` 이 정한다 —
-    둘이 따로 움직이지 않게 주석에 원천을 적는다
-  - 앱의 "(global) deep-link handler" 주석 — 실제로는 Expo Router 가 `/auth/callback` · `/auth/reset` 화면(`pages/auth-callback`)으로 보내
-    코드를 교환한다: `apps/mobile/src/features/sign-up/model/supabase-sign-up-provider.ts` · `features/sign-up/ui/email-sent-notice.tsx` ·
-    `features/reset-password/model/reset-password-provider.ts` · `features/reset-password/model/supabase-reset-password-provider.ts` ·
-    `entities/session/model/session-store.ts` · `entities/session/api/session-gateway.ts` · `shared/lib/supabase/auth-redirect.ts`
-  - `apps/mobile/.prettierignore` — 없는 대상(`src/shared/api/schema.d.ts` · `docs/api/openapi.json` · `docs/guides/**/*.html`)과 없는 스크립트
-    (`api:gen` · `api:pull`)를 가리키는 줄을 지운다
 - [ ] **테스트 게시물 정리** — 인스타 릴스는 API 로 삭제할 수 없으므로 앱에서 수동으로 지운다.
       **틱톡 받은함 초안 3건은 지우지 않는다** — C-2("API 는 ok 인데 알림 미도착")의 유일한 증거물이라
       C-2 가 닫힌 뒤에 정리한다.
@@ -1076,4 +1058,5 @@ C 문단이 사실상 권장이다.
 - **F** 한 번에 하나씩 만들기의 실기기 확인(MOV-11 `구현됨`) · 다른 기기에서 지운 스냅의 컷 표시(SNAP-12) — 2026-10-09 → progress 2026-10-09 "휴대폰과 에뮬레이터로 — 다른 기기 · 삭제 · 업로드 전 무비"
 - **G** Firebase 서비스 계정 키 로테이션(루트 키 파일 없음 확인 포함) — 2026-08-11 → progress 2026-08-11 "Firebase 서비스 계정 키 로테이션"
 - **G** 틱톡 Sandbox `client_key` 이력 노출 — 2026-08-11 제거하지 않기로 판정 → [sns-setup.md](./sns-setup.md) §3 "Sandbox client_key 의 이력 노출"
+- **G** 낡은 코드 주석 · 설명(배포 잡 머리말 · 분석 동의 철회 설명 · `AdReward.status` · Redis 머리말 · `media-cleanup.mjs` · 만료 예고 시각 · 앱의 딥링크 처리 · `.prettierignore`) — 2026-10-09 → progress 2026-10-09 "낡은 코드 주석 · 설명을 고친다"
 - **H-5** 배포 문서 두 개를 합칠지 — 2026-10-09 사내 서버를 접으며 `docs/deployment.md` 가 보관돼 [deployment-aws.md](./deployment-aws.md) 하나가 됐다 → progress 2026-10-09 "사내 서버를 접고 배포 대상을 AWS 하나로"

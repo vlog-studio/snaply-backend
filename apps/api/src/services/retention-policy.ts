@@ -58,6 +58,9 @@ export const SNAP_EXPIRY_NOTICE_DAYS = [3, 1] as const;
  * 정리 배치(새벽)와 **일부러 분리했다.** 사용자의 조용한 시간대 기본값이 22-08시라 새벽에
  * 같이 보내면 알림이 발송되지 않고 버려지고, 사용자는 예고 없이 파일을 잃는다. 조용한
  * 시간대를 무시하는 대신 낮에 보내는 쪽을 택했다 — 설정을 어기지 않으면서 알림도 도착한다.
+ *
+ * 이 값은 배치 로그에 찍는 표시값이다. 실제 발송 시각은 deploy/batches.cron 의
+ * `media:notify-expiring` 줄이 정한다 — 바꿀 때는 둘을 함께 바꾼다.
  */
 export const EXPIRY_NOTICE_HOUR_KST = 10;
 

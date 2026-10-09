@@ -505,7 +505,7 @@ model AdReward {
   userId        String    @map("user_id") @db.Uuid
   /// SSV custom_data 로 왕복하는 일회성 난수. 추측 불가해야 한다.
   nonce         String    @unique @db.VarChar(64)
-  /// pending | granted | expired | rejected
+  /// pending | abandoned | granted | expired | rejected (ad-reward.service.ts AD_REWARD_STATUS)
   status        String    @db.VarChar(16)
   /// 지급 확정된 크레딧. 세션 발급 시점의 정책값을 스냅샷한다 —
   /// 정책이 바뀌어도 이미 시작된 광고의 약속은 지켜야 한다.
