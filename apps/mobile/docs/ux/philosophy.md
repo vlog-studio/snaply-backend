@@ -4,7 +4,7 @@ Four root ideas. Every principle in [`principles.md`](principles.md) must derive
 
 The single sentence all four serve:
 
-> The user reaches their own goal with the least thinking, in the fewest decisions, without needing to understand how the app is built.
+> The user reaches their own goal with the least thinking, in the fewest decisions, without needing to understand how the app is built — and without losing capability or control.
 
 Not "the screen is simple". Not "the screen looks calm". Simplicity is a means; goal completion at low cognitive cost is the end.
 

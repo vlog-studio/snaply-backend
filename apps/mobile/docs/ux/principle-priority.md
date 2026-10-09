@@ -2,9 +2,9 @@
 
 Principles conflict routinely. This document decides which one yields.
 
-The objective is never "obey principle N". It is:
+The objective is never "obey principle N". It is the sentence [`philosophy.md`](philosophy.md) states once for the whole system:
 
-> The user achieves their own goal at the lowest total cognitive cost, without losing capability or control.
+> The user reaches their own goal with the least thinking, in the fewest decisions, without needing to understand how the app is built — and without losing capability or control.
 
 A change that satisfies a principle while raising total cost is a regression, however well-cited.
 

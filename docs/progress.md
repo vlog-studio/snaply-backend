@@ -2689,3 +2689,9 @@ Expo Go 를 받는 명령은 `https://api.expo.dev/v2/versions` 의 응답(`sdkV
 [decisions/env-management.md](./decisions/env-management.md)의 "후속 연계"는 작성 뒤에 덧붙인 결정(배포 플랫폼 = AWS 공모전 서버)인데 본문 절로 남아
 있었다([doc-conventions.md](./doc-conventions.md) §헤더: 후속 결정은 헤더 아래 배너). 헤더의 `> **후속 결정**(2026-10-08)` 배너로 압축하고 절을 지웠다.
 빈 값을 옮기지 않는 이유 같은 쓸모 있는 사실은 배너에 남겼고, 지운 절을 가리키는 링크는 없었다.
+
+## 2026-10-10 (이어서) — UX 목표 문장을 하나로 맞춘다(backlog H-12 닫음)
+
+오너가 권장안을 골랐다. [guardrails.md](../apps/mobile/docs/ux/guardrails.md)는 그대로 둔다. 목표 문장은 [philosophy.md](../apps/mobile/docs/ux/philosophy.md)를
+원천으로 두고 [principle-priority.md](../apps/mobile/docs/ux/principle-priority.md)에만 있던 조건("능력 · 통제를 잃지 않고")을 더했으며,
+principle-priority 는 그 문장을 그대로 인용한다. [ux/README.md](../apps/mobile/docs/ux/README.md)의 라우팅 표는 바꿀 것이 없었다.
