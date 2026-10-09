@@ -51,6 +51,10 @@ export function usePushTokenRegistration({ recheckKey }: { recheckKey?: unknown 
         const token = await getFcmToken();
         if (cancelled) return;
         await registerFcmToken(token);
+        // A run replaced while the backend answered must not subscribe: its
+        // cleanup has already run, so its listeners would never be removed and
+        // every foreground push would be shown once more.
+        if (cancelled) return;
 
         unsubscribers.push(
           onFcmTokenRefresh((refreshed) => {

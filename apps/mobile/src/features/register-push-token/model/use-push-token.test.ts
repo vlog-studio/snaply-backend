@@ -149,6 +149,47 @@ describe('usePushTokenRegistration', () => {
     expect(mockHasPermission).toHaveBeenCalledTimes(2);
   });
 
+  // At app start the account's movie-alert preference is read after the first
+  // run began, so the key changes while that run still waits on the backend.
+  // Its listeners then outlived it, and a push in the foreground was shown
+  // twice (seen on a phone, 2026-10-09).
+  it('keeps one set of listeners when the recheck key changes mid-registration', async () => {
+    let finishFirst!: () => void;
+    mockRegisterToken.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          finishFirst = resolve;
+        }),
+    );
+    type ForegroundListener = Parameters<typeof onForegroundMessage>[0];
+    const foreground = new Set<ForegroundListener>();
+    mockOnForegroundMessage.mockImplementation((listener) => {
+      foreground.add(listener);
+      return () => foreground.delete(listener);
+    });
+    const { rerender } = await renderHook(
+      ({ recheckKey }: { recheckKey?: boolean }) => usePushTokenRegistration({ recheckKey }),
+      { initialProps: { recheckKey: undefined } },
+    );
+    await waitFor(() => expect(mockRegisterToken).toHaveBeenCalledTimes(1));
+
+    await act(async () => rerender({ recheckKey: true }));
+    await waitFor(() => expect(foreground.size).toBe(1));
+    await act(async () => finishFirst());
+
+    expect(foreground.size).toBe(1);
+    expect(mockOnTokenRefresh).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      foreground.forEach((listener) =>
+        listener({
+          notification: { title: 'Movie ready', body: 'Open Snaply' },
+          data: { movieId: 'm1' },
+        } as unknown as Parameters<ForegroundListener>[0]),
+      );
+    });
+    expect(mockPresentLocal).toHaveBeenCalledTimes(1);
+  });
+
   it('unsubscribes both native listeners on unmount', async () => {
     const unsubscribeRefresh = jest.fn();
     const unsubscribeForeground = jest.fn();
