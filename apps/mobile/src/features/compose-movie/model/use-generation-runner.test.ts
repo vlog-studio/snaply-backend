@@ -131,6 +131,26 @@ describe('useGenerationRunner', () => {
     expect(mockFinish).not.toHaveBeenCalled();
   });
 
+  // The worker retries a passing failure from the start (specs/movie.md MOV-12):
+  // the line says so, and the stages it reports again do not walk it backwards.
+  it('says a run is being retried and does not walk its line back', async () => {
+    mockMovies.mockReturnValue([
+      generatingMovie({ job: { id: 'job-1', progress: 35, startedAt, step: cutStep } }),
+    ]);
+    await act(async () => {
+      await renderHook(() => useGenerationRunner());
+    });
+    mockAdvance.mockClear(); // the catch-up pass on mount is not what this is about
+    const retryStep = '\uB2E4\uC2DC \uC2DC\uB3C4'; // 다시 시도
+    const download = '\uC6D0\uBCF8 \uB2E4\uC6B4\uB85C\uB4DC \uC644\uB8CC'; // 원본 다운로드 완료
+
+    await emit('job-1', { kind: 'progress', progress: 0, step: retryStep });
+    await emit('job-1', { kind: 'progress', progress: 10, step: download });
+
+    expect(mockAdvance).toHaveBeenNthCalledWith(1, 'm1', 0, retryStep);
+    expect(mockAdvance).toHaveBeenNthCalledWith(2, 'm1', 10, undefined);
+  });
+
   // The socket says the run is over but cannot be trusted for what it produced:
   // a reconnect to a finished job arrives without the URL at all.
   it('confirms a completion against the backend and finishes with the rendered file', async () => {

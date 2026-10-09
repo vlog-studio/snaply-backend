@@ -20,6 +20,7 @@ import { getEditJob } from '../api/get-edit-job';
 import { subscribeEditProgress } from '../api/subscribe-edit-progress';
 import { announceJobEnd } from '../lib/announce-job-end';
 import { editFailureMessage } from '../lib/edit-failure-copy';
+import { reportedStep } from '../lib/edit-step-label';
 
 /**
  * How often a running job is asked about over HTTP, on top of its socket.
@@ -281,7 +282,12 @@ export function useGenerationRunner({ announce = false }: GenerationRunnerOption
         onEvent: (event) => {
           if (cancelled || settled.has(movieId)) return;
           if (event.kind === 'progress') {
-            advanceMovieJob(movieId, event.progress, event.step);
+            const shown = movieById(movieId)?.job?.progress ?? 0;
+            advanceMovieJob(
+              movieId,
+              event.progress,
+              reportedStep(event.step, event.progress, shown),
+            );
             return;
           }
           if (event.kind === 'failed') {

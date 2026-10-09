@@ -1,4 +1,4 @@
-import { editStepLabel } from './edit-step-label';
+import { editStepLabel, reportedStep } from './edit-step-label';
 
 describe('editStepLabel', () => {
   // Every step the worker publishes today (apps/ai-worker/src/worker.py).
@@ -11,6 +11,7 @@ describe('editStepLabel', () => {
     ['\uC790\uB9C9 \uAC74\uB108\uB700', '\uB9C8\uBB34\uB9AC\uD558\uB294 \uC911'], // 자막 건너뜀 → 마무리하는 중
     ['\uC5C5\uB85C\uB4DC \uC911...', '\uB9C8\uBB34\uB9AC\uD558\uB294 \uC911'], // 업로드 중... → 마무리하는 중
     ['\uC644\uB8CC', '\uB2E4 \uB410\uC5B4\uC694'], // 완료 → 다 됐어요
+    ['\uB2E4\uC2DC \uC2DC\uB3C4', '\uB2E4\uC2DC \uC2DC\uB3C4\uD558\uB294 \uC911'], // 다시 시도 → 다시 시도하는 중
   ])('maps the worker step %s', (step, label) => {
     expect(editStepLabel(step)).toBe(label);
   });
@@ -34,5 +35,30 @@ describe('editStepLabel', () => {
     ['an empty step', '  '],
   ])('reads %s as waiting in line', (_label, step) => {
     expect(editStepLabel(step)).toBe('\uC21C\uC11C\uB97C \uAE30\uB2E4\uB9AC\uB294 \uC911'); // 순서를 기다리는 중
+  });
+});
+
+describe('reportedStep', () => {
+  const retry = '\uB2E4\uC2DC \uC2DC\uB3C4'; // 다시 시도
+  const cut = '\uC6D0\uBCF8 \uB2E4\uC6B4\uB85C\uB4DC \uC644\uB8CC'; // 원본 다운로드 완료
+  const music = '\uCEF7\uD3B8\uC9D1 \uC644\uB8CC'; // 컷편집 완료
+
+  it('takes a step reported at or past the shown progress', () => {
+    expect(reportedStep(music, 35, 35)).toBe(music);
+    expect(reportedStep(cut, 10, 0)).toBe(cut);
+  });
+
+  // A retried run starts over while the shown progress holds; its early stages
+  // must not walk the line backwards.
+  it('keeps the shown step when a retried run reports an earlier stage', () => {
+    expect(reportedStep(cut, 10, 35)).toBeUndefined();
+  });
+
+  it('always shows the retry itself, though it reports 0', () => {
+    expect(reportedStep(retry, 0, 35)).toBe(retry);
+  });
+
+  it('keeps the shown step when none was reported', () => {
+    expect(reportedStep(undefined, 60, 35)).toBeUndefined();
   });
 });
