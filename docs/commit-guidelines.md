@@ -1,7 +1,14 @@
 # 커밋 지침
 
-이 문서는 Snaply 통합 모노레포에서 일관된 커밋을 만들기 위한 기준이다. 최근 이력에서
-사용 중인 Conventional Commits 스타일을 유지하며, 각 커밋이 독립적으로 이해되고
+**작성일**: 2026-08-07
+**상태**: 현행
+**원천**: 커밋 제목의 type·scope, 커밋 분할 기준, 스테이징·확인 절차. 커밋 전에도 지켜야 하는 최소 규칙은
+[AGENTS.md](../AGENTS.md) §커밋에 요약돼 있다
+**관련 문서**: [constitution.md](constitution.md) 제8조 · [pull-request-guidelines.md](pull-request-guidelines.md) ·
+[ONBOARDING.md](../ONBOARDING.md) §3-9(검증 명령)
+
+이 문서는 Snaply 통합 모노레포에서 일관된 커밋을 만들기 위한 기준이다. 저장소
+이력에서 사용 중인 Conventional Commits 스타일을 유지하며, 각 커밋이 독립적으로 이해되고
 되돌릴 수 있게 만드는 것을 목표로 한다.
 
 ## 1. 기본 형식
@@ -56,6 +63,7 @@ scope는 변경의 주된 소유 영역이 분명할 때 사용한다.
 | `ai-worker` | `apps/ai-worker` Python 워커 |
 | `db` | Prisma 스키마, 마이그레이션, 시드 |
 | `shared-types` | `packages/shared-types` |
+| `scripts` | 루트 `scripts/`의 개발 도구 |
 
 저장소 루트 설정이나 여러 영역에 걸친 변경은 scope를 생략한다. 문서만 변경하는
 커밋도 현재 이력에 맞춰 보통 `docs:`를 사용한다.
@@ -159,7 +167,8 @@ Closes #123
    전체 검증이 과도하면 변경된 workspace의 관련 명령을 실행하고 그 범위를 기록한다.
    API 코드를 바꿨다면 관련 테스트도 실행한다 — 반드시 `npm test -w apps/api`
    (다른 형태로 실행하지 않는다, [AGENTS.md](../AGENTS.md) §테스트).
-   모바일은 `npm run verify:mobile`.
+   모바일은 `npm run verify:mobile`. AI 워커 테스트까지 포함한 전체 목록은
+   [ONBOARDING.md](../ONBOARDING.md) §3-9.
 
 3. 커밋 목적에 해당하는 파일만 명시적으로 스테이징한다.
 

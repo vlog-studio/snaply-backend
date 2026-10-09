@@ -1,10 +1,14 @@
 # 스냅의 사용자 사본 — 앨범 저장과 "이 기기에서만 삭제"
 
 **작성일**: 2026-09-29
-**상태**: 결정 — 네 가지 모두 권장안을 채택했다(2026-09-29 오너). 같은 날 구현해 Android 에뮬레이터에서 확인했다([progress.md](../progress.md)). 휴대폰·iOS 확인은 [backlog.md](../backlog.md) A-4, 구현 상태는 [specs/snap-library.md](../specs/snap-library.md) SNAP-17·18·19 가 원천이다
+**상태**: 결정 — 네 가지 모두 권장안을 채택했다(2026-09-29 오너)
+**원천**: 앨범 저장과 "이 기기에서만 삭제"의 결정 근거와 설계. 요구와 구현 상태는
+[specs/snap-library.md](../specs/snap-library.md) SNAP-17·18·19, 앱 동작은
+[apps/mobile/docs/features/snaps.md](../../apps/mobile/docs/features/snaps.md)가 원천이다
 **관련 문서**: [snap-retention-period.md](./snap-retention-period.md) · [local-copy-after-upload.md](./local-copy-after-upload.md) ·
 [snap-sync-across-devices.md](./snap-sync-across-devices.md) · [specs/snap-library.md](../specs/snap-library.md) SNAP-9·14·16~19 ·
-[apps/mobile/docs/features/snaps.md](../../apps/mobile/docs/features/snaps.md)
+[apps/mobile/docs/features/snaps.md](../../apps/mobile/docs/features/snaps.md) · [progress.md](../progress.md) 2026-09-29(구현 ·
+에뮬레이터 확인) · [backlog.md](../backlog.md) A-4
 
 ---
 

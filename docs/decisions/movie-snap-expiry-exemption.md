@@ -2,9 +2,9 @@
 
 **작성일**: 2026-09-15
 **상태**: 결정(잠정) — **예외를 두지 않는다.** 다음 회의 안건으로 다시 본다
-**관련**: [snap-retention-period.md](./snap-retention-period.md) ·
+**관련 문서**: [snap-retention-period.md](./snap-retention-period.md) ·
 [storage-and-subscription-policy.md](./storage-and-subscription-policy.md) ·
-[specs/movie.md](../specs/movie.md) MOV-14
+[specs/movie.md](../specs/movie.md) MOV-14 · MOV-20 · [backlog.md](../backlog.md) A-1(다시 볼 안건) · A-2(요금제)
 
 ---
 
@@ -20,7 +20,7 @@
 
 무비는 영구 보존이지만 그 재료인 스냅은 15일이다. 컷이 하나라도 만료되면
 **그 무비는 영구히 내보낼 수 없다** — `POST /movies/{id}/export` 가 400 으로 막는다
-(`movie.service.ts`). 무비는 열리고 컷 목록도 보이지만, 사용자가 그 컷을 직접 빼야만
+(`apps/api/src/services/movie.service.ts`, MOV-20). 무비는 열리고 컷 목록도 보이지만, 사용자가 그 컷을 직접 빼야만
 다시 만들 수 있다. 즉 15일 안에 완성하지 않고 묵힌 초안은 시간이 지날수록 재료를 잃는다.
 
 ## 검토한 선택지
@@ -57,7 +57,7 @@
 
 바꾸기로 하면 스키마 변경도 마이그레이션도 없다. `MovieClip.videoId` 에 인덱스가 있어
 "이 스냅을 쓰는 무비가 있는가" 는 한 줄 질의이고, 만료 여부를 행에 굳히지 않고 정책에서
-유도하도록 만들어 두었기 때문이다(`retention-policy.ts`). 조건 하나를 더하는 일이다.
+유도하도록 만들어 두었기 때문이다(`apps/api/src/services/retention-policy.ts`). 조건 하나를 더하는 일이다.
 
 **주의할 점 하나**: 무비 컷 행은 스냅이 사라져도 툼스톤으로 남는다. 그래서 "무비가 참조 중"
 을 순진하게 판정하면 **이미 지운 무비가 참조하던 스냅까지** 살아남는다. 살아 있는 무비

@@ -27,7 +27,7 @@
 
 > **앱 식별자는 이미 정해져 있습니다** (`app.json` 기준): Android `package` / iOS `bundleIdentifier` 모두 **`com.anonymous.snaplyapp`**. Firebase 앱 등록 시 이 값을 그대로 입력하세요.
 
-> **`google-services.json`은 비밀 키가 아닙니다**(클라이언트에 배포되는 공개 설정). 다만 프로젝트 식별자가 담기므로 팀 정책에 따라 커밋 여부를 정하면 됩니다. 커밋하지 않는다면 `apps/mobile/`에 두고, EAS 빌드에는 [EAS 파일 환경변수](https://docs.expo.dev/eas/environment-variables/)로 제공해야 합니다. FCM 자체는 SHA-1 지문이 필요 없습니다(그건 Google 로그인·Dynamic Links용).
+> **`google-services.json`·`GoogleService-Info.plist`는 비밀 키가 아닙니다**(클라이언트에 배포되는 공개 설정). 이 저장소는 두 파일을 `apps/mobile/`에 커밋해 두었으므로, 다른 Firebase 프로젝트로 옮길 때는 같은 경로의 파일을 교체합니다. 커밋하지 않는 방식으로 바꾸면 EAS 빌드에는 [EAS 파일 환경변수](https://docs.expo.dev/eas/environment-variables/)로 제공해야 합니다. FCM 자체는 SHA-1 지문이 필요 없습니다(그건 Google 로그인·Dynamic Links용).
 
 ---
 
@@ -64,12 +64,12 @@
 1. 패키지 설치: `npx expo install @react-native-firebase/app @react-native-firebase/messaging expo-build-properties`
 2. `app.json` 반영:
    - `expo.android.googleServicesFile: "./google-services.json"`, `expo.ios.googleServicesFile: "./GoogleService-Info.plist"`
-   - `plugins`에 `"@react-native-firebase/app"` 추가
-   - `expo-build-properties` 플러그인으로 iOS `useFrameworks: "static"` + `ios.forceStaticLinking: ["RNFBApp", "RNFBMessaging"]`
-3. `shared/lib/notifications` 어댑터: `getToken`, `onTokenRefresh`, `onMessage`(포그라운드 수신 → `expo-notifications`로 로컬 알림 표시), iOS `requestPermission`/`registerDeviceForRemoteMessages`
-4. `features/register-push-token`: 토큰 발급 → `registerFcmToken` 호출, 토큰 갱신 시 재등록
+   - `plugins`에 `"@react-native-firebase/app"`, `"@react-native-firebase/messaging"` 추가
+   - `expo-build-properties` 플러그인으로 iOS `useFrameworks: "static"`
+3. `shared/lib/notifications/messaging.ts` 어댑터: 권한 확인 `hasNotificationPermission`, iOS APNs 등록 `registerForRemoteMessages`, 토큰 `getFcmToken`·`onFcmTokenRefresh`, 포그라운드 수신 `onForegroundMessage`(같은 디렉터리의 `local.ts`가 `expo-notifications`로 로컬 알림 표시), 알림 탭 `onNotificationOpened`·`getOpeningNotification`. 네이티브 모듈이 없으면(Expo Go 등) 지연 로드가 실패하고 웹 스텁과 같은 무해한 동작으로 대신합니다. 알림 권한 요청 창은 이 어댑터가 아니라 나 탭의 무비 완성 알림 스위치가 띄웁니다.
+4. `features/register-push-token`: 권한이 이미 있을 때만 토큰 발급 → `registerFcmToken` 호출, 토큰 갱신 시 재등록
 
-Firebase 파일을 바꾼 뒤에는 `expo prebuild --clean` 후 Android dev build에서 실제 FCM 토큰이 발급되는지, Firebase 콘솔 테스트 발송이 포그라운드·백그라운드에서 도착하는지 확인합니다. 실기기에서 geofence 진입 보고부터 기기 표시까지 통과하는 end-to-end 수신은 아직 검증되지 않았습니다 — 동작 범위는 [기능 문서](../features/location-and-push-notifications.md), 남은 검증은 루트 backlog C-4.
+Firebase 파일을 바꾼 뒤에는 `npx expo prebuild --clean --platform android` 후 Android dev build에서 실제 FCM 토큰이 발급되는지, Firebase 콘솔 테스트 발송이 포그라운드·백그라운드에서 도착하는지 확인합니다. 실기기에서 geofence 진입 보고부터 기기 표시까지 통과하는 end-to-end 수신은 아직 검증되지 않았습니다 — 동작 범위는 [기능 문서](../features/location-and-push-notifications.md), 남은 검증은 루트 backlog C-4.
 
 ---
 

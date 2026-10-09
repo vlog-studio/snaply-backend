@@ -1,14 +1,17 @@
 # 제품 콘셉트 — 스냅을 모아 무비로 만드는 스튜디오
 
 **작성일**: 2026-08-03 (2026-09-27 `apps/mobile/docs/guides/ai-vlog-studio/concept.md` 에서 아직 유효한 결정만 옮김)
-**상태**: 결정 — 제품 방향·이름·모델·무비 화면 구성의 근거. 구현 완료
+**상태**: 결정 — 제품 방향·이름·모델·무비 화면 구성의 근거
 **원천**: 이 방향을 고른 이유와 기각·유보한 대안의 원천이다. 요구는 [specs/](../specs/README.md), 앱이 지금 하는 일은
 [apps/mobile/docs/features/](../../apps/mobile/docs/features/README.md), 화면 어휘는
 [ux-writing.md](../../apps/mobile/docs/ux/ux-writing.md) 가 원천이다.
 **관련 문서**: [specs/movie.md](../specs/movie.md) MOV-1·3·4 ·
 [specs/template-and-recommendation.md](../specs/template-and-recommendation.md) TPL-1 ·
-[movie-model.md](movie-model.md)(서버의 무비 엔티티) · 결정 당시 기획 원문
-[archive/ai-vlog-studio/concept.md](../archive/ai-vlog-studio/concept.md)
+[movie-model.md](movie-model.md)(서버의 무비 엔티티) · [backlog.md](../backlog.md) A-10(이 콘셉트가 정하지 않은 것) ·
+결정 당시 기획 원문 [archive/ai-vlog-studio/concept.md](../archive/ai-vlog-studio/concept.md)
+
+> **후속 결정**(2026-09-28): §3 의 "무비를 시작하는 길은 두 갈래"에 세 번째 길이 더해졌다 — 고른 스냅으로 AI 편집
+> 초안을 받아 시작한다(MOV-21, [auto-edit-draft.md](auto-edit-draft.md)). 셋 모두 같은 무비 화면에서 만난다.
 
 ---
 
@@ -31,7 +34,7 @@
 
 ## 2. 제품 한 줄 정의
 
-> **짧게 여러 번 찍어두면, AI가 한 편의 숏폼 브이로그로 만들어 주는 앱.**
+**짧게 여러 번 찍어두면, AI가 한 편의 숏폼 브이로그로 만들어 주는 앱.**
 
 두 개의 명사로 제품이 설명된다: **재료**(스냅)와 **완성작**(무비).
 

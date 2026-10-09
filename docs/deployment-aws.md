@@ -1,10 +1,11 @@
 # 배포와 운영 — AWS 공모전 서버
 
 **작성일**: 2026-10-08
-**상태**: 현행 — AWS 서버의 설치·배포·시크릿·배치 절차의 원천. 서버 구성이 바뀌면 이 문서를 고친다
-**관련 문서**: [decisions/aws-contest-server.md](./decisions/aws-contest-server.md)(왜 이 구성인지) ·
-[backlog.md](./backlog.md) B-8 ·
-인프라 구성과 접속은 사내 위키 "snaply — AWS 구성 · 인프라 접속"(이하 인프라 문서)
+**상태**: 현행
+**원천**: 현행 배포 대상인 AWS 공모전 서버의 설치·배포·시크릿·배치·백업 절차. 이 구성을 고른 이유는
+[decisions/aws-contest-server.md](./decisions/aws-contest-server.md)
+**관련 문서**: [decisions/env-management.md](./decisions/env-management.md) · [backlog.md](./backlog.md) B-8 ·
+인프라 구성 · 접속은 사내 위키 "snaply — AWS 구성 · 인프라 접속"(이하 인프라 문서)
 
 ---
 
@@ -45,7 +46,7 @@
    토큰을 물으면 붙여 넣는다. 하는 일은 [`deploy/aws/install.sh`](../deploy/aws/install.sh) 머리말에 있다 — 패키지
    (cron 은 Amazon Linux 2023 에 기본으로 없다), `snaply` 계정(docker 그룹), Docker data-root 를 `/data/docker` 로
    옮기고 `/data` 마운트를 기다리게 하기(인프라 문서 6-2), runner 설치 · 등록 · 서비스, cron.
-3. 저장소 Runners 화면에 `dweax-snaply` 가 **Idle** 이면 끝이다.
+3. 저장소 Runners 화면에 `dweax-snaply`(라벨 `snaply-aws` — `deploy-aws` 잡의 `runs-on`)가 **Idle** 이면 끝이다.
 
 다시 돌려도 된다. 앱이 떠 있으면 Docker 는 건드리지 않는다. runner 는 다시 시작되므로 배포 중에는 피한다.
 
@@ -83,7 +84,9 @@ aws secretsmanager put-secret-value --profile dweax-snaply --secret-id dweax/ser
 - **값에 작은따옴표나 줄바꿈이 있으면 배포가 멈춘다.** `FIREBASE_SERVICE_ACCOUNT_KEY` 는 서비스 계정 JSON 을 base64
   한 줄로 넣는다(`base64 -w0 key.json`, macOS 는 `base64 -i key.json`).
 - **외부 연동**(SNS · 결제 · 광고 보상)은 키가 비어 있으면 mock · 꺼짐으로 뜬다. 콘솔에 콜백 · 웹훅 주소
-  (`https://snaply-api.dweaxai.com/...`)를 등록한 뒤 키를 넣는다.
+  (`https://snaply-api.dweaxai.com/...`)를 등록한 뒤 키를 넣는다. 틱톡은 `TIKTOK_SCOPES` 를 비우면 코드 기본값
+  `user.info.basic,video.publish`(심사 필요한 직접 게시)가 되므로, 심사(C-3) 전에는 `user.info.basic,video.upload` 를
+  명시한다([sns-setup.md](./sns-setup.md) §3).
 
 바꾼 값은 다음 배포에 반영된다. 기다리지 않으려면 셸에서 env 파일을 다시 만들고 컨테이너를 다시 올린다(§6 의 셸에서
 `deploy/aws/write-env.sh` → `docker compose --env-file .env up -d`).
@@ -93,9 +96,11 @@ aws secretsmanager put-secret-value --profile dweax-snaply --secret-id dweax/ser
 
 ## 3. 배포
 
-**켜기**: 저장소 **Settings → Variables** 에 `DEPLOY_AWS_ENABLED=true`. 그때부터 main 머지가 이 서버로 배포된다.
-첫 배포는 다음 머지를 기다리거나 마지막 Deploy 실행에서 **Re-run** 한다. 저장소가 public 이므로 **Settings → Actions →
-General** 의 포크 PR 워크플로 승인도 "모든 외부 협업자"로 올려 둔다 — 작업 전 검사와 겹으로 막는다.
+**켜기**: 저장소 **Settings → Variables** 에 `DEPLOY_AWS_ENABLED=true`. 그때부터 main 머지가 이 서버로 배포된다(어느
+머지가 배포를 부르는지는 [`deploy.yml`](../.github/workflows/deploy.yml) 의 `paths` 가 정한다 — API · 워커 · 공유 패키지 · compose ·
+`deploy/` 가 바뀐 머지만이고, 문서나 모바일만 바꾼 머지는 배포하지 않는다). 첫 배포는 다음 머지를 기다리거나 마지막 Deploy 실행에서
+**Re-run** 한다. 저장소가 public 이므로 **Settings → Actions → General** 의 포크 PR 워크플로 승인도 "모든 외부 협업자"로
+올려 둔다 — 작업 전 검사와 겹으로 막는다.
 
 ```
 main 머지
@@ -136,15 +141,15 @@ main 머지
 sudo -u snaply env COMPOSE_FILE=docker-compose.aws.yml SNAPLY_ENV_FILE=/data/compose/.env /data/compose/deploy/run-batch.sh media:purge-expired
 ```
 
-만료 예고(`media:notify-expiring`)는 `FIREBASE_SERVICE_ACCOUNT_KEY` 가 없으면 시작하지 않고 실패로 끝난다 — 보내지
-않은 것을 보냈다고 기록하지 않기 위해서다.
+만료 예고(`media:notify-expiring`)는 `FIREBASE_SERVICE_ACCOUNT_KEY` 가 없거나 깨졌으면 시작하지 않고 실패로 끝난다 — 그때
+FCM 은 dry-run 으로 떨어지는데, 보내지 않은 예고를 보냈다고 기록하지 않기 위해서다.
 
 ## 5. 백업
 
 - 매일 03:30(KST) `pg_dump` → `/data/backup`, 14일 보관. `/data` 볼륨은 인프라가 매일 스냅샷한다(7개).
 - **S3 영상은 백업이 없다.** 버킷의 버전 관리가 꺼져 있어 지운 영상은 되돌릴 수 없다.
-- 복구는 §6 의 셸에서
-  `gunzip -c /data/backup/snaply-<날짜>.sql.gz | docker compose --env-file .env exec -T postgres psql -U postgres -d snaply`.
+- 복구는 §6 의 셸에서 빈 DB 에(덤프는 `pg_dump` 기본값이라 `DROP` 이 없어, 데이터가 있는 DB 에 부으면 섞인다)
+  `gunzip -c /data/backup/snaply-<YYYYMMDD-HHMMSS>.sql.gz | docker compose --env-file .env exec -T postgres psql -U postgres -d snaply`.
   볼륨째 되돌리는 것은 인프라에 요청한다.
 
 ## 6. 자주 볼 것
@@ -163,7 +168,7 @@ curl -s localhost:3000/health
 |---|---|
 | 배포 잡이 대기열에서 안 움직인다 | runner 가 꺼져 있다 — `systemctl status "$(cat /opt/actions-runner/.service)"` |
 | 배포 잡이 Set up runner 에서 실패 | 작업 전 검사가 거부했다 — main 의 `deploy.yml` 이 아닌 작업이다 |
-| Write the secrets file 에서 실패 | 값에 작은따옴표 · 줄바꿈이 있거나 `POSTGRES_PASSWORD` 가 비었다(§2) |
+| Write the secrets file 에서 실패 | 값에 작은따옴표 · 줄바꿈이 있거나, 키 이름이 env 변수 형식이 아니거나, `POSTGRES_PASSWORD` 가 비었다(§2) |
 | `analysis-worker` 가 재시작을 반복 | `OPENAI_API_KEY` 가 없다(의도된 동작) |
 | 도메인이 502 · 디스크 · presigned URL 의 `ExpiredToken` | 인프라 문서 8장 |
 | WebSocket 이 끊김 | 서버가 30초마다 ping 을 보내 ALB 유휴 제한(180초)을 넘기지 않는다(2026-10-09). 그래도 끊기면 앱이 다시 붙는다 — 인프라 문서 8장 |

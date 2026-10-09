@@ -1,23 +1,31 @@
 # 스냅 관리 정책 전환 — 서버 원천(source of truth) 및 스토리지 용량 정책
 
 **작성일**: 2026-08-11
-**상태**: 과거 결정 — 일부 대체됨. 스냅 원천을 서버로 전환한다는 방향은 유효하고 현행 요구는
-[specs/snap-library.md](../specs/snap-library.md) SNAP-14 다. §1·§6 의 스토리지 용량 정책(Free 5GB 한도)은
-아래 후속 결정이 대체했다.
-**범위**: 정책 결정과 근거를 기록한다. §4·§5의 스키마와 이행 순서, §6.4의 집행 방식은
-결정 당시 구현 초안이며 작업 상태를 관리하지 않는다.
-**후속 작업의 원천**: [backlog.md](../backlog.md) A-4(스냅 세부 정책),
-A-2(유료 플랜 한도), E-3(GC 배치)
-**후속 결정**: 2026-08-14에 Free 한도가 5GB → **2GB**로 축소됐다 —
-[storage-and-subscription-policy.md](./storage-and-subscription-policy.md). 그 결정이 §6.1의
-한도 값, §6.2에서 2GB를 기각했던 판단, §6.3의 원가 계산을 대체했다. 2026-09-09에는 용량 한도 자체가
-기간 기준(업로드 후 15일)으로 바뀌었다 — [snap-retention-period.md](./snap-retention-period.md). 그래서 §1·§6의
-용량 정책(한도 단위·산정 범위·초과 시 동작·§6.4 집행 설계)은 현행이 아니며, 용량 한도를 남길지는
-미결이다([backlog.md](../backlog.md) A-2). 2026-09-27 의 기기 간 동기화 설계는 §4 의 `snap.id` UUID 전환과
-§1 의 `clientId` 유일 제약을 쓰지 않는다 — 이유는 [snap-sync-across-devices.md](./snap-sync-across-devices.md)
-§[동기화 설계](./snap-sync-across-devices.md#동기화-설계).
+**상태**: 과거 결정 — 일부 대체됨. 스냅 원천을 서버로 전환한다는 방향은 유효하고(SNAP-14), §1·§6 의 스토리지
+용량 정책(Free 5GB 한도)은 아래 배너의 결정들이 대체했다
+**원천**: 서버 원천 전환 방향의 결정 근거와 업계 조사(§3). 현행 요구는 [specs/snap-library.md](../specs/snap-library.md)
+SNAP-14 다. §4·§5의 스키마와 이행 순서, §6.4의 집행 방식은 결정 당시 구현 초안이며 작업 상태를 관리하지 않는다
+**관련 문서**: [archive/plan-limits.md](../archive/plan-limits.md) · [api-spec.md](../api-spec.md) ·
+[backlog.md](../backlog.md) A-4(스냅 세부 정책) · A-2(유료 플랜 한도)
 
-관련: [plan-limits.md](../archive/plan-limits.md), [api-spec.md](../api-spec.md)
+> **후속 결정**(2026-08-12): §1·§6.1 이 "예정(미구현)"으로 적은 무비 생성의 크레딧 과금이 확정됐다
+> → [credit-payment-model.md](./credit-payment-model.md).
+
+> **대체**(2026-08-14): Free 한도가 5GB → **2GB**로 축소됐다. §6.1의 한도 값, §6.2에서 2GB를 기각했던 판단,
+> §6.3의 원가 계산이 대체됐다 → [storage-and-subscription-policy.md](./storage-and-subscription-policy.md).
+
+> **대체**(2026-09-09): 용량 한도 자체가 기간 기준(업로드 후 15일)으로 바뀌었다. §1·§6의 용량 정책(한도 단위·
+> 산정 범위·초과 시 동작·§6.4 집행 설계)은 현행이 아니며, 용량 한도를 남길지는 미결이다([backlog.md](../backlog.md) A-2)
+> → [snap-retention-period.md](./snap-retention-period.md).
+
+> **후속 결정**(2026-09-09): §1 의 "로컬은 캐시" 전환은 렌디션·앱 동기화가 실기기에서 검증된 뒤로 미뤘다 — 그때까지
+> 기기의 파일이 원천이다 → [local-copy-after-upload.md](./local-copy-after-upload.md).
+
+> **후속 결정**(2026-09-27): 기기 간 동기화 설계는 §4 의 `snap.id` UUID 전환과 §1 의 `clientId` 유일 제약을 쓰지
+> 않는다 → [snap-sync-across-devices.md](./snap-sync-across-devices.md) §[동기화 설계](./snap-sync-across-devices.md#동기화-설계).
+
+> **후속 결정**(2026-10-07): §1 삭제의 유예 기간은 따로 정하지 않고 원래 보관 기간이 끝날 때까지다(서버 사본이 있던
+> 스냅만) → [snap-trash.md](./snap-trash.md).
 
 ---
 
@@ -25,11 +33,11 @@ A-2(유료 플랜 한도), E-3(GC 배치)
 
 | 항목 | 결정 |
 |---|---|
-| 원천 모델 | **서버가 원천, 디바이스 로컬은 캐시** (현행: 로컬 원천 + 파일만 백그라운드 업로드) |
-| 업로드 원칙 | 촬영/추출 즉시 자동 업로드 (현행 유지) + **메타데이터 동봉** (신규) |
+| 원천 모델 | **서버가 원천, 디바이스 로컬은 캐시** (당시: 로컬 원천 + 파일만 백그라운드 업로드) |
+| 업로드 원칙 | 촬영/추출 즉시 자동 업로드 (당시 방식 유지) + **메타데이터 동봉** (신규) |
 | 촬영 시각 | **`capturedAt` 수집** — 위치 정보와 분리해 결정 완료 |
 | 멱등성 | 클라이언트 생성 UUID(`clientId`)를 `(userId, clientId)` unique로 집행 |
-| 삭제 | soft delete + **유예 기간 후 실삭제** (현행 즉시 실삭제에서 변경) |
+| 삭제 | soft delete + **유예 기간 후 실삭제** (당시의 즉시 실삭제에서 변경) |
 | 크로스 플랫폼 재생 | ingest에서 H.264/SDR 배포 렌디션 생성, **원본은 무변형 보존** |
 | 스토리지 한도 | **용량(GB) 기반**, Free **5GB**, 산정 대상은 **원본 스냅만** |
 | 한도 초과 시 | **신규 업로드 차단 + 로컬 보관** ("백업 안 됨" 상태 명시, 해제 시 자동 재개) |
@@ -101,9 +109,9 @@ Snapchat은 약 10년 무료였던 Memories에 2025년 용량 제한(무료 5GB,
 
 ## 4. 결정 당시 스키마 변경안 (1단계)
 
-> 구현 작업의 상태나 확정 계약이 아니라, 결정의 실현 가능성을 검토한 초안이다.
-> 실제 착수 범위는 [backlog.md](../backlog.md)에서 관리하고 API가 바뀌면
-> [api-spec.md](../api-spec.md)를 함께 갱신한다.
+*구현 작업의 상태나 확정 계약이 아니라, 결정의 실현 가능성을 검토한 초안이다.
+실제 착수 범위는 [backlog.md](../backlog.md)에서 관리한다. 현행 스키마는 `apps/api/prisma/schema.prisma`
+`model Video`, 계약은 [packages/shared-types/src/contract/videos.ts](../../packages/shared-types/src/contract/videos.ts)가 원천이다.*
 
 별도 `Snap` 테이블 대신 **`Video`(kind=source) 확장**. `EditJob`/`SnsUpload`/워커/앱의
 `videoId` 매핑이 전부 `Video`를 참조하므로 분리 비용이 크다. 스냅 전용 필드는 nullable.
@@ -162,8 +170,8 @@ API 계약:
 
 ## 5. 결정 당시 검토한 이행 순서
 
-> 아래 표는 작업 목록이 아니다. 선후관계의 근거만 보존하며 실제 미완료 작업은
-> [backlog.md](../backlog.md)에서만 관리한다.
+*아래 표는 작업 목록이 아니다. 선후관계의 근거만 보존하며 실제 미완료 작업은
+[backlog.md](../backlog.md)에서만 관리한다.*
 
 | 단계 | 내용 | 비고 |
 |---|---|---|
@@ -171,7 +179,7 @@ API 계약:
 | **2. ingest 렌디션** | confirm 후 워커가 FFprobe로 `durationMs`를 교정하고 H.264/SDR 배포본 + 썸네일 생성(원본 보존), `Video`에 렌디션 키 컬럼 추가 | 분석 워커가 먼저 실측했다면 같은 값을 재사용. 크로스 플랫폼 재생의 전제 — reconcile보다 먼저 |
 | **3. 복구/동기화** | 앱 reconcile(서버 목록 대조, 파일 온디맨드), 삭제 유예·전파 규칙 | Google Photos 모델 |
 | **4. 무비 동기화** | 평면 `Video`를 참조하는 `Movie` 엔티티 + CRUD, 앱 `snaply.movies` 전환 | 엔티티는 `Movie`로 결정. 재내보내기·삭제 연동 등 세부 정책은 [backlog.md](../backlog.md) A-1 |
-| **병행** | GC 배치: ① pending TTL(예: 24h) 회수 ② 삭제 유예 만료분 S3 실삭제 ③ S3 삭제 실패분 정리(`video.service.ts:205` 주석의 미구현 배치) | finalize 안전망(S3 이벤트)은 선택적 후속 |
+| **병행** | GC 배치: ① pending TTL(예: 24h) 회수 ② 삭제 유예 만료분 S3 실삭제 ③ S3 삭제 실패분 정리(`video.service.ts` `deleteVideo` 의 "정리 배치로 처리" 주석이 가리키던 미구현 배치) | finalize 안전망(S3 이벤트)은 선택적 후속 |
 
 ## 6. 스토리지 용량 정책
 
@@ -265,6 +273,6 @@ Standard(₩9,900) 100GB, Premium(₩24,900) 500GB였으나 Premium은 월 스�
 ## 7. 결정 범위 밖의 후속 작업
 
 이 문서는 후속 작업의 세부 목록이나 완료 여부를 갱신하지 않는다. 스냅 전환의 추가 판단은
-[backlog.md](../backlog.md) A-4, Standard/Premium 스토리지 한도와 무비 과금 정책은 A-2,
-S3 삭제 실패분 정리 배치는 E-3이 유일한 원천이다. 작업을 닫을 때는 이 문서가 아니라
-해당 백로그 항목을 갱신한다.
+[backlog.md](../backlog.md) A-4, Standard/Premium 스토리지 한도와 무비 과금 정책은 A-2가
+유일한 원천이다. S3 삭제 실패분 정리 배치(E-3)는 2026-09-09 에 닫혔다(backlog [닫은 항목](../backlog.md#닫은-항목)).
+작업을 닫을 때는 이 문서가 아니라 해당 백로그 항목을 갱신한다.

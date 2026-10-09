@@ -1,15 +1,18 @@
 # 환경변수 관리 — 파일은 로컬만, 운영은 주입
 
 **작성일**: 2026-08-11
-**상태**: 결정 (구현 완료)
-**범위**: API·AI 워커·compose가 공유하는 **서버 환경변수**의 위치, 운영 주입 방식, 변수 목록의 관리 원칙을 기록한다.
-**원천**: 서버 환경변수의 위치·주입 경로·목록 관리 방식은 이 문서가 원천이다. 모바일의
-`EXPO_PUBLIC_*`는 `apps/mobile/.env`와 `apps/mobile/.env.example`이 별도로 관리한다.
-**후속 작업의 원천**: [backlog.md](../backlog.md) B-8(AWS 서버의 시크릿 연결)
-변수 하나하나의 목록은 [`apps/api/src/env-spec.ts`](../../apps/api/src/env-spec.ts),
-사람이 복사해 쓰는 표현은 [`.env.example`](../../.env.example).
+**상태**: 결정
+**원천**: API·AI 워커·compose 가 공유하는 **서버 환경변수**의 위치·운영 주입 경로·목록 관리 방식. 변수 하나하나의 목록은
+[`apps/api/src/env-spec.ts`](../../apps/api/src/env-spec.ts)(사람이 복사해 쓰는 표현은 [`.env.example`](../../.env.example)),
+모바일의 `EXPO_PUBLIC_*` 는 [`apps/mobile/.env.example`](../../apps/mobile/.env.example), 서버의 주입 절차는
+[deployment-aws.md](../deployment-aws.md) §2
+**관련 문서**: [ONBOARDING.md](../../ONBOARDING.md) §3-3 · [aws-contest-server.md](./aws-contest-server.md) ·
+[archive/on-prem-deployment.md](../archive/on-prem-deployment.md) · [backlog.md](../backlog.md) B-8
 
-관련: [ONBOARDING.md](../../ONBOARDING.md) §3-3 · [backlog.md](../backlog.md) B-8(배포 인프라)
+> **정정**(2026-09-29): [기각한 대안](#기각한-대안)의 워커 `.env` 구현은 워커 파일이 있으면 `apps/api/.env` 를 아예 읽지 않았다. 그래서
+> [ONBOARDING.md](../../ONBOARDING.md) §3-8 대로 `DATABASE_URL` 한 줄만 둔 워커 파일이 나머지 키(`OPENAI_API_KEY`·S3 등)를
+> 모두 가렸다. 지금은 두 파일을 모두 읽고 같은 키만 워커 파일이 이긴다(`apps/ai-worker/src/config.py` 의 `_load_dotenv`,
+> [progress.md](../progress.md) 2026-09-29).
 
 ---
 
@@ -118,10 +121,6 @@ compose 규격상 `environment` 가 `env_file` 보다 우선한다. 그래서 �
 만든다. 대신 [`config.py`](../../apps/ai-worker/src/config.py) 가 `apps/ai-worker/.env` → 없으면
 `apps/api/.env` 순으로 찾게 했다. `os.environ.setdefault` 라 주입 우선순위는 그대로다.
 
-> **정정 (2026-09-29)**: 위 구현은 워커 파일이 있으면 `apps/api/.env` 를 아예 읽지 않았다. 그래서
-> [ONBOARDING.md](../../ONBOARDING.md) §3-8 대로 `DATABASE_URL` 한 줄만 둔 워커 파일이 나머지 키(`OPENAI_API_KEY`·S3 등)를
-> 모두 가렸다. 지금은 두 파일을 모두 읽고 같은 키만 워커 파일이 이긴다([progress.md](../progress.md) 2026-09-29).
-
 ## 파서가 서로 다르다 — `.env` 주석 형식 규칙
 
 같은 파일을 세 파서가 읽는데 인라인 주석 처리가 달랐다. `KEY=   # 설명` (빈 값 + 주석)을 넣고
@@ -145,8 +144,8 @@ compose 가 읽으면 `LEGAL_CONTACT_EMAIL`·`SITE_VERIFICATION_META`·`STRIPE_P
    (`_parse_value`, [tests/test_config.py](../../apps/ai-worker/tests/test_config.py)).
    값 안의 `pa#ss` 같은 `#` 는 그대로 둔다 — 앞에 공백이 있을 때만 주석으로 본다.
 
-> 이미 만들어 둔 개인 `apps/api/.env` 에는 옛 형식이 남아 있다. compose 로 테스트 서버를
-> 띄울 계획이라면 빈 값 뒤의 주석을 줄 위로 옮겨두는 것이 좋다.
+이미 만들어 둔 개인 `apps/api/.env` 에는 옛 형식이 남아 있다. compose 로 테스트 서버를
+띄울 계획이라면 빈 값 뒤의 주석을 줄 위로 옮겨두는 것이 좋다.
 
 ## 함께 고친 결함
 

@@ -1,11 +1,15 @@
 # 무비의 앱 측 저장 — 서버 캐시 + 아웃박스, 앱이 정한 id
 
 **작성일**: 2026-09-12
-**상태**: 결정 — 구현 완료(앱·API). 실기기 검증은 [backlog.md](../backlog.md) A-1
-**관련**: [movie-model.md](./movie-model.md) · [movie-export-policy.md](./movie-export-policy.md) ·
-[movie-cleanup-after-export.md](./movie-cleanup-after-export.md) ·
+**상태**: 결정 — 앱의 무비 스토어는 서버 캐시 + 아웃박스, 무비 id 는 앱이 정한 uuid
+**관련 문서**: [movie-model.md](./movie-model.md) · [movie-export-policy.md](./movie-export-policy.md) ·
+[movie-cleanup-after-export.md](./movie-cleanup-after-export.md) · [specs/movie.md](../specs/movie.md) MOV-2 ·
+[backlog.md](../backlog.md) A-1(서버 전환 실기기 검증) ·
 [archive/movie-server-transition.md](../archive/movie-server-transition.md)(착수 계획) ·
 앱 동작 [apps/mobile/docs/features/movie.md](../../apps/mobile/docs/features/movie.md)
+
+> **후속 결정**(2026-10-07): 6 의 "알림 스위치가 서버 판정에 닿지 않는 틈"(B-6)은 알림 설정이 계정 설정이 되면서
+> 닫혔다 → [notification-preferences.md](notification-preferences.md)
 
 ---
 
@@ -13,11 +17,11 @@
 
 1. **앱의 무비 스토어는 서버 무비의 캐시 + 아웃박스다.** 화면은 전과 같이 zustand 스토어를 읽고 쓰며
    즉시 반영된다. 쓰기는 무비를 `pending`(`create`/`update`) 으로 표시하고, 동기화 워커
-   (`features/compose-movie` 의 `MovieSyncGate`)가 **컷의 스냅이 모두 업로드된 뒤** 서버로 보낸다.
+   (`apps/mobile/src/features/compose-movie` 의 `MovieSyncGate`)가 **컷의 스냅이 모두 업로드된 뒤** 서버로 보낸다.
    읽기는 로그인 시와 포그라운드 복귀 시 `GET /movies` 전 페이지를 받아 병합한다 — pending 무비는
    로컬을, 나머지는 서버를 취한다. 병합의 세부 규칙(이 기기만 아는 값의 보존, 서버에서 알게 된 작업을
    따라가는 방식)은 앱 동작 문서 [features/movie.md §Movies live on the server](../../apps/mobile/docs/features/movie.md#movies-live-on-the-server)가
-   원천이다(구현 `entities/movie/lib/movie-sync.ts`).
+   원천이다(구현 `apps/mobile/src/entities/movie/lib/movie-sync.ts`).
 2. **무비 id 는 앱이 uuid 로 정하고 서버가 그대로 받는다.** `POST /movies` 의 `id`(선택). 같은 id
    재전송은 멱등(있는 것을 돌려준다), 다른 사용자의 id 와 겹치면 409.
 3. **`Movie.jobId` 를 응답에 노출한다.** 진행률·취소·실패 사유는 편집 작업 API 로 보는데, 앱이 `export`
@@ -25,7 +29,7 @@
 4. **`PATCH /movies/{id}` 의 `clips` 는 빈 배열을 받는다.** 마지막 스냅을 지운 무비도 초안으로 남는다.
 5. **취소된 작업은 무비를 `draft` 로 되돌린다**(결과물 포인터도 비운다). 앱이 취소를 초안으로 다루므로
    서버가 `failed` 라 하면 두 쪽이 서로 고치려 든다.
-6. **완료 알림은 서버 푸시만**, 실패 알림은 앱 로컬만. 알림 스위치가 서버 판정에 닿지 않는 틈은 B-6(2026-10-07 닫힘 — 스위치가 계정 설정이 됐다).
+6. **완료 알림은 서버 푸시만**, 실패 알림은 앱 로컬만. 알림 스위치가 서버 판정에 닿지 않는 틈은 B-6.
 7. **기존 로컬 무비는 이관하지 않는다**(개발 단계 — 2026-09-09 결정 그대로). 스토어 `version: 1` 마이그레이션이
    파일을 비운다.
 

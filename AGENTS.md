@@ -27,10 +27,11 @@
   "로컬에서 되니까 됐다"가 아니라 운영에서 누가 주입하는지를 같이 정해야 한다.
 - 환경변수의 원천은 [`apps/api/src/env-spec.ts`](apps/api/src/env-spec.ts)다. 새 변수를 읽기
   시작하면 **여기부터** 선언하고 [`.env.example`](.env.example)에도 공개 가능한 예시를 넣는다.
-  빠뜨리면 `test/env-spec.test.ts`가 실패한다.
+  빠뜨리면 `apps/api/test/env-spec.test.ts`가 실패한다.
 - 로컬 인프라·명령·트러블슈팅은 [`ONBOARDING.md`](ONBOARDING.md)를 본다.
 - 스키마 변경을 pull한 뒤에는 `npm run db:generate`가 필수다. 빼먹으면 낡은 Prisma 클라이언트가
-  새 컬럼을 몰라 테스트가 500으로 실패한다(실제로 웹훅 테스트 13개가 이 이유로 실패한 적 있다).
+  새 컬럼을 몰라 API가 500을 낸다. 테스트는 global setup의 `assertPrismaClientFresh()`
+  (`apps/api/test/setup/assert-prisma-client-fresh.ts`)가 먼저 멈추고 이 명령을 알려 준다.
 
 ## 테스트
 
@@ -39,28 +40,30 @@
   적용되지 않고, `DATABASE_URL`이 **개발 DB**를 가리킨 채 테스트의 `TRUNCATE`가 실행될 수 있다.
   실제로 이 경로로 개발 DB 시드가 삭제된 사고가 있었다. 지금은 `assertTestDatabase()`가 막지만
   애초에 그러지 말 것.
-- 통합 테스트는 실제 Postgres/Redis를 사용하고 `snaply_test` DB를 자동 생성한다.
+- 통합 테스트는 실제 Postgres/Redis/MinIO를 사용하고 `snaply_test` DB를 자동 생성한다.
 - 기존 기대값을 "제한 없음" 같은 현행 동작으로 고정한 테스트가 있다. 정책을 되돌릴 때 함께
   복원해야 하므로, 그런 고정에는 되돌릴 기대값을 주석으로 남긴다.
 
 ## 문서 갱신 의무
 
-동작 계약(사용자가 관찰하는 동작·API 계약·정책 값)을 바꾸는 변경은 아래 표의 해당 행을
-**같은 변경**에서 함께 갱신한다([constitution](docs/constitution.md) 제1조·제3조).
-어디를 고칠지 매번 원칙에서 재조립하지 말고 이 표에서 찾는다.
+아래 표의 왼쪽을 바꾸는 변경은 오른쪽을 **같은 변경**에서 함께 갱신한다. 동작 계약(사용자가
+관찰하는 동작·API 계약·정책 값)은 [constitution](docs/constitution.md) 제1조·제3조가, 나머지는
+원천이 낡지 않게 하는 제2조가 근거다. 어디를 고칠지 매번 원칙에서 재조립하지 말고 이 표에서 찾는다.
 
 | 바꾼 것 | 같은 변경에서 갱신할 곳 |
 |---|---|
 | 사용자 가시 동작·정책 값 | [`docs/specs/`](docs/specs/README.md)의 해당 요구 — **구현보다 먼저** 고친다 |
 | 라우트·요청/응답 스키마 | [`packages/shared-types/src/contract/`](packages/shared-types/src/contract/)의 Zod 계약(백엔드 검증·직렬화·Swagger·앱 타입의 원천) · `npm run openapi:write -w apps/api`로 재생성한 [`apps/api/openapi.json`](apps/api/openapi.json) · [`docs/api-spec.md`](docs/api-spec.md)(FE 안내 + WebSocket) · 관련 테스트 |
 | 앱(모바일)의 사용자 가시 동작 | [`apps/mobile/docs/features/`](apps/mobile/docs/features/README.md)의 해당 기능 문서 |
-| 새 정책·설계 결정 | [`docs/decisions/`](docs/decisions/)에 배경·기각한 대안과 함께 |
+| 새 정책·설계 결정, 결정 상태 | [`docs/decisions/`](docs/decisions/)에 배경·기각한 대안과 함께 + [`docs/decisions/README.md`](docs/decisions/README.md) 인덱스 행 |
 | DB 스키마 | 마이그레이션(같은 커밋) — pull 한 쪽은 `npm run db:generate` |
 | 새 환경변수 | [`apps/api/src/env-spec.ts`](apps/api/src/env-spec.ts) 선언 + [`.env.example`](.env.example) 예시 |
+| 명령·로컬 인프라·CI 검사 (루트 `package.json` scripts · `scripts/` · `docker-compose.dev.yml`·`docker-compose.yml` · `.github/workflows/ci.yml`) | [`ONBOARDING.md`](ONBOARDING.md) — §3 절차 · §4 명령 표 · §5 트러블슈팅 |
+| 서버 배포 구성 (`docker-compose.aws.yml` · `.github/workflows/deploy.yml` · `deploy/`) | [`docs/deployment-aws.md`](docs/deployment-aws.md) |
+| 백로그 항목을 끝냄 | [`docs/backlog.md`](docs/backlog.md)에서 "닫은 항목"으로 옮기고 [`docs/progress.md`](docs/progress.md)에 검증 결과를 기록 |
 
 - 미결 작업은 [`docs/backlog.md`](docs/backlog.md)에만 기록한다. 결정 문서·진행 기록에 미결
   체크리스트를 새로 만들지 않는다 — 여러 곳에 있으면 하나를 닫아도 나머지가 낡는다.
-- 완료된 구현·검증은 [`docs/progress.md`](docs/progress.md)에 기록한다.
 - [`docs/archive/`](docs/archive/)의 문서는 지난 기록이다. **판단 근거로 인용하지 말고,
   archive로 옮기는 시점에 붙이는 상단 상태 배너 외에는 수정하지 않는다.**
 
@@ -83,8 +86,8 @@
 | 함수/변수 | camelCase |
 | 클래스/타입/인터페이스 | PascalCase |
 | 상수 | UPPER_SNAKE_CASE |
-| API 응답 | 항상 `{ success, data }` 또는 `{ success, error }` |
-| 에러 처리 | try-catch + `Sentry.captureException`, 에러 전파는 커스텀 Error 클래스 |
+| API 응답 | 항상 `{ success, data }` 또는 `{ success, error }` — 계약의 `apiSuccess`·`apiErrorSchema`(`packages/shared-types/src/contract/common.ts`) |
+| 에러 처리 | 요청 처리 중 오류는 커스텀 에러 `AppError`(`apps/api/src/lib/errors.ts`)로 던지고 `app.ts`의 전역 에러 핸들러가 응답으로 바꾼다(5xx는 Sentry로 보고). 삼키는 예외는 try-catch에서 `captureException`(`apps/api/src/lib/sentry.ts`)으로 보고한다. Python 워커는 각 워커의 `_capture()`(`sentry_sdk.capture_exception`) |
 | 로깅 (Python) | loguru 사용, `print` 금지 |
 
 ## 공유 파일

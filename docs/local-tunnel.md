@@ -1,10 +1,12 @@
 # 로컬 서버를 임시 공개 주소로 노출하기 (cloudflared)
 
-> **작성일**: 2026-08-18
-> **원천**: 로컬 개발 서버를 외부에서 호출할 수 있게 만드는 절차와 그때의 주의사항
-> **관련 문서**: [sns-setup.md](./sns-setup.md) (인스타·틱톡 연동에서의 사용) ·
-> [decisions/ad-reward-credits.md](./decisions/ad-reward-credits.md) (AdMob SSV 검증 규칙) ·
-> [backlog.md](./backlog.md) (고정 도메인 D-1, AdMob 콘솔 설정 C-6)
+**작성일**: 2026-08-18
+**상태**: 현행
+**원천**: 로컬 개발 서버를 외부에서 호출할 수 있게 만드는 절차와 그때의 주의사항
+**관련 문서**: [sns-setup.md](./sns-setup.md) (인스타·틱톡 연동에서의 사용) ·
+[decisions/ad-reward-credits.md](./decisions/ad-reward-credits.md) (AdMob SSV 검증 규칙) ·
+[deployment-aws.md](./deployment-aws.md) (공개 도메인이 있는 서버) ·
+[backlog.md](./backlog.md) (고정 도메인 D-1, AdMob 콘솔 설정 C-6)
 
 ---
 
@@ -74,7 +76,10 @@ MinIO를 노출해야 하면 같은 방식으로 포트만 바꿔 하나 더 띄
 ## 4. 주의사항
 
 - **주소는 재시작마다 바뀐다.** 바뀌면 `.env`에서 그 주소를 담은 값(`INSTAGRAM_REDIRECT_URI`·
-  `TIKTOK_REDIRECT_URI`·`CLOUDFRONT_DOMAIN` 등)과 외부 콘솔에 등록한 URL을 **양쪽 다** 고쳐야 한다.
+  `TIKTOK_REDIRECT_URI`·`S3_PUBLIC_ENDPOINT`·`CLOUDFRONT_DOMAIN` 등)과 외부 콘솔에 등록한 URL을 **양쪽 다**
+  고쳐야 한다. `S3_PUBLIC_ENDPOINT`를 빠뜨리면 SNS 업로드가 플랫폼에 넘기는 presigned URL이 로컬 주소로
+  서명된다 — 서명 호스트가 `S3_PUBLIC_ENDPOINT ?? S3_ENDPOINT`다(`apps/api/src/services/storage.service.ts`의
+  `presignClient`·`createDownloadUrl`). 값별 설명은 [sns-setup.md](./sns-setup.md) §1.
   반복이 부담이면 §6의 고정 주소로 간다.
 - **서버 전체가 공개된다.** 노출되는 것은 웹훅 경로 하나가 아니라 그 포트의 모든 라우트다.
   로컬은 보통 `NODE_ENV=development` 라 Swagger `/docs` 와 개발 로그인(`/docs/auth/token`)까지
@@ -123,7 +128,11 @@ Cloudflare에 등록된 도메인이 있으면 named tunnel로 고정 서브도�
 ./apps/api/scripts/dev-tunnel.sh <도메인> --run
 ```
 
-운영용 고정 도메인은 별개 작업이다 — [backlog.md](./backlog.md) D-1.
+스크립트는 `apps/api/.env`에 넣을 값과 콘솔에 등록할 값을 출력하지만, 출력에 `S3_PUBLIC_ENDPOINT`는 없다 —
+`S3_PUBLIC_ENDPOINT=https://media-dev.<도메인>`을 직접 넣는다.
+
+운영용 고정 도메인은 별개 작업이다 — [backlog.md](./backlog.md) D-1. 로컬이 아니라 배포된 서버로 외부
+콜백을 받아도 되면, AWS 공모전 서버는 공개 HTTPS 도메인을 가진다 — [deployment-aws.md](./deployment-aws.md) §0.
 
 ## 7. 트러블슈팅
 
@@ -132,7 +141,7 @@ Cloudflare에 등록된 도메인이 있으면 named tunnel로 고정 서브도�
 | 터널 주소로 `/health` 가 응답 없음 | 서버가 안 떠 있거나 포트가 다르다 | 그 기기에서 `curl http://localhost:3000/health` 부터 확인 |
 | 로컬은 되는데 터널은 502 | 컨테이너 내부 포트를 터널에 넘겼다 | 호스트에 매핑된 포트(`API_HOST_PORT`, 기본 3000)를 쓴다 |
 | 외부 콘솔의 URL 검증 실패 | 우리 응답이 2xx가 아니다 | 서버 로그에서 그 요청의 `url` 과 상태 코드를 확인한다. 요청 원문이 로그에 남는다 |
-| 어제 쓰던 주소가 죽었다 | 임시 주소는 재시작마다 바뀐다 | 새 주소로 `.env` 와 콘솔을 갱신하거나 §6으로 간다 |
+| 전에 쓰던 주소가 죽었다 | 임시 주소는 재시작마다 바뀐다 | 새 주소로 `.env` 와 콘솔을 갱신하거나 §6으로 간다 |
 | 콜백이 오는데 계속 거절된다 | 허용 목록·킬 스위치·세션 만료 | AdMob은 `ad_rewards.status`·`reject_reason` 에 이유가 남는다(`npm run db:studio`) |
 
 ## 8. 에이전트에게

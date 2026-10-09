@@ -35,13 +35,12 @@ If two pieces of code look similar but have different reasons to change, duplica
 
 ## 4. Divide a slice by purpose
 
-Add only the segments that are needed.
+Add only the segments that are needed — `features/share-movie` has no `ui`, because each screen that offers sharing draws its own control:
 
 ```text
-features/share-photo/
-├── ui/share-photo-button.tsx
-├── model/use-share-photo.ts
-├── api/share-photo.ts
+features/share-movie/
+├── api/download-render-file.ts
+├── model/use-share-movie.ts
 └── index.ts
 ```
 

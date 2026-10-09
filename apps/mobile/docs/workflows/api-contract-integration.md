@@ -79,12 +79,7 @@ Which slices own an `api` segment today is recorded in the [FSD ownership map](.
 
 Contract types are compile-time only. Zod at the slice `api` boundary remains the **runtime** response contract: every `apiRequest` call requires a schema for the envelope's `data`. Keep schemas focused on the fields the app actually consumes; do not blanket-validate every field of every response (see the error-placement table in [`state-and-data.md`](../frameworks/state-and-data.md)). Where a response's enum may grow on the server (edit-job status, template style), keep the boundary schema **wider** than the contract (`z.string()`) and narrow in the mapper — a value this build has not heard of must not fail the whole call.
 
-Reusing the contract's Zod schemas at runtime (`videoSchema.pick(...)`) would make the package part of the app bundle; that step is tracked in the root backlog (B-5) and is not done — until then the boundary schemas stay hand-written, checked against the contract by `apiRequest`'s assignability rule.
-
-## Open decisions
-
-- **Runtime reuse of contract schemas** at the entity boundary — see "Zod validation policy" and backlog B-5.
-- **Validation scope:** which responses warrant field-level Zod strictness beyond the fields the app consumes — tracked in the root backlog (B-5).
+Reusing the contract's Zod schemas at runtime (`videoSchema.pick(...)`) would make the package part of the app bundle; that step is not done — until then the boundary schemas stay hand-written, checked against the contract by `apiRequest`'s assignability rule. Both it and the open question of which responses, if any, warrant field-level strictness beyond the fields the app consumes are tracked in the root [backlog B-5](../../../../docs/backlog.md#b-5-api-계약-스키마-우선--남은-다듬기).
 
 ## Sources
 

@@ -2,21 +2,24 @@
 
 **작성일**: 2026-08-12
 **상태**: 결정 — 정기 구독을 제품 모델에서 제거하고 무비 생성을 크레딧으로 과금한다.
-**원천**: 결제 방식이 다시 변경되기 전까지 수익 모델의 원천이다.
-**후속 작업의 원천**: [backlog.md](../backlog.md) A-2, C-1
-**후속 결정**: 결제 채널은 2026-08-13에 Stripe에서 Apple/Google IAP로 확정됐다 —
-[payment-channel-iap.md](payment-channel-iap.md).
-아래 §"기각한 대안 — 월 정기 구독 유지"는 **생성 축(크레딧 지급형 구독)에 한해** 유효하다.
-보관 혜택(기간 연장 등)을 구독으로 팔지는 예정이나 미확정이고
-([specs/credits-and-payment.md](../specs/credits-and-payment.md) CRD-7, [backlog.md](../backlog.md) A-2),
-두 축을 섞지 않는 경계 규칙은 [storage-and-subscription-policy.md](storage-and-subscription-policy.md)
-§4.3에 있다. 아래 결정 4의 보관 한도는 현행 원천이
-[specs/snap-library.md](../specs/snap-library.md) SNAP-9(업로드 후 15일, 용량 한도 대체)다.
+**원천**: 결제 방식이 다시 변경되기 전까지 수익 모델의 원천이다. 현행 요구는
+[specs/credits-and-payment.md](../specs/credits-and-payment.md) CRD-1~8 이다.
+**관련 문서**: [payment-channel-iap.md](payment-channel-iap.md) ·
+[storage-and-subscription-policy.md](storage-and-subscription-policy.md) · [backlog.md](../backlog.md) A-2 · C-1
 
-**후속 확정 (2026-08-14)**: 아래 결정 5의 기본 단위 **Movie export 1회 = 100크레딧**이 확정됐다
-(단위의 이유는 [specs/credits-and-payment.md](../specs/credits-and-payment.md) CRD-1). 같은 날 **유료
-정기 구독을 두지 않는다**는 것도 재확인됐고, 레거시 `subscriptions` 테이블은 이관 없이 제거됐다
-([progress.md](../progress.md) 2026-08-14).
+> **후속 결정**(2026-08-13): 결제 채널이 Stripe에서 Apple/Google IAP로 확정됐다 →
+> [payment-channel-iap.md](payment-channel-iap.md).
+
+> **후속 결정**(2026-08-14): 결정 5의 기본 단위 **Movie export 1회 = 100크레딧**이 확정됐다
+> (단위의 이유는 [specs/credits-and-payment.md](../specs/credits-and-payment.md) CRD-1). 같은 날 **유료
+> 정기 구독을 두지 않는다**는 것도 재확인됐고, 레거시 `subscriptions` 테이블은 이관 없이 제거됐다
+> ([progress.md](../progress.md) 2026-08-14). 아래 §"기각한 대안 — 월 정기 구독 유지"는 **생성 축(크레딧
+> 지급형 구독)에 한해** 유효하다 — 보관 혜택(기간 연장 등)을 구독으로 팔지는 예정이나 미확정이고(CRD-7,
+> [backlog.md](../backlog.md) A-2), 두 축을 섞지 않는 경계 규칙은
+> [storage-and-subscription-policy.md](storage-and-subscription-policy.md) §4.3에 있다.
+
+> **대체**(2026-09-09): 결정 4의 보관 한도(결정 당시 Free 5GB 용량 한도)는 기간 기준으로 바뀌었다 — 현행 원천은
+> [specs/snap-library.md](../specs/snap-library.md) SNAP-9(업로드 후 15일) → [snap-retention-period.md](snap-retention-period.md).
 
 ## 결정
 

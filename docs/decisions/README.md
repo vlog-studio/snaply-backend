@@ -1,7 +1,10 @@
 # 결정 문서 인덱스
 
-정책·설계 결정을 담는 디렉터리다. 각 문서 상단의 `**상태**` 줄이 원천이고, 이 표는 그것을 한곳에 모은
-것이다. **문서를 추가하거나 상태가 바뀌면 이 표를 같은 변경에서 갱신한다.**
+정책·설계 결정을 담는 디렉터리다. **결정 상태**(결정 · 결정(잠정) · 미결 · 과거 결정)의 원천은 각 문서 상단의
+`**상태**` 줄이고, 이 표는 그것을 한곳에 모은 것이다. **구현 상태**는 상태 줄에 쓰지 않는다 — 요구별 원천은
+[specs/](../specs/README.md)의 라벨이고, 아래 `구현` 열은 그 요약과 남은 일의 백로그 ID 다
+([doc-conventions.md](../doc-conventions.md) §헤더). **문서를 추가하거나 결정·구현 상태가 바뀌면 이 표를 같은
+변경에서 갱신한다.**
 
 - **결정 대기(미결)** 문서는 배경·영향 범위·선택지·각 선택의 결과·권장안을 담고, 마지막의 "결정 기록"
   표가 비어 있다. 결정이 나면 같은 파일의 상태 줄과 결정 기록을 채우고, 해당 spec 을 **먼저** 고친다
@@ -22,8 +25,9 @@
 
 각 결정의 착수 순서와, 결정을 기다리지 않고 시작할 수 있는 일:
 
-- **sns-webhook-scope** — 어느 답이든 고정 도메인이 필요하다. 도메인·인증서·배포 타깃(D-1·B-8)은 결정 전에
-  시작할 수 있고, 도메인이 생겨야 웹훅·검수·결제 검증(C-1·C-5·C-6·D-3)이 이어진다.
+- **sns-webhook-scope** — 어느 답이든 외부에서 닿는 고정 도메인이 필요하다. 공모전 기간에는 AWS 공모전 서버(B-8)의
+  `https://snaply-api.dweaxai.com` 이 그 조건을 채우고, 공모전이 끝나면 운영 도메인(D-1)이 필요하다 — D-1 은 결정 전에
+  시작할 수 있다. 도메인이 있어야 웹훅·검수·결제 검증(C-1·C-5·C-6·D-3)이 이어진다.
 - **bgm-sourcing** — 법적 검토 → 조달 → `bgm_tracks` → E-5 해소 순이다. 후보 서비스의 약관 비교표는 결정
   전에 만들 수 있다.
 - **sticker-asset-sourcing** — 에셋 조달 → 매니페스트 시드 등록 → (필요해지면) 관리자 페이지 순이다. 에셋
@@ -37,11 +41,11 @@
 |---|---|---|
 | [api-contract-schema-first.md](api-contract-schema-first.md) | API 계약 원천을 `packages/shared-types` Zod 스키마로 통일 | 완료 |
 | [snap-content-analysis.md](snap-content-analysis.md) | 스냅 내용 분석(vision) 도입. 법무 검토 전에는 사용자 동의(옵트인)로 켠다(2026-09-29 §6.1) | 분석·동의 완료. 생산 활성화는 A-3 |
-| [template-snap-recommendation.md](template-snap-recommendation.md) | 템플릿 기반 스냅 자동 추천 | 완료, 생산 활성화 대기(A-6) |
-| [edit-spec-v3.md](edit-spec-v3.md) | editSpec v3·에셋 매니페스트·어휘 사전의 설계 규칙(시드·핀·무효화·큐 분리·사전 로딩) | 어휘 사전 3종 구현. 스키마 본문과 남은 개정은 A-7 |
+| [template-snap-recommendation.md](template-snap-recommendation.md) | 템플릿 기반 스냅 자동 추천 — 앱 로컬 매칭 + 서버 추천 2단계, 서버 카탈로그, 무료 추천과 상한, 규칙 기반 점수화. 켜는 조건은 2026-09-29 부터 옵트인 | 완료, 생산 활성화 대기(A-6) |
+| [edit-spec-v3.md](edit-spec-v3.md) | editSpec v3·에셋 매니페스트·어휘 사전의 설계 규칙(시드·핀·무효화·큐 분리·사전 로딩) | 어휘 사전 5종 구현(전환·컷 역할은 2026-10-01) · 큐 분리(`edit-v3`)와 v3 `timeline`(컷·경계별 전환) 부분 구현(2026-10-01). 스키마 본문은 [plans/](../plans/README.md) 초안, 확정·파이프라인은 A-7 |
 | [transition-director.md](transition-director.md) | AI 가 경계마다 전환을 고르는 규칙 — 스타일 경향 · 30분 장면 전환 · 두 컷을 키로 한 시드. 여분이 없어 들어가지 않는 `crossfade` 는 `dip` 으로 | 완료(2026-10-01, 편집 화면의 선택·미리보기 포함 — Galaxy 실기기 확인) |
 | [edit-director.md](edit-director.md) | AI 편집 초안이 스냅을 고르고 자르는 규칙 — 극단만 거르기(절반 한도) · 10분 안의 중복 · 10컷을 넘으면 촬영 흐름을 묶음으로 나눠 고르기 · 촬영순 · 스타일별 컷 길이와 겹침용 여분 | 구현됨(2026-10-01) — 문턱값은 잠정 |
-| [auto-edit-draft.md](auto-edit-draft.md) | 고른 스냅 여러 개로 AI 가 고칠 수 있는 무비 초안을 만든다 — 결과는 렌더가 아닌 초안, 구간·경계별 전환까지 사용자가 고친다 | 구현됨(2026-10-01, `POST /movie-drafts` · 앱의 자동 편집) — 실기기 확인 전 |
+| [auto-edit-draft.md](auto-edit-draft.md) | 고른 스냅 여러 개로 AI 가 고칠 수 있는 무비 초안을 만든다 — 결과는 렌더가 아닌 초안, 구간·경계별 전환까지 사용자가 고친다 | 구현됨(2026-10-01, `POST /movie-drafts` · 앱의 자동 편집, Galaxy 실기기 확인) — 거르기·중복 문턱값은 잠정(A-11) |
 | [ad-reward-credits.md](ad-reward-credits.md) | 보상형 광고 크레딧 지급 규칙 | 완료, 기본 꺼짐(C-6) |
 | [snap-retention-period.md](snap-retention-period.md) | 스냅 서버 보관은 기간 기준 — 업로드 후 15일 만료 (구독 혜택으로 연장할지는 미확정, A-2) | 완료(서버 2026-09-09 · 앱 만료 표시 2026-09-27). 용량 한도 존치는 A-2 |
 | [expiry-notice-schedule.md](expiry-notice-schedule.md) | 스냅 만료 예고는 삭제 전 두 번, 정리 배치와 분리된 낮 시간 배치가 보낸다 | 완료(서버 2026-09-09). 앱의 남은 기간 표시는 SNAP-13 |
@@ -58,7 +62,7 @@
 | [credit-payment-model.md](credit-payment-model.md) | 구독 제거, 무비 생성 = 크레딧 100 | 완료 |
 | [product-concept.md](product-concept.md) | 제품 방향 — 필름 은유를 걷고 스튜디오(작업대형)를 채택, 이름(스냅·무비·컷·초안 무비·스튜디오·나), 원본/조합 모델, 무비 한 화면·실행 밖 편집·순서 고정 | 완료 |
 | [movie-model.md](movie-model.md) | 영상 묶음은 평면 `Video`를 참조하는 `Movie` 엔티티 | 완료(서버 2026-09-09 · 앱 전환 2026-09-12). 세부 규칙은 movie-export-policy |
-| [aws-contest-server.md](aws-contest-server.md) | 공모전 테스트 서버를 인프라팀 EC2 에 올린다 — GitHub self-hosted runner + GHCR(main 배포만 받음), S3 는 인스턴스 역할, 단독 compose, Secrets Manager → 배포 때 env 파일 | 저장소 쪽 완료(2026-10-08). 서버 작업은 B-8. **2026-10-09 부터 유일한 배포 대상** — 사내 서버 안은 접었다([archive/on-prem-deployment.md](../archive/on-prem-deployment.md)) |
+| [aws-contest-server.md](aws-contest-server.md) | 공모전 테스트 서버를 인프라팀 EC2 에 올린다 — GitHub self-hosted runner + GHCR(main 배포만 받음), S3 는 인스턴스 역할, 단독 compose, Secrets Manager → 배포 때 env 파일. **2026-10-09 부터 유일한 배포 대상** — 사내 서버 안은 접었다([archive/on-prem-deployment.md](../archive/on-prem-deployment.md)) | 저장소 쪽 완료 · 첫 배포(2026-10-08). 남은 일은 B-8 |
 | [env-management.md](env-management.md) | 로컬은 `apps/api/.env`, 운영은 서버 측 주입(AWS 서버는 Secrets Manager 에서 배포 때 만든 파일) | 완료 |
 
 ## 과거 결정 — 일부 또는 전부 대체됨
@@ -67,6 +71,6 @@
 |---|---|
 | [account-deletion.md](account-deletion.md) | 과거 결정 — 결제 모델 전환으로 일부 대체. 삭제 유예 30일은 유효 |
 | [storage-and-subscription-policy.md](storage-and-subscription-policy.md) | 과거 결정 — 일부 대체. Free 2GB 한도는 snap-retention-period 가, 무비 30일 보관 + 무료 재생성은 movie-cleanup-after-export 가 대체. 크레딧/구독 2축과 경계 규칙은 유효 |
-| [snap-source-of-truth.md](snap-source-of-truth.md) | 과거 결정 — 일부 대체. 스냅 원천을 서버로 옮기는 방향은 유효(SNAP-14, 렌디션·reconcile·Movie 는 구현, 로컬 캐시 전환·휴지통·위치는 A-4). §6 용량 정책(Free 5GB)은 snap-retention-period 가 대체 |
+| [snap-source-of-truth.md](snap-source-of-truth.md) | 과거 결정 — 일부 대체. 스냅 원천을 서버로 옮기는 방향은 유효(SNAP-14 — 렌디션·reconcile·Movie·휴지통은 구현, 로컬 캐시 전환·위치는 A-4). §6 용량 정책(Free 5GB)은 storage-and-subscription-policy(2GB)를 거쳐 snap-retention-period(15일)가 대체 |
 
 보관된 결정(예: 플랜 차등 보류 `plan-limits`)은 [archive/README.md](../archive/README.md)에 있다.

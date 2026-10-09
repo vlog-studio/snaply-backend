@@ -27,7 +27,8 @@ rather than letting two copies drift apart.
 
 - Adding a screen → §1, §14.
 - Reading data from the backend → §2, §3, §4 (in that order), consumed via §5-adjacent code.
-- Writing data / firing a server action → §5.
+- Writing data / firing a server action → §5 (the request function), §10 (the action hook and
+  its query-cache update).
 - Sharing client state across components → §7, §8 (§8a when the data belongs to the signed-in account rather than to the device).
 - Swapping an external dependency (auth, storage) behind an interface → §9.
 - Orchestrating a user action with pending/error state → §10.
@@ -106,8 +107,13 @@ import { useLocalSearchParams } from 'expo-router';
 import { SnapsPage } from '@/pages/snaps';
 
 export default function SnapsRoute() {
-  const { select } = useLocalSearchParams<{ select?: string }>();
-  return <SnapsPage startSelecting={select === '1'} />;
+  const { select, at } = useLocalSearchParams<{ select?: string; at?: string }>();
+  return (
+    <SnapsPage
+      startSelecting={select === '1' ? 'movie' : select === 'draft' ? 'draft' : undefined}
+      selectionRequest={at}
+    />
+  );
 }
 ```
 
@@ -125,7 +131,7 @@ export default function SnapsRoute() {
 **When:** reading any business resource from the backend. This is the backbone pattern;
 §3–§5 are its parts.
 
-**Canonical:** the four files of `entities/location/api`
+**Canonical:** the three files of `entities/location/api`
 ([`location.dto.ts`](../../src/entities/location/api/location.dto.ts),
 [`get-locations.ts`](../../src/entities/location/api/get-locations.ts),
 [`location.queries.ts`](../../src/entities/location/api/location.queries.ts)),
@@ -137,7 +143,7 @@ Responsibilities, one per file:
 | File | Owns | Knows domain models? |
 | --- | --- | --- |
 | `shared/api/client.ts` | HTTP transport: URL/query, JWT, envelope, `ApiError` | No |
-| `<entity>/api/<entity>.dto.ts` | wire (snake_case) Zod schema + mapper to domain | Maps to it |
+| `<entity>/api/<entity>.dto.ts` | wire-shape Zod schema (the contract's field names) + mapper to domain | Maps to it |
 | `<entity>/api/get-<entity>.ts` | calls `apiRequest`, maps DTO → domain | Returns it |
 | `<entity>/api/<entity>.queries.ts` | `queryOptions` key + fn factory | Via the fetch fn |
 | consumer (`model`/`ui`) | `useQuery`/`fetchQuery` with the factory | Domain type only |
@@ -407,7 +413,10 @@ export { initX, useXValue } from './model/x-store';
 
 **When:** client state that must survive relaunch (settings, preferences).
 
-**Canonical:** [`notification-settings-store.ts`](../../src/features/notification-settings/model/notification-settings-store.ts).
+**Canonical:** [`album-auto-save-store.ts`](../../src/features/save-snap-to-album/model/album-auto-save-store.ts)
+(the skeleton below);
+[`notification-settings-store.ts`](../../src/features/notification-settings/model/notification-settings-store.ts)
+adds a versioned `migrate` for fields that moved to the server.
 
 ```ts
 import { create } from 'zustand';
@@ -430,11 +439,15 @@ const useXStore = create<XState>()(
 - Namespace the `persist` key with the `snaply.` prefix.
 - Back persistence with the `secureStorage` adapter, not `AsyncStorage` directly.
 - If the state mirrors a future backend field, document how it becomes a server query
-  once the endpoint exists (see the file's header comment).
-- Decide whose data it is. A device preference (theme, notification switches) is the
+  once the endpoint exists — `notification-settings-store.ts`'s header records how its
+  alert switches did: its `migrate` keeps the values an older build stored in
+  `legacyChoices` until `useLegacyChoicesUpload` hands them to the server once.
+- Decide whose data it is. A device preference (theme mode, 자동 앨범 저장) is the
   device's and stays one file. **Anything the signed-in user created or the backend
   answered for them is that account's**, and belongs in §8a instead — one device holds
-  several accounts.
+  several accounts. A preference the server holds for the account (the notification
+  switches) is not persisted here at all: read it as a query (§2) and write it from an
+  action hook (§10).
 
 ---
 
@@ -545,6 +558,15 @@ export function useDoAction() {
   declarative via the route guard reacting to state.
 - Distinguish user-cancellation (silent) from real failure (surface a message).
   User-facing copy is Korean and lives in the feature, not in shared.
+- When the action changes server data a query holds, the hook updates the cache itself
+  through `useQueryClient()` — the app does not use `useMutation`. Write the server's
+  answer into the query with `setQueryData`
+  ([`use-analysis-consent-actions.ts`](../../src/features/analysis-consent/model/use-analysis-consent-actions.ts)),
+  or invalidate the factory's `all()` key once the request settles
+  ([`use-restore-snaps.ts`](../../src/features/restore-snap/model/use-restore-snaps.ts)).
+  A control that must move before the network answers sets the value optimistically and
+  puts the changed fields back on failure
+  ([`use-update-notification-preferences.ts`](../../src/features/notification-settings/model/use-update-notification-preferences.ts)).
 
 ---
 

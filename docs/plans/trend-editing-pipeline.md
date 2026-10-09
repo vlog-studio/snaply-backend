@@ -1,13 +1,14 @@
 # 트렌드 숏폼 편집 파이프라인 구현 계획 — 타임라인 스펙 v3
 
 **작성일**: 2026-08-19
-**상태**: 제안 — 일부 착수. v3 공유 어휘 사전 3종·HDR 톤매핑·산출물 계약 테스트(CI ffmpeg)는 구현됐고
-나머지는 착수 전이다. 현행 사실이 아니다.
-**원천**: 편집 파이프라인의 층별 설계·오픈소스 선정·라이선스 요건 제안. 미결 항목은 [backlog.md](../backlog.md) A-7 에만 둔다.
-**관련 문서**: 현행 파이프라인의 사실은 코드(`apps/ai-worker/src/pipeline/`)와 [specs/movie.md](../specs/movie.md)
-MOV-7~MOV-9·MOV-14(같은 구성 → 같은 결과)·MOV-19(다시 만들기), 현행 API 계약은
-[`packages/shared-types/src/contract/`](../../packages/shared-types/src/contract/) ·
-[decisions/movie-model.md](../decisions/movie-model.md) · [decisions/credit-payment-model.md](../decisions/credit-payment-model.md)
+**상태**: 제안 — 현행 사실이 아니다. 어디까지 구현됐는지는 [계획 인덱스](README.md)
+**원천**: 편집 파이프라인의 층별 설계·오픈소스 선정·라이선스 요건 제안. 현행 파이프라인의 사실은 코드
+(`apps/ai-worker/src/pipeline/`)와 [specs/movie.md](../specs/movie.md) MOV-7~MOV-9·MOV-14(같은 구성 → 같은 결과)·MOV-19(다시
+만들기), 현행 API 계약은 [`packages/shared-types/src/contract/`](../../packages/shared-types/src/contract/), 스펙 v3 의 확정
+규칙은 [decisions/edit-spec-v3.md](../decisions/edit-spec-v3.md)가 원천이다. 미결 항목은 [backlog.md](../backlog.md) A-7 에만 둔다
+**관련 문서**: v3 스키마 초안([edit-spec-v3.md](edit-spec-v3.md) · [asset-pack-manifest.md](asset-pack-manifest.md)) ·
+편집 툴 [edit-recipe-tools.md](edit-recipe-tools.md) · [decisions/movie-model.md](../decisions/movie-model.md) ·
+[decisions/credit-payment-model.md](../decisions/credit-payment-model.md)
 
 ---
 
@@ -28,7 +29,8 @@ MOV-7~MOV-9·MOV-14(같은 구성 → 같은 결과)·MOV-19(다시 만들기), 
 
 다행히 기존 설계가 이 확장을 이미 받아들이게 돼 있다 —
 `parse_job_clips` 는 v2 `clips` 와 레거시 `videoIds` 를 함께 처리하고,
-`parse_render_spec` 은 `profileVersion` 으로 갈린다. v3 는 같은 자리에 한 갈래를 더하는 일이다.
+`parse_render_spec` 은 `profileVersion` 으로 갈린다. v3 는 같은 자리에 한 갈래를 더하는 일이다 — v3 의 컷·경계
+전환은 2026-10-01 에 그렇게 들어갔다([`pipeline/edit_spec.py`](../../apps/ai-worker/src/pipeline/edit_spec.py) `parse_timeline`).
 
 ---
 
@@ -59,8 +61,8 @@ v3 는 스냅 여부(`snapToBeat`)와 허용 오차를 클립 단위로 명시�
 남기고, 상한을 넘기면 기능이 아니라 상한을 먼저 재검토한다.
 
 **편집 워커는 동시성이 설정돼 있지 않다.** 분석 워커는 `VIDEO_ANALYSIS_CONCURRENCY`(기본 3)를
-넘기는데 편집 워커의 `Worker(...)` 에는 옵션이 없어 기본값으로 돈다
-([`worker.py`](../../apps/ai-worker/src/worker.py)). 가장 무거운 작업이 사실상 직렬로 처리되는
+넘기는데 편집 워커의 `Worker(...)`(큐 `edit-jobs`·`edit-v3` 마다 하나)에는 옵션이 없어 기본값으로 돈다
+([`worker.py`](../../apps/ai-worker/src/worker.py) `main`). 가장 무거운 작업이 사실상 직렬로 처리되는
 셈이라, 파이프라인이 무거워지면 **개별 처리 시간보다 큐 대기가 먼저 문제가 된다.** 다만 적정
 동시성은 단계별 CPU·메모리 실측 뒤에 정한다 — 지금 숫자를 찍으면 근거가 없다.
 
@@ -69,7 +71,8 @@ v3 는 스냅 여부(`snapToBeat`)와 허용 오차를 클립 단위로 명시�
 `Movie` 엔티티는 있고, 기존 `POST /edit-jobs` 는 **한 버전 공존 후 폐기**로 결정됐다
 ([decisions/movie-export-policy.md](../decisions/movie-export-policy.md) ⑤, [backlog.md](../backlog.md) A-1).
 따라서 v3 의 부착 지점은 `POST /edit-jobs` 가 아니라 Movie export(`POST /movies/{id}/export`)다 —
-폐기 전에 `POST /edit-jobs` 에도 붙이면 같은 스펙을 두 곳에 붙이게 된다.
+폐기 전에 `POST /edit-jobs` 에도 붙이면 같은 스펙을 두 곳에 붙이게 된다. 2026-10-01 에 그렇게 들어갔다 — 무비 생성은
+v3, `POST /edit-jobs` 는 v2 그대로다([api-spec.md](../api-spec.md) §AI 편집).
 
 **타임라인 모델 자체(§3)는 부착 지점과 무관하므로 설계는 지금 진행할 수 있다.**
 
@@ -308,8 +311,8 @@ BGM 과 같이 [decisions/bgm-sourcing.md](../decisions/bgm-sourcing.md) 의 공
 **어떤 아키텍처도 유행을 자동으로 알지 못한다.** 월 1회 리뷰로 5~10종을 교체하고, **사용자가
 스티커를 지웠는지 로깅**한다. 편집 레이어를 스티커까지 확장하면 삭제율이 은퇴 판단의 근거가 된다.
 
-> 위 유형 판단은 작성 시점의 일반적 관찰이다. **착수 전에 국내 릴스·틱톡 상위 브이로그를 직접
-> 훑어 검증할 것** — 이 절에서 가장 빨리 낡는 부분이다.
+위 유형 판단은 작성 시점의 일반적 관찰이다. **착수 전에 국내 릴스·틱톡 상위 브이로그를 직접
+훑어 검증할 것** — 이 절에서 가장 빨리 낡는 부분이다.
 
 ---
 
@@ -344,9 +347,9 @@ CRF 품질에서 손해를 본다.
 
 ## 10. 구현 순서
 
-> 이 절은 **의존 순서 제안**이다 — 미결 항목의 상태·완료 조건의 원천은 [backlog.md](../backlog.md)
-> A-7이며, 여기 목록으로 상태를 관리하지 않는다. 0단계 1번의 기반(어휘 사전·시드·무효화 규칙)은
-> 구현돼 있고, 확정 결정은 [decisions/edit-spec-v3.md](../decisions/edit-spec-v3.md)에 있다.
+이 절은 **의존 순서 제안**이다 — 미결 항목의 상태·완료 조건의 원천은 [backlog.md](../backlog.md)
+A-7이며, 여기 목록으로 상태를 관리하지 않는다. 어디까지 구현됐는지는 [계획 인덱스](README.md), 확정 결정은
+[decisions/edit-spec-v3.md](../decisions/edit-spec-v3.md)에 있다.
 
 ### 0단계 — 선행 (병행 불가)
 
@@ -387,7 +390,7 @@ CRF 품질에서 손해를 본다.
 
 ## 11. 테스트 계획
 
-필터그래프 문자열 검증 14개 위에 이걸 얹으면 회귀를 잡을 수 없다. 최소 두 종류가 함께 간다.
+필터그래프 문자열 검증만으로는 이걸 얹었을 때 회귀를 잡을 수 없다. 최소 두 종류가 함께 간다.
 
 - **ffprobe 계약 테스트**: 출력 duration 이 스펙과 ±100ms 이내, 오디오/비디오 길이 일치,
   moov 위치(faststart), 오디오 LUFS 범위

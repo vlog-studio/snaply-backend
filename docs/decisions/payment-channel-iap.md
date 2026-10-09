@@ -2,14 +2,15 @@
 
 **작성일**: 2026-08-13
 **상태**: 결정 — 크레딧 판매 채널을 Apple StoreKit / Google Play Billing(IAP)으로 확정하고 Stripe를 제거한다.
-**관련 문서**: [credit-payment-model.md](credit-payment-model.md)(과금 모델), 완료된 구현 계획은
-[../archive/iap-migration.md](../archive/iap-migration.md), 미결 항목은 [../backlog.md](../backlog.md) A-2·C-1.
-**후속 결정**: 보관 혜택을 구독으로 팔지는 예정이나 미확정이다
-([specs/credits-and-payment.md](../specs/credits-and-payment.md) CRD-7, [backlog.md](../backlog.md) A-2).
-판다면 그 상품은 **auto-renewable subscription**(iOS StoreKit 2 / Android Play Billing)으로
-양 스토어에 함께 등록하고([storage-and-subscription-policy.md](storage-and-subscription-policy.md) §5),
-아래 §결정 1의 "consumable"은 크레딧 팩에 한한다. 채널(IAP + RevenueCat)과 §5의 "원천은
-항상 백엔드" 원칙은 그대로 적용된다.
+**관련 문서**: [credit-payment-model.md](credit-payment-model.md)(과금 모델) ·
+[archive/iap-migration.md](../archive/iap-migration.md)(완료된 구현 계획, 보관) ·
+[storage-and-subscription-policy.md](storage-and-subscription-policy.md) §5 · [backlog.md](../backlog.md) A-2 · C-1
+
+> **후속 결정**(2026-08-14): 보관 혜택을 구독으로 판다면 그 상품은 **auto-renewable subscription**(iOS StoreKit 2 /
+> Android Play Billing)으로 양 스토어에 함께 등록하고([storage-and-subscription-policy.md](storage-and-subscription-policy.md) §5),
+> 아래 §결정 1의 "consumable"은 크레딧 팩에 한한다. 채널(IAP + RevenueCat)과 결정 5의 "원천은 항상 백엔드" 원칙은
+> 그대로 적용된다. 구독을 팔지는 예정이나 미확정이다([specs/credits-and-payment.md](../specs/credits-and-payment.md) CRD-7,
+> [backlog.md](../backlog.md) A-2).
 
 ## 결정
 

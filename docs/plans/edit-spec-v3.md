@@ -1,14 +1,21 @@
 # editSpec v3 — 스키마
 
 **작성일**: 2026-08-20 (main 에는 2026-10-03 에 들어왔다)
-**상태**: 제안 (착수 전) — 현행 사실이 아니다. 이 초안이 따르는 확정 결정은
-[decisions/edit-spec-v3.md](../decisions/edit-spec-v3.md) 가 원천이다.
+**상태**: 제안 — 현행 사실이 아니다. 어디까지 구현됐는지는 [계획 인덱스](README.md)
+**원천**: editSpec v3 의 필드 정의 초안. 이 초안이 따르는 확정 규칙은 [decisions/edit-spec-v3.md](../decisions/edit-spec-v3.md),
+어휘 값은 `packages/shared-types/src/*-vocabulary.json`, 지금 쓰는 v3(컷·경계 전환만)의 계약은
+[`contract/edit-jobs.ts`](../../packages/shared-types/src/contract/edit-jobs.ts) `editSpecV3Schema` 가 원천이다.
+미결은 [backlog.md](../backlog.md) A-7 에만 둔다
 **관련 문서**: [asset-pack-manifest.md](./asset-pack-manifest.md) ·
 [trend-editing-pipeline.md](./trend-editing-pipeline.md)(상위 계획) ·
 [archive/edit-spec-v3-kickoff.md](../archive/edit-spec-v3-kickoff.md)(착수 순서와 커밋 계획, 보관) ·
-[storage-and-subscription-policy.md](../decisions/storage-and-subscription-policy.md) §3
+[storage-and-subscription-policy.md](../decisions/storage-and-subscription-policy.md) §3(레시피 영구 보관 — 무료 재생성은
+[movie-cleanup-after-export.md](../decisions/movie-cleanup-after-export.md)가 대체)
 
-미결은 [backlog.md](../backlog.md) A-7 에만 둔다.
+> **후속 결정**(2026-10-01): v3 는 `timeline` 의 컷과 경계 전환만 먼저 들어갔다 — 무비 생성이 v3 를 `edit-v3` 큐로
+> 보낸다([progress.md](../progress.md) 2026-10-01, [api-spec.md](../api-spec.md) §AI 편집). 그 모양은 이 초안과 다르다:
+> 컷이 `clipId` 대신 `videoId` 를 직접 갖고(§6 `source` 없음), 최상위 `stylePreset` 이 색보정·음악을 정하며, `seed`·`intent`·
+> `transitionId`·`reason` 이 없다. 이 초안과 맞추는 일은 [backlog.md](../backlog.md) A-7 의 "`editSpec` v3 확정"이다.
 
 ---
 
@@ -21,13 +28,17 @@
 - **어휘 값** — `anchor` 의 `kind`·`ref`, 무효화 상태와 조합, `attempt` 대상 스테이지,
   `reason.code`, `userEdits.locked`, `cuts[].role`, `transitions[].kind`, `accents[].kind` 값은
   `packages/shared-types/src/*-vocabulary.json` 이 원본이다. 이 문서는 값을 복제하지 않는다.
-  ⚠️ 뒤 다섯(`reason.code` 이후)은 **아직 사전 파일이 없다.** 파일을 몇 개로 묶을지가 미결이며,
-  그 전까지는 열린 문자열로 남는다 — `cuts[].role` 은 무효화 규칙이 근거로 삼고 있으므로
-  가장 먼저 닫아야 한다(§11.1).
+  `cuts[].role`([`cut-role-vocabulary.json`](../../packages/shared-types/src/cut-role-vocabulary.json))과
+  `transitions[].kind`([`transition-vocabulary.json`](../../packages/shared-types/src/transition-vocabulary.json))는
+  2026-10-01 에 사전으로 닫혔다. ⚠️ `reason.code`·`userEdits.locked`·`accents[].kind` 는 **아직 사전 파일이 없다.**
+  파일을 몇 개로 묶을지가 미결이며, 그 전까지는 열린 문자열로 남는다.
 - **출력 기하** — 해상도·fps·`fitMode` 는 `renderSpec` 단독 권위다. §16 참조.
 - **생성 시 파라미터** — 밀도·전환 가중치·보정 상한은 번들이 갖는다.
   [asset-pack-manifest.md](./asset-pack-manifest.md) §10.
 - **미결 결정** — [backlog.md](../backlog.md) A-7.
+
+괄호 안의 `A-1`~`D-8` 은 [decisions/edit-spec-v3.md](../decisions/edit-spec-v3.md) §1·§2 표의 결정 항목이다 —
+백로그 ID 가 아니다(백로그는 [backlog.md](../backlog.md) 링크와 함께 적는다).
 
 ---
 
@@ -73,8 +84,9 @@
 ```
 
 **키 이름은 `version` 이다. `specVersion` 이 아니다.**
-[edit-job.service.ts:64-88](../../apps/api/src/services/edit-job.service.ts#L64-L88) `parseEditSpec` 과
-[worker.py:71-72](../../apps/ai-worker/src/worker.py#L71-L72) 가 v1·v2 를 그 키로 읽는다.
+[edit-job.service.ts](../../apps/api/src/services/edit-job.service.ts) 의 `parseEditSpec` 과
+[worker.py](../../apps/ai-worker/src/worker.py) 의 `_run_pipeline`·[edit_spec.py](../../apps/ai-worker/src/pipeline/edit_spec.py) 의
+`parse_job_clips` 가 그 키로 v1·v2·v3 를 가른다.
 이름을 바꾸면 알 수 없는 형태가 `{version:1, stylePreset:'일상'}` 으로 조용히 삼켜진다(A-1).
 
 ---
@@ -97,7 +109,7 @@
 
 | 경로 | `attempt` | 결과 |
 |---|---|---|
-| 시스템 재렌더 · 만료 후 재생성 | 유지 | 완전 동일 |
+| 시스템 재렌더 · 만료 후 재생성(2026-09-09 폐기 — MOV-16·MOV-19) | 유지 | 완전 동일 |
 | 사용자 "다시 생성" | 해당 스테이지만 `++` | 다른 결과, 여전히 재현 가능 |
 
 `attempt` 를 전역 하나로 두면 부분 재생성이 깨진다 — 유지해야 할 스테이지의 시드까지 바뀐다.
@@ -120,8 +132,8 @@
 
 `overlays.captions` 가 `[]` 인 것만으로는 **"자막을 요청하지 않았다"** 와 **"요청했는데 음성이
 없었다"** 가 구분되지 않는다. 현행 기본값은 `subtitles: false`(whisper 비용 절약)이고 큐
-페이로드에만 있어([edit-queue.ts:17](../../apps/api/src/queue/edit-queue.ts#L17)) 레시피 재생성 시
-자막 유무가 달라진다(A-4).
+페이로드에만 있어([edit-queue.ts](../../apps/api/src/queue/edit-queue.ts) `EditJobData.subtitles`) 레시피 재생성 시
+자막 유무가 달라진다(A-4). 무비는 `movies.captions` 에 남지만 생성 스펙(`editSpec`)에는 없다.
 
 `targetDurationMs` 는 **목표**다. 실제 길이는 `timeline` 에서 파생된다(B-2).
 
@@ -188,7 +200,7 @@
 ```
 
 **`videoId` 다. S3 URI 가 아니다.** 워커는
-[worker.py:86](../../apps/ai-worker/src/worker.py#L86) `fetch_source_keys(user_id, video_ids)` 로 키를
+[worker.py](../../apps/ai-worker/src/worker.py) 의 `_run_pipeline` 에서 `db.fetch_source_keys(user_id, video_ids)` 로 키를
 해석한다. URI 를 구우면 스토리지 이전 시 과거 스펙이 전부 죽고, 소유권 검증도 우회된다(B-10).
 
 `durationMs` 는 §9.3 의 컷별 제약 검사에 쓰인다.
@@ -216,8 +228,10 @@
 인라인하면 두 가지가 깨진다.
 
 - 의미 필드 이름이 기존 계약과 갈라진다. `summary`·`moods`·`topics`·`places`·`objects`·
-  `actions`·`visualQuality` 를 [movie-recommendation.service.ts:262-297](../../apps/api/src/services/movie-recommendation.service.ts#L262-L297)
-  이 읽는다 — 이름을 바꾸면 배포된 템플릿 추천이 깨진다
+  `actions`·`visualQuality` 는 분석 계약([`contract/video-analyses.ts`](../../packages/shared-types/src/contract/video-analyses.ts))의
+  이름이고, 그 저장 열을 [movie-recommendation.service.ts](../../apps/api/src/services/movie-recommendation.service.ts) 의
+  `scoreIfReady` 와 [movie-draft.service.ts](../../apps/api/src/services/movie-draft.service.ts) 가 읽는다 — 이름을 바꾸면
+  배포된 템플릿 추천이 깨진다
 - 클립 10개에 수십 KB 가 붙어 storage 원가표가 틀린다
 
 **편집 전용 산출물**(`highlightMs`·`stickerHints`·`faces`·`hands`)은 `video_analyses` 에 컬럼을
@@ -370,7 +384,8 @@ UI 에 드러나야 한다.
 
 `kind` 는 닫힌 집합이다. 매니페스트의 `triggerKinds`(§7.1)와 번들의 `transitionWeights`(§10)가
 같은 어휘를 참조하므로, **집합은 사전이고 가중치는 번들이다** — `bgm.filter.moodTags` 와 같은
-구조다. 사전 파일은 아직 없다(§0).
+구조다. 사전은 [`transition-vocabulary.json`](../../packages/shared-types/src/transition-vocabulary.json)이다(v1 5종 —
+위 예시의 `whip` 은 아직 없다).
 
 ### 9.5 reason 코드
 
@@ -464,7 +479,8 @@ UI 에 드러나야 한다.
 `isValidAnchorAffinity()` 가 별도로 검증한다. 같은 배열이 한쪽에서 통과하고 다른 쪽에서
 거부되는 것을 양쪽 테스트가 고정한다.
 
-`kind`·`ref` 어휘와 `offset` 의미는 `anchor-vocabulary.json` 이 원본이다.
+`kind`·`ref` 어휘는 `anchor-vocabulary.json` 이, `offset` 의 의미(앵커점 기준 상대 이동, `scaleRef` 단위의 배수)는
+[`anchor.ts`](../../packages/shared-types/src/anchor.ts) `AnchorSpec` 이 원본이다.
 
 ### 10.5 captions
 
@@ -520,8 +536,8 @@ UI 에 드러나야 한다.
 }
 ```
 
-현행 유일한 스타일 표현은 [editor.py:34-38](../../apps/ai-worker/src/pipeline/editor.py#L34-L38) 의
-`eq=saturation=0.8` 한 줄이다. v3 초안에는 갈 자리가 없었다(A-3).
+현행 유일한 색 표현은 [editor.py](../../apps/ai-worker/src/pipeline/editor.py) `PRESETS` 의 프리셋별 `eq=` 한 줄
+(`감성` 의 `eq=saturation=0.8` 등)이다. v3 초안에는 갈 자리가 없었다(A-3).
 
 ### 11.1 `grade` 세 갈래는 축이 각각 다르다 — 별개 레이어다
 
@@ -548,7 +564,7 @@ UI 에 드러나야 한다.
 
 ⚠️ **그래서 `cuts[].role` 이 닫힌 집합이어야 한다.** 무효화 규칙이 "순서가 바뀌면 어느 컷이
 hook 인지가 바뀐다"를 근거로 삼는데, `role` 이 열린 문자열이면 그 논리에 계약이 없다.
-사전 파일이 아직 없으므로 **가장 먼저 닫아야 하는 어휘다**(§0).
+2026-10-01 에 [`cut-role-vocabulary.json`](../../packages/shared-types/src/cut-role-vocabulary.json)으로 닫혔다(§0).
 
 ⚠️ **클립 추가는 `match` 를 무효화한다.** 추가된 클립의 `perClip` 항목이 없다는 이유만이 아니다 —
 추가 클립이 기존 레퍼런스보다 노출·품질이 좋으면 `referenceClipId` 가 바뀌고, 그러면
@@ -623,7 +639,8 @@ Object.keys(bundle.correction) === Object.keys(perClip[c].corrections)
 ```
 
 - **톤매핑이 LUT 앞이다.** 아이폰 기본 촬영은 BT.2020 PQ 다. 톤매핑 없이 rec709 LUT 를
-  태우면 색이 두 번 깨진다. 현행 파이프라인에 톤매핑이 없으므로 신규 구현이다(C-4).
+  태우면 색이 두 번 깨진다. 톤매핑은 정규화 단계에 있다 — 트림 직후, `eq` 앞
+  ([hdr.py](../../apps/ai-worker/src/pipeline/hdr.py), `editor.normalize_clip`)(C-4).
 - **LUT 는 정규화된 입력에만 닿는다.** match 이전에 걸면 클립마다 다른 입력에 같은 룩업이
   적용돼 결과가 제각각이 된다.
 - LUT 를 concat 이후 한 번만 걸면 N 회가 아니라 1 회 연산이고, 전환 블렌딩이 LUT 이전
@@ -659,7 +676,7 @@ Object.keys(bundle.correction) === Object.keys(perClip[c].corrections)
 ⚠️ **`sidechain` 은 `"sourceAudio"` 다.** concat 된 원본 오디오 트랙을 그대로 물린다.
 음성만 분리해 물리려면 소스 분리(demucs 계열)가 필요한데 안전 목록에 없고, 워커 이미지가
 이미 1.38GB 다. 브이로그 원본은 대부분 발화가 주 성분이라 분리 없이도 덕킹이 의도대로
-작동한다. 음성 분리를 도입하려면 A-7 의 새 항목이다.
+작동한다. 음성 분리를 도입하려면 [backlog.md](../backlog.md) A-7 의 새 항목이다.
 
 ---
 
@@ -791,11 +808,12 @@ P2 의 순서 잠금 모드가 이 필드로 구현된다.
 ## 17. v2 → v3
 
 **승격은 불가능하다.** v2 에는 비트·레이어·시드가 없어 없는 정보를 지어내야 한다.
-`version` 분기 병행이 유일한 선택이고, `parseEditSpec` 폴백을 throw 로 바꾸는 것이 전제다.
+`version` 분기 병행이 유일한 선택이고, `parseEditSpec` 폴백을 throw 로 바꾸는 것이 전제다
+(v3 가 들어간 2026-10-01 에도 폴백은 그대로다 — 알 수 없는 형태를 v1 `일상` 으로 읽는다).
 
 ⚠️ **큐를 분리한다**(`edit-v3`). 호환 필드 이중 기록은 **실패하지 않기 때문에** 탈락이다 —
 구버전 워커가 v3 작업을 v2 로 성공적으로 렌더하고, 스티커·비트·LUT 가 빠진 결과물이 `done`
-으로 완료되며, [edit-jobs.ts:69](../../apps/api/src/routes/edit-jobs.ts#L69) 정책상 환급은 실패·취소에만
-있으므로 100크레딧이 그대로 소모된다.
+으로 완료되며, 환급은 실패·취소에만 있으므로([api-spec.md](../api-spec.md) §AI 편집) 100크레딧이 그대로 소모된다.
+큐 분리는 2026-10-01 에 들어갔다(`edit-v3`, 상단 배너).
 
 유료 export 에서 조용한 품질 저하는 시끄러운 실패보다 나쁘다.

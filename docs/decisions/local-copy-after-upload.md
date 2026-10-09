@@ -1,13 +1,16 @@
 # 결정 요청 — 서버 업로드가 끝난 스냅의 로컬 파일을 지울 것인가
 
 **작성일**: 2026-09-05 (2026-09-09 결정)
-**상태**: 결정 — 선택지 **B**. 로컬을 캐시로 내리는 것이 목표이되, 실제로 삭제를 켜는 시점은
-**서버 원천 전환 2단계(렌디션)·3단계(앱 동기화)가 실기기에서 검증된 뒤**로 미룬다.
-그때까지 앱의 로컬 파일이 계속 원천이다.
-§결정 기록 앞의 요약·설명·선택지·권장은 결정 요청(2026-09-05) 당시의 기록이며, 확정 내용은 §결정 기록이다.
+**상태**: 결정 — 선택지 **B**. 로컬을 캐시로 내리되, 켜는 시점은 서버 원천 전환 2단계(렌디션)·3단계(앱 동기화)가
+실기기에서 검증된 뒤로 미룬다. 그때까지 앱의 로컬 파일이 원천이다
+**원천**: 로컬 파일 삭제 시점의 결정 근거. §한 줄 요약부터 §권장까지는 결정 요청(2026-09-05) 당시의 기록이고 확정 내용은
+[§결정 기록](#결정-기록)이다. 현행 요구는 [specs/snap-library.md](../specs/snap-library.md) SNAP-14 다
 **출처**: [meetings/2026-08-31-dev-sync.md](../meetings/2026-08-31-dev-sync.md) §4 "서버 업로드 성공하면 로컬은 삭제"
-**관련 문서**: [snap-source-of-truth.md](snap-source-of-truth.md) §1·§5 · [specs/snap-library.md](../specs/snap-library.md) SNAP-6~8 ·
-[apps/mobile/docs/features/snaps.md](../../apps/mobile/docs/features/snaps.md) §Backend upload sync · [backlog.md](../backlog.md) A-1 ⑥ · A-4
+**관련 문서**: [snap-source-of-truth.md](snap-source-of-truth.md) §1·§5 · [specs/snap-library.md](../specs/snap-library.md) SNAP-6~8 · SNAP-14 ·
+[apps/mobile/docs/features/snaps.md](../../apps/mobile/docs/features/snaps.md) §Backend upload sync · [backlog.md](../backlog.md) A-4
+
+> **후속 결정**(2026-09-29): 사용자가 고르는 "이 기기에서만 삭제"(SNAP-19)는 이 연기와 별개로 들였다. 앱이 **스스로**
+> 기기의 파일을 지우는 전환은 여전히 조건이 충족된 뒤다 → [snap-album-save-and-device-delete.md](snap-album-save-and-device-delete.md).
 
 ## 한 줄 요약
 
@@ -84,4 +87,4 @@ B 를 택해 로컬이 원천으로 남으므로 그 조합은 생기지 않는�
 
 **단, 전환을 켜는 시점에 이 문제가 다시 열린다.** 로컬을 캐시로 내리는 순간 서버 만료가 곧
 영상의 소멸이 되므로, 그때는 15일 만료 정책(또는 구독 연장)과 반드시 같이 본다.
-전환 조건에 이 항목을 포함한다.
+전환 조건에 이 항목을 포함한다([backlog.md](../backlog.md) A-4 "전환을 켤 때 함께 볼 것").

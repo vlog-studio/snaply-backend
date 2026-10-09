@@ -1,11 +1,15 @@
 # 템플릿 기반 스냅 자동 추천 — 실행 구조·카탈로그 소유·비용
 
 **작성일**: 2026-08-19
-**상태**: 결정 · **1·2·3단계(카탈로그·추천 API·앱 2단계 병합) 구현 완료**, 생산 활성화 대기
-**원천**: 추천의 실행 위치·템플릿 카탈로그의 소유·추천 1회의 과금·미업로드 스냅의 취급
-**관련 문서**: [snap-content-analysis.md](./snap-content-analysis.md) (§3 요청 시점 분석 · §4 비동기) ·
+**상태**: 결정 — 2단계 실행(앱 로컬 매칭 + 서버 추천)·서버 카탈로그·무료 추천과 상한·규칙 기반 점수화
+**원천**: 추천의 실행 위치·템플릿 카탈로그의 소유·추천 1회의 과금·미업로드 스냅의 취급을 고른 근거. 요구와 현행 상한 값은
+[specs/template-and-recommendation.md](../specs/template-and-recommendation.md)(TPL·REC)가 원천이다
+**관련 문서**: [backlog.md](../backlog.md) A-6(생산 활성화·남은 미결) · [snap-content-analysis.md](./snap-content-analysis.md) (§3 요청 시점 분석 · §4 비동기) ·
 [movie-model.md](./movie-model.md) · [credit-payment-model.md](./credit-payment-model.md)
-**남은 미결**: [backlog.md](../backlog.md) A-6
+
+> **후속 결정**(2026-09-29): 추천을 켜는 조건이 법무 검토 완료에서 **사용자 동의(옵트인)**로 바뀌었다. 스위치
+> (`MOVIE_RECOMMENDATION_ENABLED`)는 그대로 두고, 켜져도 분석에 동의한 사용자에게만 추천이 돈다 — §8 의 "법무 검토"
+> 선행 조건을 대체한다 → [snap-content-analysis.md](snap-content-analysis.md) §6.1
 
 ---
 
@@ -67,7 +71,7 @@ compose 는 `api` 를 `migrate` 완료에 걸어 두므로, 마이그레이션�
 반드시 존재한다. 문구·힌트 수정은 다음 마이그레이션의 `UPDATE` 로 한다. 사용자에게 보이는
 문구가 리뷰 없이 바뀌지 않는다는 장점이 따라온다.
 
-**기각한 대안**: `prisma/seeds/` 의 시드 스크립트(`locations.sql` 선례). 수동 실행이라
+**기각한 대안**: `apps/api/prisma/seeds/` 의 시드 스크립트(`locations.sql` 선례). 수동 실행이라
 새 환경에서 빠뜨리기 쉽고, 빠뜨린 결과가 조용한 폴백이다.
 
 ---
@@ -174,7 +178,7 @@ score = 0.50 × keyword + 0.20 × visualQuality.score
 
 일일 한도(`RECOMMENDATION_LIMIT`)는 429 다. 그런데 전역 에러 핸들러가 **모든** 429 를
 `RATE_LIMITED` 로 뭉개고 있어서, 앱이 "잠시 후 다시 시도"와 "오늘은 끝났다"를 구분할 수
-없었다. `AppError` 판정을 rate limit 판정보다 앞으로 옮겼다(`app.ts`). 플러그인이 만드는
+없었다. `AppError` 판정을 rate limit 판정보다 앞으로 옮겼다(`apps/api/src/app.ts` 의 에러 핸들러). 플러그인이 만드는
 제한은 `AppError` 가 아니므로 여전히 `RATE_LIMITED` 로 나간다.
 
 ---
@@ -188,6 +192,3 @@ score = 0.50 × keyword + 0.20 × visualQuality.score
 활성화의 선행 조건 중 법무 검토의 리드타임이 가장 길다. 그래서 추천 경로는
 `MOVIE_RECOMMENDATION_ENABLED` **기본 꺼짐**으로 배포된다 — 켜지 않으면 분석이 돌지 않고, 앱은
 로컬 매칭을 그대로 유지한다(REC-4).
-
-**2026-09-29**: 켜는 조건이 법무 검토 완료에서 **사용자 동의(옵트인)**로 바뀌었다. 스위치는 그대로 두고,
-스위치가 켜져도 분석에 동의한 사용자에게만 추천이 돈다([snap-content-analysis.md](snap-content-analysis.md) §6.1).

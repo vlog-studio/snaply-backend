@@ -1,10 +1,10 @@
 # 스냅 휴지통의 세부 규칙
 
 **작성일**: 2026-10-07
-**상태**: 결정(2026-10-07) — 권장안 그대로(① C · ② A · ③ A · ④ A · ⑤ C). 방향(soft delete + 유예 후 실삭제)은
-[snap-source-of-truth.md](./snap-source-of-truth.md) §1 에서 정해졌고, 이 문서는 그 세부를 정했다. 현행 요구는
-[specs/snap-library.md](../specs/snap-library.md) SNAP-16 · SNAP-20
-**출처**: [backlog.md](../backlog.md) A-4 "스냅 휴지통(삭제 유예)"
+**상태**: 결정 — 권장안 그대로(① C · ② A · ③ A · ④ A · ⑤ C). §한 줄 요약부터 §권장까지는 결정 전의 요청 기록이다
+**원천**: 휴지통 세부 규칙의 결정 근거. 방향(soft delete + 유예 후 실삭제)은 [snap-source-of-truth.md](./snap-source-of-truth.md) §1
+에서 정해졌고, 현행 요구는 [specs/snap-library.md](../specs/snap-library.md) SNAP-16 · SNAP-20 이다
+**출처**: [backlog.md](../backlog.md) A-4 "스냅 휴지통(삭제 유예)"(2026-10-07 닫힘)
 **관련 문서**: [specs/snap-library.md](../specs/snap-library.md) SNAP-5 · SNAP-9 · SNAP-16 · SNAP-19 ·
 [snap-sync-across-devices.md](./snap-sync-across-devices.md) ① · [snap-retention-period.md](./snap-retention-period.md) ·
 [snap-album-save-and-device-delete.md](./snap-album-save-and-device-delete.md) · [account-deletion.md](./account-deletion.md) ·
@@ -15,7 +15,9 @@
 지금 "모든 기기에서 삭제"는 서버 파일과 **모든 기기의 원본 파일**을 즉시 지운다. 실수로 한 번 누르면 어느 기기에서도
 되돌릴 수 없다. 휴지통을 두기로는 이미 정했으니, **얼마나 남겨 두고, 무엇을 되살리고, 어디서 되살리는지**를 정해야 한다.
 
-## 지금 어떻게 동작하나
+## 결정 전에는 어떻게 동작했나
+
+아래는 이 결정을 구현하기 전(2026-10-07)의 동작이다. 현행 동작은 SNAP-16 · SNAP-20 이다.
 
 - `DELETE /videos/{id}` 는 그 영상이 가진 S3 객체(원본 · 배포본 · 썸네일)를 **곧바로 지우고** 행에 `deletedAt` 과
   `removalReason: 'user'` 를 남긴다(`video.service.ts` `deleteVideo`). 행은 툼스톤으로 남지만 되살릴 파일이 없다.

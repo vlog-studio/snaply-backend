@@ -1,7 +1,7 @@
 # 스냅 내용 어휘 — 자유 문자열 매칭을 개념 사전으로 바꾸는 계획
 
 **작성일**: 2026-10-07
-**상태**: 제안 — 착수 전이며 현행 사실이 아니다. 사전 초안은 [content-vocabulary-draft.json](content-vocabulary-draft.json)
+**상태**: 제안 — 현행 사실이 아니다. 사전 초안은 [content-vocabulary-draft.json](content-vocabulary-draft.json)
 **원천**: 분석 결과의 장소·사물·행동·주제를 닫힌 개념 사전으로 바꾸는 방법과, 바꾸기 전후를 가르는 매칭 테스트(오탐·미탐)의
 계획. 미결은 [backlog.md](../backlog.md) A-6 에만 둔다
 **관련 문서**: [decisions/template-snap-recommendation.md](../decisions/template-snap-recommendation.md) §7 ·

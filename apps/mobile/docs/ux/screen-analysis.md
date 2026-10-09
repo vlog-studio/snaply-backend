@@ -11,7 +11,7 @@ The order exists because the most common review failure is redesigning before un
 Before judging, know what the screen actually is.
 
 Collect:
-- The route and the file that owns it (`src/app/...` → the feature slice it renders).
+- The route and the file that owns it (`src/app/...` → the `src/pages` slice it renders).
 - Its documented behavior and implementation status from [`../features/`](../features/README.md). A `Prototype` screen is judged against what it claims, not against what a finished screen would do.
 - Its states: empty, loading, partial, error, offline, populated. List which ones exist in code.
 - Its entry points: how the user got here, and what they were doing immediately before.
@@ -101,7 +101,7 @@ Then run [`Reduce Decision Cost`](principles.md#6--reduce-decision-cost)'s Detec
 
 ## Step 6 — UX smell detection
 
-Run the Detection Rules of all 17 principles against the screen and name what fires, using the vocabulary in [`ux-smells.md`](ux-smells.md).
+Run the Detection Rule of every principle in [`principles.md`](principles.md) against the screen and name what fires, using the vocabulary in [`ux-smells.md`](ux-smells.md).
 
 For each firing rule, do the confirmation pass immediately:
 1. Which Detection Rule fired, quoted.
@@ -149,7 +149,7 @@ Propose the improved screen as a text wireframe, not prose. `L1`–`L5` order th
 ```
 
 Rules for this step:
-- Every block from Step 4 must appear exactly once — kept, deferred, moved, or removed. Nothing may silently vanish; that is the `Truncated Feature` guardrail.
+- Every block from Step 4 must appear exactly once — kept, deferred, moved, or removed. Nothing may silently vanish; that is `Truncated Feature` ([G1](guardrails.md#g1--do-not-simplify-by-deletion)).
 - Exact user-facing Korean strings for every label and CTA, written to [`ux-writing.md`](ux-writing.md).
 - All states from Step 0 must be specified: empty, loading, error, offline, partial.
 - State what does *not* change. A review that rewrites the whole screen when two labels were wrong is a failure of scope, not a thorough review.
@@ -170,7 +170,7 @@ Before calling the analysis done, run [`review-checklist.md`](review-checklist.m
 
 ## Worked example (abbreviated)
 
-**Step 0.** `/movie/[id]` (`src/app/movie/[id]/index.tsx`), documented in [`../features/movie.md`](../features/movie.md); states: draft, generating, watch, failed; entered from the studio, the movie list, and after generation. *(Illustrative walkthrough — verify current behavior before reusing these claims.)*
+**Step 0.** `/movie/[id]` (`src/app/movie/[id]/index.tsx` → `src/pages/movie`), documented in [`../features/movie.md`](../features/movie.md); states: `draft`, `generating`, `ready` (watch mode), `failed`; entered from the Snap tab's picking (`이 스냅으로 새 무비`, `자동으로 편집하기`), the studio board, the movie list, and a template's `이대로 만들기`. *(Illustrative walkthrough — verify current behavior before reusing these claims.)*
 
 **Step 1.** The user wants to see whether their video came out right, and fix it if not.
 

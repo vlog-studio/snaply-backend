@@ -19,7 +19,7 @@ Create only layers that provide current value. Do not pre-create empty directori
 src/
 ├── app/                 # Expo Router route adapter only; not an FSD layer
 │   ├── _layout.tsx
-│   ├── index.tsx
+│   ├── (tabs)/
 │   └── ...
 ├── _app/                # FSD App layer
 │   ├── providers/
@@ -84,13 +84,13 @@ Do not extract a large screen block into a widget merely because it is large. If
 
 Widgets are large UI or use-case blocks that are reused across multiple screens or can be understood independently inside one screen.
 
-Examples include a global app header, a reused photo feed, or a media gallery used on multiple screens. If a block makes up most of one page and is not reused, keep it in that page.
+Examples include a global app header, a reused photo feed, or a media gallery used on multiple screens — in this codebase, `movie-shelf` and `snap-grid`. If a block makes up most of one page and is not reused, keep it in that page.
 
 ### `features`: user actions
 
 Features represent deliberate, product-valued actions that users perform and that are reused across screens or widgets.
 
-Possible examples include `capture-photo`, `share-photo`, `sign-in`, and `toggle-favorite`. Prefer names that make the action visible.
+Examples in this codebase include `capture-moment`, `share-movie`, `sign-in`, and `delete-snap`. Prefer names that make the action visible.
 
 Not every interaction is a feature. Consider all of the following:
 
@@ -104,7 +104,7 @@ A button and its handler used on one screen belong in that page by default.
 
 Entities are persistent noun-like concepts the product works with.
 
-Possible examples include `photo`, `album`, `user`, and `notification`. Create them only after the product model is established; do not create an entity for every API response DTO.
+Examples in this codebase include `snap`, `movie`, `session`, and `credit`. Create them only after the product model is established; do not create an entity for every API response DTO.
 
 An entity slice may own:
 
@@ -125,7 +125,7 @@ Shared code can be explained without knowing a specific product use case.
 - `routes`: href builders for targets more than one screen navigates to
 - `assets`: runtime assets reused across slices
 
-`shared` is not a dumping ground: the broad names the [naming rules](../conventions/module-boundaries.md#naming-rules) forbid are forbidden here too. Use focused responsibilities such as `shared/lib/date` or `shared/lib/secure-storage`.
+`shared` is not a dumping ground: the broad names the [naming rules](../conventions/module-boundaries.md#naming-rules) forbid are forbidden here too. Use focused responsibilities such as `shared/lib/datetime` or `shared/lib/secure-storage`.
 
 ## Slices and segments
 
@@ -135,11 +135,11 @@ A slice is a product-meaningful unit directly under `pages`, `widgets`, `feature
 
 ```text
 features/
-├── capture-photo/
-└── share-photo/
+├── capture-moment/
+└── share-movie/
 ```
 
-`capture-photo` must not import `share-photo`. Compose them in a widget or page, or move a genuinely shared domain concept down to an entity or shared module.
+`capture-moment` must not import `share-movie`. Compose them in a widget or page, or move a genuinely shared domain concept down to an entity or shared module.
 
 Use a slice group only when the number of slices makes navigation difficult. A group is a navigation-only folder: it has no `index.ts`, segments, or shared code of its own, and it does not relax the same-layer import rule.
 

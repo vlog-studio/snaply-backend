@@ -1,10 +1,11 @@
 # AWS 공모전 서버 — 인프라팀 EC2 에 올리는 방식
 
 **작성일**: 2026-10-08
-**상태**: 결정(2026-10-08) — 저장소 쪽 구현 완료. 서버 작업과 남은 판단은 [backlog.md](../backlog.md) B-8
+**상태**: 결정
 **원천**: AWS 공모전 서버를 이렇게 구성한 이유와 기각한 대안. 절차·시크릿·배치는 [deployment-aws.md](../deployment-aws.md)
 **관련 문서**: [deployment-aws.md](../deployment-aws.md) · [archive/on-prem-deployment.md](../archive/on-prem-deployment.md) ·
-[env-management.md](./env-management.md) · 사내 위키 "AWS 서비스 요청서 — snaply"(요청)와 "snaply — AWS 구성 · 인프라 접속"(인프라팀 답)
+[env-management.md](./env-management.md) · [backlog.md](../backlog.md) B-8 · 사내 위키 "AWS 서비스 요청서 — snaply"(요청)와
+"snaply — AWS 구성 · 인프라 접속"(인프라팀 답)
 
 ---
 

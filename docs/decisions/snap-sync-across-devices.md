@@ -1,11 +1,22 @@
 # 기기 간 스냅 동기화 — 삭제 전파와 만료 스냅의 표시
 
 **작성일**: 2026-09-27
-**상태**: 결정 — 세 가지 모두 계획의 권장안을 채택했다. 2026-09-27 구현하고 세 가지 모두 기기에서 확인했다([progress.md](../progress.md)). iPhone 실기기 확인은 iOS 출시 전([backlog.md](../backlog.md) A-4). [두지 않은 것](#두지-않은-것)의 "이 기기에서만 제거"는 2026-09-29 [snap-album-save-and-device-delete.md](./snap-album-save-and-device-delete.md)가 사용자가 고르는 삭제로 들였다
-**관련**: [snap-source-of-truth.md](./snap-source-of-truth.md) §3.2 ·
+**상태**: 결정 — ① · ② · ③ 모두 착수 계획의 권장안(A)을 채택했다
+**원천**: 기기 간 동기화 규칙과 [동기화 설계](#동기화-설계)의 결정 근거. 앱 동작은
+[apps/mobile/docs/features/snaps.md](../../apps/mobile/docs/features/snaps.md#snaps-from-other-devices), 요구는
+[specs/snap-library.md](../specs/snap-library.md) SNAP-12 · 15 · 16 이다
+**관련 문서**: [snap-source-of-truth.md](./snap-source-of-truth.md) §3.2 ·
 [local-copy-after-upload.md](./local-copy-after-upload.md) · [snap-retention-period.md](./snap-retention-period.md) ·
 [movie-snap-expiry-exemption.md](./movie-snap-expiry-exemption.md) ·
-[specs/snap-library.md](../specs/snap-library.md) SNAP-12·15·16 · 착수 계획(보관) [archive/snap-reconcile.md](../archive/snap-reconcile.md)
+[specs/snap-library.md](../specs/snap-library.md) SNAP-12·15·16 · 착수 계획(보관) [archive/snap-reconcile.md](../archive/snap-reconcile.md) ·
+[progress.md](../progress.md) 2026-09-27(구현 · 실기기 검증) · [backlog.md](../backlog.md) A-4
+
+> **후속 결정**(2026-09-29): [두지 않은 것](#두지-않은-것)의 "이 기기에서만 제거"를 사용자가 고르는 삭제로 들였다(SNAP-19)
+> → [snap-album-save-and-device-delete.md](./snap-album-save-and-device-delete.md).
+
+> **후속 결정**(2026-10-07): ①이 남긴 "실수 삭제를 되돌릴 수 없다"는 휴지통이 맡았다 — 서버에 사본이 있던 스냅은 원래
+> 보관 기간이 끝날 때까지 되살릴 수 있다(SNAP-20). 휴지통에 있는 동안 다른 기기의 원본은 ①대로 지운다
+> → [snap-trash.md](./snap-trash.md).
 
 ---
 
@@ -86,14 +97,13 @@
 
 ### 두지 않은 것
 
-> **2026-09-29** — 아래 첫 항목은 [snap-album-save-and-device-delete.md](./snap-album-save-and-device-delete.md)가 들였다.
-> 보관 중인 스냅을 삭제할 때 사용자가 이 기기에서만 삭제를 고를 수 있다(SNAP-19).
-
 - **"이 기기에서만 제거"** — 로컬이 원천인 동안, 촬영한 기기에서 제거하는 것은 원본을 지우는 것과 같다.
-  SNAP-14 전환 때 다시 본다.
+  SNAP-14 전환 때 다시 본다. *(2026-09-29 에 사용자가 고르는 삭제로 들였다 — SNAP-19,
+  [snap-album-save-and-device-delete.md](./snap-album-save-and-device-delete.md))*
 - **업로드 멱등(`clientId` 유일 제약·`upload-url` 행 재사용)** — 파일명 id 는 기기 사이에 겹칠 수 있어
   유일 제약을 걸려면 UUID 가 먼저 필요하다. T5 의 `clientId` 는 식별용이라 겹쳐도 해가 없다.
 
 ## 남은 것
 
-미결 작업(스냅 휴지통, iPhone 실기기 확인)은 [backlog.md](../backlog.md) A-4 에만 둔다.
+미결 작업(iPhone 실기기 확인)은 [backlog.md](../backlog.md) A-4 에만 둔다. 스냅 휴지통은 2026-10-07 에
+[snap-trash.md](./snap-trash.md)로 정하고 구현했다.

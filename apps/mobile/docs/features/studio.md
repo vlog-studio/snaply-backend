@@ -65,7 +65,7 @@ What remains on the studio is the entry: a `스냅 골라 새 무비` block (the
 
 | Capability | Status | Actual behavior |
 | --- | --- | --- |
-| 무비 board | `Functional` | One lane, reading `useBoardMovies()`: every movie, with the unfinished ones first — so drafts, in-flight generations, and failures stay together and above the finished work — and each half in most-recently-worked-on order. The studio draws the first three and defers to the movie tab through `전체 보기`. Each row shows the movie's first cut as a square frame, its cut count and length (`컷 N · 0:14`), its status badge (초안 · 만드는 중 · 완성 · 실패), and when it was last worked on. **The block is absent while the user has no movies** rather than drawing an empty state. **Do not split it back into 작업 중 / 최근 완성 lanes**: the split restated what each row's own status badge already says, and on a device with no movies it drew two dashed "없어요" placeholders — two headings and two boxes carrying no fact. Ordering carries what the split carried. |
+| 무비 board | `Functional` | One lane, reading `useBoardMovies()`: every movie, with the unfinished ones first — so drafts, in-flight generations, and failures stay together and above the finished work — and each half in most-recently-worked-on order. The studio draws the first three and defers to the movie tab through `전체 보기`. Each row shows the movie's first cut as a square frame, its cut count and length (`컷 N · 14초`, `formatSeconds`), its status badge (초안 · 만드는 중 · 완성 · 실패), and when it was last worked on. **The block is absent while the user has no movies** rather than drawing an empty state. **Do not split it back into 작업 중 / 최근 완성 lanes**: the split restated what each row's own status badge already says, and on a device with no movies it drew two dashed "없어요" placeholders — two headings and two boxes carrying no fact. Ordering carries what the split carried. |
 | Movie tab grid | `Functional` | `/movies` draws every movie as a square tile — with its status badge and length — under a header whose count reads 모두 N편, since the grid holds drafts and failures too and a bare count under a 무비 heading reads as a count of finished ones — cropped to a square, as in the snap grid, so a second row of movies stays on screen. **The cover is the render's own thumbnail once a run has produced one**: the grid is cover art, and a finished movie's cover should be the movie rather than the first thing that went into it. A draft, a failed run, a render made before covers were kept, or a cover the OS has reclaimed draws the first cut's frame instead — the fallback is triggered by the image failing to load, not by a check, because a cached file can vanish under the app and only the load says so. Drafts sit in the same grid as finished movies — they are the same object at a different point in its life. **With no movies at all the grid gives way to the way of making one**: `스냅 골라 새 무비` pushes the snap library in picking mode, the same act and the same destination as the studio's 새 무비 row, worded the same way in its accessibility label. The studio may leave its board out when there is nothing to draw, because two entrances stand above it; this tab has no other entrance of its own, so an empty state that only reported the emptiness left the user to go and find one. |
 | Open a movie | `Functional` | Every movie, at every status, opens on [the movie screen](movie.md). Watching a finished one and fixing it are the same visit, so there is nothing for a row or a tile to branch on. |
 | Generation progress | `Functional` | A row or tile for a `generating` movie carries a bar from `MovieSummary.progress` — the percentage the backend last published, held on the movie (`movieJobRatio`). Every surface reads the same stored number and none of them ticks: progress moves when a milestone arrives, which is six times over a run (see [The movie screen](movie.md)). |
@@ -81,11 +81,15 @@ Movie
 ├── id, title
 ├── status        draft | generating | ready | failed
 ├── createdAt, updatedAt
-├── snapRefs[]    { snapId, order, trim?, videoId?, unavailable? } — per-movie order and trim, the cut's server
-│                 id, and the server's word that its snap is gone; the snap original is never mutated
+├── snapRefs[]    { snapId, order, trim?, trimOwner?, videoId?, unavailable?, unavailableReason?, transition? }
+│                 — per-movie order and trim (with 'ai' when the edit draft chose the window), the cut's
+│                 server id, the server's word that its snap is gone and why (user | expired), and how it
+│                 hands over to the next cut (kind, owner, the snap it leads into); the snap original is
+│                 never mutated
 ├── style         emotional | travel | daily — the backend's three editing presets
 ├── bgm, ratio    track id (on the device only, and unused — the preset scores the run), '9:16'
 ├── arranger?     user | ai — who owns the cut order (see the movie screen)
+├── leftOut?      snap ids the edit draft did not put in, offered back on the movie screen (this device only)
 ├── captions      sent with the movie; always false — subtitles are opt-in and no control offers them
 ├── job?          { id, progress?, step?, startedAt, adopted? } — the backend's jobId, its last report, and
 │                 whether this device only learned of the run from a read-back

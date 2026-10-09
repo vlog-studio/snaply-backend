@@ -1,5 +1,11 @@
 # Pull Request 작성 지침
 
+**작성일**: 2026-08-07
+**상태**: 현행
+**원천**: PR 제목·본문 구성·검증 기록·생성 후 보고. Draft 기본값과 검증 기록 원칙은 [AGENTS.md](../AGENTS.md)
+§Pull Request에 요약돼 있다
+**관련 문서**: [commit-guidelines.md](commit-guidelines.md) · [ONBOARDING.md](../ONBOARDING.md) §3-9(검증 명령)
+
 이 문서는 Snaply 통합 모노레포에서 동료 개발자가 변경 목적과 리뷰 포인트를 빠르게
 파악할 수 있는 Pull Request를 작성하기 위한 기준이다. 에이전트가 PR을 생성할 때도
 같은 기준을 사용한다.

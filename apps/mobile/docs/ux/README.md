@@ -9,12 +9,12 @@ Design tokens (color, type scale, spacing, radius, motion curves) are **out of s
 | # | Document | What it decides |
 | --- | --- | --- |
 | 1 | [`philosophy.md`](philosophy.md) | The four root ideas every other rule derives from |
-| 2 | [`principles.md`](principles.md) | 17 applicable principles, each with a machine-checkable Detection Rule |
+| 2 | [`principles.md`](principles.md) | 17 applicable principles, each with a yes/no Detection Rule |
 | 3 | [`ux-smells.md`](ux-smells.md) | Named defects to classify a screen's problems quickly |
 | 4 | [`screen-analysis.md`](screen-analysis.md) | The Step 0–10 analysis a review must run before proposing anything |
 | 5 | [`visual-hierarchy.md`](visual-hierarchy.md) | Semantic role, weight, and misuse of every screen element |
 | 6 | [`interaction-patterns.md`](interaction-patterns.md) | Canonical answers for 22 recurring situations |
-| 7 | [`ux-writing.md`](ux-writing.md) | Copy rules for CTAs, questions, explanations, errors |
+| 7 | [`ux-writing.md`](ux-writing.md) | Copy rules for CTAs, questions, explanations, read-outs, errors, and empty states; the fixed product vocabulary and tone |
 | 8 | [`examples.md`](examples.md) | 13 before/after screens with the reasoning shown |
 | 9 | [`agent-protocol.md`](agent-protocol.md) | How an agent runs that analysis: request modes, implementation rules, the change-report format, and when to ask |
 | 10 | [`guardrails.md`](guardrails.md) | Failure modes an agent must not commit, each linked to the rule it breaks |
@@ -30,7 +30,7 @@ What to read and run, by task:
 
 ## Evidence labels
 
-Every principle, pattern, and rule in this directory carries one label. The label states *where the authority comes from*, so that a reader can weigh it. Never relabel a rule upward, and never attribute a rule to Toss that Toss has not published.
+Every root idea in `philosophy.md` and every principle in `principles.md` carries one label; a rule elsewhere that leans on Toss links its source inline. The label states *where the authority comes from*, so that a reader can weigh it. Never relabel a rule upward, and never attribute a rule to Toss that Toss has not published.
 
 | Label | Meaning |
 | --- | --- |

@@ -1,16 +1,18 @@
 # editSpec v3 — 스펙 · 에셋 매니페스트 · 어휘 사전의 확정 결정
 
 **작성일**: 2026-08-20 (착수 계획 §1·§3~§6에서 분리 — 원문은 [archive/edit-spec-v3-kickoff.md](../archive/edit-spec-v3-kickoff.md))
-**상태**: 결정 — 스펙 초안 검토(5회)에서 수렴했다. 공유 어휘 사전 3종(앵커 · 스테이지·시드 · 재생성
-무효화)은 구현됐고, `editSpec` v3 와 에셋 매니페스트의 스키마 본문은 초안
-([plans/edit-spec-v3.md](../plans/edit-spec-v3.md) · [plans/asset-pack-manifest.md](../plans/asset-pack-manifest.md))으로
-있다 — 미결은 [backlog.md](../backlog.md) A-7 에만 둔다.
+**상태**: 결정 — 스펙 초안 검토(5회)에서 수렴했다
 **원천**: v3 스펙·매니페스트가 따라야 할 설계 규칙과 그 근거. 어휘와 무효화 판단의 **값**은
-`packages/shared-types/src/*-vocabulary.json` 이 원천이며, 이 문서는 그 이유만 담는다.
-**관련 문서**: [plans/trend-editing-pipeline.md](../plans/trend-editing-pipeline.md)(상위 계획) ·
+`packages/shared-types/src/*-vocabulary.json` 이 원천이며, 이 문서는 그 이유만 담는다. 스키마 본문은 초안
+[plans/edit-spec-v3.md](../plans/edit-spec-v3.md) · [plans/asset-pack-manifest.md](../plans/asset-pack-manifest.md)에 있다
+**관련 문서**: [backlog.md](../backlog.md) A-7(미결) · [plans/trend-editing-pipeline.md](../plans/trend-editing-pipeline.md)(상위 계획) ·
 [specs/movie.md](../specs/movie.md) MOV-14·MOV-19 · [movie-cleanup-after-export.md](movie-cleanup-after-export.md) ·
 [movie-export-policy.md](movie-export-policy.md) ⑤ · [snap-content-analysis.md](snap-content-analysis.md) ·
 [movie-model.md](movie-model.md)
+
+> **대체**(2026-09-09): 결과물이 만료된 무비를 크레딧 없이 같은 산출물로 다시 만들어 주는 "만료 후 재생성"은
+> 폐기됐다 — 끝낸 뒤 다시 만들기는 항상 새 생성이다(MOV-16·MOV-19, [movie-cleanup-after-export.md](movie-cleanup-after-export.md)).
+> §5·§6 의 "만료 후 재생성"·"복원"은 그 전제의 기록이다. 무효화 사전의 `expired-regenerate` 행은 그대로 남아 있다.
 
 ---
 
@@ -58,7 +60,9 @@
 ## 3. 어휘 사전
 
 - **단일 원본 JSON** — `packages/shared-types/src/*-vocabulary.json`. 코드젠 없음, 수동 동기화 없음.
-  지금 셋이다: `anchor`(앵커 어휘) · `stage`(스테이지·시드 알고리즘) · `invalidation`(재생성 규칙).
+  이 결정 때는 셋이었다: `anchor`(앵커 어휘) · `stage`(스테이지·시드 알고리즘) · `invalidation`(재생성 규칙).
+  2026-10-01 에 `transition`(컷 사이 전환) · `cut-role`(컷 역할)이 더해졌다
+  ([transition-director.md](transition-director.md) · [edit-director.md](edit-director.md) §6).
 - **폴백 인코딩은 객체 배열로 통일.** `"face:aboveHead"` 문자열은 `offset` 을 담지 못해 확장 불가다.
 - **자유 배치(`freezone`)도 `ref` 를 쓴다** — `prefer` 를 따로 두지 않는다. 같은 것을 두 이름으로
   부르면 어긋난다.

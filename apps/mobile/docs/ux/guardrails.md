@@ -60,7 +60,7 @@ Failure modes that a principle-driven review is prone to. Each entry names the w
 
 ## G15 — Do not create a new pattern when one exists
 
-**Wrong move.** Building a bespoke sheet, selection mode, or confirmation for one screen. **Rule:** [`Consistent Interaction Pattern`](principles.md#11--consistent-interaction-pattern), and the cookbook reuse rule in [`agent-protocol.md` → Implementation rules](agent-protocol.md#implementation-rules).
+**Wrong move.** Building a bespoke sheet, selection mode, or confirmation for one screen. **Rule:** [`Consistent Interaction Pattern`](principles.md#11--consistent-interaction-pattern), and the component reuse rule in [`agent-protocol.md` → Implementation rules](agent-protocol.md#implementation-rules).
 
 ## G16 — Do not fix structure with copy
 

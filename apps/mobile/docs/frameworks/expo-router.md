@@ -73,8 +73,8 @@ Consult the SDK 57 documentation when a React Navigation API is needed. Since SD
 Expo Router groups such as `(tabs)` and `(auth)` organize the URL or navigation tree. They are not FSD slices or business-domain boundaries.
 
 ```text
-src/app/(tabs)/feed.tsx          # Route group
-src/pages/feed/index.ts          # Page slice
+src/app/(tabs)/snaps.tsx         # Route group
+src/pages/snaps/index.ts         # Page slice
 src/features/sign-in/index.ts    # Feature slice
 ```
 

@@ -1,15 +1,15 @@
 # 계정 삭제 정책
 
 **작성일**: 2026-08-12
-**상태**: **과거 결정** — 2026-08-14 결제 모델 전환과 `canceled` 상태 도입으로 일부 대체됨
+**상태**: 과거 결정 — 2026-08-14 결제 모델 전환과 `canceled` 상태 도입으로 일부 대체됨. 삭제 유예 30일은 유효
 **원천**: soft delete + 30일 유예 + 배치 실삭제라는 방향의 결정 근거. 현행 요구는
 [specs/account.md](../specs/account.md) ACC-7~11 이 원천이다(구현
 [`account.service.ts`](../../apps/api/src/services/account.service.ts), FE 호출 [api-spec.md](../api-spec.md)).
-**관련 문서**: [snap-source-of-truth.md](./snap-source-of-truth.md)(영상 soft delete + GC),
-[api-spec.md](../api-spec.md) §인증/프로필, [backlog.md](../backlog.md) C-5·E-3
+**관련 문서**: [snap-source-of-truth.md](./snap-source-of-truth.md)(영상 soft delete + GC) ·
+[api-spec.md](../api-spec.md) §인증 / 프로필 · [backlog.md](../backlog.md) C-5 · E-3(닫힘)
 
-> **정정 (2026-09-02)**: 아래 본문의 Stripe 구독 취소와 진행 중 작업의 `failed` 처리는 현행이 아니다 —
-> 정기 구독은 제거됐고, 진행 중 작업은 `canceled` 로 전환된다(§기각한 대안의 `canceled` 신설은 이후
+> **정정**(2026-09-02): 아래 본문의 Stripe 구독 취소·Stripe 웹훅 한계와 진행 중 작업의 `failed` 처리는 현행이
+> 아니다 — 정기 구독은 제거됐고, 진행 중 작업은 `canceled` 로 전환된다(§기각한 대안의 `canceled` 신설은 이후
 > 채택됐다). 현행 동작은 [specs/account.md](../specs/account.md) ACC-7~11 을 본다. 아래 본문은
 > 2026-08-12 당시 결정 배경으로 보존한다.
 

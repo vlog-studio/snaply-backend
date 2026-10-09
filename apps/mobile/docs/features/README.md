@@ -22,53 +22,54 @@ Never describe a prototype as functional merely because its controls can be pres
 ## Current application map
 
 ```text
-Root stack
-├── /auth/callback     Sign-up confirmation + OAuth deep-link landing (unguarded)
-├── /auth/reset        Password-recovery deep-link landing (unguarded)
-│
-├── (pending-deletion guard — declared first)
+Root stack (groups in declaration order, which is also the fallback priority)
+├── (pending-deletion guard)
 │   └── /account-restore   Grace-period block: restore the account or sign out
 │
 ├── (recovery guard: isRecovering)
 │   └── /update-password   Set a new password; blocks the app until saved
+│
+├── (authenticated guard)
+│   ├── (tabs)         Four tabs + a center capture button
+│   │   ├── /          Studio (스튜디오): the 새 무비 and 자동 편집 entries, the templates, the movie board
+│   │   ├── /snaps     Snap library (스냅): day-grouped grid, playback and album save,
+│   │   │              selection → a new movie or the edit draft, deletion
+│   │   ├── /movies    Movie list (무비)
+│   │   └── /me        Profile, stats, and the doorway to every preference (나)
+│   ├── /settings/credits          Credit balance, ledger, and the rewarded-ad row
+│   ├── /settings/notifications   Every notification preference (titled header)
+│   ├── /settings/analysis        The consent to snap analysis (titled header)
+│   ├── /settings/album           The automatic album copy switch (titled header)
+│   ├── /settings/theme           The theme-mode radio
+│   ├── /settings/delete-account  Deletion consequences + the confirm button
+│   ├── /capture           Camera recording with an inline 3초/5초 toggle
+│   │                      (full-screen modal, opened by the center capture button)
+│   ├── /extract           Cutting 0.5–5s snaps out of a gallery video: filmstrip +
+│   │                      draggable window (full-screen modal, opened from the Snap
+│   │                      tab's 가져오기 after the system video picker)
+│   ├── /template/[id]     A template matched against the library: filled slots, empty ones to shoot
+│   ├── /movie/[id]        One movie at any point of its life: run it, watch it, fix it, run it again
+│   ├── /movie/[id]/add-snaps
+│   │                      That movie's 스냅 더 넣기 picker — the snap library, always picking,
+│   │                      appending to its cut list and returning to it
+│   └── /recently-deleted  최근 삭제: snaps deleted everywhere that can still come back (titled header)
 │
 ├── (signed-out guard)
 │   ├── /sign-in       Email/password + Google sign-in
 │   ├── /sign-up       Create an account (email confirmation)
 │   └── /reset-password    Request a recovery link
 │
-└── (authenticated guard)
-    ├── (tabs)         Four tabs + a center capture button
-    │   ├── /          Studio (스튜디오): the 새 무비 and 자동 편집 entries, the templates, the movie board
-    │   ├── /snaps     Snap library (스냅): day-grouped grid, playback, selection → new draft movie, deletion
-    │   ├── /movies    Movie list (무비)
-    │   └── /me        Profile, stats, and the doorway to every preference (나)
-    ├── /settings/credits          Credit balance, ledger, and the rewarded-ad row
-    ├── /settings/notifications   Every notification preference (titled header)
-    ├── /settings/analysis        The consent to snap analysis (titled header)
-    ├── /settings/album           The automatic album copy switch (titled header)
-    ├── /settings/theme           The theme-mode radio
-    ├── /settings/delete-account  Deletion consequences + the confirm button
-    ├── /capture           Camera recording with an inline 3초/5초 toggle
-    │                      (full-screen modal, opened by the center capture button)
-    ├── /extract           Cutting 0.5–5s snaps out of a gallery video: filmstrip +
-    │                      draggable window (full-screen modal, opened from the Snap
-    │                      tab's 가져오기 after the system video picker)
-    ├── /template/[id]     A template matched against the library: filled slots, empty ones to shoot
-    ├── /movie/[id]        One movie at any point of its life: run it, watch it, fix it, run it again
-    ├── /movie/[id]/add-snaps
-    │                      That movie's 스냅 더 넣기 picker — the snap library, always picking,
-    │                      appending to its cut list and returning to it
-    └── /recently-deleted  최근 삭제: snaps deleted everywhere that can still come back (titled header)
+├── /auth/callback     Sign-up confirmation + OAuth deep-link landing (unguarded, declared last)
+└── /auth/reset        Password-recovery deep-link landing (unguarded, declared last)
 ```
 
 The tab bar hosts four tabs with a floating ember capture button centered over the bar. The button is not a tab; it opens the `/capture` modal from any tab.
 
 There is no separate capture-setup screen: `/capture` opens straight into the viewfinder and the clip length is tuned inline while it is idle.
 
-Access control: `src/_app/routes/root-layout.tsx` composes the groups above with `Stack.Protected`. The map groups routes conceptually; the declaration order is also the fallback priority, and the guards and why they are ordered that way are in [Authentication](authentication.md#route-flow), with the deep-link and restore flows.
+Access control: `src/_app/routes/root-layout.tsx` composes the groups above with `Stack.Protected`, in the order the map lists them. The guards and why they are ordered that way are in [Authentication](authentication.md#route-flow), with the deep-link and restore flows; every route's presentation and owner is in the [route map](app-shell-and-navigation.md#route-map).
 
-Headless behavior: `src/_app/providers` mounts the app's headless nodes — the account-scope binding that decides whose data every other node sees, the gates that hand a notification preference to the feature acting on it, the notification-tap router, the snap reconcile, movie sync, and upload workers, the deleted-library purge, and two one-per-start repairs — and `src/_app/routes/register-background-tasks.ts` defines the background geofence task at startup. None has a route; the full list, the order they mount in, and why are kept in [Application shell and navigation](app-shell-and-navigation.md#composition-and-ownership).
+Headless behavior: `src/_app/providers` mounts the app's headless nodes — the account-scope binding that decides whose data every other node sees, the one-time upload of the notification choices an older build kept on the device, the gates that hand a notification preference to the feature acting on it, the notification-tap router, the snap reconcile, movie sync, and upload workers, the deleted-library purge, and two one-per-start repairs — and `src/_app/routes/register-background-tasks.ts` defines the background geofence task at startup. None has a route; the full list, the order they mount in, and why are kept in [Application shell and navigation](app-shell-and-navigation.md#composition-and-ownership).
 
 There are three ways to start a movie, and they meet at the same screen.
 
@@ -107,15 +108,15 @@ Three rules shape that flow; each is owned by the document it links to:
 | --- | --- | --- |
 | [Application shell and navigation](app-shell-and-navigation.md) | Providers, splash, root stack, four-tab navigation, capture button, route adapters, theme | `Functional` |
 | [Authentication](authentication.md) | Supabase email/password sign-in, sign-up with email confirmation, password reset (both via deep link), Google OAuth (Apple deferred), Supabase-owned session persistence, route guard, sign-out, account deletion with a 30-day grace period and the forced restore screen | `Functional` |
-| [Studio and movies](studio.md) | The 새 무비 entry, the movie board with job progress and failure recovery, the movie tab grid, and the movie data model | `Functional` |
+| [Studio and movies](studio.md) | The 새 무비 entry, the 자동 편집 entry (the edit draft), the movie board with job progress and failure recovery, the movie tab grid with its selection mode, and the movie data model | `Functional` (the edit draft `Partial` — its filtering thresholds are provisional) |
 | [The movie screen](movie.md) | One screen per movie: settling the draft (reordering, trimming, adding cuts, changing the style, the 순서 고정 rule), running it on the backend, the progress, watching the rendered file, fixing the result with the same controls, regenerating, and finishing (정리하기). Plus renaming, failure, retry, the end-of-job notification, sharing the rendered file, and how movies live on the server with a device-side cache and outbox | `Functional` (server sync mostly unverified on device) |
-| [Movie templates](movie-templates.md) | The server-served template catalog on the studio, the two-stage match into its slots (local outing match, then the backend's snap recommendation on top), shooting for an empty slot, and turning the result into an editable movie draft. The recommendation stage is built and dormant — the backend refuses it until a terms revision lands | `Functional` |
-| [Snap library](snaps.md) | Day-grouped snap grid, playback, saving a snap to the device's album (one at a time, or every capture automatically), selection → a new or existing movie, deletion everywhere or from this device only, the file and thumbnail model, and the account's snaps kept in step across devices (arriving, deleted everywhere, expiring) | `Functional` (cross-device sync verified on a phone, the emulator and the iOS Simulator; an iPhone device waits for the iOS release) |
+| [Movie templates](movie-templates.md) | The server-served template catalog on the studio, the two-stage match into its slots (local outing match, then the backend's snap recommendation on top), shooting for an empty slot, and turning the result into an editable movie draft. The recommendation stage is built and dormant — it runs only for an account that has agreed to snap analysis (ANA-5) and while the backend has recommendation switched on (backlog A-6) | `Functional` |
+| [Snap library](snaps.md) | Day-grouped snap grid, playback, saving a snap to the device's album (one at a time, or every capture automatically), selection → a new or existing movie, deletion everywhere or from this device only, bringing a deleted snap back (되돌리기, 최근 삭제), the file and thumbnail model, and the account's snaps kept in step across devices (arriving, deleted everywhere, expiring) | `Functional` (cross-device sync verified on a phone, the emulator and the iOS Simulator; an iPhone device waits for the iOS release; 되돌리기 and 최근 삭제 not yet seen on a phone) |
 | [Capture flow](capture-flow.md) | Inline duration option, permissions, press-and-hold recording, saving a snap, in-camera feedback, recording library | `Functional` |
 | [Snap extraction](snap-extract.md) | Cutting snaps out of a gallery video: system picker, filmstrip with a draggable 0.5–5s window, looped window playback, native trim (media3 / AVAssetExportSession), snaps landing in the library like captures | `Partial` |
-| [Me tab](me.md) | Profile, snap/movie stats, reminder, notification, social-connection, and account controls | `Partial` |
+| [Me tab](me.md) | Profile, the week record and snap/movie stats, and the preference screens — the account-held notification preferences, theme, the consent to snap analysis, the automatic album copy — with 준비 중 rows for capture reminders, interests, and social connections; sign-out and account deletion | `Partial` |
 | [Credits and rewarded ads](credits-and-rewarded-ads.md) | The credit balance and ledger (`/settings/credits`), earning credits by watching a rewarded ad, and the movie screen's insufficient-credit refusal. **Blocked on AdMob app review** — the SDK and provider are wired, but the AdMob app cannot be verified until Snaply is on Play, so its ad units serve nothing and no credit can be earned. Purchasing credits is not implemented | `Partial` |
-| [Location alerts and push notifications](location-and-push-notifications.md) | FCM token registration, geofence monitoring, arrival reporting, foreground notification presentation | `Partial` |
+| [Location alerts and push notifications](location-and-push-notifications.md) | FCM token registration, geofence monitoring, arrival reporting, foreground notification presentation, and where a tapped notification lands | `Partial` |
 
 ## Current FSD ownership map
 

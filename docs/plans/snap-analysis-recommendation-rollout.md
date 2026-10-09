@@ -1,14 +1,21 @@
 # 스냅 분석 기반 추천 — 실제로 돌게 하고 넓히는 계획
 
 **작성일**: 2026-09-27
-**상태**: 제안 — 1단계 진행 중. 회사 OpenAI 키(C-7)는 2026-09-29 에 닫혔고, 스냅 4건 첫 실행은
-[progress.md](../progress.md) 2026-09-29
-**원천**: 이미 구현된 스냅 분석·템플릿 추천 경로를 실제 모델로 돌리고, 추천이 쓰이는 곳을 넓히는 순서
+**상태**: 제안 — 현행 사실이 아니다. 어디까지 진행됐는지는 [계획 인덱스](README.md)
+**원천**: 이미 구현된 스냅 분석·템플릿 추천 경로를 실제 모델로 돌리고, 추천이 쓰이는 곳을 넓히는 순서의 제안
 **관련 문서**: [decisions/snap-content-analysis.md](../decisions/snap-content-analysis.md) ·
 [decisions/template-snap-recommendation.md](../decisions/template-snap-recommendation.md) ·
+[decisions/auto-edit-draft.md](../decisions/auto-edit-draft.md) ·
 [specs/template-and-recommendation.md](../specs/template-and-recommendation.md) ·
 [모바일 템플릿 기능 문서](../../apps/mobile/docs/features/movie-templates.md) ·
 [모바일 무비 화면 문서](../../apps/mobile/docs/features/movie.md)
+
+> **후속 결정**(2026-09-28): §4.3 (b)를 넓힌 쓰임 — 고른 스냅으로 AI 가 고칠 수 있는 무비 초안을 만든다 — 이 열렸다
+> → [decisions/auto-edit-draft.md](../decisions/auto-edit-draft.md) · [backlog.md](../backlog.md) A-11. 초안은 이미 있는
+> 분석 결과를 읽지만 분석을 요청하지는 않는다([edit-director.md](../decisions/edit-director.md) §6).
+
+> **후속 결정**(2026-09-29): 법무 검토 전에도 **분석에 동의한 사용자에게는** 켤 수 있다(ANA-5·REC-4,
+> [snap-content-analysis.md](../decisions/snap-content-analysis.md) §6.1). §4.5 의 켜는 조건에서 법무(D-2)가 빠졌다.
 
 ---
 
@@ -47,16 +54,18 @@
 | 추천 API (`apps/api/src/services/movie-recommendation.service.ts`) | 접수 시 후보 분석을 적재하고, 폴링 시 규칙 기반으로 채점해 슬롯 배정(`recommendation/score-slots.ts`) |
 | 앱 (`use-template-recommendation.ts`) | 로컬 매칭이 먼저 화면을 채우고, 서버 추천이 도착하면 사용자가 손대지 않은 슬롯에 얹는다 |
 
-제대로 동작하지 않는 이유는 다섯 가지다.
+제대로 동작하지 않는 이유는 다섯 가지다(2026-09-27 기준 — 그 뒤 달라진 것은 항목 끝에 적는다).
 
 1. **`MOVIE_RECOMMENDATION_ENABLED` 가 기본 꺼짐**이다. 서버는 503 을 주고, 앱은 오류 없이 로컬 매칭을
-   유지하므로 **꺼져 있다는 사실이 화면에 드러나지 않는다.**
+   유지하므로 **꺼져 있다는 사실이 화면에 드러나지 않는다.** 켜도 분석에 동의한 사용자에게만 돈다(REC-4, 2026-09-29)
 2. **로컬 `apps/api/.env` 에 `OPENAI_API_KEY` 가 없다.** 키가 없으면 분석 워커는 기동 단계에서
-   스스로 종료된다(의도된 동작).
+   스스로 종료된다(의도된 동작). — 2026-09-29 회사 키를 넣었다(C-7 닫음)
 3. **실제 모델 응답으로 끝까지 돌린 적이 없다**([progress.md](../progress.md) 2026-08-19). 통합 테스트는
    분석 결과 행을 직접 만들어 채점 경로만 검증했다. 운영 모델(`OPENAI_VISION_MODEL` 기본값)도 잠정값이다.
+   — 2026-09-29 스냅 4건으로 처음 끝까지 돌았다([progress.md](../progress.md) 2026-09-29). 팀 스냅 실측과 모델 고정은 A-3
 4. **템플릿 경로에만 붙어 있다.** 새 무비(스냅 골라 만들기)의 "AI 배치"는 촬영 시각 정렬이 전부이고
-   분석 결과를 읽지 않는다([movie.md](../../apps/mobile/docs/features/movie.md) `arranger`).
+   분석 결과를 읽지 않는다([movie.md](../../apps/mobile/docs/features/movie.md) `arranger`). — 2026-10-01 부터
+   AI 편집 초안(자동 편집)은 이미 있는 분석 결과를 읽는다(상단 배너)
 5. **첫 추천이 느리다.** 분석은 추천 요청 시점에만 돌기 때문에 후보(최대 `MAX_RECOMMENDATION_CANDIDATES`)를
    `VIDEO_ANALYSIS_CONCURRENCY` 동시성으로 분석할 때까지 기다린다. 마감 시한은 `SCORING_DEADLINE_MS` 다.
 
@@ -144,9 +153,12 @@
 
 ### 4.5 5단계 — 운영에서 켠다
 
-선행 조건은 D-2 의 법무 항목(약관·개인정보처리방침 법무 검토, 광고 누락)과 A-3 의 운영 모델 고정,
-A-6 의 상한값 재조정, 서버 시크릿 주입(B-8)이다. **법무 검토는 코드가 아니라 리드타임이 가장
+처음 잡은 선행 조건은 D-2 의 법무 항목(약관·개인정보처리방침 법무 검토, 광고 누락)과 A-3 의 운영 모델 고정,
+A-6 의 상한값 재조정, 서버 시크릿 주입(B-8)이었다. **법무 검토는 코드가 아니라 리드타임이 가장
 길기 때문에 1단계와 동시에 시작한다.**
+
+2026-09-29 옵트인 결정(상단 배너)으로 법무 검토는 켜는 조건에서 빠졌다 — 켜도 분석에 동의한 사용자에게만
+돈다(REC-4). 켜는 조건은 A-3 의 팀 스냅 실측과 운영 모델 고정이고, 법무 검토(D-2)는 켜는 조건이 아니어도 여전히 필요하다.
 
 ---
 
@@ -156,6 +168,6 @@ A-6 의 상한값 재조정, 서버 시크릿 주입(B-8)이다. **법무 검토
 |---|---|
 | 1단계 선행 — 회사 키 발급 | C-7 (2026-09-29 닫음) |
 | 1·2단계 — 실측·운영 모델·분석 시점 | A-3 |
-| 3단계 — 소비처 결정·상한 재조정 | A-6 |
+| 3단계 — 소비처 결정·상한 재조정 | A-6 (AI 편집 초안으로 넓힌 쓰임은 A-11) |
 | 4단계 — 관심사 | A-9 |
-| 5단계 — 활성화 | D-2·A-6 (법무·플래그), B-1 (시크릿 주입) |
+| 5단계 — 활성화 | A-3·A-6 (켜는 조건·플래그), D-2 (법무 — 켜는 조건은 아니다), B-8 (시크릿 주입) |

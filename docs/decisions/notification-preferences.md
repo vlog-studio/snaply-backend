@@ -1,9 +1,14 @@
 # 알림 설정 — 종류별로 끌 수 있게 한다
 
 **작성일**: 2026-09-15
-**상태**: 결정 — 서버·앱 구현 완료. 2026-10-07 에 "서버가 원천, 기본은 꺼짐"을 더했다(아래 같은 이름의 절)
-**관련**: [specs/notifications.md](../specs/notifications.md) NTF-7·NTF-9 ·
-[expiry-notice-schedule.md](./expiry-notice-schedule.md) · [movie-ready-notification.md](./movie-ready-notification.md)
+**상태**: 결정 — 알림 설정은 서버에 종류별로 두고, 스냅 만료 예고에는 종류별 스위치가 없다
+**원천**: 알림 설정의 결정 근거. 현행 요구는 [specs/notifications.md](../specs/notifications.md) NTF-7 · NTF-9 이다
+**관련 문서**: [specs/notifications.md](../specs/notifications.md) NTF-7·NTF-9 ·
+[expiry-notice-schedule.md](./expiry-notice-schedule.md) · [movie-ready-notification.md](./movie-ready-notification.md) ·
+[backlog.md](../backlog.md) B-2
+
+> **후속 결정**(2026-10-07): 서버가 원천이고 위치 · 무비 알림의 서버 기본값은 꺼짐이다 →
+> [§서버가 원천, 기본은 꺼짐](#서버가-원천-기본은-꺼짐-2026-10-07).
 
 ---
 
@@ -76,7 +81,7 @@
 - **서버 기본값을 켜짐으로 두고 앱도 서버를 따름** — 새 사용자가 권한 질문 없이 켜진 스위치를 본다. 푸시 토큰은 권한이 있어야
   생기므로 실제로는 오지 않는데 켜져 있다고 보인다 — 앱이 피해 온 "켜져 보이는데 조용한" 상태다.
 
-## 남은 것
+## 이 결정의 범위 밖
 
 - **촬영 리마인더**는 앱이 직접 띄우는 알림이라 이 결정의 범위 밖이다.
-- 기기 여러 대에 푸시를 보낼지는 B-2 다. 지금은 마지막에 토큰을 등록한 기기 하나만 받는다.
+- 기기 여러 대에 푸시를 보낼지는 [backlog.md](../backlog.md) B-2 다. 지금은 마지막에 토큰을 등록한 기기 하나만 받는다.

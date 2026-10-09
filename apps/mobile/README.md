@@ -21,9 +21,7 @@ npx expo start --dev-client
 
 iOS 시뮬레이터는 Expo Go(`npx expo start --go`)로 띄울 수 있습니다.
 
-> **Xcode 16.4까지만 사용할 수 있는 구형 macOS 장비에서는 `npx expo run:ios`를 실행할 수 없습니다.** Expo SDK 57은 Swift 6.2 도구 모음이 필요하므로, 이 조건에 해당하는 장비에서는 iOS 시뮬레이터를 Expo Go로 실행하세요. 최신 macOS와 Swift 6.2를 지원하는 Xcode가 설치된 장비에는 이 제한이 적용되지 않습니다.
->
-> 에이전트의 검증 경로와 기기 연결 규칙은 [`docs/workflows/local-development-and-testing.md`](docs/workflows/local-development-and-testing.md)가 기준입니다.
+> Swift 6.2를 지원하는 Xcode가 없는 장비(구형 macOS, Xcode 16.4까지)에서는 iOS 로컬 빌드(`npm run ios`)가 실패하므로 Expo Go를 씁니다. 조건과 에러 메시지, 에이전트의 검증 경로와 기기 연결 규칙은 [`docs/workflows/local-development-and-testing.md`](docs/workflows/local-development-and-testing.md#environment-and-legacy-macos-limitation)가 기준입니다.
 
 웹(`npm run web`)도 실행할 수 있지만 기준 개발 환경은 아닙니다. 웹에서는 영상 촬영 기능을 사용할 수 없습니다.
 
@@ -53,8 +51,8 @@ src/
 | [`AGENTS.md`](AGENTS.md) | 작업 유형에 맞는 에이전트 문서를 찾기 위한 색인과 공통 규칙 |
 | [`docs/architecture/`](docs/architecture) | 아키텍처 원칙과 FSD 계층 기준 |
 | [`docs/conventions/`](docs/conventions) | 모듈 경계, 코드 설계 및 작성 규칙 |
-| [`docs/frameworks/`](docs/frameworks) | Expo Router와 상태·데이터 처리 규칙 |
-| [`docs/workflows/`](docs/workflows) | 기능 개발, 검증, 브랜딩 변경 절차 |
+| [`docs/frameworks/`](docs/frameworks) | Expo Router, 상태·데이터, 애니메이션·제스처 처리 규칙 |
+| [`docs/workflows/`](docs/workflows) | 기능 개발, API 계약 연동, 단위 테스트 작성, 로컬·기기 검증, 브랜딩 변경 절차 |
 | [`docs/features/`](docs/features) | 현재 사용자 기능, 구현 상태, 소유 계층 기록 |
 | [`docs/ux/`](docs/ux) | 화면 UX 판단 체계 — 원칙, UX 스멜, 화면 분석, UX 라이팅, 리뷰 체크리스트 |
 
@@ -151,7 +149,10 @@ src/
 | `expo-image-picker` | 갤러리에서 영상을 골라 스냅으로 추출하는 시스템 피커. |
 | `expo-file-system` | 촬영 영상을 로컬 문서 디렉터리에 저장·관리. |
 | `expo-sharing` | 완성 무비 내보내기용 시스템 공유 시트 호출. 렌더 파일을 캐시에 내려받아 공유합니다. (app.json 플러그인) |
+| `expo-media-library` | 스냅을 기기 사진 앱(앨범)에 저장합니다. (app.json 플러그인) |
 | `expo-video-thumbnails` | 영상 첫 프레임 썸네일 생성. 스냅 그리드와 타임라인 클립에 사용합니다. |
+
+> 갤러리 영상에서 구간을 잘라내고 영상의 실제 크기·회전을 읽는 일은 의존성 패키지가 아니라 로컬 네이티브 모듈 [`modules/video-trim`](modules/video-trim)(`VideoTrim`)이 맡습니다. Expo autolinking으로 개발 빌드에만 들어가며 Expo Go에는 없습니다.
 
 ### 위치와 알림
 
@@ -179,7 +180,7 @@ src/
 | --- | --- |
 | `react-native-reanimated` | 고성능 네이티브 애니메이션. |
 | `react-native-worklets` | Reanimated 4가 요구하는 워클릿 런타임. |
-| `react-native-svg` | 벡터 그래픽. 촬영 홀드 링과 타임라인 트림 핸들을 그립니다. |
+| `react-native-svg` | 벡터 그래픽. 촬영 홀드 링·생성 진행 링·나 탭의 주간 링과 타임라인 트림 핸들을 그립니다. |
 | `expo-haptics` | 촉각 피드백(진동). |
 | `expo-blur` | 탭바 등 블러 배경 효과. |
 | `@expo/vector-icons` | 아이콘 세트. |
@@ -194,14 +195,14 @@ src/
 | `expo-navigation-bar` | Android 시스템 내비게이션 바 제어(탭바 블러 연동). (app.json 플러그인) |
 | `expo-system-ui` | 루트 배경색 등 시스템 UI 설정(설정 기반). |
 | `expo-linking` | 딥링크·OAuth 리다이렉트 URL 처리. |
-| `expo-constants` | 앱 설정·상수 접근. 앱 코드는 직접 쓰지 않고(환경 변수는 `process.env`로 읽음) `expo-auth-session`·`expo-linking`·`expo-notifications`가 요구합니다. |
+| `expo-constants` | 앱 설정·상수 접근. 나 탭이 앱 버전(`Constants.expoConfig.version`)을 읽고, `expo-auth-session`·`expo-linking`·`expo-notifications`도 요구합니다. 환경 변수는 이 패키지가 아니라 `process.env`로 읽습니다. |
 
 ### 빌드와 개발 도구
 
 | 패키지 | 사용 이유 |
 | --- | --- |
 | `expo-dev-client` | 커스텀 개발 빌드 실행기. 네이티브 모듈 포함 빌드를 Expo Go 대신 실행합니다. |
-| `expo-build-properties` | 네이티브 빌드 속성(SDK 버전 등) 설정. (app.json 플러그인) |
+| `expo-build-properties` | 네이티브 빌드 속성 설정. 지금은 React Native Firebase가 요구하는 iOS `useFrameworks: "static"` 하나입니다. (app.json 플러그인) |
 
 ### API 계약
 
