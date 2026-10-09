@@ -45,7 +45,15 @@ describe('useRenderSource', () => {
   beforeEach(() => jest.clearAllMocks());
 
   it('asks for a fresh address by the result id and plays the answer', async () => {
-    mockGetEditedVideo.mockResolvedValue({ editedUrl: 'https://fresh/e.mp4' });
+    // The answer is held until the in-between state has been read: an already
+    // settled promise can land inside the awaited render, which made this test
+    // see the end state first on CI (2026-10-09).
+    let answer!: (value: unknown) => void;
+    mockGetEditedVideo.mockReturnValue(
+      new Promise((resolve) => {
+        answer = resolve;
+      }),
+    );
     const movie = makeMovie({
       uri: 'https://stale/e.mp4',
       videoId: 'result-1',
@@ -56,6 +64,7 @@ describe('useRenderSource', () => {
     const { result } = await renderSourceHook(movie);
 
     expect(result.current).toMatchObject({ uri: undefined, resolving: true, unresolved: false });
+    answer({ editedUrl: 'https://fresh/e.mp4' });
     await waitFor(() => expect(result.current.resolving).toBe(false));
     expect(mockGetEditedVideo).toHaveBeenCalledWith('result-1', expect.anything());
     expect(result.current.uri).toBe('https://fresh/e.mp4');
