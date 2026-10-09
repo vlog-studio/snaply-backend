@@ -157,7 +157,7 @@ function CaptureRecordScreen() {
         ]}
       >
         <Pressable
-          accessibilityLabel="촬영 닫기"
+          accessibilityLabel="카메라 닫기"
           onPress={closePage}
           style={[styles.permissionClose, { top: insets.top + Spacing.three }]}
         >
@@ -248,7 +248,7 @@ function CaptureRecordScreen() {
 
         <View style={styles.topBar}>
           <Pressable
-            accessibilityLabel="촬영 닫기"
+            accessibilityLabel="카메라 닫기"
             onPress={closePage}
             style={styles.utilityButton}
           >

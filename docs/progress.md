@@ -2609,3 +2609,10 @@ env-spec 부터). `POSTGRES_HOST_PORT` 처럼 `origin: 'local'` 로 선언하고
 - **검증**: `config.test.ts` 에 서명 호스트 세 경우(AWS S3 · 공개 엔드포인트 · CloudFront 만 공개 — 수정 전 셋 다 실패)를 더했다. `npm test -w apps/api` 41개 파일 629건 ·
   typecheck · lint 통과.
 - **남은 것**: 터널로 실제 키 업로드를 다시 돌리는 확인은 backlog F 로 옮겼다(C-2 · D-3 와 같은 자리에서).
+
+## 2026-10-10 (이어서) — UX 문구 규칙의 범위를 좁힌다(backlog H-1 닫음)
+
+오너가 권장안을 골랐다. [ux-writing.md](../apps/mobile/docs/ux/ux-writing.md) 용어표를 좁혔다. `지우기` · `지울까요` 금지는 사용자가 누르는 버튼과
+묻는 질문에만 걸고, 결과를 설명하는 문장의 `지워요`(분석 동의 문구 등)는 허용한다. `촬영` 금지는 카메라 컨트롤의 보이는 라벨과 접근성 라벨에만
+걸고 메시지(`촬영을 완료하지 못했어요`)는 둔다 — 그래서 캡처 화면 ✕ 의 접근성 라벨 두 곳을 `촬영 닫기` 에서 `카메라 닫기` 로 바꿨다
+(`apps/mobile/src/pages/capture-record/ui/capture-record-page.tsx`). 템플릿 힌트의 `장면`(`처음 본 장면`)은 컷이 아니라 찍을 대상을 말하므로 허용한다.
