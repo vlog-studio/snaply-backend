@@ -25,9 +25,10 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
  *     근거: Sentry 는 우리 DSN 이 `ingest.us.sentry.io` 라 US 리전(EU 로 옮기려면 조직 이전이
  *     필요하다), RevenueCat 은 미국, FCM 은 리전을 고를 수 없다.
  *     **남은 두 가지**:
- *       (a) AWS 는 `AWS_REGION=ap-northeast-2`(서울)라 국외 이전이 아니라고 적었는데, 이건
- *           아직 **의도값**이다 — 운영 배포가 없어서(backlog B-1) 로컬은 MinIO 로 돌고 있다.
- *           배포하면서 실제 리전과 CloudFront 사용 여부(엣지는 전 세계다)를 확인해 확정할 것.
+ *       (a) AWS 는 `AWS_REGION=ap-northeast-2`(서울)라 국외 이전이 아니라고 적었다. 2026-10-08 에
+ *           AWS 서버가 떠서(backlog B-8) 이제 **실제 값을 확인할 수 있다** — 배포된 버킷의 리전과
+ *           CloudFront 사용 여부(엣지는 전 세계다)를 확인해 확정할 것. 공모전 서버는 끝나면
+ *           내려가므로, 서버가 옮겨 가면 이 확인을 다시 한다.
  *       (b) ~~인스타그램·틱톡·Apple·Google~~ — **2026-08-19 확인.** Meta(미국·아일랜드 등)와
  *           TikTok(미국·싱가포르·말레이시아 등)은 우리가 직접 호출하므로 표에 내렸다
  *           (`services/sns/*.client.ts`). Apple·Google 은 **우리가 직접 보내지 않는다** — 백엔드는
