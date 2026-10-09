@@ -2444,3 +2444,34 @@ C-7 에서 받은 회사 OpenAI 키를 로컬 개발과 AWS 서버가 함께 쓰
   완성 푸시는 나중에 켠 기기 하나에만 간다 — 서버가 계정당 FCM 토큰 하나만 둔다(backlog B-2, 알려진 것).
 - **남은 것** — A-1 ⑥(계정 전환), 실패 카드의 거절 안내(E-24 — 실패한 무비가 없었다), 되돌리기의 다른 기기 반영(SNAP-20), 이 기기에서만 지운 스냅의
   만료(SNAP-19, 2026-10-24), 위치 알림의 권한 안내(NTF-7), 촬영 스냅 치수(A-4).
+## 2026-10-09 (이어서) — 테스터 앱을 EAS 로도 만든다
+
+로컬 Gradle release 빌드(앞의 "AWS 서버로 휴대폰에서 업로드 → 편집 → 재생")와 따로, Android SDK 가 없는 컴퓨터에서 같은 서버를 보는
+앱을 EAS 클라우드 빌드로 만들었다. 결과가 설치 링크라 테스터에게 그대로 보낼 수 있다. 절차는 [deployment-aws.md](./deployment-aws.md)
+§8 "EAS 로 빌드해 링크로 나눠 주기".
+
+- **빌드** — [`apps/mobile/eas.json`](../apps/mobile/eas.json) 에 `tester` 프로필(내부 배포 APK, API 주소)을 두고 Expo 계정 `dayomi` 의
+  `snaply-app` 에 연결했다(`app.json` 의 `owner` · `extra.eas.projectId`). Supabase 클라이언트 값은 EAS 환경변수(`preview`)에 두었다 —
+  서버 시크릿에는 anon 키가 없다(서버는 JWKS 로 검증해 필요 없다). 이 Mac 에 Android SDK 가 없어 EAS 를 골랐다.
+- **`eas init` 이 `app.json` 을 풀어 썼다** — 플러그인이 계산한 위치 · 저장소 권한과 `extra` 까지 박아 넣었고,
+  `READ_MEDIA_VISUAL_USER_SELECTED` 가 `permissions` 와 `blockedPermissions` 양쪽에 들어갔다. 되돌리고 `owner` · `projectId` 만 남겼다.
+- **검증** — 실기기가 없어 Android 35(Play Store 이미지) 에뮬레이터에 APK 를 깔았다. 로그인 → 합성 세로 클립(3초 × 3)을 `가져오기` →
+  무비 생성 → 서버 렌더 완성("10월 9일 오후 9:25 완성 · 2.6초") → 재생까지 됐다. 실기기 확인은 앞 항목의 Galaxy S22 Ultra 가 했다.
+- **찾은 것** — 새 계정은 크레딧이 0 이라(가입 보너스 0 · 광고 보상 꺼짐 · 결제 mock) 무비를 만들 수 없다. 이번에는 서버 셸에서
+  `credit_ledger` 에 `promo` 1000 을 넣었다(처음에 Supabase UID 를 `users.id` 자리에 넣어 FK 오류가 났다 — 둘은 다른 값이다).
+  공모전 동안의 지급 방식은 바로 아래 항목, iOS 는 backlog B-8.
+
+## 2026-10-09 (이어서) — 공모전 서버의 가입 보너스(CRD-8) · 중복 지급 경합 수정
+
+테스터 앱 확인에서 새 계정이 크레딧 0 이라 무비를 만들 수 없음을 찾았다(바로 위 항목). 공모전 서버만 가입 보너스 **500**(무비 5편)을
+주기로 했다 — 광고 보상을 켜는 안은 AdMob 콘솔 · SSV · 앱 재빌드가 필요해 늦고, 손으로 주는 안은 테스터마다 서버 셸이 필요하다.
+
+- **스펙** — CRD-8 에 공모전 서버의 값과 "계정마다 한 번 · 켜기 전 계정도 다음 요청에서 받는다"를 적었다
+  ([specs/credits-and-payment.md](./specs/credits-and-payment.md)). 기본값 0 은 그대로라 코드 기본값은 바꾸지 않았다.
+- **켜기 전에 고친 결함** — `grantSignupBonus`(`apps/api/src/services/credit.service.ts`)는 인증된 요청마다 "없으면 넣는다"를 해서,
+  앱이 시작할 때 보내는 동시 요청에서 두 번 들어갈 수 있었다. 값이 0 이라 드러나지 않았다. 부분 유니크 인덱스는 Prisma 스키마로
+  선언할 수 없어(다음 마이그레이션이 지운다) 예약처럼 유저 행 `FOR UPDATE` 로 직렬화하고 잠금 안에서 다시 확인한다. 이미 받은 계정은
+  잠그기 전에 돌아간다.
+- **검증** — `billing.test.ts` 에 "동시 요청 20개에도 한 번만" · "켜기 전에 가입한 계정도 다음 요청에서 한 번"을 더했다. 수정을 빼면
+  첫 테스트가 `expected 2 to be 1` 로 실패한다. `npm test -w apps/api` 41개 파일 626건 통과.
+- **남은 것** — 서버 시크릿에 값을 넣는 일(backlog B-8).

@@ -499,6 +499,11 @@ geofence 쿨다운 판정용 이력이 무한히 쌓인다. 쿨다운은 30분 �
 **2026-10-08 첫 배포 완료** — runner 설치 · 시크릿 · `DEPLOY_AWS_ENABLED` 를 마쳤고 main 머지가 이 서버로 배포된다
 (`https://snaply-api.dweaxai.com/health` → `db=connected`). 남은 것:
 
+- [ ] `서버작업` **시크릿에 `CREDIT_SIGNUP_BONUS=500`** — 2026-10-09 공모전 서버는 가입 보너스 500 으로 정했다(CRD-8).
+      시크릿에 넣고(deployment-aws.md §2) 다음 배포가 돈 뒤, 테스터 계정의 잔액에 `signup_bonus` 500 이 한 번 들어왔는지 본다.
+      중복 지급 경합은 같은 변경에서 막았다(progress 2026-10-09 "공모전 서버의 가입 보너스")
+- [ ] **iOS 테스터 앱** — 설치 배포(ad hoc · TestFlight)에 유료 Apple Developer 계정이 필요하고 번들 ID 가
+      `com.anonymous.snaplyapp` 이다. 아이폰 테스터가 있으면 계정부터 정한다
 - [ ] **외부 연동 켜기** — RevenueCat · AdMob · Instagram · TikTok 콘솔에 콜백 · 웹훅 주소를 등록한 뒤 시크릿을 채운다
       (deployment-aws.md §2). 지금은 비어 있어 mock · 꺼짐이다
 - [ ] **TikTok 게시** — 버킷이 퍼블릭 차단이고 CloudFront 가 없어 미디어 호스트의 URL prefix 검증(D-3) 파일을 둘 곳이 없다.

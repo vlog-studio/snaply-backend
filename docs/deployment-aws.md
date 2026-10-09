@@ -206,7 +206,9 @@ unzip -p app/build/outputs/apk/release/app-release.apk assets/index.android.bund
 - **개발용 앱을 대체한다.** 패키지가 같아 덮어 깔리고, 로그인과 기기의 라이브러리가 남는다. 라이브러리는 계정으로만 나뉘고 서버로는
   나뉘지 않으므로, 로컬 서버에서 쓰던 계정으로 이 서버를 보면 두 서버의 스냅이 섞인다 — 테스터 앱에는 별도 계정을 쓴다. 이미 로그인돼
   있으면 비행기 모드에서 앱을 열어 로그아웃한 뒤 바꾼다. 개발용으로 돌아갈 때는 `npm run android:device:install -w snaply-app`.
-- **새 계정의 크레딧은 0 이다**(가입 보너스 · 광고 보상이 꺼져 있다). 시험에는 §6 의 셸에서 사용자 id 를 찾아 `promo` 를 넣는다:
+- **테스터 크레딧은 가입 보너스로 준다.** 광고 보상은 꺼져 있고 결제는 mock 이라, 시크릿에 `CREDIT_SIGNUP_BONUS=500`
+  (무비 5편, [CRD-8](./specs/credits-and-payment.md))을 둔다(§2). 계정마다 한 번이고, 넣기 전에 가입한 계정도 다음 요청에서 받는다.
+  더 줘야 하는 테스터는 §6 의 셸에서 사용자 id 를 찾아 `promo` 를 넣는다:
 
   ```bash
   docker compose --env-file .env exec -T postgres psql -U postgres -d snaply -c "SELECT u.id, u.nickname, count(v.id) AS snaps, max(v.created_at) AS last_upload FROM users u LEFT JOIN videos v ON v.user_id = u.id GROUP BY u.id ORDER BY last_upload DESC NULLS LAST;"
@@ -215,3 +217,26 @@ unzip -p app/build/outputs/apk/release/app-release.apk assets/index.android.bund
   ```bash
   docker compose --env-file .env exec -T postgres psql -U postgres -d snaply -c "INSERT INTO credit_ledger (id, user_id, delta, reason) VALUES (gen_random_uuid(), '<USER_ID>', 500, 'promo');"
   ```
+
+### EAS 로 빌드해 링크로 나눠 주기
+
+Android SDK 가 없는 컴퓨터에서도 만들 수 있고, 결과가 설치 링크라 테스터에게 그대로 보낸다. iOS 는 유료 Apple Developer 계정이 없어
+만들지 않는다(backlog B-8).
+
+| 무엇 | 어디 |
+|---|---|
+| 빌드 프로필 | [`apps/mobile/eas.json`](../apps/mobile/eas.json) 의 `tester` — 내부 배포 APK, `EXPO_PUBLIC_API_BASE_URL=https://snaply-api.dweaxai.com` |
+| EAS 프로젝트 | Expo 계정 `dayomi` 의 `snaply-app` (`app.json` 의 `owner` · `extra.eas.projectId`) |
+| Supabase 클라이언트 값 | EAS 프로젝트 환경변수(`preview` 환경) `EXPO_PUBLIC_SUPABASE_URL` · `EXPO_PUBLIC_SUPABASE_ANON_KEY` — 공개 저장소라 `eas.json` 에 두지 않는다 |
+| 서명 키 | EAS 서버가 보관한다(첫 빌드에서 생성) |
+
+```bash
+cd apps/mobile && npx --yes eas-cli@24.12.1 build --profile tester --platform android
+```
+
+- **위의 Gradle 빌드와 서명이 다르다.** 로컬 빌드(debug 키)가 깔린 기기에는 덮어 깔리지 않으므로 지우고 깐다 — 로컬 라이브러리가 지워진다.
+- **Supabase 값은 서버와 같은 프로젝트여야 한다.** 서버 시크릿의 `SUPABASE_URL` 과 같은 프로젝트의 URL, 그 프로젝트 대시보드
+  (Project Settings → API Keys)의 publishable 또는 anon 키를 넣는다. 서버는 anon 키가 없어도 된다(JWKS 로 검증) —
+  시크릿에 없다고 앱도 비워 두면 로그인이 안 된다.
+- **`eas init` 은 `app.json` 을 풀어 쓴다.** 플러그인이 계산한 권한 · `extra` 까지 박아 넣으므로, 다시 연결할 때는
+  `owner` 와 `extra.eas.projectId` 만 남기고 되돌린다(config plugin 이 원천이다).

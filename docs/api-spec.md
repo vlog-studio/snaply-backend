@@ -26,7 +26,7 @@ OpenAPI 로 표현되지 않아 아래 [WebSocket](#websocket-edit-jobsidprogres
 ## 인증 / 프로필 (`contract/auth.ts`)
 
 - `GET /auth/me` 🔒 — 첫 호출 시 유저가 자동 생성된다(인증된 첫 요청이면 어느 것이든 upsert 를 일으키고, 가입 보너스
-  [CRD-8](./specs/credits-and-payment.md)도 그때 한 번 지급된다). 앱은 알림 설정을 읽으려고 부른다. 잔액은 프로필에 없다 —
+  [CRD-8](./specs/credits-and-payment.md)도 그때 한 번 지급된다 — 수량을 켜기 전에 가입한 계정은 켠 뒤의 첫 요청에서). 앱은 알림 설정을 읽으려고 부른다. 잔액은 프로필에 없다 —
   `GET /billing/credits`.
 - `PATCH /auth/me` 🔒 — 보낸 필드만 바뀐다. `avatarUrl: null` 은 지우기다.
   **알림 설정(전체 스위치 · 종류별 스위치 · 방해 금지 시간)이 사는 곳이다** — 필드는 계약, 기본값은
