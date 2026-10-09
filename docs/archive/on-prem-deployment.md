@@ -4,12 +4,13 @@
 > ([decisions/aws-contest-server.md](../decisions/aws-contest-server.md) · [deployment-aws.md](../deployment-aws.md)).
 > 사내망 전용이라 실사용자를 받을 수 없었고, 외부에서 닿는 서버가 생기면서 둘을 함께 둘 이유가 사라졌다.
 > 아래는 그때의 기록이다 — **판단 근거로 인용하지 않는다.**
+> 이동하면서 **본문의 상대 링크 경로만 보정**했다(doc-conventions.md) — 내용은 그대로다.
 
 **작성일**: 2026-09-27
 **상태**: 결정(2026-09-15) — 저장소 쪽 구현 완료. 남은 서버 작업은 [backlog.md](../backlog.md) B-1
-**원천**: 사내 서버 배포 구성을 이렇게 고른 이유와 기각한 대안. 절차·시크릿·배치는 [deployment.md](../deployment.md)
-**관련 문서**: [deployment.md](../deployment.md) · [env-management.md](./env-management.md) ·
-[backlog.md](../backlog.md) B-1 · 착수 계획 원문 [archive/on-prem-deploy.md](../archive/on-prem-deploy.md)
+**원천**: 사내 서버 배포 구성을 이렇게 고른 이유와 기각한 대안. 절차·시크릿·배치는 [deployment.md](./deployment-on-prem.md)
+**관련 문서**: [deployment.md](./deployment-on-prem.md) · [env-management.md](../decisions/env-management.md) ·
+[backlog.md](../backlog.md) B-1 · 착수 계획 원문 [archive/on-prem-deploy.md](./on-prem-deploy.md)
 
 ---
 
@@ -40,8 +41,8 @@ FCM·OpenAI 가 전부 **나가는** 방향이다.
 
 반대로 **이 서버는 실사용자를 받을 수 없다.** 사내망 전용이라 LTE 로 접속하는 사용자의 폰이 닿지
 않는다. 바깥에서 **우리를 불러야** 하는 SNS 게시·결제 웹훅·광고 보상 검증은 mock 으로 둔다
-([deployment.md](../deployment.md) §0). 실사용 서버는 외부 접속이 되는 곳에 따로 필요하며, **그때
-이미지와 파이프라인은 그대로 재사용된다** — 지금 하는 일이 그때 버려지지 않는다([deployment.md](../deployment.md) §6).
+([deployment.md](./deployment-on-prem.md) §0). 실사용 서버는 외부 접속이 되는 곳에 따로 필요하며, **그때
+이미지와 파이프라인은 그대로 재사용된다** — 지금 하는 일이 그때 버려지지 않는다([deployment.md](./deployment-on-prem.md) §6).
 
 ## 왜 DB 를 서버 컨테이너로 두는가
 
@@ -51,7 +52,7 @@ FCM·OpenAI 가 전부 **나가는** 방향이다.
 - 인터넷이 끊겨도 돈다
 - 무료 플랜 자동 일시정지 위험이 없다
 
-관리형 DB 가 아니므로 백업은 매일 덤프로 해결한다(절차와 한계는 [deployment.md](../deployment.md) §4).
+관리형 DB 가 아니므로 백업은 매일 덤프로 해결한다(절차와 한계는 [deployment.md](./deployment-on-prem.md) §4).
 
 ## 왜 self-hosted runner 인가
 

@@ -4,11 +4,12 @@
 > ([decisions/aws-contest-server.md](../decisions/aws-contest-server.md) · [deployment-aws.md](../deployment-aws.md)).
 > 사내망 전용이라 실사용자를 받을 수 없었고, 외부에서 닿는 서버가 생기면서 둘을 함께 둘 이유가 사라졌다.
 > 아래는 그때의 기록이다 — **판단 근거로 인용하지 않는다.**
+> 이동하면서 **본문의 상대 링크 경로만 보정**했다(doc-conventions.md) — 내용은 그대로다.
 
 **작성일**: 2026-09-15
 **상태**: 현행 — 배포 절차·시크릿·배치의 원천. 서버 구성이 바뀌면 이 문서를 고친다
-**관련**: [decisions/on-prem-deployment.md](./decisions/on-prem-deployment.md)(왜 이 구성인지) ·
-[decisions/env-management.md](./decisions/env-management.md) · [backlog.md](./backlog.md) B-1
+**관련**: [decisions/on-prem-deployment.md](./on-prem-deployment.md)(왜 이 구성인지) ·
+[decisions/env-management.md](../decisions/env-management.md) · [backlog.md](../backlog.md) B-1
 
 ---
 
@@ -41,7 +42,7 @@ sudo -u snaply git clone <저장소 URL> /opt/snaply
 
 ### 1-2. 시크릿 파일
 
-**운영은 `.env` 파일을 쓰지 않는 것이 원칙이지만**([env-management.md](./decisions/env-management.md)),
+**운영은 `.env` 파일을 쓰지 않는 것이 원칙이지만**([env-management.md](../decisions/env-management.md)),
 사내 서버에는 시크릿 저장소가 없다. root 와 배포 계정(`snaply`)만 읽는 파일 하나로 대신한다.
 
 ```bash
@@ -58,7 +59,7 @@ sudo vi /etc/snaply/snaply.env
   않으므로 `--env-file` 이 없으면 아래 `:?` 값이 비었다며 멈춘다. 배포 워크플로 · `deploy/run-batch.sh` ·
   `deploy/backup-db.sh` 가 모두 넘기고, 손으로 부를 때도 같다(§2·§5).
 
-넣을 값은 [`apps/api/src/env-spec.ts`](../apps/api/src/env-spec.ts) 에서 **`origin !== 'local'`**
+넣을 값은 [`apps/api/src/env-spec.ts`](../../apps/api/src/env-spec.ts) 에서 **`origin !== 'local'`**
 인 항목 전부, 그리고 compose 가 치환에 쓰는 아래 값들이다.
 
 | 키 | 설명 |
@@ -148,7 +149,7 @@ $C pull && $C run --rm migrate && $C up -d
 | **10:00** | **만료 예고 알림** | `notify-expiring.log` |
 
 **예고와 정리를 같은 시각에 묶지 않는다.** 조용한 시간대(22–08시)에 보낸 예고는 발송되지
-않고 버려지고, 그러면 예고 없는 삭제가 된다([expiry-notice-schedule.md](./decisions/expiry-notice-schedule.md)).
+않고 버려지고, 그러면 예고 없는 삭제가 된다([expiry-notice-schedule.md](../decisions/expiry-notice-schedule.md)).
 
 배치는 전부 **dry-run 이 기본**이라 `deploy/run-batch.sh` 가 `--yes` 를 붙인다. 손으로 한 건만
 돌릴 때:
@@ -167,7 +168,7 @@ sudo -u snaply /opt/snaply/deploy/run-batch.sh media:purge-expired
 성공으로 치지 않는다(`pg_dump` 가 죽어도 `gzip` 은 0 을 돌려줄 수 있다).
 
 **덤프는 같은 서버에 쌓인다.** 서버가 통째로 죽는 경우는 이걸로 막지 못한다 — 외부 보관은
-별도 판단이 필요하다([backlog.md](./backlog.md) B-1).
+별도 판단이 필요하다([backlog.md](../backlog.md) B-1).
 
 복구:
 
@@ -200,9 +201,9 @@ cat deploy/.current-images  # 지금 돌고 있는 이미지 태그
 ## 6. 실사용 서버가 필요해지면
 
 이 서버로는 사용자를 받을 수 없다. 외부 접속이 되는 곳이 생기면 추가로 필요한 것은
-**고정 HTTPS 도메인**([backlog.md](./backlog.md) D-1)과 §0 의 세 가지를 실제로 켜는 일뿐이다.
+**고정 HTTPS 도메인**([backlog.md](../backlog.md) D-1)과 §0 의 세 가지를 실제로 켜는 일뿐이다.
 이미지·마이그레이션·배치 구성은 그대로 간다.
 
-**2026-10-08**: 외부 접속이 되는 서버가 사내 공모전용으로 생겼다 — AWS 공모전 서버([deployment-aws.md](./deployment-aws.md)).
+**2026-10-08**: 외부 접속이 되는 서버가 사내 공모전용으로 생겼다 — AWS 공모전 서버([deployment-aws.md](../deployment-aws.md)).
 이미지 · 마이그레이션 · 배치는 그대로 쓰고, compose 는 단독 파일 · 시크릿은 Secrets Manager · runner 는 그 인스턴스에 따로 둔다.
-이 서버와의 관계(대체인지 병행인지)는 [backlog.md](./backlog.md) B-8.
+이 서버와의 관계(대체인지 병행인지)는 [backlog.md](../backlog.md) B-8.
