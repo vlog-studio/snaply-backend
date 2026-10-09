@@ -145,7 +145,7 @@ Fixed product vocabulary. Use exactly these words; never introduce a synonym.
 | 영상 | Only a gallery video a snap is cut from (`영상에서 스냅 가져오기`, `다른 영상 고르기`) | Any snap |
 | 무비 | One generated video, or the draft collecting toward it | 브이로그, 비디오, 결과물, 프로젝트, 완성 파일, 릴, 에피소드 |
 | 초안 | A movie waiting to be made — the draft the picks go straight into, and the first of the four status badges a movie wears on the board and the grid (`초안`, `만드는 중`, `완성`, `실패`) | 트레이 (below) |
-| 컷 | One snap inside a movie, and one slot of a template | 장면, 조각, 칸, 자리, 슬롯 |
+| 컷 | One snap inside a movie, and one slot of a template. A template's hint may say `장면` for what to shoot (`처음 본 장면`) — it names the subject, not the cut | 장면 (for the cut itself), 조각, 칸, 자리, 슬롯 |
 | 만들기 | Making a movie (`무비 만들기`, `만드는 중`, `다시 만들기`) | 생성 |
 | 스튜디오 | The tab where a movie is started | 홈, 메인 |
 | 나 | The tab with the user's record and every preference (`나 탭에서 언제든 끌 수 있고`, `나 탭 크레딧에서`) | 마이, 프로필 |
@@ -153,7 +153,7 @@ Fixed product vocabulary. Use exactly these words; never introduce a synonym.
 | 올리기 | Sending a snap to the server (`올리는 중`, `다시 올리기`) | 업로드 |
 | 앨범 | The device's own photo gallery, where a snap's copy is the user's to keep (`앨범에 저장`, `앨범에 저장했어요`, `찍은 스냅을 앨범에도 저장`). The OS permission is named for the OS's own app (`사진 권한`, `사진 추가`) | 갤러리, 사진첩, 카메라 롤, 내려받기, 다운로드 |
 | 이 기기에서만 삭제 | Deleting a snap's file on this device while the server still keeps it; the opposite answer is `모든 기기에서 삭제` | 로컬 삭제, 서버에 남기기, 공간 정리 |
-| 삭제 | Removing something: `…삭제할까요?` / `삭제` / `삭제하는 중…` | 지우기, 지울까요 |
+| 삭제 | Removing something: `…삭제할까요?` / `삭제` / `삭제하는 중…`. The rule binds what the user presses and what the user is asked; a sentence describing what will happen may say `지워요` (`끄면 분석 결과를 지워요`, `최대 30일 보관한 뒤 지워요`) | 지우기, 지울까요 — on a button or in a question |
 | 최근 삭제 | Where a snap deleted everywhere waits until its retention ends, and the screen that lists it (`최근 삭제에서 되살릴 수 있어요`) | 휴지통, 쓰레기통, 삭제한 항목, 보관함 |
 | 되살리기 | Bringing a snap back from 최근 삭제 (`되살리기`, `되살리는 중…`, `스냅을 되살렸어요`) | 복구, 복원, 되찾기 |
 | 되돌리기 | Undoing the action just taken, on its toast (`되돌리기`, `스냅 N개를 되돌렸어요`) — never a place or a later act | 실행 취소, 취소, 원래대로 |
@@ -167,7 +167,7 @@ Fixed product vocabulary. Use exactly these words; never introduce a synonym.
 
 `담김` names the confirmation that a snap was taken, which no other word covers: the `담김 · 스냅 N개` badge after a capture or an extraction, and the picker cell's `담김` badge for a snap the target movie already holds. Use it for that confirmation only — never for a place things are collected into, which is what the tray was.
 
-The camera's own controls say `찍기` (owner decision, 2026-09-24): the shutter's `꾹 눌러 찍기`, the review stage's `다시 찍기`, and the template's `지금 찍기` — the everyday word a first-time user already has for pointing a camera. Never `촬영` or `담기` on a camera control. Cutting a snap out of a gallery video is not shooting, so the extract screen's `이 구간을 스냅으로 담기` keeps `담기`.
+The camera's own controls say `찍기` (owner decision, 2026-09-24): the shutter's `꾹 눌러 찍기`, the review stage's `다시 찍기`, and the template's `지금 찍기` — the everyday word a first-time user already has for pointing a camera. Never `촬영` or `담기` on a camera control — its visible label or its accessibility label (the ✕ reads `카메라 닫기`). A sentence about what happened may still say `촬영` (`촬영을 완료하지 못했어요`). Cutting a snap out of a gallery video is not shooting, so the extract screen's `이 구간을 스냅으로 담기` keeps `담기`.
 
 Internal vocabulary that must never appear on screen: queue, job, sync, geofence, model, generation id, error codes, enum values, route names — and their Korean forms: 서버, 작업, 소켓, 슬롯, 스팟, 원본 다운로드, 예약 크레딧. Server and worker messages (API error text, `errorDetail`, generation step names) are never shown verbatim; the app maps them to its own copy.
 
