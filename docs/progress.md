@@ -2652,3 +2652,11 @@ env-spec 부터). `POSTGRES_HOST_PORT` 처럼 `origin: 'local'` 로 선언하고
   [trend-editing-pipeline.md](./plans/trend-editing-pipeline.md), 무효화 사전의 `note` 세 곳(`packages/shared-types/src/invalidation-vocabulary.json`),
   코드 주석(`invalidation.ts` · `invalidation.py` · 두 무효화 테스트). 같은 문서에 섞인 백로그 ID(A-3 · A-7 · C-7 등)와 만료 예고의 D-3 · D-1 은 그대로다.
   결정 문서 헤더에 정정 배너를 달아, 그 전의 기록(이 progress 포함)은 옛 ID 를 쓴다고 적었다.
+
+## 2026-10-10 (이어서) — 문서만 바꾼 변경에는 CI 를 돌리지 않는다
+
+CI(`.github/workflows/ci.yml`)가 문서만 바꾼 PR 과 `main` push 에도 네 작업(API 빌드 · 모바일 검증 · API 통합 테스트 · 워커 테스트)을 모두 돌렸다.
+어떤 검사도 `docs/` 나 마크다운을 읽지 않으므로(모바일 prettier 도 `*.md` 를 무시한다, `docs/` 의 마크다운 아닌 두 파일도 코드가 쓰지 않는다)
+`push` · `pull_request` 에 `paths-ignore: ['docs/**', '**/*.md']` 를 두었다. 코드가 하나라도 섞이면 지금처럼 전부 돈다. `main` 에 브랜치 보호 ·
+필수 검사가 없어(2026-10-10 확인) 건너뛴 PR 의 머지가 막히지 않는다 — 나중에 필수 검사를 걸면 문서 PR 이 "대기"로 남지 않게 다시 봐야 한다.
+[ONBOARDING.md](../ONBOARDING.md) §3 의 CI 설명을 맞췄다.

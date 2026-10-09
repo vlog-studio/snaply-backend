@@ -266,7 +266,8 @@ npm test -w apps/api
 ```
 
 루트 `npm test`는 turbo로 모바일 jest까지 돌고, CI는 바꾼 경로와 상관없이 모든 PR에서 `verify:mobile`도
-실행한다 — 백엔드만 고친 PR도 모바일 검증이 깨지면 실패하므로 위 명령으로 먼저 확인한다.
+실행한다 — 백엔드만 고친 PR도 모바일 검증이 깨지면 실패하므로 위 명령으로 먼저 확인한다. 예외는 문서만 바꾼 변경이다
+(`docs/**` · `*.md` 뿐이면 CI 가 돌지 않는다).
 
 API 테스트는 `infra:up`으로 띄운 로컬 PostgreSQL·Redis·MinIO를 사용하고 `snaply_test` DB를 자동
 생성한다. `apps/api` 밖에서 `npx vitest`를 직접 실행하지 않는다. AI worker 테스트는 다음과 같다.
