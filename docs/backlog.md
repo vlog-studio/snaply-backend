@@ -788,15 +788,6 @@ Supabase 로 DB 에 직접 닿을 수 있는 공유 Supabase DB 를 쓸 때뿐�
 줄을 출력하게 한다 · presigned 전환(2026-08-10) 이후 이 터널 경로로 실키 업로드를 다시 돌린 기록이 없으므로 한 번 실검증한다
 (C-2 · D-3 와 같은 자리에서).
 
-### E-22. `API_HOST_PORT` 가 환경변수 원천에 없다
-
-`API_HOST_PORT` 는 `docker-compose.yml` · `docker-compose.ci.yml` 의 포트 매핑, `scripts/smoke-images.sh`, 배포 잡의 헬스체크
-(`deploy.yml` 의 `vars.API_HOST_PORT`)가 읽는데 [`apps/api/src/env-spec.ts`](../apps/api/src/env-spec.ts)에 선언되지 않았다
-(AGENTS.md: 새 변수는 env-spec 부터). `env-spec.test.ts` 는 앱 코드가 읽는 변수만 검사해 잡지 못한다.
-
-**완료 조건**: `API_HOST_PORT` 를 `POSTGRES_HOST_PORT` 처럼 `origin: 'local'` 로 선언하고 [`.env.example`](../.env.example)에 예시를 넣는다 ·
-`npm test -w apps/api`(env-spec 테스트) 통과.
-
 ### E-25. 알림이 앱의 알림 채널을 쓰지 않는다
 
 앱은 Android 채널 `default`("기본 알림")를 만들지만(`apps/mobile/src/shared/lib/notifications/local.ts` `ensureNotificationChannel`) 어떤 알림도 그
@@ -1078,6 +1069,7 @@ C 문단이 사실상 권장이다.
 - **E-17** 결과물이 원본의 위치 태그를 싣는다(무비 결과물에서 지움 — 배포본은 A-4 위치 항목으로) — 2026-10-07 → progress 2026-10-07 "무비 결과물이 찍은 곳을 싣고 나가지 않는다"
 - **E-18** 지운 스냅의 분석 결과가 남는다(ANA-3, 개인정보처리방침과 다름) — 2026-10-09 → progress 2026-10-09 "지운 스냅의 분석 결과를 지운다"
 - **E-20** 사내 서버 오버레이만 바꾼 머지는 배포되지 않는다 — 2026-10-09 사내 서버 경로를 지우면서(`docker-compose.prod.yml` 삭제) 사라졌다 → progress 2026-10-09 "사내 서버를 접고 배포 대상을 AWS 하나로"(낡은 머리 주석은 G)
+- **E-22** `API_HOST_PORT` 가 환경변수 원천에 없다 — 2026-10-09 → progress 2026-10-09 "`API_HOST_PORT` 를 환경변수 원천에 선언한다"
 - **E-23** 같은 동작의 권한 버튼 라벨이 둘이다(촬영 화면을 `설정에서 권한 켜기` 로) — 2026-10-09 → progress 2026-10-09 "촬영 화면의 권한 버튼 라벨을 맞춘다"
 - **E-24** 보드 · 그리드의 `다시 시도` 가 거절을 말하지 않는다(카드에 거절의 첫 문장을 띄움, 실기기 확인은 F) — 2026-10-09 → progress 2026-10-09 "실패한 무비 카드가 다시 시도의 거절을 말한다"
 - **F** HDR · 장시간 · 10클립 스트레스 실검증 — 2026-09-15 → progress 2026-09-15 "스트레스 실검증과 HDR 색 태그 결함"(돌비비전 실물은 F 에 남음)
