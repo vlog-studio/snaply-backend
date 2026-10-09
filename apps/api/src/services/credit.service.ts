@@ -59,22 +59,28 @@ export async function listEntries(userId: string, limit = 50): Promise<CreditEnt
 
 /**
  * 가입 보너스. 수량이 0이면(=기본값, A-2 미확정) 아무 것도 하지 않는다.
- * 유저 생성 직후에만 호출되며, 실패해도 로그인 자체는 막지 않는다.
+ * 인증된 요청마다 호출되고(`resolveUser`), 지급 여부는 원장으로 판정한다 — 그래서 수량을 켜면
+ * 이미 있는 계정도 다음 요청에서 한 번 받는다. 실패해도 로그인 자체는 막지 않는다.
+ *
+ * 앱은 시작할 때 요청을 동시에 보내므로 "없으면 넣는다"가 경합해 두 번 들어갈 수 있다.
+ * 부분 유니크 인덱스는 Prisma 스키마로 선언할 수 없어, 예약(`assertCreditsForExport`)처럼
+ * 유저 행을 잠가 같은 유저의 지급을 직렬화한다. 이미 받은 유저는 잠그기 전에 돌아간다.
  */
 export async function grantSignupBonus(userId: string): Promise<void> {
   const amount = signupBonusCredits();
   if (amount <= 0) {
     return;
   }
-  const existing = await getPrisma().creditLedger.findFirst({
-    where: { userId, reason: CREDIT_REASON.signupBonus },
-    select: { id: true },
-  });
-  if (existing) {
+  const where = { userId, reason: CREDIT_REASON.signupBonus };
+  if (await getPrisma().creditLedger.findFirst({ where, select: { id: true } })) {
     return;
   }
-  await getPrisma().creditLedger.create({
-    data: { userId, delta: amount, reason: CREDIT_REASON.signupBonus },
+  await getPrisma().$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM users WHERE id = ${userId}::uuid FOR UPDATE`;
+    if (await tx.creditLedger.findFirst({ where, select: { id: true } })) {
+      return;
+    }
+    await tx.creditLedger.create({ data: { userId, delta: amount, reason: CREDIT_REASON.signupBonus } });
   });
 }
 

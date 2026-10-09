@@ -5,7 +5,7 @@
  * 지급 멱등성의 근거가 DB 제약이므로, 테스트도 "같은 이벤트를 두 번 보낸다"처럼
  * 실제 재전송과 같은 모양으로 확인한다.
  */
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import { createHarness, type Harness, type TestUser } from './helpers/harness.js';
 import { MOVIE_EXPORT_COST } from '../src/services/billing/credit-policy.js';
@@ -212,6 +212,46 @@ describe('GET /billing/credits', () => {
 
   it('인증이 없으면 401', async () => {
     expect((await h.app.inject({ method: 'GET', url: '/billing/credits' })).statusCode).toBe(401);
+  });
+});
+
+describe('가입 보너스', () => {
+  const SIGNUP_BONUS = 300;
+  let saved: string | undefined;
+  beforeEach(() => {
+    saved = process.env.CREDIT_SIGNUP_BONUS;
+    process.env.CREDIT_SIGNUP_BONUS = String(SIGNUP_BONUS);
+  });
+  afterEach(() => {
+    process.env.CREDIT_SIGNUP_BONUS = saved;
+  });
+
+  it('동시 요청에도 한 번만 들어간다', async () => {
+    // 앱은 시작할 때 요청을 동시에 보낸다 — 수량을 켠 뒤 첫 요청들이 같은 순간에 지급을 시도한다
+    process.env.CREDIT_SIGNUP_BONUS = '0';
+    const user = await h.createUser();
+    process.env.CREDIT_SIGNUP_BONUS = String(SIGNUP_BONUS);
+
+    const results = await Promise.all(
+      Array.from({ length: 20 }, () =>
+        h.app.inject({ method: 'GET', url: '/auth/me', headers: user.auth }),
+      ),
+    );
+    expect(results.map((r) => r.statusCode)).toEqual(Array(20).fill(200));
+    const grants = await h.prisma.creditLedger.count({
+      where: { userId: user.id, reason: 'signup_bonus' },
+    });
+    expect(grants).toBe(1);
+  });
+
+  it('수량을 켜기 전에 가입한 계정도 다음 요청에서 한 번 받는다', async () => {
+    process.env.CREDIT_SIGNUP_BONUS = '0';
+    const user = await h.createUser();
+    expect(await balanceOf(user)).toBe(0);
+
+    process.env.CREDIT_SIGNUP_BONUS = String(SIGNUP_BONUS);
+    expect(await balanceOf(user)).toBe(SIGNUP_BONUS);
+    expect(await balanceOf(user)).toBe(SIGNUP_BONUS);
   });
 });
 
