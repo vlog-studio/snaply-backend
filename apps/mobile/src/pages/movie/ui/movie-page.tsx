@@ -15,7 +15,11 @@ import {
   type TransitionKind,
 } from '@/entities/movie';
 import { useSnapFiles, useSnapIndex, type Snap } from '@/entities/snap';
-import { useComposeMovie, useRenderSource } from '@/features/compose-movie';
+import {
+  generationRefusalMessage,
+  useComposeMovie,
+  useRenderSource,
+} from '@/features/compose-movie';
 import { FinishMovieConfirm } from '@/features/finish-movie';
 import { RenameMovieSheet } from '@/features/rename-movie';
 import { useShareMovie } from '@/features/share-movie';
@@ -44,7 +48,6 @@ import { MovieActionsSheet } from './movie-actions-sheet';
 import { MovieWatch } from './movie-watch';
 import {
   CutsRefusalMessages,
-  generationRefusalMessage,
   OpenGeneratingMovieLabel,
   RefusalNotice,
   type RefusalAction,
