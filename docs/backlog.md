@@ -775,23 +775,13 @@ Supabase 로 DB 에 직접 닿을 수 있는 공유 Supabase DB 를 쓸 때뿐�
 **완료 조건**: 고른 쪽으로 SQL 이나 원칙 문구를 고치고, (a) 면 새 테이블을 만들 때 정책을 함께 쓰라는 줄을
 [team.md](./team.md) §3 에 넣는다.
 
-### E-21. SNS 업로드 준비 경고가 실제 업로드 주소를 보지 않는다
-
-인스타 · 틱톡은 우리가 넘긴 URL 에서 영상을 내려받는다. 그 URL 은 결과물의 presigned GET 이고 서명 호스트는
-`S3_PUBLIC_ENDPOINT ?? S3_ENDPOINT` 다(`apps/api/src/services/storage.service.ts` `presignClient`). 그런데 기동 때 이 주소가 외부에서
-닿는지 미리 경고하는 `snsUploadReadiness`(`apps/api/src/services/sns.service.ts`, `apps/api/src/app.ts` 에서 호출)는
-`config.storage.publicBaseUrl` — `CLOUDFRONT_DOMAIN` 우선의 공개 URL — 을 판정한다. `CLOUDFRONT_DOMAIN` 만 터널 주소이고
-`S3_PUBLIC_ENDPOINT` 가 localhost 면 **경고 없이** 업로드가 400 이 된다. 터널 안내 스크립트(`apps/api/scripts/dev-tunnel.sh`)의 출력에도
-`S3_PUBLIC_ENDPOINT` 가 없어 문서([sns-setup.md](./sns-setup.md) §1 · [local-tunnel.md](./local-tunnel.md) §6)가 손으로 넣으라고 보완하고 있다.
-
-**완료 조건**: 판정 대상을 presign 호스트로 바꾸고 테스트로 고정한다 · `dev-tunnel.sh` 가 `S3_PUBLIC_ENDPOINT=https://<미디어 호스트>`
-줄을 출력하게 한다 · presigned 전환(2026-08-10) 이후 이 터널 경로로 실키 업로드를 다시 돌린 기록이 없으므로 한 번 실검증한다
-(C-2 · D-3 와 같은 자리에서).
-
 ---
 
 ## F. 남은 실검증
 
+- [ ] **SNS 업로드를 터널로 실키 재검증** — 업로드가 플랫폼에 넘기는 URL 은 2026-08-10 부터 결과물의 presigned GET 인데, 그 뒤로 터널 경로
+      (`apps/api/scripts/dev-tunnel.sh` · [local-tunnel.md](./local-tunnel.md) §6)로 실제 키 업로드를 다시 돌린 기록이 없다. 기동 경고는 서명 호스트를
+      보도록 고쳤다(E-21). C-2 · D-3 와 같은 자리에서, 터널의 `S3_PUBLIC_ENDPOINT` 로 인스타 · 틱톡 업로드가 400 없이 통과하는지 본다
 - [ ] **돌비비전 실물 원본으로 HDR 경로 확인** — 스트레스 검증(2026-09-15)의 HDR 수정은 합성 HDR10 으로만
       확인했다. 실제 DV 원본이 생기면 편집 결과물과 렌디션 모두 다시 확인한다(아이폰 원본은 A-4 "iOS 출시 전"과
       같은 공백)
@@ -1025,6 +1015,7 @@ C 문단이 사실상 권장이다.
 - **E-17** 결과물이 원본의 위치 태그를 싣는다(무비 결과물에서 지움 — 배포본은 A-4 위치 항목으로) — 2026-10-07 → progress 2026-10-07 "무비 결과물이 찍은 곳을 싣고 나가지 않는다"
 - **E-18** 지운 스냅의 분석 결과가 남는다(ANA-3, 개인정보처리방침과 다름) — 2026-10-09 → progress 2026-10-09 "지운 스냅의 분석 결과를 지운다"
 - **E-20** 사내 서버 오버레이만 바꾼 머지는 배포되지 않는다 — 2026-10-09 사내 서버 경로를 지우면서(`docker-compose.prod.yml` 삭제) 사라졌다 → progress 2026-10-09 "사내 서버를 접고 배포 대상을 AWS 하나로"(낡은 머리 주석은 G)
+- **E-21** SNS 업로드 준비 경고가 실제 업로드 주소를 보지 않는다(서명 호스트로 판정 · 터널 스크립트가 `S3_PUBLIC_ENDPOINT` 를 출력, 실키 재검증은 F) — 2026-10-10 → progress 2026-10-10 "SNS 업로드 준비 경고가 서명 호스트를 본다"
 - **E-22** `API_HOST_PORT` 가 환경변수 원천에 없다 — 2026-10-09 → progress 2026-10-09 "`API_HOST_PORT` 를 환경변수 원천에 선언한다"
 - **E-23** 같은 동작의 권한 버튼 라벨이 둘이다(촬영 화면을 `설정에서 권한 켜기` 로) — 2026-10-09 → progress 2026-10-09 "촬영 화면의 권한 버튼 라벨을 맞춘다"
 - **E-24** 보드 · 그리드의 `다시 시도` 가 거절을 말하지 않는다(카드에 거절의 첫 문장을 띄움, 실기기 확인은 F) — 2026-10-09 → progress 2026-10-09 "실패한 무비 카드가 다시 시도의 거절을 말한다"

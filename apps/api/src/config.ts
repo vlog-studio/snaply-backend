@@ -103,6 +103,12 @@ export interface StorageConfig {
   forcePathStyle: boolean;
   /** 공개 URL 베이스. 운영은 CloudFront, 개발은 MinIO 공개 URL. */
   publicBaseUrl: string;
+  /**
+   * 서명 URL(업로드 · 다운로드)의 호스트 — storage.service 의 presignClient 와 같은 순서
+   * (S3_PUBLIC_ENDPOINT → S3_ENDPOINT → AWS S3)로 정한다. SNS 는 이 주소의 URL 을 직접 내려받으므로
+   * 기동 때 외부 도달 여부를 이 값으로 판정한다. CloudFront 는 여기에 끼지 않는다.
+   */
+  presignOrigin: string;
   presignExpirySeconds: number;
   downloadUrlExpirySeconds: number;
   maxUploadBytes: number;
@@ -137,6 +143,9 @@ function loadStorageConfig(): StorageConfig {
         ? `${endpoint}/${bucket}`
         : `https://${bucket}.s3.amazonaws.com`);
 
+  const region = process.env.AWS_REGION ?? 'ap-northeast-2';
+  const presignOrigin = publicEndpoint ?? endpoint ?? `https://${bucket}.s3.${region}.amazonaws.com`;
+
   // 빈 문자열도 미설정이다 — AWS 서버의 compose 가 키를 ""로 덮어 인스턴스 역할만 쓰게 한다.
   const accessKeyId = process.env.AWS_ACCESS_KEY_ID || undefined;
   const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY || undefined;
@@ -150,7 +159,7 @@ function loadStorageConfig(): StorageConfig {
   }
 
   return {
-    region: process.env.AWS_REGION ?? 'ap-northeast-2',
+    region,
     bucket,
     credentials:
       accessKeyId && secretAccessKey ? { accessKeyId, secretAccessKey } : undefined,
@@ -158,6 +167,7 @@ function loadStorageConfig(): StorageConfig {
     publicEndpoint,
     forcePathStyle: Boolean(endpoint),
     publicBaseUrl,
+    presignOrigin,
     presignExpirySeconds: Number(process.env.S3_PRESIGN_EXPIRY_SECONDS ?? 15 * 60),
     downloadUrlExpirySeconds: Number(
       process.env.S3_DOWNLOAD_URL_EXPIRY_SECONDS ?? 60 * 60,
