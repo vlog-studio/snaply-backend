@@ -289,7 +289,7 @@ v3 는 **Movie export 에 붙인다** — `POST /edit-jobs` 는 한 버전 공�
       [decisions/sticker-asset-sourcing.md](./decisions/sticker-asset-sourcing.md) 결정 1(미결)
 - [ ] 스티커를 어떤 경로로 등록·관리할 것인가(관리자 페이지 도입 여부) — 같은 문서 결정 2(미결)
 - [ ] **세이프 에어리어 실측값** — 상단 약 10%·하단 약 20%·우측 버튼 레일은 추정치라 실기기 캡처가
-      필요하다. 값은 스펙이 아니라 버전드 팩에 둔다([edit-spec-v3.md](./decisions/edit-spec-v3.md) §1 B-3)
+      필요하다. 값은 스펙이 아니라 버전드 팩에 둔다([edit-spec-v3.md](./decisions/edit-spec-v3.md) §1 V3-B3)
 - [ ] **에셋 라이선스에 영구(perpetual) 조항을 필수로 걸 것인가** — 근거는 **다시 만들기가
       계속 가능하다**는 것이다([movie-cleanup-after-export.md](./decisions/movie-cleanup-after-export.md):
       프로젝트는 보존되고 유료로 다시 생성한다). 라이선스가 만료돼 에셋 서빙을 멈추면 사용자는 예전
@@ -298,11 +298,11 @@ v3 는 **Movie export 에 붙인다** — `POST /edit-jobs` 는 한 버전 공�
       "신규 제작"인지**가 계약서마다 다를 수 있다. 법률 판단이 필요하고 스키마로는 풀리지 않는다.
       조달 단계에서 **"신규 배포 중단 / 기존 저작물 유지" 분리 조항**을 협상 항목으로 올린다.
       이 조항이 확보되면 팩 상태를 셋(`experimental → active → deprecated`)으로 줄이고
-      `retired` 를 법적 차단 전용으로 좁힌다([edit-spec-v3.md](./decisions/edit-spec-v3.md) §2 C-2)
+      `retired` 를 법적 차단 전용으로 좁힌다([edit-spec-v3.md](./decisions/edit-spec-v3.md) §2 V3-C2)
 - [ ] **강조·수정 어휘를 사전 파일로** — v3 초안은 `accents[].kind` · `reason.code` · `userEdits.locked` 의 자리만 두고 값을 닫지 않았다. 전환 `kind` 와
       컷 `role` 은 사전으로 닫혔다([`transition-vocabulary.json`](../packages/shared-types/src/transition-vocabulary.json) ·
       [`cut-role-vocabulary.json`](../packages/shared-types/src/cut-role-vocabulary.json), 2026-10-01)
-- [ ] **컷 타이밍의 기준을 컷마다** — 결정 B-6(`beatLength` 가 기준)은 사용자가 자른 컷과 음악 없는 무비를
+- [ ] **컷 타이밍의 기준을 컷마다** — 결정 V3-B6(`beatLength` 가 기준)은 사용자가 자른 컷과 음악 없는 무비를
       다루지 못한다. 사용자가 자른 컷은 ms, AI 가 정한 컷은 음악이 있을 때 비트가 기준이다
       ([auto-edit-draft.md](./decisions/auto-edit-draft.md) §2.4). 사용자 수정을 값별 주인으로 표현할지,
       v3 초안의 `userEdits` 로 표현할지도 함께 정한다(같은 문서 §2.2)
@@ -324,7 +324,7 @@ v3 는 **Movie export 에 붙인다** — `POST /edit-jobs` 는 한 버전 공�
 
 **완료 조건**: 위 선행 결정·조달 확정 → `editSpec` v3 확정(계약 `editSpecSchema` 와 `openapi.json` 을 같은
 변경에서 갱신하고, `parseEditSpec` 이 모르는 스펙을 v1 `일상` 으로 삼키는 폴백을 거절로 바꾼다 —
-[decisions/edit-spec-v3.md](./decisions/edit-spec-v3.md) §1 A-1) → `bgm_tracks` + 오프라인 비트 그리드 →
+[decisions/edit-spec-v3.md](./decisions/edit-spec-v3.md) §1 V3-A1) → `bgm_tracks` + 오프라인 비트 그리드 →
 1단계(출력 옵션 · ASS 자막 · VAD 무음 컷 · 비트 스냅) 구현 → 계약·골든 프레임 테스트 위에서
 e2e 실검증.
 
@@ -847,16 +847,6 @@ C 문단이 사실상 권장이다.
 
 **완료 조건**: Reanimated 4.5 · worklets 의 권장에 맞춰 하나로 통일하고 문서와 코드를 맞춘다.
 
-### H-10. 결정 문서의 결정 ID 가 백로그 ID 와 같은 모양이다
-
-[decisions/edit-spec-v3.md](./decisions/edit-spec-v3.md)와 그 초안([plans/edit-spec-v3.md](./plans/edit-spec-v3.md) ·
-[plans/asset-pack-manifest.md](./plans/asset-pack-manifest.md))은 결정 항목을 `A-1`~`D-8`(`B-6` · `B-9` · `D-4` …)로 부른다.
-백로그 ID 와 모양이 같아 grep 과 독자가 헷갈린다 — 예: 닫힌 백로그 B-6(알림 설정)과 결정 B-6(컷 타이밍 기준). 2026-10-09 에 두
-초안에는 "괄호 안의 A-1~D-8 은 결정 항목이다"는 안내를 넣었다.
-
-**선택지**: (a) 결정 쪽 ID 에 접두를 붙인다(`결정 B-6` 또는 `V3-B6`) — 이 ID 를 인용하는 백로그 A-7 · 코드 주석도 함께 바꾼다
-(b) 안내만으로 둔다.
-
 ### H-11. `env-management.md` 의 "후속 연계" 절
 
 [decisions/env-management.md](./decisions/env-management.md)의 "후속 연계"는 작성 뒤에 덧붙인 내용인데 배너가 아니라 본문 절로 남아
@@ -925,7 +915,7 @@ C 문단이 사실상 권장이다.
 - **A-4** 다른 기기의 스냅 앨범 저장(SNAP-17 `구현됨`) · 최근 삭제의 삭제 · 되살리기 · 빠진 컷(SNAP-20) — 2026-10-09 → progress 2026-10-09 "휴대폰과 에뮬레이터로 — 다른 기기 · 삭제 · 업로드 전 무비"
 - **A-5** FE-BE 연동 범위 · 일정 확정 — 2026-09-02, 같은 개발자가 FE·BE 를 함께 맡게 되어 따로 둘 이유가 없어졌다
 - **A-7** CI 의 ffmpeg 설치(골든 프레임 · ffprobe 계약 테스트) — 2026-09-15 → progress 2026-09-15 "산출물 계약 테스트와 CI 의 ffmpeg"
-- **A-7** 스티커 팩 매니페스트 스키마와 editSpec v3·에셋 매니페스트 초안의 남은 개정 — 2026-10-03, 2026-08-20 에 개정된 초안이 미병합 브랜치에서 main 에 들어왔다 → [plans/edit-spec-v3.md](./plans/edit-spec-v3.md) · [plans/asset-pack-manifest.md](./plans/asset-pack-manifest.md) §5 · §9(들일 때 `prefer` 가 남지 않고(`ref`), anchor 어휘가 매니페스트 §9 로 떨어져 `defaultAnchor` 가 없으며, editSpec §10.3 이 `resolved.xy` 를 범위 무제약으로 적는 것을 확인했다. 결정 A-1~D-8 은 초안에서 대응하는 서술을 찾는 정도로 대조했다)
+- **A-7** 스티커 팩 매니페스트 스키마와 editSpec v3·에셋 매니페스트 초안의 남은 개정 — 2026-10-03, 2026-08-20 에 개정된 초안이 미병합 브랜치에서 main 에 들어왔다 → [plans/edit-spec-v3.md](./plans/edit-spec-v3.md) · [plans/asset-pack-manifest.md](./plans/asset-pack-manifest.md) §5 · §9(들일 때 `prefer` 가 남지 않고(`ref`), anchor 어휘가 매니페스트 §9 로 떨어져 `defaultAnchor` 가 없으며, editSpec §10.3 이 `resolved.xy` 를 범위 무제약으로 적는 것을 확인했다. 결정 V3-A1~V3-D8 은 초안에서 대응하는 서술을 찾는 정도로 대조했다)
 - **A-10** 진행 중인 생성을 사용자당 하나로(MOV-11 — 유지하기로 하고 서버 · 앱에 구현, 실기기 확인은 F) — 2026-10-09 → progress 2026-10-09 "무비는 한 번에 하나씩 만든다"
 - **A-11** 경계별 전환(MOV-22) — 전환 어휘 · 무효화 액션 `cut-trim`·`transition-edit` · 무비 계약의 경계별 전환과 주인 · editSpec v3 렌더(`edit-v3` 큐) · AI 의 전환 규칙 · 편집 화면의 선택과 미리보기 · 실기기 확인 — 2026-10-01 → progress 2026-10-01 "Android 실기기에서 영상 두 개를 겹친 `crossfade`" ~ "경계별 전환 실기기 확인"
 - **A-11** 컷 역할 사전(`cut-role-vocabulary.json`, TS·워커 로더와 정합성 테스트) — 2026-10-01 → progress 2026-10-01 "컷 역할 사전"
@@ -979,3 +969,4 @@ C 문단이 사실상 권장이다.
 - **H-5** 배포 문서 두 개를 합칠지 — 2026-10-09 사내 서버를 접으며 `docs/deployment.md` 가 보관돼 [deployment-aws.md](./deployment-aws.md) 하나가 됐다 → progress 2026-10-09 "사내 서버를 접고 배포 대상을 AWS 하나로"
 - **H-7** 모바일 런타임 에셋의 위치 규칙(이미지 · 폰트는 루트 `assets`, `@/assets/*`) — 2026-10-10 → progress 2026-10-10 "모바일 에셋은 루트 assets 에 둔다"
 - **H-9** ONBOARDING 의 "모노레포 통합 이전에 분기한 브랜치" 절(한 줄로) — 2026-10-10 → progress 2026-10-10 "ONBOARDING 의 통합 전 브랜치 절을 걷는다"
+- **H-10** 결정 문서의 결정 ID 가 백로그 ID 와 같은 모양이다(`V3-A1` 꼴로) — 2026-10-10 → progress 2026-10-10 "editSpec v3 결정 ID 에 접두를 붙인다"

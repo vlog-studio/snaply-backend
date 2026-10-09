@@ -37,7 +37,7 @@
   [asset-pack-manifest.md](./asset-pack-manifest.md) §10.
 - **미결 결정** — [backlog.md](../backlog.md) A-7.
 
-괄호 안의 `A-1`~`D-8` 은 [decisions/edit-spec-v3.md](../decisions/edit-spec-v3.md) §1·§2 표의 결정 항목이다 —
+괄호 안의 `V3-A1`~`V3-D8` 은 [decisions/edit-spec-v3.md](../decisions/edit-spec-v3.md) §1·§2 표의 결정 항목이다 —
 백로그 ID 가 아니다(백로그는 [backlog.md](../backlog.md) 링크와 함께 적는다).
 
 ---
@@ -87,7 +87,7 @@
 [edit-job.service.ts](../../apps/api/src/services/edit-job.service.ts) 의 `parseEditSpec` 과
 [worker.py](../../apps/ai-worker/src/worker.py) 의 `_run_pipeline`·[edit_spec.py](../../apps/ai-worker/src/pipeline/edit_spec.py) 의
 `parse_job_clips` 가 그 키로 v1·v2·v3 를 가른다.
-이름을 바꾸면 알 수 없는 형태가 `{version:1, stylePreset:'일상'}` 으로 조용히 삼켜진다(A-1).
+이름을 바꾸면 알 수 없는 형태가 `{version:1, stylePreset:'일상'}` 으로 조용히 삼켜진다(V3-A1).
 
 ---
 
@@ -133,9 +133,9 @@
 `overlays.captions` 가 `[]` 인 것만으로는 **"자막을 요청하지 않았다"** 와 **"요청했는데 음성이
 없었다"** 가 구분되지 않는다. 현행 기본값은 `subtitles: false`(whisper 비용 절약)이고 큐
 페이로드에만 있어([edit-queue.ts](../../apps/api/src/queue/edit-queue.ts) `EditJobData.subtitles`) 레시피 재생성 시
-자막 유무가 달라진다(A-4). 무비는 `movies.captions` 에 남지만 생성 스펙(`editSpec`)에는 없다.
+자막 유무가 달라진다(V3-A4). 무비는 `movies.captions` 에 남지만 생성 스펙(`editSpec`)에는 없다.
 
-`targetDurationMs` 는 **목표**다. 실제 길이는 `timeline` 에서 파생된다(B-2).
+`targetDurationMs` 는 **목표**다. 실제 길이는 `timeline` 에서 파생된다(V3-B2).
 
 ⚠️ **`styleBundleId` 에 버전이 없다.** `assetRefs.styleBundle` 의 `"preset_daily@3"` 과 중복이
 아니라 **요청과 해석의 관계**다 — 사용자는 "일상"을 골랐지 `@3` 을 고르지 않았고, 재생성 시
@@ -144,7 +144,7 @@
 📌 v2 의 `stylePreset`(`'감성'|'여행'|'일상'`, `shared-types` 의 `StylePreset` 타입)과는 다른
 필드다. 같은 이름에 다른 값 공간을 주면 타입 이름과 필드 이름이 어긋나므로 이름을 나눴다.
 
-⚠️ **`subtitles` 는 필수 필드다.** 없는 스펙을 만나면 기본값을 채우지 않고 거부한다 — A-1 과
+⚠️ **`subtitles` 는 필수 필드다.** 없는 스펙을 만나면 기본값을 채우지 않고 거부한다 — V3-A1 과
 같은 원칙이다. v3 생성 경로가 항상 값을 채운다.
 
 📌 `intent` 변경(예: 자막 켜기)은 아직 무효화 사전의 액션에 없다. `overlays.captions` 무효화에
@@ -174,7 +174,7 @@
 버전 없는 사용자 선택은 `intent.styleBundleId` 가 갖는다(§4).
 
 `derivationVersion` 은 **앵커 파생 공식 전용**이다. `resolved` 가 재계산 가능한 캐시인 이상
-재계산 가능성이 곧 재현성이므로 `beatGridVersion`·`analysisVersion` 과 같은 부류다(C-3).
+재계산 가능성이 곧 재현성이므로 `beatGridVersion`·`analysisVersion` 과 같은 부류다(V3-C3).
 
 `gradeMappingVersion` 은 **`tempShift`·`tintShift` → `colorbalance` 축 매핑 함수의 버전**이다.
 저장값이 `-0.04` 하나뿐이므로 매핑이 바뀌면 같은 스펙이 다른 색으로 렌더된다 — 재현성
@@ -201,7 +201,7 @@
 
 **`videoId` 다. S3 URI 가 아니다.** 워커는
 [worker.py](../../apps/ai-worker/src/worker.py) 의 `_run_pipeline` 에서 `db.fetch_source_keys(user_id, video_ids)` 로 키를
-해석한다. URI 를 구우면 스토리지 이전 시 과거 스펙이 전부 죽고, 소유권 검증도 우회된다(B-10).
+해석한다. URI 를 구우면 스토리지 이전 시 과거 스펙이 전부 죽고, 소유권 검증도 우회된다(V3-B10).
 
 `durationMs` 는 §9.3 의 컷별 제약 검사에 쓰인다.
 
@@ -223,7 +223,7 @@
 두 곳에 있으면 갈라진다.
 
 **인라인하지 않는다.** `video_analyses` 테이블이 이미 있고
-`@@unique([videoId, analysisVersion])` 로 행이 덮이지 않으므로 참조 핀이 안전하게 작동한다(A-5).
+`@@unique([videoId, analysisVersion])` 로 행이 덮이지 않으므로 참조 핀이 안전하게 작동한다(V3-A5).
 
 인라인하면 두 가지가 깨진다.
 
@@ -294,7 +294,7 @@
 렌더 경로가 읽지 않는다. 명시하지 않으면 누군가 "최신 그리드를 쓰는 게 낫지 않나" 하고
 컬럼을 다시 읽는다.
 
-트랙 정보는 여기에만 있다. `audio.bgm` 은 믹스 파라미터만 갖는다(B-4).
+트랙 정보는 여기에만 있다. `audio.bgm` 은 믹스 파라미터만 갖는다(V3-B4).
 
 ---
 
@@ -321,7 +321,7 @@
 ### 9.2 권위와 파생 — 네 값 중 셋만 독립이다
 
 `sourceInMs` · `sourceOutMs` · `speed` · `beatLength` 는 서로를 결정한다. 권위를 정하지 않으면
-과결정 상태로 남는다(B-7 이 오버레이에서 정리한 것과 같은 문제다).
+과결정 상태로 남는다(V3-B7 이 오버레이에서 정리한 것과 같은 문제다).
 
 **`sourceOutMs` 가 파생이다.**
 
@@ -353,7 +353,7 @@ edit-director 를 다시 돌린다.**
 ±20% 가드는 이걸 못 잡는다.
 
 ⚠️ **총 길이 가드**: 재투영한 총 길이가 원래의 ±20% 를 벗어나면 마찬가지로 edit-director 를
-다시 돌린다(B-6). 92→128 BPM 이면 28% 짧아지는데, 그 정도면 컷 구성을 다시 짜는 것이 맞다.
+다시 돌린다(V3-B6). 92→128 BPM 이면 28% 짧아지는데, 그 정도면 컷 구성을 다시 짜는 것이 맞다.
 
 두 가드는 같은 탈출구를 쓴다.
 
@@ -378,7 +378,7 @@ UI 에 드러나야 한다.
 ```
 
 **`sfxId` 는 여기 없다.** 효과음은 style-director 도메인이고 `audio.sfx[].sourceRef` 로 역참조가
-이미 된다(B-5).
+이미 된다(V3-B5).
 
 `atBeat` 도 없다 — `toCutId` 의 `startBeat` 에서 파생된다.
 
@@ -392,7 +392,7 @@ UI 에 드러나야 한다.
 `reason` 은 `{ code, detail }` 이다. `code` 는 닫힌 집합이고 사전이 원본이다.
 
 자유 문자열이면 `userEdits.removedCutIds` → `reason` 집계가 문자열 파싱이 되고,
-"어떤 규칙이 자주 틀리는지 드러난다"는 §13 의 주장이 성립하지 않는다(B-8).
+"어떤 규칙이 자주 틀리는지 드러난다"는 §13 의 주장이 성립하지 않는다(V3-B8).
 
 ### 9.6 excluded
 
@@ -439,7 +439,7 @@ UI 에 드러나야 한다.
 
 ### 10.2 시각 표현 — 앵커 컷 + 지속시간
 
-**`(anchorCutId, offsetInCutMs)` 가 권위, `durationMs` 가 지속, 절대 ms 와 `atBeat` 는 파생이다**(B-7).
+**`(anchorCutId, offsetInCutMs)` 가 권위, `durationMs` 가 지속, 절대 ms 와 `atBeat` 는 파생이다**(V3-B7).
 
 `durationMs` 로 지속을 표현하므로 **스티커가 다음 컷으로 자연스럽게 넘어간다.**
 [trend-editing-pipeline.md](./trend-editing-pipeline.md) §3 의 "레이어는 클립이 아니라 타임라인에
@@ -537,7 +537,7 @@ UI 에 드러나야 한다.
 ```
 
 현행 유일한 색 표현은 [editor.py](../../apps/ai-worker/src/pipeline/editor.py) `PRESETS` 의 프리셋별 `eq=` 한 줄
-(`감성` 의 `eq=saturation=0.8` 등)이다. v3 초안에는 갈 자리가 없었다(A-3).
+(`감성` 의 `eq=saturation=0.8` 등)이다. v3 초안에는 갈 자리가 없었다(V3-A3).
 
 ### 11.1 `grade` 세 갈래는 축이 각각 다르다 — 별개 레이어다
 
@@ -640,7 +640,7 @@ Object.keys(bundle.correction) === Object.keys(perClip[c].corrections)
 
 - **톤매핑이 LUT 앞이다.** 아이폰 기본 촬영은 BT.2020 PQ 다. 톤매핑 없이 rec709 LUT 를
   태우면 색이 두 번 깨진다. 톤매핑은 정규화 단계에 있다 — 트림 직후, `eq` 앞
-  ([hdr.py](../../apps/ai-worker/src/pipeline/hdr.py), `editor.normalize_clip`)(C-4).
+  ([hdr.py](../../apps/ai-worker/src/pipeline/hdr.py), `editor.normalize_clip`)(V3-C4).
 - **LUT 는 정규화된 입력에만 닿는다.** match 이전에 걸면 클립마다 다른 입력에 같은 룩업이
   적용돼 결과가 제각각이 된다.
 - LUT 를 concat 이후 한 번만 걸면 N 회가 아니라 1 회 연산이고, 전환 블렌딩이 LUT 이전
@@ -666,12 +666,12 @@ Object.keys(bundle.correction) === Object.keys(perClip[c].corrections)
 }
 ```
 
-**`bgm` 에 `trackId`·`startOffsetMs` 가 없다.** `music` 이 갖는다(B-4).
+**`bgm` 에 `trackId`·`startOffsetMs` 가 없다.** `music` 이 갖는다(V3-B4).
 
 **`sfx` 에 `atMs` 가 없다.** `sourceRef` 가 가리키는 전환·스티커에서 파생되며, 매니페스트의
 `peakOffsetMs` 만큼 프리롤이 적용된다. 프리롤이 타임라인 0 이전이 되면 클램프한다.
 
-`gainDb` 는 선택 필드다. 없으면 매니페스트의 기본값을 쓴다(D-8).
+`gainDb` 는 선택 필드다. 없으면 매니페스트의 기본값을 쓴다(V3-D8).
 
 ⚠️ **`sidechain` 은 `"sourceAudio"` 다.** concat 된 원본 오디오 트랙을 그대로 물린다.
 음성만 분리해 물리려면 소스 분리(demucs 계열)가 필요한데 안전 목록에 없고, 워커 이미지가
@@ -696,7 +696,7 @@ Object.keys(bundle.correction) === Object.keys(perClip[c].corrections)
 P2 의 순서 잠금 모드가 이 필드로 구현된다.
 
 `locked` 는 **열거형**이다. `"timeline.cuts.order"` 같은 자유 문자열 경로는 `order` 가 실재하는
-필드가 아니고, 소비자마다 다르게 파싱한다(B-9). 값 집합은 사전이 원본이다.
+필드가 아니고, 소비자마다 다르게 파싱한다(V3-B9). 값 집합은 사전이 원본이다.
 
 이 레이어는 학습 데이터다. `removedCutIds` 에 해당하는 컷의 `reason.code` 를 집계하면 어떤
 규칙이 자주 틀리는지 드러난다. 같은 방식으로 `removedStickerIds` 의 `assetId` 별 삭제율이
@@ -738,7 +738,7 @@ P2 의 순서 잠금 모드가 이 필드로 구현된다.
 
 가드 안에서 BGM 을 교체하면 `timeline.cuts` 가 정확히 그 상태다 — 컷 구성은 유지되고
 `beatLength` 재투영으로 시각만 다시 계산된다. 이걸 무효화로 쓰면 컷 구성을 다시 짜게 되고,
-유지로 쓰면 낡은 시각이 남는다. 둘 다 틀린다(B-6).
+유지로 쓰면 낡은 시각이 남는다. 둘 다 틀린다(V3-B6).
 
 정의가 명확해서 위반도 보인다 — §9.3 의 소스 창 확대가 그 예다. 시각만 바뀐 것이 아니라
 안 보이던 프레임이 들어오므로 `retimed` 로 처리할 수 없고, 그래서 컷별 제약 재검사가 필요하다.
@@ -791,14 +791,14 @@ P2 의 순서 잠금 모드가 이 필드로 구현된다.
 
 ## 16. renderSpec 과의 경계
 
-**출력 기하는 `renderSpec` 단독 권위다.** editSpec 에 `output` 블록은 없다(B-1).
+**출력 기하는 `renderSpec` 단독 권위다.** editSpec 에 `output` 블록은 없다(V3-B1).
 
 | 값 | 위치 |
 |---|---|
 | 해상도 · fps · `fitMode` · `outputProfile` | `renderSpec` (`profileVersion` 으로 버전드) |
 | 목표 길이 | `intent.targetDurationMs` |
-| 실제 길이 | `timeline` 파생 (B-2) |
-| 세이프에어리어 | `assetRefs.safeAreaPack` 참조 (B-3) |
+| 실제 길이 | `timeline` 파생 (V3-B2) |
+| 세이프에어리어 | `assetRefs.safeAreaPack` 참조 (V3-B3) |
 
 `safeArea` 를 값으로 구우면 플랫폼 UI 가 바뀌었을 때 **이미 저장된 스펙 수천 개를 못 고친다.**
 에셋은 ID 참조인데 세이프에어리어만 값인 것도 일관되지 않는다.
