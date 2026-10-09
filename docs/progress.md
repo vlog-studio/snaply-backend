@@ -2483,3 +2483,11 @@ C-7 에서 받은 회사 OpenAI 키를 로컬 개발과 AWS 서버가 함께 쓰
   `write-env.sh` 가 값을 작은따옴표로 감싸므로 `grep '=500'` 으로는 찾지 못한다.
 - **확인** — 배포 직후 `signup_bonus` 행은 0 이었고(요청이 아직 없었다), 에뮬레이터에서 테스트 계정으로 앱을 다시 열자 그 계정에
   `signup_bonus` 가 **1행** 들어왔다. 앱은 시작할 때 요청을 여러 개 동시에 보내므로 중복 없이 한 번이다.
+
+## 2026-10-09 (이어서) — 촬영 화면의 권한 버튼 라벨을 맞춘다(backlog E-23 닫음)
+
+권한이 거절된 뒤 OS 설정으로 보내는 버튼이 앨범 · 알림 화면은 `설정에서 권한 켜기` 인데 촬영 화면만 `설정에서 권한 열기` 였다(UX `Inconsistent Twin`).
+촬영 화면(`apps/mobile/src/pages/capture-record/ui/capture-record-page.tsx`)을 `설정에서 권한 켜기` 로 맞추고, 두 라벨이 언제 나오는지를
+[capture-flow.md](../apps/mobile/docs/features/capture-flow.md)에 적었다. 이 화면에는 테스트가 없고 문구 하나만 바뀌어 새로 더하지 않았다.
+
+- **검증**: `npm run verify:mobile` 통과(175개 스위트 1398건, lint 경고 1건은 원래 있던 것). 기기에서는 보지 않았다.
