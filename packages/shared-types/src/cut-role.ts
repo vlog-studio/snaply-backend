@@ -4,7 +4,7 @@
  * 원본은 `cut-role-vocabulary.json` **하나**이고 워커(`pipeline/cut_role.py`)도 같은 파일을 읽는다.
  * 역할마다 놓일 수 있는 자리(`position`)와 판단에 쓰는 신호, 그 신호의 출처(촬영·로컬·분석)를 담는다.
  *
- * 결정: `docs/decisions/auto-edit-draft.md` · v1 목록: `docs/plans/edit-recipe-tools.md` §3
+ * 결정: `docs/decisions/auto-edit-draft.md` · 역할을 정하는 규칙: `docs/decisions/edit-director.md` §6
  */
 import vocabulary from './cut-role-vocabulary.json' with { type: 'json' };
 

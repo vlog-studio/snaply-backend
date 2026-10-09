@@ -137,7 +137,7 @@ describe('사전 자체의 내부 정합성', () => {
   });
 
   it('zoompunch 배율이 720p 원본의 상한(1.1)을 넘지 않는다', () => {
-    // 720p 원본은 1080×1920 출력에서 이미 1.5배다 — plans/edit-recipe-tools.md §2.4
+    // 720p 원본은 1080×1920 출력에서 이미 1.5배다 — decisions/transition-director.md §0.3
     const scale = vocabulary.kinds.zoompunch?.scaleFrom ?? 0;
     expect(scale).toBeGreaterThan(1);
     expect(scale).toBeLessThanOrEqual(1.1);

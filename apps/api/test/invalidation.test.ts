@@ -182,7 +182,7 @@ describe('계획이 약속한 규칙', () => {
   });
 
   it('전환 하나를 바꿔도 컷은 움직이지 않는다', () => {
-    // 겹침형 전환이 여분 프레임을 써서 무비 길이가 컷 길이의 합이다(edit-recipe-tools §1.1).
+    // 겹침형 전환이 여분 프레임을 써서 무비 길이가 컷 길이의 합이다(decisions/transition-director.md §0.2).
     expect(layersInState('transition-edit', 'invalidated')).toEqual(['timeline.transitions', 'audio.sfx']);
   });
 

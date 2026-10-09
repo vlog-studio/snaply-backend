@@ -7,7 +7,7 @@
 만들기), 현행 API 계약은 [`packages/shared-types/src/contract/`](../../packages/shared-types/src/contract/), 스펙 v3 의 확정
 규칙은 [decisions/edit-spec-v3.md](../decisions/edit-spec-v3.md)가 원천이다. 미결 항목은 [backlog.md](../backlog.md) A-7 에만 둔다
 **관련 문서**: v3 스키마 초안([edit-spec-v3.md](edit-spec-v3.md) · [asset-pack-manifest.md](asset-pack-manifest.md)) ·
-편집 툴 [edit-recipe-tools.md](edit-recipe-tools.md) · [decisions/movie-model.md](../decisions/movie-model.md) ·
+편집 툴의 v1 범위 [decisions/auto-edit-draft.md](../decisions/auto-edit-draft.md#6-편집-툴--툴마다-정할-것과-v1-범위) §6 · [decisions/movie-model.md](../decisions/movie-model.md) ·
 [decisions/credit-payment-model.md](../decisions/credit-payment-model.md)
 
 ---

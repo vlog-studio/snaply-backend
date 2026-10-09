@@ -6,7 +6,7 @@
 계획. 미결은 [backlog.md](../backlog.md) A-6 에만 둔다
 **관련 문서**: [decisions/template-snap-recommendation.md](../decisions/template-snap-recommendation.md) §7 ·
 [decisions/snap-content-analysis.md](../decisions/snap-content-analysis.md) §9.1(`visualIssues` 를 코드로 닫은 이유) ·
-[decisions/edit-director.md](../decisions/edit-director.md) §6 · [edit-recipe-tools.md](edit-recipe-tools.md) §3 ·
+[decisions/edit-director.md](../decisions/edit-director.md) §6 · [`cut-role-vocabulary.json`](../../packages/shared-types/src/cut-role-vocabulary.json) ·
 [snap-analysis-recommendation-rollout.md](snap-analysis-recommendation-rollout.md) §4.1 ·
 [`score-slots.ts`](../../apps/api/src/services/recommendation/score-slots.ts) ·
 [`prompt.py`](../../apps/ai-worker/src/pipeline/video_analysis/prompt.py)

@@ -6,7 +6,8 @@
  * 두 구현을 같은 픽스처(`packages/shared-types/fixtures/transition-resolution.json`)로 고정한다.
  * 편집 화면에서 본 전환이 결과물과 다르면 사용자는 보지 않고 고른 셈이 된다(MOV-22).
  *
- * 결정: `docs/decisions/auto-edit-draft.md` §2.3 · 툴 카드: `docs/plans/edit-recipe-tools.md` §1
+ * 결정: `docs/decisions/auto-edit-draft.md` §2.3 · 툴 카드: 같은 문서 §6.1 · v1 전환과 여분 프레임:
+ * `docs/decisions/transition-director.md` §0
  */
 import vocabulary from './transition-vocabulary.json' with { type: 'json' };
 

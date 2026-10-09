@@ -4,7 +4,7 @@
 읽는다(`cut-role.ts`). 고르는 일은 API 의 선택 단계가 하고, 워커는 역할을 받아 검증한다 —
 사전에 없는 역할은 조용히 `body` 로 바꾸지 않고 거부한다.
 
-결정: docs/decisions/auto-edit-draft.md · v1 목록: docs/plans/edit-recipe-tools.md §3
+결정: docs/decisions/auto-edit-draft.md · 역할을 정하는 규칙: docs/decisions/edit-director.md §6
 """
 
 from pipeline import vocabulary as _vocabulary
