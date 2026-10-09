@@ -847,13 +847,6 @@ C 문단이 사실상 권장이다.
 
 **완료 조건**: Reanimated 4.5 · worklets 의 권장에 맞춰 하나로 통일하고 문서와 코드를 맞춘다.
 
-### H-9. ONBOARDING 의 "모노레포 통합 이전에 분기한 브랜치" 절
-
-[ONBOARDING.md](../ONBOARDING.md) §5 의 이 절은 통합 전에 분기한 브랜치를 옮기는 법을 다루는데, 원격에는 `main` 만 있고 로컬에도
-통합 전 브랜치가 없다(2026-10-09 확인).
-
-**선택지**: (a) 지우고 "`apps/mobile` 이력은 통합 커밋 이전으로 내려가지 않는다"는 한 줄만 남긴다 (b) 그대로 둔다.
-
 ### H-10. 결정 문서의 결정 ID 가 백로그 ID 와 같은 모양이다
 
 [decisions/edit-spec-v3.md](./decisions/edit-spec-v3.md)와 그 초안([plans/edit-spec-v3.md](./plans/edit-spec-v3.md) ·
@@ -985,3 +978,4 @@ C 문단이 사실상 권장이다.
 - **H-4** 테스트의 한국어 문자열 이스케이프 관례(리터럴 · 이스케이프 둘 다 허용) — 2026-10-10 → progress 2026-10-10 "테스트의 한국어는 리터럴도 된다"
 - **H-5** 배포 문서 두 개를 합칠지 — 2026-10-09 사내 서버를 접으며 `docs/deployment.md` 가 보관돼 [deployment-aws.md](./deployment-aws.md) 하나가 됐다 → progress 2026-10-09 "사내 서버를 접고 배포 대상을 AWS 하나로"
 - **H-7** 모바일 런타임 에셋의 위치 규칙(이미지 · 폰트는 루트 `assets`, `@/assets/*`) — 2026-10-10 → progress 2026-10-10 "모바일 에셋은 루트 assets 에 둔다"
+- **H-9** ONBOARDING 의 "모노레포 통합 이전에 분기한 브랜치" 절(한 줄로) — 2026-10-10 → progress 2026-10-10 "ONBOARDING 의 통합 전 브랜치 절을 걷는다"
