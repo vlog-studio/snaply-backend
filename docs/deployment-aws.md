@@ -2,7 +2,7 @@
 
 **작성일**: 2026-10-08
 **상태**: 현행
-**원천**: 현행 배포 대상인 AWS 공모전 서버의 설치·배포·시크릿·배치·백업 절차. 이 구성을 고른 이유는
+**원천**: 현행 배포 대상인 AWS 공모전 서버의 설치·배포·시크릿·배치·백업 절차와 이 서버를 보는 테스터 앱. 이 구성을 고른 이유는
 [decisions/aws-contest-server.md](./decisions/aws-contest-server.md)
 **관련 문서**: [decisions/env-management.md](./decisions/env-management.md) · [backlog.md](./backlog.md) B-8 ·
 인프라 구성 · 접속은 사내 위키 "snaply — AWS 구성 · 인프라 접속"(이하 인프라 문서)
@@ -185,3 +185,33 @@ curl -s localhost:3000/health
 
 `/data` 는 그대로 다시 붙는다(DB · 이미지 · env 파일 · 태그가 남는다). §1 을 다시 하고(토큰은 새로 받는다) 마지막 배포를
 Re-run 한다. 같은 이름(`dweax-snaply`)으로 등록하므로 예전 등록은 새 runner 가 이어받는다.
+
+## 8. 테스터 앱
+
+이 서버를 보는 Android 앱이다. 주소가 `https` 라 release 빌드가 그대로 닿는다(release 는 `http://` 를 막는다).
+`EXPO_PUBLIC_API_BASE_URL` 은 번들에 박히고, 셸에서 준 값이 `apps/mobile/.env` 보다 앞선다.
+
+```bash
+cd apps/mobile/android && EXPO_PUBLIC_API_BASE_URL=https://snaply-api.dweaxai.com ./gradlew app:assembleRelease -x lint -x test
+```
+
+```bash
+unzip -p app/build/outputs/apk/release/app-release.apk assets/index.android.bundle | grep -ao 'https://snaply-api.dweaxai.com'
+```
+
+두 번째 명령이 주소를 한 줄 내면 된다. 휴대폰에는 `npm run android:device:install -w snaply-app -- --variant release --apk <APK 경로>`
+로 깐다(`.env` 의 `http://` 경고는 이 APK 와 무관하다).
+
+- **나눠 줄 APK 는 출력 폴더 밖에 둔다.** 다음 Gradle 빌드가 `release/` 를 비운다.
+- **개발용 앱을 대체한다.** 패키지가 같아 덮어 깔리고, 로그인과 기기의 라이브러리가 남는다. 라이브러리는 계정으로만 나뉘고 서버로는
+  나뉘지 않으므로, 로컬 서버에서 쓰던 계정으로 이 서버를 보면 두 서버의 스냅이 섞인다 — 테스터 앱에는 별도 계정을 쓴다. 이미 로그인돼
+  있으면 비행기 모드에서 앱을 열어 로그아웃한 뒤 바꾼다. 개발용으로 돌아갈 때는 `npm run android:device:install -w snaply-app`.
+- **새 계정의 크레딧은 0 이다**(가입 보너스 · 광고 보상이 꺼져 있다). 시험에는 §6 의 셸에서 사용자 id 를 찾아 `promo` 를 넣는다:
+
+  ```bash
+  docker compose --env-file .env exec -T postgres psql -U postgres -d snaply -c "SELECT u.id, u.nickname, count(v.id) AS snaps, max(v.created_at) AS last_upload FROM users u LEFT JOIN videos v ON v.user_id = u.id GROUP BY u.id ORDER BY last_upload DESC NULLS LAST;"
+  ```
+
+  ```bash
+  docker compose --env-file .env exec -T postgres psql -U postgres -d snaply -c "INSERT INTO credit_ledger (id, user_id, delta, reason) VALUES (gen_random_uuid(), '<USER_ID>', 500, 'promo');"
+  ```
