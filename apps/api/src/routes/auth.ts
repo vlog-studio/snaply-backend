@@ -147,7 +147,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
         tags: ['auth'],
         summary: '스냅 분석 동의 철회',
         description: [
-          '그 뒤로 분석하지 않고, 이 사용자의 **분석 결과와 추천 기록을 파기**한다. 동의 기록 자체는 철회',
+          '그 뒤로 분석하지 않고, 이 사용자의 **분석 결과 · 추천 기록 · 편집 초안 기록을 파기**한다. 동의 기록 자체는 철회',
           '시각과 함께 남는다. 동의가 없어도 성공한다(멱등).',
         ].join('\n'),
       },

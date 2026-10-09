@@ -5,7 +5,8 @@ import type { ResetPasswordProvider } from './reset-password-provider';
 /**
  * Real deep-link password reset over Supabase Auth. `resetPasswordForEmail`
  * sends a recovery link pointing at `passwordResetUrl`; tapping it deep-links
- * back and the global handler establishes a recovery session. `updateUser` then
+ * back to the auth callback screen (`pages/auth-callback`), which establishes a
+ * recovery session. `updateUser` then
  * changes the password on that session.
  */
 export const supabaseResetPasswordProvider: ResetPasswordProvider = {

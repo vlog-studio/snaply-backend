@@ -1,8 +1,9 @@
 import { makeRedirectUri } from 'expo-auth-session';
 
 // Deep links Supabase redirects back to. Both must be registered in the Supabase
-// dashboard's Redirect URL allowlist. Distinct paths let the deep-link handler
-// tell a sign-up confirmation apart from a password recovery without relying on
+// dashboard's Redirect URL allowlist. Distinct paths let Expo Router open the
+// auth callback screen (`pages/auth-callback`) in the right mode — a sign-up
+// confirmation apart from a password recovery — without relying on
 // the auth event, which is not emitted consistently for a manual code exchange.
 //
 // Computed lazily (and memoized) rather than at module load: `makeRedirectUri`

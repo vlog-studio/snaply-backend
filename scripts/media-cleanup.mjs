@@ -2,7 +2,8 @@
 /**
  * 미디어 트랙 테스트 데이터 정리 (개발용).
  *
- * 공유 Supabase를 쓰기 때문에 통합 테스트 후 자기 데이터를 지워야 한다(ONBOARDING.md §5 "테스트 데이터 정리").
+ * `npm run media:e2e` 가 공유 DB(공유 Supabase 등)에 만든 데이터를 지운다(ONBOARDING.md §5 "테스트 데이터 정리").
+ * 통합 테스트(`npm test -w apps/api`)는 로컬 `snaply_test` DB 만 쓰므로 여기서 정리할 것이 없다.
  * (플랜별 편집 횟수 제한이 재도입되면 한도 초기화 용도로도 쓴다 — docs/decisions/credit-payment-model.md "편집 횟수 무제한")
  *
  * 사용법:

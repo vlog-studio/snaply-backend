@@ -20,8 +20,9 @@ export type SignUpStep = 'form' | 'sent';
 /**
  * Orchestrates sign-up: create the account, then wait for the user to confirm
  * via the emailed link. Owns the step transition and pending/error state. The
- * actual confirmation and sign-in happen globally when the deep link lands
- * (`exchangeCodeForSession`), so this hook never verifies a code or navigates.
+ * actual confirmation and sign-in happen on the auth callback screen the link
+ * opens (`pages/auth-callback`, which exchanges the code), so this hook never
+ * verifies a code or navigates.
  */
 export function useSignUpFlow() {
   const [step, setStep] = useState<SignUpStep>('form');
