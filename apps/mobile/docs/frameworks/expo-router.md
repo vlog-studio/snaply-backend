@@ -96,9 +96,7 @@ This project enables `typedRoutes: true` in `app.json`.
 
 ## Asset placement
 
-- Keep build assets referenced directly by `app.json`, such as icons, splash images, and adaptive icons, under the root `assets` directory.
-- Keep an asset rendered by only one slice close to that slice.
-- Put runtime assets reused by multiple slices in `shared/assets`.
+- Keep every image and font under the root `assets` directory — the build assets `app.json` references (icons, splash images, adaptive icons) and the runtime ones a screen renders alike — and import a runtime asset through the `@/assets/*` alias (`require('@/assets/images/brand-glyph-white.png')`). There is no `src/shared/assets` and no asset beside a slice: the brand glyphs the screens render are the same artwork the icon and splash are made from, and one directory keeps them together.
 - When Metro requires a static `require()`, use a literal path that it can analyze.
 
 ## Checks before writing Expo code
