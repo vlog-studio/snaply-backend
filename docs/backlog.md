@@ -819,18 +819,6 @@ Supabase 로 DB 에 직접 닿을 수 있는 공유 Supabase DB 를 쓸 때뿐�
 2026-10-09 문서 전수 감사에서 나온, 코드 동작은 그대로이고 **규칙이나 문서를 어느 쪽으로 맞출지만 정하면 되는** 판단이다.
 각 항목에 배경 · 선택지 · 권장(있으면) · 완료 조건을 적었다. 정하면 해당 문서(와 필요한 경우 코드 · 테스트)를 고치고 닫는다.
 
-### H-2. 결정이 끝난 결정 문서의 제목
-
-`snap-retention-period.md` · `local-copy-after-upload.md` · `movie-cleanup-after-export.md` · `movie-export-policy.md` 의 제목이
-아직 "결정 요청 —"으로 시작한다(상태 줄은 이미 `결정`). `storage-and-subscription-policy.md` 의 제목 "구독 상품 도입"은 구독이
-미확정(CRD-7 `보류`)인 지금 "구독을 들였다"로 읽힌다. 선례 [movie-model.md](./decisions/movie-model.md)는 결정 뒤 제목이 결정을
-말한다. 제목을 가리키는 앵커 링크는 없다(2026-10-09 확인).
-
-**선택지**: (a) 접두사를 걷고 결정 내용을 말하는 제목으로 바꾼다 — **권장**, 인덱스 · 검색에서 미결처럼 보이지 않는다
-(b) 결정 당시의 기록으로 둔다.
-
-**완료 조건**: (a) 면 다섯 문서의 제목을 바꾸고 [decisions/README.md](./decisions/README.md)가 그대로 맞는지 확인한다.
-
 ### H-3. `movie-snap-expiry-exemption.md` 의 형식
 
 상태는 `결정(잠정)`인데 [decisions/README.md](./decisions/README.md)에서는 "결정 대기" 표에 있다. 미결 문서 규격(배경 · 영향 ·
@@ -1013,4 +1001,5 @@ C 문단이 사실상 권장이다.
 - **G** 틱톡 Sandbox `client_key` 이력 노출 — 2026-08-11 제거하지 않기로 판정 → [sns-setup.md](./sns-setup.md) §3 "Sandbox client_key 의 이력 노출"
 - **G** 낡은 코드 주석 · 설명(배포 잡 머리말 · 분석 동의 철회 설명 · `AdReward.status` · Redis 머리말 · `media-cleanup.mjs` · 만료 예고 시각 · 앱의 딥링크 처리 · `.prettierignore`) — 2026-10-09 → progress 2026-10-09 "낡은 코드 주석 · 설명을 고친다"
 - **H-1** UX 문구 규칙의 범위(금지어는 버튼 · 질문 · 컨트롤 라벨에만, `카메라 닫기`, 템플릿 힌트의 `장면` 허용) — 2026-10-10 → progress 2026-10-10 "UX 문구 규칙의 범위를 좁힌다"
+- **H-2** 결정이 끝난 결정 문서의 제목(결정을 말하는 제목으로) — 2026-10-10 → progress 2026-10-10 "결정이 끝난 결정 문서의 제목을 바꾼다"
 - **H-5** 배포 문서 두 개를 합칠지 — 2026-10-09 사내 서버를 접으며 `docs/deployment.md` 가 보관돼 [deployment-aws.md](./deployment-aws.md) 하나가 됐다 → progress 2026-10-09 "사내 서버를 접고 배포 대상을 AWS 하나로"
