@@ -10,7 +10,7 @@ Each After is one of three kinds, and every case says which:
 
 A Proposal or Hypothetical After must never stand on a concept the product has dropped — a reader cannot tell a proposal from a fossil, and an agent will build what it reads. Before citing any case against a real screen, verify the screen's state against [`../features/README.md`](../features/README.md) and the code.
 
-In wireframes, `L1`–`L5` order the blocks by importance to the current step, as in the Step 8 template of [`screen-analysis.md`](screen-analysis.md#step-8--revised-structure). They are not the weight levels of [`visual-hierarchy.md`](visual-hierarchy.md), which assign each element's visual weight (exactly one `W1`); a `W`-level in a wireframe, such as `W6` for a recessive element, is that weight.
+Wireframes use the `L1`–`L5` block order of [`screen-analysis.md` → Step 8](screen-analysis.md#step-8--revised-structure); a `W`-level in a wireframe, such as `W6` for a recessive element, is a weight from [`visual-hierarchy.md`](visual-hierarchy.md#the-weight-ladder).
 
 ---
 
@@ -29,7 +29,7 @@ In wireframes, `L1`–`L5` order the blocks by importance to the current step, a
 
 **Applied principles** — 1 One Thing per Page, 3 Action First, 9 Clear Visual Hierarchy, 13 Show State Not Instructions.
 
-**After** — shipped: [Studio](../features/studio.md#user-goal). One whole-block `스냅 골라 새 무비` leads; the templates and then the movie board follow as lower-weight sections; the banner is gone.
+**After** — shipped: [Studio](../features/studio.md#user-goal). One whole-block `스냅 골라 새 무비` leads; the one-row `스냅 골라 자동 편집`, the templates, and then the movie board follow as lower-weight sections; the banner is gone.
 
 **Why** — Cognitive Load at entry drops to one action; the banner and the three peer CTAs are gone. Templates stay discoverable as a section (Discoverability preserved), so nothing was truncated.
 
@@ -61,7 +61,7 @@ In wireframes, `L1`–`L5` order the blocks by importance to the current step, a
 
 ## 3 — Place detail
 
-*Hypothetical — the app has no place screen and no saved places: location alerts are one switch in the 나 tab over places the server provides ([Location alerts](../features/location-and-push-notifications.md#user-goal)).*
+*Hypothetical — the app has no place screen and no saved places: location alerts are one switch on 나 → 알림 over places the server provides ([Location alerts](../features/location-and-push-notifications.md#user-goal)).*
 
 **Before**
 ```text
@@ -108,7 +108,7 @@ In wireframes, `L1`–`L5` order the blocks by importance to the current step, a
 
 **Applied principles** — 8 Value Before Cost, 15 Preserve User Control and Exit, 2 Easy to Answer.
 
-**After** — shipped: the 위치 알림 받기 switch in the [Me tab](../features/me.md#current-behavior). Nothing is asked at launch; turning the switch on asks `주변 장소 알림을 받을까요?` (`알림 받기` / `안 받기`) first, only a yes runs the OS prompts, and a refusal leaves the switch off with `설정에서 권한 켜기` on its row.
+**After** — shipped: the 위치 알림 받기 switch on 나 → 알림 (`/settings/notifications`, [Me tab](../features/me.md#current-behavior)). Nothing is asked at launch; turning the switch on asks `주변 장소 알림을 받을까요?` (`알림 받기` / `안 받기`) first, only a yes runs the OS prompts, and a refusal leaves the switch off, says so on its row, and adds a `설정에서 권한 켜기` row under it.
 
 **Why** — The ask is caused by the user's own act and phrased as a question they can answer. Our own question can be re-asked freely, so the one-shot OS "always allow" prompt only ever follows a yes, and declining keeps the feature reachable from the same row.
 
@@ -118,7 +118,7 @@ In wireframes, `L1`–`L5` order the blocks by importance to the current step, a
 
 ## 5 — Notification permission
 
-*Proposal — not built: the app asks for the notification permission when the user turns on 무비 완성 알림 in the 나 tab ([Me tab](../features/me.md#current-behavior)).*
+*Proposal — not built: the app asks for the notification permission when the user turns on 무비 완성 알림 on 나 → 알림 ([Me tab](../features/me.md#current-behavior)).*
 
 **Before**
 ```text
@@ -220,7 +220,7 @@ In wireframes, `L1`–`L5` order the blocks by importance to the current step, a
 
 **Applied principles** — 9, 7 Progressive Disclosure, 10 Obvious Navigation, 12.
 
-**After** — shipped, by owner decision: the [Me tab](../features/me.md#user-goal). The record is the hero (the week ring, the name, the two counts); five summary rows — 크레딧, 알림, 화면 테마, 관심사, 소셜 연결 — read out the current settings while the controls sit one push away on `/settings/*`; 로그아웃 and 계정 삭제 close the screen, and deletion is a confirmation screen of its own.
+**After** — shipped, by owner decision: the [Me tab](../features/me.md#user-goal). The record is the hero (the week ring, the name, the two counts); seven summary rows — 크레딧, 알림, 화면 테마, 스냅 분석, 앨범 저장, 관심사, 소셜 연결 — read out the current settings while the controls sit one push away on `/settings/*` (관심사 and 소셜 연결 read 준비 중 and open nothing); 로그아웃 and 계정 삭제 close the screen, and deletion is a confirmation screen of its own.
 
 **Why** — The root shows state, not controls: each row's read-out is the current setting, so nothing has to be opened to know it, and the row order is deliberate — the balance first, then the preferences most likely to be touched ([Ownership and state](../features/me.md#ownership-and-state)). The destructive actions sit last, away from routine rows.
 
@@ -289,7 +289,8 @@ In wireframes, `L1`–`L5` order the blocks by importance to the current step, a
   (after the first snap) the snap counter bumps and the viewfinder stays — snaps
               collect in the library; making a movie is a separate act, started
               from the Studio or the Snap tab
-  permissions: the camera when shooting starts, everything else when its feature is turned on
+  permissions: the camera and microphone when shooting starts, location as the first
+              snap is saved, everything else when its feature is turned on
   skip: always available
 ```
 **Why** — The product teaches itself by being used; the vocabulary is learned from labels attached to real objects the user just made.

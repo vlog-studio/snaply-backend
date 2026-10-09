@@ -69,7 +69,7 @@ Always design the declined path as a real path, not a degraded dead end.
 - **Knows.** That location is used to attach *where* a snap was taken and to notify them on arriving near a place worth shooting; whether background access is involved.
 - **First.** The feature that needs it, in the moment it is used — not on first launch.
 - **Default.** Foreground first. Ask for background/always only when the user enables a feature that genuinely needs it (geofenced alerts), never bundled with the foreground ask.
-- **CTA.** The foreground ask is the OS prompt itself, at the first capture that records a place — a refusal only files the snap without one. The background upgrade asks our own question first — `주변 장소 알림을 받을까요?` with `알림 받기` / `안 받기` — and only a yes runs the OS prompts ([Me tab](../features/me.md#current-behavior)).
+- **CTA.** The foreground ask is the OS prompt itself, at the first capture that records a place — a refusal only files the snap without one. The background upgrade asks our own question first — `주변 장소 알림을 받을까요?` with `알림 받기` / `안 받기` — and only a yes runs the OS prompts (the `위치 알림 받기` switch on 나 → 알림 — [Me tab](../features/me.md#current-behavior)).
 - **Disclosure.** Explain the always-on implication only at the background step, in one line. Snaps captured without location save fine, silently.
 
 See [`../features/location-and-push-notifications.md`](../features/location-and-push-notifications.md) for the current gating; keep the copy aligned with what the code actually registers.
@@ -152,7 +152,7 @@ Background work must never steal focus, block a CTA, or interrupt the current sc
 
 - **Knows.** What failed, in their words, and the one thing that fixes it.
 - **First.** The state at the failure site, scoped to what broke.
-- **Default.** Preserve the user's input and progress. Choose the lightest component: toast (transient), inline (field/block), dialog (a decision is required).
+- **Default.** Preserve the user's input and progress. Choose the lightest component that fits the severity ([`Errors Are Design Failures First`](principles.md#16--errors-are-design-failures-first)).
 - **CTA.** `다시 시도`, or the specific fix (`인터넷 연결 확인하기`). Never `확인` alone.
 - **Disclosure.** Diagnostics under a disclosure or a copy action; never as the headline. No blame, no codes as the message ([Toss's error principles](https://toss.tech/article/21021)).
 
@@ -218,4 +218,4 @@ Never mix sort and filter into one unlabeled control.
 - **CTA.** Outcome plus cost adjacency: `무비 만들기` with the cost stated next to it, not after the tap.
 - **Disclosure.** Fine-grained control is available before the commit and stays available after the result: a movie is editable whenever no run owns it ([the movie screen](../features/movie.md#user-goal)).
 
-Cost is always disclosed *before* the commit. `Value first, cost later` orders the reveal; it never hides the bill.
+`Value first, cost later` orders the reveal; it never hides the bill — [`Value Before Cost`](principles.md#8--value-before-cost)'s reverse Detection Rule.

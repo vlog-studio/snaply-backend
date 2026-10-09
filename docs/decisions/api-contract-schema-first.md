@@ -3,14 +3,13 @@
 **작성일**: 2026-09-05
 **상태**: 결정 — API 계약의 원천을 `packages/shared-types`의 Zod 스키마 하나로 통일하고,
 백엔드 검증·직렬화·OpenAPI와 모바일 타입·런타임 검증을 모두 그 스키마에서 유도한다.
-§4의 5단계는 2026-09-05에 구현됐다(검증 내역은 [progress.md](../progress.md)). 모바일의 런타임
-검증을 계약 스키마의 파생으로 바꾸는 일은 [backlog.md](../backlog.md) B-5 후속으로 남았다.
-**범위**: 결정과 근거, 기각한 대안, 이행 단계의 형태를 기록한다. 단계별 진행 상태는
-[backlog.md](../backlog.md) B-5가 관리한다.
+**원천**: 이 결정의 근거·기각한 대안·이행 단계의 형태. 계약 자체의 원천은
+[packages/shared-types/src/contract/](../../packages/shared-types/src/contract/)다.
 **관련 문서**: [constitution.md](../constitution.md) 제2조·제6조 ·
 [api-spec.md](../api-spec.md) · [team.md](../team.md) §2 ·
 [apps/mobile/docs/workflows/api-contract-integration.md](../../apps/mobile/docs/workflows/api-contract-integration.md)
-(결정 시점의 이름은 `openapi-api-integration.md` 였고 4단계에서 교체됐다)
+(결정 시점의 이름은 `openapi-api-integration.md` 였고 4단계에서 교체됐다) ·
+[progress.md](../progress.md) 2026-09-05(1~5단계 구현·검증) · [backlog.md](../backlog.md) B-5(남은 다듬기)
 
 ---
 
@@ -28,7 +27,8 @@
 
 ## 2. 배경 — 한 사실이 여섯 번 적혀 있다
 
-2026-09-05 기준으로 하나의 엔드포인트 계약이 다음 여섯 곳에 각각 손으로 적힌다.
+전환 전(2026-09-05 기준)에는 하나의 엔드포인트 계약이 다음 여섯 곳에 각각 손으로 적혀 있었다.
+이 절은 그 상태의 기록이며, 아래 파일들은 2·4단계에서 지워졌다.
 
 1. `packages/shared-types/src/domain.ts` — 응답 도메인 타입(TS 인터페이스)
 2. `apps/api/src/schemas/responses.ts` — 응답 JSON 스키마 770줄. **실제 와이어 계약**이다.
@@ -46,7 +46,7 @@
 정면으로 어긋난다.
 
 모노레포에 두 앱을 같이 둔 이유가 계약을 import로 닿게 하고 어긋남을 컴파일러가 잡게
-하려는 것인데, 현재는 마이크로서비스 사이에서나 쓰는 HTTP 추출 절차를 쓰고 있다.
+하려는 것인데, 전환 전에는 마이크로서비스 사이에서나 쓰는 HTTP 추출 절차를 쓰고 있었다.
 
 ## 3. 기각한 대안
 
@@ -100,3 +100,8 @@
 - 모바일의 "소비하는 필드만 검증, 모르는 enum은 통과"는 유지한다. 계약 스키마에서
   `.pick()`으로 좁히고 enum은 `z.string()`으로 넓힌 파생 스키마를 엔티티 경계에 둔다.
   정의는 하나이고 앱은 그 위에서 관대해지는 방향으로만 갈라진다
+
+이후의 결과: 라우트 맵은 4단계에서 레지스트리 `apiContract`(`packages/shared-types/src/contract/index.ts`)가 됐고,
+앱은 이를 **타입으로만** import 해(`apps/mobile/src/shared/api/paths.ts`) 계약 패키지가 앱 런타임 번들에 들어가지
+않는다([progress.md](../progress.md) 2026-09-05). 엔티티 경계 Zod 를 계약 스키마의 파생으로 바꾸는 일과 그때 필요한
+Metro·Jest 해석 확인은 [backlog.md](../backlog.md) B-5 다.

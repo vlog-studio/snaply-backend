@@ -75,7 +75,7 @@ Project addition: **no explanatory UI copy** — defined, with its exceptions, b
 
 | Bad | Better |
 | --- | --- |
-| AI 모델이 스냅을 분석해 자동으로 편집 구간을 결정합니다 | 찍은 스냅으로 짧은 영상을 만들어요 |
+| AI 모델이 스냅을 분석해 자동으로 편집 구간을 결정합니다 | 찍은 스냅으로 짧은 무비를 만들어요 |
 | 백그라운드 업로드 큐가 처리 중입니다 | 스냅 2개 올리는 중 |
 | Geofence가 등록되었습니다 | 찍기 좋은 장소에 도착하면 알려드려요 |
 
@@ -93,7 +93,7 @@ The replacement for explanation. A read-out is a short labeled fact that makes t
 
 | Situation | Read-out |
 | --- | --- |
-| A movie's cut list | `컷 6 · 0:14` |
+| A movie's cut list | `컷 6 · 14초` |
 | The library's holdings | `18개 · 0:23` |
 | Upload in progress | `2개 올리는 중` |
 | Offline queue | `연결되면 올라가요` |
@@ -129,7 +129,7 @@ One short line of state, plus the action that fills it. Nothing else.
 | No snaps yet (Snap tab) | The header read-out `0개 · 0:00`, with the `가져오기` cell standing alone as the action ([Snap library](../features/snaps.md#browsing-and-playback)) |
 | No movies (Movie tab) | `아직 만든 무비가 없어요` + `스냅 골라 새 무비` ([Studio and movies](../features/studio.md#the-board)) |
 | Load failed | `스냅을 불러오지 못했어요` + `다시 시도` |
-| No filter results | `조건에 맞는 스냅이 없어요` + `필터 지우기` — the shape to use; no surface filters today |
+| No filter results | `조건에 맞는 스냅이 없어요` + `필터 지우기` — the shape to use; no surface has a filter |
 
 Distinguish the three kinds — nothing yet, nothing matched, failed to load. One shared "empty" string for all three is a bug.
 
@@ -143,10 +143,12 @@ Fixed product vocabulary. Use exactly these words; never introduce a synonym.
 | --- | --- | --- |
 | 스냅 | One short recorded or extracted clip | 클립, 영상, 동영상, 순간, 필름, 사진 |
 | 영상 | Only a gallery video a snap is cut from (`영상에서 스냅 가져오기`, `다른 영상 고르기`) | Any snap |
-| 무비 | One generated video, or the draft collecting toward it | 브이로그, 비디오, 결과물, 프로젝트, 완성 파일 |
+| 무비 | One generated video, or the draft collecting toward it | 브이로그, 비디오, 결과물, 프로젝트, 완성 파일, 릴, 에피소드 |
+| 초안 | A movie waiting to be made — the draft the picks go straight into, and the first of the four status badges a movie wears on the board and the grid (`초안`, `만드는 중`, `완성`, `실패`) | 트레이 (below) |
 | 컷 | One snap inside a movie, and one slot of a template | 장면, 조각, 칸, 자리, 슬롯 |
 | 만들기 | Making a movie (`무비 만들기`, `만드는 중`, `다시 만들기`) | 생성 |
 | 스튜디오 | The tab where a movie is started | 홈, 메인 |
+| 나 | The tab with the user's record and every preference (`나 탭에서 언제든 끌 수 있고`, `나 탭 크레딧에서`) | 마이, 프로필 |
 | 가져오기 | Importing from the gallery | 업로드, 임포트, 추출 |
 | 올리기 | Sending a snap to the server (`올리는 중`, `다시 올리기`) | 업로드 |
 | 앨범 | The device's own photo gallery, where a snap's copy is the user's to keep (`앨범에 저장`, `앨범에 저장했어요`, `찍은 스냅을 앨범에도 저장`). The OS permission is named for the OS's own app (`사진 권한`, `사진 추가`) | 갤러리, 사진첩, 카메라 롤, 내려받기, 다운로드 |
@@ -177,7 +179,7 @@ When a new concept needs a name: pick a Korean word a first-time user would use,
 
 - 해요체 everywhere, including errors, push notifications, and system-initiated messages. No 합니다체, and no ~시 honorific (`잊었나요`, not `잊으셨나요`; `없나요`, not `없으신가요`).
 - Spacing: the auxiliary 주다 is spaced (`시도해 주세요`, `넣어 주세요`, `빼 주세요`, `채워 보세요`); `드려요` stays joined (`보내드려요`, `알려드려요`). The ellipsis is `…`, never `...`.
-- No English in product copy except brand names (Snaply, Google, TikTok, Instagram): durations are `3초`, not `3s`, and a CTA says `무비 만들기`, not `AI로 생성 시작`.
+- No English in product copy except brand names (Snaply, Google, OpenAI, TikTok, Instagram, iOS, Android): durations are `3초`, not `3s`, and a CTA says `무비 만들기`, not `AI로 생성 시작`.
 - Active and positive: `와이파이에서만 올려요` over `모바일 데이터로는 올릴 수 없습니다`.
 - Calm, not cute. No exclamation marks except in genuine celebration, and at most one per screen.
 - No urgency pressure, no fear, no dark-pattern framing of the decline option (`Suggest over force`).

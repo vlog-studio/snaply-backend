@@ -5,7 +5,7 @@
 A change is verified on three surfaces, each answering a different question:
 
 1. **Automated checks** (`npm run verify`, [below](#automated-checks)) — JavaScript logic and rendered interaction contracts. Always run first.
-2. **iOS Simulator and Android emulator** — the agent's on-device verification path: screens render, navigation and interaction flows work, the app talks to the backend. Boot them, drive them, and capture screenshots yourself using the procedures below (Expo Go on the iOS Simulator, a dev build on the Android emulator — [Expo Go limitations](#expo-go-limitations) explains the split). The web build (`expo start --web`) is not a reference runtime; do not use it as evidence.
+2. **iOS Simulator and Android emulator** — the agent's on-device verification path: screens render, navigation and interaction flows work, the app talks to the backend. Boot them, drive them, and capture screenshots yourself using the procedures below (Expo Go on the iOS Simulator, a dev build on the Android emulator — [Expo Go limitations](#expo-go-limitations) explains the split). The web build (`npm run web`) is not a reference runtime; do not use it as evidence.
 3. **Physical device, by the owner** — behavior a simulator cannot reproduce faithfully: real camera capture and the recording pipeline, the OS permission prompts as shipped, haptics, push-notification delivery, media-library writes, and network behavior from the device's own connection. When a change touches any of these, do not claim it verified. List the exact steps and expected results as a **separate manual-check section in your report** so the owner can run them on a real device, and say what you did verify on the simulator/emulator. If the owner has a device attached and asks you to drive it, [`android-device-verification.md`](android-device-verification.md) is the toolkit — confirm it with `adb devices` and target it with `-s <serial>` (or `ANDROID_SERIAL`); never assume it is the only device.
 
 iOS hardware checks follow the fallback in [`AGENTS.md`](../../AGENTS.md#planned-documentation).
@@ -29,7 +29,7 @@ Jest and React Native Testing Library validate JavaScript logic and rendered int
 The project does not prohibit `expo run:ios` on every development machine. The restriction applies only to older macOS machines that cannot install an Xcode version with the Swift 6.2 toolchain required by Expo SDK 57 / React Native 0.86.
 
 - An older Intel Mac (`x86_64`) on macOS 15.7.7 is limited to **Xcode 16.4 (Swift 6.1.2)** and cannot install Xcode 26 (Swift 6.2).
-- On that class of machine, a **local native iOS build is not possible**. Running `npx expo run:ios` fails with:
+- On that class of machine, a **local native iOS build is not possible**. Running `npm run ios` (`expo run:ios`) fails with:
   `package 'apple' is using Swift tools version 6.2.0 but the installed version is 6.1.0`.
 - A machine running a current macOS version with an Xcode release that provides Swift 6.2 is not subject to this limitation and may use `npm run ios` (`expo run:ios`).
 
@@ -84,7 +84,7 @@ Verify each interaction with `xcrun simctl io "iPhone 16" screenshot <path>`. To
 
 **Expo Go no longer boots this app on Android** (verified 2026-07-23 on the Pixel_API_35 emulator): the app imports `expo-notifications` at startup (`_app/providers` push-token registrar → `shared/lib/notifications/local.ts`), and on Android Expo Go that import throws a fatal `Uncaught Error: expo-notifications: Android Push notifications … removed from Expo Go with the release of SDK 53` before anything renders. Android verification therefore requires a dev build: `npm run android` for the emulator, `npm run android:device` for a connected physical device. iOS Expo Go is unaffected.
 
-Only native modules bundled in Expo Go work, and `expo-dev-client` configuration is ignored. Custom native behavior (e.g. `expo-camera` config-plugin options, `expo-glass-effect`) may differ from a real build or be unavailable. When a feature depends on such modules, verify it with EAS Build instead.
+Only native modules bundled in Expo Go work, and `expo-dev-client` configuration is ignored. Config-plugin options (e.g. `expo-camera`'s) may differ from a real build, and the native modules Expo Go lacks are absent: `@react-native-firebase/messaging` and `react-native-google-mobile-ads` load lazily and fall back to inert behavior with a dev warning, and the local `modules/video-trim` module (`VideoTrim`) is missing, so push registration, rewarded ads, and snap-extract trimming cannot be verified there. When a feature depends on such modules, verify it on the Android dev build or with EAS Build instead.
 
 Reanimated `entering` presets never start on iOS in Expo Go; the rule, `FadeInView`, and the splash exception are in [animations and gestures](../frameworks/animations-and-gestures.md#prefer-runtime-shared-value-animations-over-enteringexiting-presets).
 

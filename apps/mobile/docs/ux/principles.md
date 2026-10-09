@@ -38,7 +38,7 @@ Index:
 
 **Bad Pattern.** A tray screen that simultaneously promotes templates, shows the current tray, lists work in progress, lists finished movies, and pushes a capture prompt — all at equal weight, so nothing states what to do now.
 
-**Better Pattern.** The studio leads with its one advancing action — the `스냅 골라 새 무비` block, which carries the state it acts on (the library's `2개 · 0:06` and its newest frames). Other capabilities remain on the screen as clearly lower-weight sections, in a fixed order, below it: templates, then the movie board ([Studio](../features/studio.md#user-goal)).
+**Better Pattern.** The studio leads with its one advancing action — the `스냅 골라 새 무비` block, which carries the state it acts on (the library's `2개 · 0:06` and its newest frames). Other capabilities remain on the screen as clearly lower-weight sections, in a fixed order, below it: the one-row `스냅 골라 자동 편집`, the templates, then the movie board ([Studio](../features/studio.md#user-goal)).
 
 **Why.** Reduces Cognitive Load at entry and lets Information Hierarchy carry the meaning. When one goal owns the top of the screen, Predictability improves for every subsequent step because the user has a frame to interpret it in.
 
@@ -118,7 +118,7 @@ Index:
 
 **Bad Pattern.** A sheet titled `위치 권한` with buttons `취소` / `확인`. Confirm what?
 
-**Better Pattern.** `주변 장소 알림을 받을까요?` with `알림 받기` / `안 받기` — the location-alert question in the [Me tab](../features/me.md#current-behavior).
+**Better Pattern.** `주변 장소 알림을 받을까요?` with `알림 받기` / `안 받기` — the question the `위치 알림 받기` switch asks on 나 → 알림 ([Me tab](../features/me.md#current-behavior)).
 
 **Why.** Predictability and Error Prevention. The label carries the meaning, so the surrounding copy can shrink — which serves `Show State, Not Instructions` too.
 
@@ -322,7 +322,7 @@ Index:
 - The primary CTA sits in a different position or style than the app's established one for that screen class.
 - The same action has two labels (`담기` vs. `추가하기`) or one label means two things.
 - A gesture has a different meaning here than elsewhere in the app.
-- A new component duplicates an existing one in [`../conventions/cookbook.md`](../conventions/cookbook.md) rather than reusing it.
+- A new component duplicates an existing shared one (`src/shared/ui`, `src/widgets`) rather than reusing it.
 
 **Exceptions.**
 - **Platform conventions win over internal consistency** (iOS vs. Android back, share, and picker behavior): users' expectations come from the OS before they come from our app, so internal consistency applies to what we invent, not to what the platform already defines.
@@ -396,7 +396,7 @@ Index:
 
 **Bad Pattern.** Tapping a snap opens a full-screen editor with unsaved changes and no exit affordance; back on a modal discards work with no notice; a sheet appears on entry before the user has done anything.
 
-**Better Pattern.** The CTA names the destination's outcome; a modal exits with ✕ to a stated place; leaving with unsaved changes asks one clear question with outcome-named buttons (see the movie screen's exit question, `EditExitSheet`, in [`../features/movie.md`](../features/movie.md#user-goal)).
+**Better Pattern.** The CTA names the destination's outcome; a modal exits with ✕ to a stated place; leaving with work still to settle asks one clear question with outcome-named buttons — the movie screen's exit question (`EditExitSheet`), asked when edits have drifted a finished movie from its render: `이 구성으로 다시 만들기` / `나중에 만들기` / `편집 취소` ([The movie screen](../features/movie.md#user-goal)).
 
 **Why.** Predictability and User Control. Also cheap to get right: it is mostly labeling and honoring platform gestures.
 

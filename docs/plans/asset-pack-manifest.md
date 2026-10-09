@@ -1,13 +1,19 @@
 # 에셋 팩 매니페스트 — 스키마
 
 **작성일**: 2026-08-20 (main 에는 2026-10-03 에 들어왔다)
-**상태**: 제안 (착수 전) — 현행 사실이 아니다. 이 초안이 따르는 확정 결정은
-[decisions/edit-spec-v3.md](../decisions/edit-spec-v3.md) §2 가 원천이다.
+**상태**: 제안 — 현행 사실이 아니다. 어디까지 구현됐는지는 [계획 인덱스](README.md)
+**원천**: 에셋 팩 레지스트리·매니페스트·스타일 번들의 스키마 초안. 이 초안이 따르는 확정 규칙은
+[decisions/edit-spec-v3.md](../decisions/edit-spec-v3.md) §2·§3, 어휘 값은 `packages/shared-types/src/*-vocabulary.json` 이
+원천이다. 미결은 [backlog.md](../backlog.md) A-7 에만 둔다
 **관련 문서**: [edit-spec-v3.md](./edit-spec-v3.md)(스펙 쪽 계약) ·
 [archive/edit-spec-v3-kickoff.md](../archive/edit-spec-v3-kickoff.md)(착수 순서, 보관) ·
-[storage-and-subscription-policy.md](../decisions/storage-and-subscription-policy.md) §3
+[decisions/sticker-asset-sourcing.md](../decisions/sticker-asset-sourcing.md) · [decisions/bgm-sourcing.md](../decisions/bgm-sourcing.md) ·
+[decisions/movie-cleanup-after-export.md](../decisions/movie-cleanup-after-export.md)
 
-미결은 [backlog.md](../backlog.md) A-7 에만 둔다.
+> **정정**(2026-10-09): §12.1·§12.2 가 전제로 든 "무비 30일 만료 뒤 크레딧 없이 재생성"
+> ([storage-and-subscription-policy.md](../decisions/storage-and-subscription-policy.md) §3)은 2026-09-09 에
+> [movie-cleanup-after-export.md](../decisions/movie-cleanup-after-export.md)가 대체했다 — 끝낸 무비를 다시 만드는 것은
+> 크레딧을 내는 새 생성이다(MOV-16·MOV-19). 두 절을 그에 맞췄다.
 
 ---
 
@@ -21,8 +27,12 @@
 - **어휘 값** — `anchor` 의 `kind`·`ref`·`scaleRef`, `platform` 허용 집합, 무드 태그 집합,
   전환 `kind` 는 `packages/shared-types/src/*-vocabulary.json` 이 원본이다. §9 는 매니페스트
   필드가 그 어휘를 **어떻게 쓰는지**만 정의한다.
-  ⚠️ `anchor` 계열을 뺀 나머지는 **아직 사전 파일이 없다** — 파일을 몇 개로 묶을지가 미결이다.
+  전환 `kind` 는 2026-10-01 에 [`transition-vocabulary.json`](../../packages/shared-types/src/transition-vocabulary.json)으로
+  닫혔다. ⚠️ `platform` 허용 집합과 무드 태그 집합은 **아직 사전 파일이 없다** — 파일을 몇 개로 묶을지가 미결이다.
 - **미결 결정** — [backlog.md](../backlog.md) A-7.
+
+괄호 안의 `B-3`·`C-1`·`D-8` 같은 ID 는 [decisions/edit-spec-v3.md](../decisions/edit-spec-v3.md) §1·§2 표의 결정 항목이다 —
+백로그 ID 가 아니다.
 
 ---
 
@@ -172,14 +182,14 @@ registry.json                        ← 짧은 TTL. 어떤 팩이 존재하는�
 ```
 
 **`defaultAnchor` 는 없다.** `anchorAffinity[0]` 이 곧 기본값이다 — 두 필드를 두면 어긋날 여지가
-생긴다(E).
+생긴다([decisions/edit-spec-v3.md](../decisions/edit-spec-v3.md) §3).
 
 ⚠️ **무드 태그는 `assetMoodTags` 다. BGM 의 `moodTags` 와 다른 어휘 집합이다.** §5.1 참조.
 
 ### 5.1 무드 어휘가 둘인 이유
 
-현행 `calm` · `upbeat` · `daily` 는 [editor.py:34-38](../../apps/ai-worker/src/pipeline/editor.py#L34-L38)
-의 **BGM 디렉터리 이름**(프리셋 → 디렉터리 매핑)이지 무드 어휘가 아니다.
+현행 `calm` · `upbeat` · `daily` 는 [editor.py](../../apps/ai-worker/src/pipeline/editor.py) `PRESETS` 의 `bgm_tag` —
+**BGM 디렉터리 이름**(프리셋 → 디렉터리 매핑, `music.pick_track`)이지 무드 어휘가 아니다.
 
 그 3값으로 스티커·LUT 의 무드를 표현하면 어휘가 빈약하고, 번들의 `bgm.filter` 와 섞이면
 서로 다른 프리셋의 태그가 한 배열에 들어간다.
@@ -542,8 +552,8 @@ MediaPipe Face Detection 6키포인트에 `cheekL`·`cheekR`·`chin` 이 없으�
 
 ## 11. 재렌더 규칙
 
-> **재렌더는 레지스트리·번들을 다시 조회하지 않는다. 스펙에 핀된 `packId`·`assetId` 만
-> 해석한다. 쿼리형·생성 시 필드는 신규 생성 경로에서만 평가된다.**
+**재렌더는 레지스트리·번들을 다시 조회하지 않는다. 스펙에 핀된 `packId`·`assetId` 만
+해석한다. 쿼리형·생성 시 필드는 신규 생성 경로에서만 평가된다.**
 
 해당 필드: `rollout` · `bgm.filter` · `sceneAffinity` · `transitionWeights` · `density` · `correction`.
 
@@ -571,9 +581,9 @@ experimental  →  active  →  deprecated
 
 ### 12.1 `expiresAt: null` 필수
 
-[storage-and-subscription-policy.md](../decisions/storage-and-subscription-policy.md) §3 은 무비
-30일 만료 후 **크레딧 소모 없이 언제든 재생성**을 확정했다. 라이선스 만료로 팩을 못 쓰게 되면
-그 약속이 깨진다 — 사용자는 이미 100크레딧을 낸 결과물을 영구히 잃는다.
+끝낸 무비의 프로젝트는 영구 보존되고, 원본 스냅이 남아 있는 동안 다시 만들 수 있다 — 다시 만들기는
+크레딧을 내는 새 생성이다([movie-cleanup-after-export.md](../decisions/movie-cleanup-after-export.md) · MOV-14·MOV-19).
+라이선스 만료로 팩을 못 쓰게 되면 그 약속이 깨진다 — 사용자는 예전 프로젝트를 돈을 내고도 다시 만들 수 없다.
 
 **이건 스키마 문제가 아니라 조달 요건이다.** `expiresAt` 이 `null` 이 아니면 등록을 거부한다.
 
@@ -586,8 +596,8 @@ experimental  →  active  →  deprecated
 
 워커는 다운로드 후 검증하고 불일치면 렌더를 실패시킨다. 잘못된 에셋으로 렌더하는 것보다 낫다.
 
-⚠️ 유료 export 는 크레딧 환급으로 구제되지만 **무료 재생성 경로는 구제 수단이 없다.**
-운영상 이 실패가 나오면 안 되므로 팩 게시 파이프라인에서 해시를 먼저 확정한다.
+⚠️ 실패한 생성은 크레딧이 환급되지만 사용자는 무비를 받지 못하고, 해시가 계속 어긋나면 그 스펙은 다시 만들 수
+없다. 운영상 이 실패가 나오면 안 되므로 팩 게시 파이프라인에서 해시를 먼저 확정한다.
 
 ---
 

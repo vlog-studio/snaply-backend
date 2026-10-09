@@ -51,11 +51,12 @@ Users can bring a video they already have — the phone's gallery — into Snapl
 - `src/shared/lib/video-trim` adapts the native module (web stub throws); `src/shared/lib/video-picker` adapts the system picker (web stub returns nothing).
 - `src/shared/lib/trim-geometry` is the px↔sec drag arithmetic this screen and the movie timeline share.
 - `src/shared/lib/video-thumbnails` supplies the explicit-offset frame (`getVideoThumbnail(uri, { timeMs })`, offset-keyed cache) this strip needs.
-- `src/app/extract.tsx` is the route adapter (`/extract?source&duration`), keying the page by `source` so a changed source is a fresh mount; the route presents as a `fullScreenModal` beside `/capture` in the root stack.
+- `src/app/extract.tsx` is the route adapter (`/extract?source&duration`), keying the page by `source` so a changed source is a fresh mount, and redirecting to the Snap tab when no `source` is given; the route presents as a `fullScreenModal` beside `/capture` in the root stack.
 
 ## Known limitations
 
 - Not yet verified on hardware, and iOS has never been compiled. The trim's real duration, passthrough behavior per codec, and long-video strip performance are all device questions.
+- Cutting needs the `VideoTrim` native module (`modules/video-trim`), which only the dev builds link. In Expo Go — the iOS Simulator path ([local-development-and-testing.md](../workflows/local-development-and-testing.md#expo-go-limitations)) — `trimVideo` (`shared/lib/video-trim`) rejects, so every extraction ends in the screen's failure message; verify extraction on the Android dev build.
 - Extraction length is capped at 5 seconds by product rule; a source shorter than 0.5 seconds is extracted whole (the floor governs cutting a moment down, not refusing one).
 - The picker's cache copy of the source is left to the OS to clean; extracting from a very large video temporarily doubles its cache footprint (copy + cuts).
 - The strip does not auto-scroll while the window's body is dragged against the viewport edge; scroll first, then drag.

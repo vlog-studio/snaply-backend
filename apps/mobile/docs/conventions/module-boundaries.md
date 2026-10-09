@@ -15,7 +15,16 @@ _app → pages → widgets → features → entities → shared
 - Consumers outside a slice must use the slice-root Public API.
 - Files inside the same slice use relative imports to concrete files.
 
+No lint rule enforces any of this. `eslint.config.js` applies only `eslint-config-expo` and the
+Prettier compatibility config — there is no Steiger or import-boundary plugin — so `npm run verify`
+passes a boundary violation. Check every new import yourself
+([feature development §5](../workflows/feature-development.md#5-review-dependencies)).
+
 ## Allowed and forbidden examples
+
+The `photo`, `photo-detail`, `share-photo`, and `capture-photo` slices in this document are
+illustrative names, not slices in this codebase. Every other module an example names — under
+`shared/`, `entities/movie`, `entities/movie-template` — is the codebase's own.
 
 ```ts
 // pages/photo-detail/ui/photo-detail-page.tsx
@@ -26,14 +35,17 @@ import { SharePhotoButton } from '@/features/share-photo';
 // ✅ Concrete relative path inside the same slice
 import { usePhotoDetail } from '../model/use-photo-detail';
 
+// ❌ A deep import into another slice's internals
+import { PhotoCard } from '@/entities/photo/ui/photo-card';
+```
+
+```ts
+// features/share-photo/ui/share-photo-button.tsx
 // ❌ A feature importing the higher Pages layer
 import { PhotoDetailPage } from '@/pages/photo-detail';
 
 // ❌ A feature importing another slice on the Features layer
 import { CapturePhotoButton } from '@/features/capture-photo';
-
-// ❌ A deep import into another slice's internals
-import { PhotoCard } from '@/entities/photo/ui/photo-card';
 ```
 
 ## Public APIs
@@ -87,15 +99,15 @@ import type { Photo } from '..';
 `shared/ui` and `shared/lib` can contain many unrelated modules, so do not create one large barrel for either segment. Give each module its own Public API.
 
 ```text
-shared/ui/button/index.ts
+shared/ui/snaply-button/index.ts
 shared/ui/text-field/index.ts
-shared/lib/date/index.ts
+shared/lib/datetime/index.ts
 shared/lib/secure-storage/index.ts
 ```
 
 ```ts
-import { Button } from '@/shared/ui/button';
-import { formatDate } from '@/shared/lib/date';
+import { SnaplyButton } from '@/shared/ui/snaply-button';
+import { formatDateTime } from '@/shared/lib/datetime';
 ```
 
 Because `_app` and `shared` have no FSD slices, each segment or independent module inside a segment acts as a Public API boundary.
@@ -104,19 +116,21 @@ Because `_app` and `shared` have no FSD slices, each segment or independent modu
 
 Use an `@x` API only when an entity relationship cannot be composed on a higher layer and a direct type-level reference is intrinsic to the model.
 
+The one `@x` in this codebase: a movie template names the style a movie made from it starts with.
+
 ```text
-entities/photo/
+entities/movie/
 ├── @x/
-│   └── album.ts
+│   └── movie-template.ts
 └── index.ts
 ```
 
 ```ts
-// entities/photo/@x/album.ts
-export type { Photo } from '../model/photo';
+// entities/movie/@x/movie-template.ts
+export type { MovieStyle } from '../model/movie';
 
-// entities/album/model/album.ts
-import type { Photo } from '@/entities/photo/@x/album';
+// entities/movie-template/model/movie-template.ts
+import type { MovieStyle } from '@/entities/movie/@x/movie-template';
 ```
 
 - Allow `@x` only on the Entities layer.
@@ -128,9 +142,9 @@ import type { Photo } from '@/entities/photo/@x/album';
 React Native and Expo platform extensions are implementation variants of the same FSD module.
 
 ```text
-shared/ui/date-picker/
-├── date-picker.tsx
-├── date-picker.web.tsx
+shared/lib/secure-storage/
+├── secure-storage.ts
+├── secure-storage.web.ts
 └── index.ts
 ```
 
@@ -141,9 +155,9 @@ Consumers import the Public API rather than selecting a platform file directly. 
 - Layers, slices, segments, and ordinary files: `kebab-case`
 - React components and TypeScript types or interfaces: `PascalCase`
 - Hooks: `use-*.ts` filenames with `useSomething` exports
-- Slice names: product terms or actions rather than technologies, such as `photo` or `share-photo`
+- Slice names: product terms or actions rather than technologies, such as `snap` or `share-movie`
 - Do not introduce broad boundaries named `common`, `misc`, `utils`, `helpers`, `types`, `components`, or `hooks`.
-- Make API filenames describe their purpose: `get-photo.ts`, `photo.queries.ts`, or `update-caption.mutation.ts`.
+- Make API filenames describe their purpose: `get-locations.ts`, `location.queries.ts`, `location.dto.ts`, or `restore-server-snap.ts`.
 
 ## Circular-dependency prevention checklist
 

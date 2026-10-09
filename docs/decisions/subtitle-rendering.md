@@ -2,7 +2,7 @@
 
 **작성일**: 2026-09-05
 **상태**: 미결 — 결정 대기. 회의(2026-08-31)에서는 "미정"으로 남았다.
-**출처**: [meetings/2026-08-31-dev-sync.md](../meetings/2026-08-31-dev-sync.md) §2 · [backlog.md](../backlog.md) A-7 "번인 자막 전환 여부"
+**출처**: [meetings/2026-08-31-dev-sync.md](../meetings/2026-08-31-dev-sync.md) §2 · [backlog.md](../backlog.md) A-7 "번인 자막으로 전환할 것인가"
 **관련 문서**: [specs/movie.md](../specs/movie.md) MOV-9 · 계약 [`contract/edit-jobs.ts`](../../packages/shared-types/src/contract/edit-jobs.ts) `subtitles` · [`contract/movies.ts`](../../packages/shared-types/src/contract/movies.ts) `captions` · [plans/trend-editing-pipeline.md](../plans/trend-editing-pipeline.md)
 
 ## 한 줄 요약

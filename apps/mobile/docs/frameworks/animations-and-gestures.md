@@ -14,7 +14,7 @@ documentation for the installed versions; this document does not restate their A
 - The worklets Babel plugin is applied automatically by `babel-preset-expo`
   (`react-native-worklets/plugin`). There is no project `babel.config.js` to edit.
 - `GestureHandlerRootView` is mounted once in `src/_app/providers/app-providers.tsx`,
-  wrapping the whole authenticated tree. RNGH gestures anywhere in the app rely on
+  wrapping the whole navigator tree. RNGH gestures anywhere in the app rely on
   it; never mount a second one.
 - Reanimated and RNGH are already native dependencies in the dev builds — new
   animation code needs no rebuild.
@@ -98,8 +98,8 @@ gesture be told apart from the scroll by direction?**
 `.activateAfterLongPress(...)` (no screen uses this shape today):
 
 - Use `.activateAfterLongPress(...)` so the scroll gesture keeps working; on
-  activation give haptic feedback (`Haptics.impactAsync(Medium)` — the established
-  lift/collect cue) and lock the scroll (`scrollEnabled={!dragActive}` via a
+  activation give haptic feedback (`impactFeedback('medium')` from `@/shared/lib/haptics`,
+  which plays on iOS only — the established lift/collect cue) and lock the scroll (`scrollEnabled={!dragActive}` via a
   `runOnJS` state flip) until the gesture settles.
 - Match the long-press delay to the sibling `Pressable`'s `delayLongPress` so
   gesture entries feel like one family.

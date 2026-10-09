@@ -2,17 +2,19 @@
 
 **작성일**: 2026-08-10 (2026-08-11 결정)
 **상태**: 결정 — 평면 `Video`를 참조하는 `Movie` 엔티티 채택
-**범위**: 영상 묶음의 저장 모델과 채택 근거를 기록한다.
-**후속 작업의 원천**: [backlog.md](../backlog.md) A-1(Movie 세부 정책·구현),
-A-4(위치 메타데이터 저장 여부)
-**후속 결정**: 세부 규칙 ①~⑤(순서 기본값·재내보내기·삭제 연동·자동 그룹핑·`POST /edit-jobs` 수명)는
-[movie-export-policy.md](movie-export-policy.md), 내보내기 후 정리는
-[movie-cleanup-after-export.md](movie-cleanup-after-export.md)(둘 다 2026-09-09), 앱 쪽 저장은
-[movie-client-cache.md](movie-client-cache.md)(2026-09-12)가 정했다. 안 3 의 "요금제를 초안 수·월 내보내기
-수에 연결"은 크레딧 과금([credit-payment-model.md](credit-payment-model.md))으로 대체됐다.
+**원천**: 영상 묶음의 저장 모델(`Movie` 엔티티)을 고른 근거와 기각한 안
+**관련 문서**: [backlog.md](../backlog.md) A-1(Movie 세부 정책·구현) · A-4(위치 메타데이터 저장 여부) ·
+[specs/movie.md](../specs/movie.md) MOV-1·MOV-2 · [product-concept.md](product-concept.md)
 
-현재 영상은 유저에게 평면으로 귀속되고, 편집은 목록에서 고른 영상들을 `POST /edit-jobs`로
-직접 묶어 요청하는 구조다. 기획 목표인 "묶음 단위 관리 + 내보내기(브이로그 생성)"를
+> **후속 결정**(2026-09-09): 세부 규칙 ①~⑤(순서 기본값·재내보내기·삭제 연동·자동 그룹핑·`POST /edit-jobs` 수명)는
+> [movie-export-policy.md](movie-export-policy.md), 내보내기 후 정리는 [movie-cleanup-after-export.md](movie-cleanup-after-export.md)가
+> 정했다. 앱 쪽 저장은 [movie-client-cache.md](movie-client-cache.md)(2026-09-12)가 정했다.
+
+> **대체**(2026-08-12): 안 3 의 "요금제를 초안 수·월 내보내기 수에 연결"(안 3 장점 · 채택 방향 3)은 크레딧 과금으로
+> 대체됐다 → [credit-payment-model.md](credit-payment-model.md)
+
+작성 당시(2026-08-10) 영상은 유저에게 평면으로 귀속되고, 편집은 목록에서 고른 영상들을 `POST /edit-jobs`로
+직접 묶어 요청하는 구조였다. 기획 목표인 "묶음 단위 관리 + 내보내기(브이로그 생성)"를
 어떤 모델로 가져갈지 세 가지 안을 비교해 아래와 같이 결정했다.
 
 ---
@@ -29,8 +31,8 @@ Snaply의 사용 흐름: **외출/여행 중 위치 알림을 받고 클립 촬�
 
 ## 안 1 — 명시적 프로젝트 (폴더형)
 
-> 유저가 프로젝트를 먼저 만들고, 그 안에 영상을 업로드하고, 프로젝트를 내보낸다.
-> (원 기획서의 "프로젝트1 > 영상 1,2,3,4" 구조 그대로)
+유저가 프로젝트를 먼저 만들고, 그 안에 영상을 업로드하고, 프로젝트를 내보낸다.
+(원 기획서의 "프로젝트1 > 영상 1,2,3,4" 구조 그대로)
 
 ```
 Project (name, status) ─< Video (projectId 필수, position)
@@ -51,8 +53,8 @@ POST /projects → POST /projects/:id/videos/upload-url → POST /projects/:id/e
 
 ## 안 2 — 자동 묶음 (세션형)
 
-> 서버가 촬영 시각(+위치)으로 클립을 자동 그룹핑. 유저는 "9월 3일 성수동" 묶음을
-> 열어서 브이로그 생성만 누른다. (애플 사진 "추억" 방식)
+서버가 촬영 시각(+위치)으로 클립을 자동 그룹핑. 유저는 "9월 3일 성수동" 묶음을
+열어서 브이로그 생성만 누른다. (애플 사진 "추억" 방식)
 
 ```
 Video (capturedAt, lat/lng 메타데이터) — 저장은 평면 유지
@@ -74,9 +76,9 @@ POST /edit-jobs — 그룹의 videoIds로 기존 API 그대로
 
 ## 안 3 — Movie (결과물 중심, draft형) — 채택
 
-> "폴더"가 아니라 **만들려는 결과물(브이로그)이 곧 묶음**. 유저가 클립을 골라 담으면
-> 초안(draft)이 되고, 초안은 저장·수정 가능하며, 내보내기를 누르면 편집이 실행된다.
-> 폴더보다는 장바구니/작곡 중인 곡에 가깝다.
+"폴더"가 아니라 **만들려는 결과물(브이로그)이 곧 묶음**. 유저가 클립을 골라 담으면
+초안(draft)이 되고, 초안은 저장·수정 가능하며, 내보내기를 누르면 편집이 실행된다.
+폴더보다는 장바구니/작곡 중인 곡에 가깝다.
 
 ```
 Movie (title, stylePreset, clips[videoId+구간+순서], status: draft|exporting|done)
@@ -120,13 +122,4 @@ POST /movies → PATCH /movies/:id (클립 추가/순서/구간) → POST /movie
 | **묶음 엔티티** | **`Movie`로 결정.** `Video`는 평면으로 유지하고 `Movie`가 클립을 참조한다. |
 
 위치 메타데이터 저장은 이 결정의 범위 밖이다. 검토 여부와 상태는
-[backlog.md](../backlog.md) A-4에서만 관리한다.
-
-## 결정 범위 밖의 후속 작업
-
-`Movie`의 클립 순서·재내보내기·삭제 연동·자동 그룹핑·기존 `POST /edit-jobs`와의 관계는
-[movie-export-policy.md](movie-export-policy.md)가 정했다. 남은 작업은 [backlog.md](../backlog.md) A-1,
-위치 저장 여부는 A-4에서만 관리한다.
-
-이 문서는 후속 작업의 상태를 갱신하지 않는다. 결정을 변경하면 새 결정 기록에서 이 문서를
-대체하고, 실제 작업 상태는 `backlog.md`만 갱신한다.
+[backlog.md](../backlog.md) A-4에서만 관리한다. `Movie` 의 남은 작업은 A-1 이다.

@@ -1,41 +1,39 @@
 # Snaply API 안내 (FE 전달용)
 
-> 이 문서는 **FE 가 다뤄야 할 동작 + WebSocket 계약**이다. 엔드포인트의 정확한 형태
-> (경로·메서드·요청·응답 필드·enum·에러 코드별 부가 필드)의 원천은
-> [`packages/shared-types/src/contract/`](../packages/shared-types/src/contract/)의 Zod 계약이고,
-> 백엔드의 검증·직렬화·Swagger(`/docs`)·[`apps/api/openapi.json`](../apps/api/openapi.json)·앱의
-> `apiRequest` 타입이 전부 거기서 나온다. **이 문서는 형태를 다시 적지 않는다** — 필드가 궁금하면
-> 계약 파일이나 Swagger 를 본다. 여기에는 계약만 봐서는 모르는 것, 즉 호출 순서·멱등성·에러의
-> 의미·앱이 하드코딩하면 안 되는 값·비동기 흐름을 적는다.
-> 제품 요구·정책 값의 원천은 [specs/](./specs/README.md)이고 배경은 [decisions/](./decisions/)다.
-> 라우트나 동작을 바꾸면 계약·스냅샷과 **같은 커밋에서 이 문서도 갱신한다.**
+**작성일**: 2026-07-27
+**상태**: 현행 — 계약만으로 알 수 없는 API 동작과 WebSocket·푸시 메시지 안내
+**원천**: 호출 순서·멱등성·에러의 의미·앱이 하드코딩하면 안 되는 값·비동기 흐름의 원천. 엔드포인트의 형태(경로·메서드·요청·응답 필드·enum·에러 코드별 부가 필드)는 이 문서가 아니라 [`packages/shared-types/src/contract/`](../packages/shared-types/src/contract/)의 Zod 계약이 원천이다 — 백엔드의 검증·직렬화·Swagger·[`apps/api/openapi.json`](../apps/api/openapi.json)·앱의 `apiRequest` 타입이 전부 거기서 나온다. WebSocket 메시지의 스키마도 계약(`editProgressEventSchema`)이다
+**관련 문서**: [specs/](./specs/README.md)(제품 요구·정책 값) · [decisions/](./decisions/README.md)(배경) · [ONBOARDING.md](../ONBOARDING.md) §3-6(로컬 Swagger) · [AGENTS.md](../AGENTS.md) §문서 갱신 의무
 
-> **인터랙티브 문서(Swagger UI)**: 개발 서버 실행 후 **`http://localhost:3000/docs`** 에서 직접
-> 호출·테스트할 수 있다. OpenAPI JSON 은 `http://localhost:3000/docs/json`, 커밋된 스냅샷은
-> `apps/api/openapi.json`(Postman/외부 소비자용). 운영에서는 비활성(필요 시 `ENABLE_DOCS=true`).
-> WebSocket 은 OpenAPI 로 표현되지 않아 아래 절이 계약의 설명이다.
+이 문서는 **형태를 다시 적지 않는다** — 필드가 궁금하면 계약 파일이나 Swagger(`/docs`)를 본다. Swagger 는
+운영에서 꺼져 있고 `ENABLE_DOCS=true` 로 연다(그래도 개발 로그인은 열리지 않는다). WebSocket 과 푸시 메시지는
+OpenAPI 로 표현되지 않아 아래 [WebSocket](#websocket-edit-jobsidprogress) · [푸시 알림](#푸시-알림-fcm-data) 절이
+안내다. 라우트나 동작을 바꾸면 계약·스냅샷과 **같은 커밋에서 이 문서도 갱신한다.**
 
 - **Base URL**: `{API_BASE_URL}` (개발: `http://localhost:3000`)
 - **인증**: 🔒 표시 엔드포인트는 `Authorization: Bearer {supabase_jwt}` 헤더 필수. 토큰은 Supabase Auth 로그인으로 발급.
-- **응답 형식(공통)**: 성공 `{ "success": true, "data": … }` / 실패 `{ "success": false, "error": { "code", "message", …부가 필드 } }`.
+- **응답 형식(공통)**: 성공 `{ "success": true, "data": … }` / 실패 `{ "success": false, "error": { "code", "message", …부가 필드 } }`
+  ([`common.ts`](../packages/shared-types/src/contract/common.ts)). 예외는 외부 플랫폼이 받는 웹훅(`/billing/webhook/*`)의 성공 응답뿐이다(봉투 없는 `{ "received": true }`).
   부가 필드는 **라우트·상태 코드별로** 계약(`common.ts`의 `*ErrorSchema`)에 선언된 것만 온다 — 선언되지 않은 키는 직렬화에서 지워진다. 예: `403 ACCOUNT_PENDING_DELETION` 의 `purgeAfter`, `POST /movies/{id}/export` · `POST /edit-jobs` 의 `402 INSUFFICIENT_CREDITS` 의 `required`·`balance`.
-- **공통 에러 코드**: `UNAUTHORIZED`(401) · `FORBIDDEN`(403) · `ACCOUNT_PENDING_DELETION`(403, 삭제 대기 계정 — 복구는 `POST /auth/me/restore`) · `NOT_FOUND`(404) · `BAD_REQUEST`/`VALIDATION_ERROR`(400) · `RATE_LIMITED`(429) · `INTERNAL_SERVER_ERROR`(500).
+- **공통 에러 코드**: `UNAUTHORIZED`(401) · `FORBIDDEN`(403) · `ACCOUNT_PENDING_DELETION`(403, 삭제 대기 계정 — 복구는 `POST /auth/me/restore`) · `NOT_FOUND`(404) · `BAD_REQUEST`/`VALIDATION_ERROR`(400) · `CONFLICT`(409) · `RATE_LIMITED`(429) · `INTERNAL_SERVER_ERROR`(500).
   타 유저의 리소스를 **조회·삭제**하면 403 이 아니라 **404** 다(존재를 알리지 않는다). 편집 요청처럼 남의 영상을 **입력으로 넘긴** 경우만 403 이다.
-- **Rate limit**: 기본 IP당 60req/분. `POST /edit-jobs` 유저당 5req/분, `POST /notifications/geofence-enter`·`POST /movie-recommendations`·`POST /movie-drafts` 유저당 10req/분. 초과 시 `429 RATE_LIMITED`. 도메인 한도(`429 RECOMMENDATION_LIMIT`·`429 DRAFT_LIMIT`)는 다른 코드다 — 잠시 후 재시도로 풀리지 않는다.
-  `POST /edit-jobs` 의 유저당 제한은 요청당 비용이 큰 작업의 큐 폭탄을 막는 보호 장치이며, 크레딧·결제와 무관하게 모두에게 같다.
-- **알 수 없는 enum 값**: 서버가 값을 늘릴 수 있는 곳(편집 상태·에러 코드·템플릿 스타일 등)에서 앱은 모르는 값을 **버리지 말고 보수적으로 해석**한다(모르는 실패 코드는 `INTERNAL`처럼, 모르는 템플릿 스타일은 건너뛰기).
+- **Rate limit**: 전역은 IP당 분당 60회(`RATE_LIMIT_GLOBAL_MAX`, `/billing/webhook/*` 제외). 라우트별 제한은 토큰(`Authorization` 헤더)당 분당 — `POST /edit-jobs` 5회, `POST /notifications/geofence-enter`·`POST /movie-recommendations`·`POST /movie-drafts` 10회. 초과 시 `429 RATE_LIMITED`. 도메인 한도(`429 RECOMMENDATION_LIMIT`·`429 DRAFT_LIMIT`)는 다른 코드다 — 잠시 후 재시도로 풀리지 않는다.
+  `POST /edit-jobs` 의 토큰당 제한은 요청당 비용이 큰 작업의 큐 폭탄을 막는 보호 장치이며, 크레딧·결제와 무관하게 모두에게 같다. `POST /movies/{id}/export` 에는 라우트별 제한이 없다 — 전역 제한과 크레딧 예약, 무비당 생성 1개(409)가 막는다.
+- **알 수 없는 enum 값**: 서버가 값을 늘릴 수 있는 곳(편집 상태·에러 코드·템플릿 스타일·푸시 `kind` 등)에서 앱은 모르는 값을 **버리지 말고 보수적으로 해석**한다(모르는 실패 코드는 `INTERNAL`처럼, 모르는 템플릿 스타일은 건너뛰기).
 
 ---
 
 ## 인증 / 프로필 (`contract/auth.ts`)
 
-- `GET /auth/me` 🔒 — 첫 호출 시 유저가 자동 생성된다(인증된 첫 요청이면 어느 것이든 upsert 를 일으킨다). 앱은 알림 설정을 읽으려고
-  부른다. 정기 구독 제거로 `plan` 필드는 없다 — 잔액은 `GET /billing/credits`.
+- `GET /auth/me` 🔒 — 첫 호출 시 유저가 자동 생성된다(인증된 첫 요청이면 어느 것이든 upsert 를 일으키고, 가입 보너스
+  [CRD-8](./specs/credits-and-payment.md)도 그때 한 번 지급된다). 앱은 알림 설정을 읽으려고 부른다. 잔액은 프로필에 없다 —
+  `GET /billing/credits`.
 - `PATCH /auth/me` 🔒 — 보낸 필드만 바뀐다. `avatarUrl: null` 은 지우기다.
-  **알림 설정(전체 스위치 · 종류별 스위치 · 방해 금지 시간)이 사는 곳이다** — 필드는 계약. 서버가 원천이라 앱은 기기에 사본을
-  두지 않는다. **위치 · 무비 알림은 기본 꺼짐**이고(앱의 스위치가 기기 권한을 물은 뒤 켠다), 전체 스위치는 켜짐 · 방해 금지는
-  22~08시가 기본이다. 전체를 끄면 종류와 무관하게 아무것도 가지 않고, **스냅 만료 예고에는 종류별 스위치가 없다**(끄면 모르는
-  채로 영상을 잃는다 — [decisions/notification-preferences.md](./decisions/notification-preferences.md)).
+  **알림 설정(전체 스위치 · 종류별 스위치 · 방해 금지 시간)이 사는 곳이다** — 필드는 계약, 기본값은
+  [NTF-7](./specs/notifications.md). 서버가 원천이라 앱은 기기에 사본을 두지 않는다. 전체를 끄면 종류와 무관하게 아무것도
+  가지 않고, **스냅 만료 예고에는 종류별 스위치가 없다**(끄면 모르는 채로 영상을 잃는다 —
+  [decisions/notification-preferences.md](./decisions/notification-preferences.md)). 어느 스위치가 어느 푸시를 막는지는
+  [푸시 알림](#푸시-알림-fcm-data).
 - `DELETE /auth/me` 🔒 — 즉시: SNS 연동·FCM 토큰 삭제, 진행 중 편집 작업 취소(예약 크레딧 환급). 이후 **30일 유예** 동안 복구 가능하고, 유예가 지나면 배치가 S3 원본까지 영구 삭제한다. 응답의 `purgeAfter` 가 실삭제 예정 시각.
   삭제 대기 중에 다른 인증 API 를 부르면 `403 ACCOUNT_PENDING_DELETION` 이고 같은 `purgeAfter` 를 에러에 싣는다 — 앱은 삭제 응답을 저장해 두지 않아도 남은 유예를 보여줄 수 있다.
 - `POST /auth/me/restore` 🔒 — 유예 내 복구. FCM 토큰·SNS 연동은 되살아나지 않는다(재등록 필요). 크레딧 잔액은 보존된다. 삭제 대기 상태가 아니면 400.
@@ -47,36 +45,36 @@
 배경 [decisions/snap-content-analysis.md](./decisions/snap-content-analysis.md) §6.1). 동의는 서버가 집행하므로
 앱이 묻는 화면을 건너뛰어도 분석·추천 요청은 `403 ANALYSIS_CONSENT_REQUIRED` 로 거절된다.
 
-- `GET /auth/me/analysis-consent` 🔒 — `{ available, currentVersion, granted, grantedAt }`.
-  - `available: false` 는 서버 스위치가 꺼져 있다는 뜻이다. 동의해도 분석이 돌지 않으므로 **묻지 않는다.**
+- `GET /auth/me/analysis-consent` 🔒
+  - `available: false` 는 서버 스위치(`MOVIE_RECOMMENDATION_ENABLED`)가 꺼져 있다는 뜻이다. 동의해도 분석이 돌지 않으므로 **묻지 않는다.**
   - `granted` 는 **현재 문구 버전**(`currentVersion`, 원천은 계약의 `SNAP_ANALYSIS_CONSENT_VERSION`)에 동의했는가다.
     문구가 바뀌어 버전이 오르면 이전 동의는 `granted: false` 가 되고, 앱은 바뀐 문구로 다시 묻는다.
 - `POST /auth/me/analysis-consent` 🔒 — 본문 `{ version }` 은 사용자에게 **보여 준** 문구의 버전이다. 멱등하다.
   `currentVersion` 과 다르면 `409 CONSENT_VERSION_MISMATCH` — 상태를 다시 읽어 바뀐 문구로 다시 묻는다.
-- `DELETE /auth/me/analysis-consent` 🔒 — 철회. 그 뒤로 분석하지 않고 **이 사용자의 분석 결과와 추천 기록을 파기**한다
-  (스냅은 그대로). 동의가 없어도 200 이다.
+- `DELETE /auth/me/analysis-consent` 🔒 — 철회. 그 뒤로 분석하지 않고 **이 사용자의 분석 결과·추천 기록·편집 초안 기록을
+  파기**한다(스냅은 그대로, 동의 기록은 철회 시각과 함께 남는다). 동의가 없어도 200 이다(멱등).
 
 ---
 
 ## 영상 (`contract/videos.ts`)
 
-업로드는 2단계다. ① `GET /videos/upload-url` 🔒 로 presigned URL 과 `pending` 레코드를 받고 ② 그 URL 에 파일을 **PUT**(헤더 `Content-Type` 은 ①에서 보낸 `contentType` 과 동일해야 서명이 유효) ③ `POST /videos` 🔒 로 등록하면 `ready` 가 된다. 단일 클립 최대 500MB — 초과하면 ③에서 객체와 레코드를 지우고 400(presigned PUT 은 발급할 때 크기를 제한할 수 없어 등록 단계에서 검사한다). S3 에 객체가 없어도 400.
+업로드는 2단계다. ① `GET /videos/upload-url` 🔒 로 presigned URL(기본 15분 유효, `S3_PRESIGN_EXPIRY_SECONDS`)과 `pending` 레코드를 받고 ② 그 URL 에 파일을 **PUT**(헤더 `Content-Type` 은 ①에서 보낸 `contentType` 과 동일해야 서명이 유효) ③ `POST /videos` 🔒 로 등록하면 `ready` 가 된다. 단일 클립 최대 500MB(SNAP-7, `S3_MAX_UPLOAD_BYTES`) — 초과하면 ③에서 객체와 레코드를 지우고 400(presigned PUT 은 발급할 때 크기를 제한할 수 없어 등록 단계에서 검사한다). S3 에 객체가 없어도 400. ①에서 24시간 안에 ③까지 가지 않은 `pending` 레코드는 정리 배치(`npm run videos:purge-pending -w apps/api`)가 지울 수 있고, 그 뒤의 ③은 404 다 — ①부터 다시 한다.
 
-- `POST /videos` 본문의 `clientId`(선택) — 앱이 붙인 스냅 이름(로컬 스냅 id). 목록의 `clientId` 로 그대로 돌아와, 찍은 기기가 자기 스냅을 알아본다. 서버는 해석하지 않고 **유일성도 보장하지 않는다.**
+- `POST /videos` 본문의 `clientId`(선택) — 앱이 붙인 스냅 이름(로컬 스냅 id). 목록의 `clientId` 로 그대로 돌아와, 찍은 기기가 자기 스냅을 알아본다. 서버는 해석하지 않고 **유일성도 보장하지 않는다.** 등록이 끝나면 서버가 배포 렌디션(`playbackUrl`)을 만들기 시작한다 — 렌디션이 실패해도 등록은 성공이다.
 - `GET /videos` 🔒 — 업로드 최신순(같은 시각이면 `id` 역순) 커서 페이지네이션. `nextCursor` 가 `null` 이 아니면 다음 페이지가 있다. 삭제·만료된 영상은 제외, 편집 결과물(`kind: result`)도 같은 목록에 온다 — 스냅만 보려면 `kind=source`. `pending` 항목은 아직 등록되지 않은 것이다.
-- 목록·상세 항목의 동기화용 필드: `width`·`height`(표시 기준, 렌디션 워커가 배포본에서 잰 값 — 없으면 `null`), `clientId`, `expiresAt`(서버 보관이 끝나는 시각. 업로드가 끝난 원본에만 있고, 정책에서 매번 유도하므로 정책이 바뀌면 값도 바뀐다).
-- `POST /videos/lookup` 🔒 — `{ ids: uuid[] }`(최대 100개)가 아직 있는지(`live`), 지워졌다면 왜인지(`removed` + `removalReason: user | expired` + `removedAt`) 알려 준다. 목록에서 사라진 스냅의 이유를 앱이 구분할 때 쓴다. 남의 id 와 없는 id 는 똑같이 응답에서 빠진다.
-- `originalUrls`·`editedUrl`·`thumbnailUrl`·`playbackUrl` 은 **presigned GET URL**(기본 1시간 유효). 만료되면 목록/상세를 다시 호출해 갱신한다.
+- `POST /videos/lookup` 🔒 — 넘긴 id 가 아직 있는지(`live`), 지워졌다면 왜인지(`removed` + `removalReason`) 알려 준다. 목록에서 사라진 스냅의 이유를 앱이 구분할 때 쓴다. 응답 순서는 요청 순서와 다르니 `id` 로 맞춘다. 남의 id 와 없는 id 는 똑같이 응답에서 빠진다.
+- `originalUrls`·`editedUrl`·`thumbnailUrl`·`playbackUrl` 은 **presigned GET URL**(기본 1시간 유효, `S3_DOWNLOAD_URL_EXPIRY_SECONDS`). 만료되면 목록이나 상세(`GET /videos/{id}`)를 다시 호출해 갱신한다.
 - `status` 의미: `pending`(URL 만 발급) → `ready`(편집 가능) / 결과물은 `processing` → `done`(`editedUrl` 사용 가능) | `failed`.
-- `DELETE /videos/{id}` 🔒 — 소프트 삭제. 목록·상세·무비에서 곧바로 사라지고 다른 기기는 `POST /videos/lookup` 의 `removed`(`user`)로 안다.
+- `DELETE /videos/{id}` 🔒 — 소프트 삭제. 목록·상세에서 곧바로 사라지고 다른 기기는 `POST /videos/lookup` 의 `removed`(`user`)로 안다.
+  서버는 무비의 컷을 지우지 않는다 — 그 스냅을 쓰던 컷은 `unavailable`(`unavailableReason: user`)이 된다(앱은 지우면서 컷을 빼고 `PATCH` 한다).
   **업로드가 끝났고 보관 기간 안인 스냅은 파일을 남긴다** — 응답의 `restorableUntil`(원래 보관 기간이 끝나는 때)까지 되살릴 수 있고, 그 뒤
   정리 배치가 지운다(SNAP-20). 그 밖의 영상(올라가는 중인 스냅 · 보관 기간이 끝난 스냅 · 결과물)은 그 영상이 소유한 S3 객체(원본·썸네일·렌디션,
   결과물이면 편집본·썸네일)를 바로 지우고 `restorableUntil: null` — 되돌릴 수 없다. 결과물을 지워도 원본 스냅의 파일은 남는다.
-- `GET /videos/trash` 🔒 — 최근 삭제: 되살릴 수 있는 스냅을 지운 순서로 최근 것부터 최대 200개(`{ items: [{ id, clientId, capturedAt,
-  durationMs, width, height, thumbnailUrl, deletedAt, restorableUntil }] }`). 보관 기간이 끝난 스냅은 나오지 않는다.
+- `GET /videos/trash` 🔒 — 최근 삭제: 되살릴 수 있는 스냅을 지운 순서로 최근 것부터 최대 `TRASH_LIST_MAX`개(페이지네이션 없음).
+  보관 기간이 끝난 스냅과 파일을 남기지 않고 지운 영상은 나오지 않는다.
 - `POST /videos/{id}/restore` 🔒 — 지운 스냅 되살리기. 응답은 되살린 `Video`. 목록에 돌아오고 다른 기기의 reconcile 이 다시 들인다(그 기기의
-  원본은 이미 지웠으므로 서버 사본을 받는다). 지울 때 무비에서 빠진 컷은 돌아오지 않는다. 이미 살아 있으면 그대로 돌려준다(멱등).
-  보관 기간이 끝났거나 파일을 남기지 않고 지운 영상(이 변경 전의 삭제 포함)은 409 `NOT_RESTORABLE`, 없거나 남의 영상은 404.
+  원본은 이미 지웠으므로 서버 사본을 받는다). 앱이 지우면서 무비에서 뺀 컷은 돌아오지 않는다. 이미 살아 있으면 그대로 돌려준다(멱등).
+  보관 기간이 끝났거나 파일을 남기지 않고 지운 영상(이 변경 전의 삭제 포함)은 409 `NOT_RESTORABLE`, 없거나 남의 영상·결과물은 404.
 
 ---
 
@@ -89,7 +87,7 @@
 배경: [decisions/snap-content-analysis.md](./decisions/snap-content-analysis.md)
 
 - `POST /videos/{videoId}/analysis` 🔒 — **비동기**. `202` 로 접수만 알리고 상태는 `GET` 으로 폴링한다.
-  **멱등하다.** 진행 중이면 같은 `analysisId`, `failed` 이고 `error.retryable: true` 면 같은 레코드를 `queued` 로 되돌려 재시도(별도 retry API 없음), `done` 이면 그대로 반환, 되돌릴 수 없는 실패(손상된 영상·정책 거절)는 **409**.
+  **멱등하다.** 진행 중이면 같은 `analysisId`, `failed` 이고 `error.retryable: true` 면 같은 레코드를 `queued` 로 되돌려 재시도(별도 retry API 없음), `done` 이면 그대로 반환, 되돌릴 수 없는 실패(손상된 영상·정책 거절)는 **`409 CONFLICT`**.
   **분석에 동의한 사용자만 요청할 수 있다**([동의](#스냅-분석-동의-contractanalysis-consentts)) — 영상을 보기 전에 검사한다.
   에러: 동의 없음 `403 ANALYSIS_CONSENT_REQUIRED` · 서버 스위치(`MOVIE_RECOMMENDATION_ENABLED`) 꺼짐 `503 ANALYSIS_DISABLED` ·
   업로드 미확정(`status != ready`) 400 · 타 유저·`kind=result`·없는 영상 404 · 큐 접근 불가 `503 QUEUE_UNAVAILABLE`(잠시 후 재요청).
@@ -105,24 +103,29 @@
 
 ## AI 편집 (`contract/edit-jobs.ts`)
 
-- `POST /edit-jobs` 🔒 (5req/분) — **비동기**. `202` + `jobId`. `npm run worker` 가 떠 있지 않으면 `queued` 에 머문다.
+편집 작업은 무비 생성(`POST /movies/{id}/export`)이 쓰는 엔진이다. 앱은 무비 경로로 만들고 진행률·취소·실패 사유를
+여기서 본다. **`POST /edit-jobs` 직접 호출은 무비 생성으로 대체됐고 다음 릴리스에서 없앤다**
+([decisions/movie-export-policy.md](./decisions/movie-export-policy.md) ⑤, [backlog](./backlog.md) A-1).
+
+- `POST /edit-jobs` 🔒 (토큰당 분당 5회) — **비동기**. `202` + `jobId`. `npm run worker` 가 떠 있지 않으면 `queued` 에 머문다.
   - `clips`(권장) 또는 `videoIds`(구버전, 전체 영상) 중 **하나만**. `clips` 는 최종 합성 순서이며 같은 영상을 다른 구간으로 반복 사용할 수 있다. 클립 수 상한(계약)은 클립 수만큼 정규화 인코딩·전환 필터가 늘어나는 워커 점유 시간의 상한이다. `startMs` 생략은 0, `endMs` 생략은 영상 끝까지. 지정 구간은 최소 100ms.
-  - 소유·`source`·`ready` 영상만 허용(아니면 403). `outputProfile`·`fitMode` 는 생략하면 서버 기본값(계약의 `.default()`) — 앱은 세로 숏폼만 만들므로 명시해서 보낸다.
+  - 소유·`source`·`ready` 영상만 허용(아니면 403). `outputProfile`·`fitMode` 는 생략하면 서버 기본값(계약의 `.default()` — 세로 숏폼 · 흐린 배경). 무비 생성은 이 기본값으로만 만든다.
   - **크레딧 100 을 예약(차감)한다.** 잔액이 모자라면 `402 INSUFFICIENT_CREDITS` 이며 작업이 만들어지지 않는다(예약과 생성이 한 트랜잭션). 에러의 `required`·`balance` 로 부족분을 그린다. 작업이 **실패하거나 취소되면 전액 자동 환급**, 자동 재시도로 추가 차감 없음. 해상도·워터마크 차등은 없다.
+  - 큐 적재가 실패하면 요청은 500 이고, 이미 만든 작업은 `failed`(`errorCode: QUEUE_FAILED`)로 남으며 예약은 환급된다.
 - `GET /edit-jobs/{id}` 🔒 — 폴링용. `videoId` 는 **결과물** 영상 id 다(원본이 아니다). 완료 후 `GET /videos/{videoId}` 로 `editedUrl` 을 얻는다.
-  - `errorMessage` 는 서버 진단용 원문 — **사용자 노출 문구가 아니다.** 화면 문구는 `errorCode` 로 분기해 앱이 만든다. `errorCode` 는 append-only 라 앱은 모르는 코드를 `INTERNAL` 처럼 다룬다. `TIMEOUT` 은 작업이 워커 제한 시간(`EDIT_TIMEOUT_SECONDS`)을 넘긴 것이다 — 멈춘 ffmpeg·whisper 가 워커를 붙잡아 두지 않게 한다.
+  - `errorMessage` 는 서버 진단용 원문 — **사용자 노출 문구가 아니다.** 화면 문구는 `errorCode` 로 분기해 앱이 만든다. `errorCode` 는 append-only 라 앱은 모르는 코드를 `INTERNAL` 처럼 다룬다. `TIMEOUT` 은 작업이 워커 제한 시간(`EDIT_TIMEOUT_SECONDS`, 기본 10분)을 넘긴 것이다 — 멈춘 ffmpeg·whisper 가 워커를 붙잡아 두지 않게 한다.
   - `pipelineVersion`·`editSpec`·`renderSpec` 은 재현 가능한 작업 스냅샷이다.
-  - `editSpec.version` 은 셋이다. `POST /edit-jobs` 는 v2(프리셋 하나가 전환을 정한다), **무비 생성은 v3**
-    (2026-10-01) — `timeline.cuts`(`cutId`·`videoId`·`sourceInMs`·`sourceOutMs?`)와 이어진 두 컷마다의
-    `timeline.transitions`(`fromCutId`·`toCutId`·`kind`·`durationMs?`). v3 는 별도 큐(`EDIT_V3_QUEUE_NAME`, 기본
+  - `editSpec.version` 은 1~3 이다. v1 은 옛 작업, `POST /edit-jobs` 는 v2(프리셋 하나가 전환을 정한다), **무비 생성은 v3**
+    (2026-10-01, 경계마다 전환 — 형태는 계약의 `editSpecV3Schema`). v3 는 별도 큐(`EDIT_V3_QUEUE_NAME`, 기본
     `edit-v3`)로만 간다 — 구버전 워커가 전환을 버리고 v2 로 렌더하지 않게 하기 위해서다
     ([decisions/edit-spec-v3.md](./decisions/edit-spec-v3.md) §4).
 - `DELETE /edit-jobs/{id}` 🔒 — `queued`/`processing` 취소. 최종 상태 `canceled`, 결과물 레코드는 목록에서 사라진다. 대기 중은 큐에서 제거, 처리 중은 워커가 다음 진행률 갱신 시점에 중단(업로드 직전이면 산출물이 생길 수 있으나 `canceled` 가 `done` 으로 되살아나지 않는다). 재취소는 200(멱등), `done`/`failed` 는 `409 CONFLICT`. 예약 크레딧은 전액 환급(한 번만 기록).
 
 ### WebSocket `/edit-jobs/{id}/progress`
 
-메시지 계약의 원천은 `contract/edit-jobs.ts` 의 `editProgressEventSchema` 다(OpenAPI 에는 없다).
-연결: `ws(s)://…/edit-jobs/{id}/progress?token={supabase_jwt}` (쿼리 파라미터 토큰).
+메시지 스키마의 원천은 [`contract/edit-jobs.ts`](../packages/shared-types/src/contract/edit-jobs.ts) 의 `editProgressEventSchema` 다(OpenAPI 에는 없다).
+연결: `ws(s)://…/edit-jobs/{id}/progress`. 인증은 `Authorization: Bearer` 헤더, 헤더를 붙일 수 없는 클라이언트는 쿼리
+`?token={supabase_jwt}`. 인증이 실패하면 업그레이드 전에 일반 HTTP 에러(401, 삭제 대기 계정은 403)로 거절되어 소켓이 열리지 않는다.
 서버 → 클라이언트 메시지(JSON), 한 형태이고 어느 필드가 있는지로 종류를 읽는다 — **`status` 를 먼저 보고, 없으면 진행 메시지**:
 
 ```
@@ -137,6 +140,7 @@
 앱 코드에는 보이지 않고 라이브러리가 pong 으로 답한다 — 운영의 공용 ALB 가 180초 동안 데이터가 없으면 연결을 끊는데,
 편집은 단계 사이가 그보다 길 수 있어서다. 앱은 여전히 끊기면 다시 붙는 쪽이 안전하다(재연결 시 스냅샷 1건을 다시 받는다).
 
+- 진행 메시지의 `step` 은 워커의 진행 단계 원문이다 — 화면에 그대로 쓰지 말고 앱이 단계별 문구로 바꾼다. 단계는 거칠어서(한 작업에 여섯 번 안팎) 그 사이에 진행률이 멈춰 있는 것이 정상이다.
 - 완료/실패/취소 시 서버가 연결을 종료한다. `code` 는 GET 응답의 `errorCode` 와 같은 분류다.
 - 이미 종료된 작업에 연결하면 최종 상태 메시지 1건만 받고 닫힌다. `done` 이면 위 완료 메시지(`outputUrl` 포함)와 동일, `canceled` 는 `{ "status": "canceled" }` 한 건.
 - 없는 작업이거나 남의 작업이면 `{ "status": "failed", "error": "편집 작업을 찾을 수 없습니다." }` 후 종료. 실제 편집 실패가 아니라 `code` 가 없다 — 앱은 `code` 유무로 구분한다.
@@ -156,7 +160,7 @@
 - `POST /movies` 🔒 — 생성. 컷 없이 만들면 빈 초안이다. **앱이 `id`(uuid) 를 정해 보낼 수 있다**
   (2026-09-12) — 앱은 오프라인에서 초안을 먼저 만들고 스냅 업로드가 끝난 뒤 올리므로 서버가 id 를
   새로 매기면 앱이 이미 쓰는 id 가 바뀐다. 같은 id 로 다시 보내면 새로 만들지 않고 있는 것을
-  돌려준다(멱등). 다른 사용자의 id 와 겹치면 409.
+  돌려준다(멱등). 다른 사용자의 id 와 겹치거나 내가 지운 무비의 id 면 409.
 - `GET /movies` 🔒 — **최근 편집순**(스튜디오 보드의 순서). 커서 페이지네이션.
 - `GET /movies/{id}` 🔒 · `PATCH /movies/{id}` 🔒 · `DELETE /movies/{id}` 🔒
 - `POST /movies/{id}/export` 🔒 — 생성 시작(**202**, 진행률은 아래).
@@ -165,6 +169,7 @@
 FE 가 알아야 할 동작:
 
 - **컷 순서는 배열 순서다.** `order` 필드는 없다 — 두 표현이 어긋나지 않게 하기 위해서다.
+- 컷에 넣을 수 있는 것은 **내 소유의 지워지지 않은 스냅**(`kind: source`)뿐이다. 아니면 `POST`·`PATCH` 가 403 이다.
 - **`arranger` 가 순서의 주인이다.** `user`(기본)면 보낸 순서를 서버가 절대 다시 정렬하지 않고,
   `ai` 면 촬영 시각 순으로 정렬한다. 사용자가 순서를 손대면 `user` 로 바꿔 보내야 그 뒤로 고정된다.
 - **`PATCH` 의 `clips` 는 통째로 교체**다. 부분 수정이 아니다. **빈 배열도 받는다**(2026-09-12) —
@@ -203,13 +208,14 @@ FE 가 알아야 할 동작:
 
 ### 끝내기 (`POST /movies/{id}/finish`)
 
-사용자가 결과물을 **다운로드했거나 SNS 에 게시했을 때** 호출한다. 서버의 결과물 파일을 지우고
-`resultVideoId` 를 비우지만 **무비는 남는다** — 끝낸 뒤에도 고쳐서 다시 만들 수 있고, 그것은
-새 생성이라 크레딧 100 을 다시 낸다. **다시 보기는 제공하지 않는다.**
+사용자가 결과물을 **다운로드했을 때** 호출한다. 서버의 결과물 파일을 지우고 `resultVideoId` 를 비우며 무비는
+`draft` 로 돌아가지만 **무비는 남는다** — 끝낸 뒤에도 고쳐서 다시 만들 수 있고, 그것은 새 생성이라 크레딧 100 을
+다시 낸다. **다시 보기는 제공하지 않는다.** 생성 중이면 409, 이미 결과물이 없으면 `resultDeleted: false` 로 끝낸다.
 
 ⚠️ **이 호출을 추측으로 하면 안 된다.** 시스템 공유 시트는 사용자가 실제로 저장했는지 알려주지
 않는다(시트를 닫기만 해도 성공과 구분되지 않는다). 다운로드 경로에서는 **사용자의 명시적 행동**을
-받아 호출하고, SNS 게시는 서버가 성공을 알고 있으므로 그쪽에서 판정한다. 되돌릴 수 없다.
+받아 호출한다. SNS 게시는 서버가 성공을 알고 있으므로 **앱이 부르지 않는다** — 게시가 `success` 면 서버가 같은
+동작으로 끝낸다([SNS 연동](#sns-연동-contractsnsts)). 되돌릴 수 없다.
 
 ---
 
@@ -243,17 +249,21 @@ FE 가 알아야 할 동작:
 켜져 있어도 **분석에 동의한 사용자만** 쓸 수 있다 — 동의가 없으면 `403 ANALYSIS_CONSENT_REQUIRED` 이고 추천을 만들지
 않는다([동의](#스냅-분석-동의-contractanalysis-consentts)). 앱은 동의 전에는 요청하지 않고 로컬 매칭만 쓴다.
 
-- `POST /movie-recommendations` 🔒 (10req/분) — **비동기**. `202` 로 접수한다.
+- `POST /movie-recommendations` 🔒 (토큰당 분당 10회) — **비동기**. `202` 로 접수한다.
   - `candidates` 는 **촬영 시간 오름차순**이어야 한다(점수화의 시간 사전값).
   - **멱등하다.** 같은 (유저·템플릿·후보 집합)이 24시간 안에 다시 오면 기존 추천을 돌려준다. 순서만 다른 재요청도 같은 집합이다.
   - 소유·`kind=source`·`status=ready` 스냅만 후보(아니면 403, 어느 것이 문제인지는 알려주지 않는다).
-  - 에러: 후보 0개 400 · 후보 초과 **`400 TOO_MANY_CANDIDATES`**(`max` 동봉. 앱은 보내기 전에 상한 이내로 샘플링하므로 이 에러는 서버 상한이 앱이 아는 값보다 내려갔다는 뜻이다) · 없거나 내린 템플릿 404 · 24시간 한도 **`429 RECOMMENDATION_LIMIT`** · 분석 큐 접근 불가 503 · 기능 꺼짐 `503 RECOMMENDATION_DISABLED`.
+  - 접수하면서 후보마다 분석을 요청한다([스냅 내용 분석](#스냅-내용-분석-contractvideo-analysests)과 같은 멱등 규칙). 후보 하나의 거절은 추천을 실패시키지 않고 그 후보가 채점에서 빠질 뿐이다.
+  - 에러: 후보 0개 400 · 후보 초과 **`400 TOO_MANY_CANDIDATES`**(`max` 동봉. 앱은 보내기 전에 상한 이내로 샘플링하므로 이 에러는 서버 상한이 앱이 아는 값보다 내려갔다는 뜻이다) · 없거나 내린 템플릿 404 · 24시간 한도 **`429 RECOMMENDATION_LIMIT`** · 분석 큐 접근 불가 `503 QUEUE_UNAVAILABLE` · 기능 꺼짐 `503 RECOMMENDATION_DISABLED`.
 - `GET /movie-recommendations/{id}` 🔒
   - `processing` 동안 `slots` 는 **빈 배열**이다. 앱은 로컬 매칭을 그대로 두고 폴링한다.
-  - **채점은 이 조회 시점에 일어난다.** 접수 후 일정 시간이 지나면 끝난 분석만으로 채점하고 닫는다 — 분석 워커가 죽어도 추천이 영원히 걸리지 않는다.
-  - `slots` 는 템플릿 슬롯 순서 그대로. `videoId: null` 은 **넣을 후보가 없었다**는 뜻이고 화면에서는 `지금 찍기` 로 남는다.
+  - **채점은 이 조회 시점에 일어난다.** 접수 후 3분(`SCORING_DEADLINE_MS`)이 지나면 끝난 분석만으로 채점하고 닫는다 — 분석 워커가 죽어도 추천이 영원히 걸리지 않는다.
+  - `slots` 는 템플릿 슬롯 순서 그대로. `videoId: null` 은 **넣을 후보가 없었다**는 뜻이고 화면에서는 `지금 찍기` 로 남는다. 한 스냅은 한 슬롯만 채운다.
   - `score` 는 **슬롯 적합도**다. 스냅이 무엇을 담고 있는지에 대한 주장이 아니다.
+  - `excluded[].reason` 의 뜻은 계약 `vocab.ts` 의 `RECOMMENDATION_EXCLUSION_REASONS` 주석에 있다.
   - 분석의 `summary`·`topics` 등 모델 출력은 **응답에 없다.**
+
+---
 
 ## 편집 초안 (`contract/movie-drafts.ts`)
 
@@ -261,7 +271,7 @@ FE 가 알아야 할 동작:
 [decisions/edit-director.md](./decisions/edit-director.md), 상한은 [decisions/auto-edit-draft.md](./decisions/auto-edit-draft.md) §5.
 화면에는 "AI" 라는 말을 쓰지 않는다.
 
-- `POST /movie-drafts` 🔒 (10req/분) — **동기**. 응답이 곧 결과다. 분석 동의·기능 스위치와 무관하게 동작한다.
+- `POST /movie-drafts` 🔒 (토큰당 분당 10회) — **동기**. 응답이 곧 결과다. 분석 동의·기능 스위치와 무관하게 동작한다.
   - `snaps` 는 업로드된 스냅 `{ videoId }` 와 업로드되지 않은 스냅 `{ localId, capturedAt }` 을 섞어 보낸다. 순서는 상관없다.
   - 응답 `cuts` 는 **촬영순**이다. 업로드된 컷은 `startMs`·`endMs`(서버가 자른 구간, 없으면 스냅 전체), 업로드되지 않은 컷은
     `{ localId }` 로 돌아오고 스냅 전체를 쓴다. 업로드됐지만 서버가 아직 신호를 계산하지 못한 스냅도 구간 없이 돌아온다.
@@ -282,8 +292,22 @@ FE 가 알아야 할 동작:
 
 ## 위치 알림 (`contract/locations.ts`)
 
-- `GET /locations` 🔒 — `lat`·`lng` 필수, `radius`(m) 생략 시 계약 기본값. Haversine 반경 필터 + 거리순.
-- `POST /notifications/geofence-enter` 🔒 (10req/분) — 조건을 통과하면 FCM 을 보내고 `{ notified: true }`, 아니면 `{ notified: false, reason }`. `reason` 은 계약의 `GEOFENCE_SKIP_REASONS`(`cooldown` 은 30분 내 재진입). 없는 위치는 404.
+- `GET /locations` 🔒 — `lat`·`lng` 필수, `radius`(m) 생략 시 계약 기본값. 서버가 관리하는 활성 장소만, Haversine 반경 필터 + 거리순.
+- `POST /notifications/geofence-enter` 🔒 (토큰당 분당 10회, 라우트는 `routes/notifications.ts`) — 조건을 통과하면 FCM 을 보내고 `{ notified: true }`, 아니면 `{ notified: false, reason }`. 보내지 않아도 200 이다. `reason` 은 계약의 `GEOFENCE_SKIP_REASONS` — `notifications_disabled` 는 전체 또는 위치 알림 스위치가 꺼진 것, `cooldown` 은 같은 장소에 30분 안에 다시 들어온 것(NTF-2), `no_token`·`send_failed` 는 발송 실패라 쿨다운을 쓰지 않는다. 없거나 내린 장소는 404.
+
+---
+
+## 푸시 알림 (FCM `data`)
+
+서버가 보내는 푸시의 `data` 는 OpenAPI 에 없다. 값은 모두 문자열이다(FCM `data` 의 제약). 앱은 `kind` 로 탭의
+목적지를 정하고, 모르는 `kind`(또는 `kind` 없음)는 앱만 연다([NTF-8](./specs/notifications.md)). 토큰은 계정당
+기기 하나다(`POST /auth/fcm-token`, [backlog](./backlog.md) B-2).
+
+| 알림 | `data` | 보내는 조건 |
+|---|---|---|
+| 무비 완성 | `kind: movie_ready` · `movieId` · `videoId`(결과물) | 무비 생성이 끝났을 때. 전체·무비 알림 스위치가 켜져 있고 방해 금지 시간이 아닐 때만 — 그 밖에는 보내지 않고 버린다(NTF-6). 실패는 보내지 않는다. 무비 없이 `POST /edit-jobs` 로 만든 결과물도 보내지 않는다 |
+| 스냅 만료 예고 | `kind: snap_expiry` · `daysBefore`(`"3"` · `"1"`) | 하루 한 번 낮에 도는 배치가 보낸다(SNAP-13, [expiry-notice-schedule.md](./decisions/expiry-notice-schedule.md)). 전체 스위치만 본다 — 종류별 스위치와 방해 금지 시간은 보지 않는다(NTF-9) |
+| 위치 도착 | `locationId`(`kind` 없음) | `POST /notifications/geofence-enter` 가 `notified: true` 일 때(NTF-1~3) |
 
 ---
 
@@ -291,18 +315,19 @@ FE 가 알아야 할 동작:
 
 경로는 `/sns/{platform}/…` 이고 `platform` 은 계약의 `SNS_PLATFORMS` 다(그 외 값은 404 가 아니라 400).
 
-- `GET /sns/connections` 🔒 — 연동된 계정 목록. `tokenExpiresAt` 이 `null`(만료 시각을 모름 — 계약 설명)이거나
-  이미 지났으면 재연동을 안내한다([backlog E-1](./backlog.md)).
+- `GET /sns/connections` 🔒 — 연동된 계정 목록. `tokenExpiresAt` 이 `null`(만료 시각을 모름)이거나 이미 지났으면
+  재연동을 안내한다(계약 설명). 만료가 가까운 토큰은 게시할 때 서버가 갱신한다.
 - `GET /sns/{platform}/connect` 🔒 — `authorizeUrl` 로 앱에서 OAuth 를 진행한다. 인스타그램은 비즈니스/크리에이터 계정만 허용.
 - `GET /sns/{platform}/callback` (인증 없음) — OAuth 콜백. **항상 302 딥링크**로 응답한다(실패해도 JSON 을 주지 않으므로 앱은 딥링크만 처리한다):
   `snaplyapp://sns/connected?platform=…`(성공) / `snaplyapp://sns/error?platform=…&reason=<사유>`(실패).
   스킴은 `APP_DEEPLINK_SCHEME`(기본 `snaplyapp://`)이며 앱(`apps/mobile/app.json`)의 `scheme` 과 같아야 한다.
   `reason`: 서버가 붙이는 값은 `invalid_state`(state 위조) · `account_type`(인스타 개인계정) · `missing_params` · `exchange_failed`(토큰 교환 실패)이고, 플랫폼이 돌려준 `error`(예: 사용자 취소 `access_denied`)는 **그대로** 실린다 — 앱은 모르는 값을 일반 실패로 다룬다.
-- `DELETE /sns/{platform}/disconnect` 🔒
-- `POST /sns/{platform}/upload` 🔒 — 편집 완료(`editedUrl` 존재) 영상만. 400 이 나는 경우: 미연동 / 편집 미완료 / **영상이 공개 URL 이 아님**(인스타·틱톡이 URL 을 직접 내려받으므로 `https` 공개 주소여야 한다 — 로컬 MinIO 는 호출 전에 차단) / **연동 만료**(`SNS 연동이 만료되었습니다. 계정을 다시 연동해 주세요.` → 재연동 플로우로 유도). 남의 영상은 404.
-  - `status`: **인스타그램**은 컨테이너 처리 완료까지 서버가 대기하므로 응답이 수십 초(최대 5분) 걸릴 수 있고 완료되면 `success`. **틱톡**은 게시 완료까지 폴링(최대 2분)하며 그 안에 끝나면 `success`, 진행 중이면 `pending`(실패가 아니다 — "업로드 중" 으로 표시).
+- `DELETE /sns/{platform}/disconnect` 🔒 — 연동이 없으면 404.
+- `POST /sns/{platform}/upload` 🔒 — 편집 완료(`editedUrl` 존재) 영상만. 400 이 나는 경우: 미연동 / 편집 미완료 / **영상이 공개 URL 이 아님**(인스타·틱톡이 URL 을 직접 내려받으므로 `https` 공개 주소여야 한다 — 로컬 MinIO 는 호출 전에 차단) / **연동 만료**(`SNS 연동이 만료되었습니다. 계정을 다시 연동해 주세요.` → 재연동 플로우로 유도) / 플랫폼의 거절(만료 시각을 모르는 연동이면 재연동을 권하는 문장이 덧붙는다). 남의 영상·없는 영상은 404.
+  - `status`: **인스타그램**은 컨테이너 처리 완료까지 서버가 대기하므로 응답이 수십 초(최대 5분, `INSTAGRAM_POLL_TIMEOUT_MS`) 걸릴 수 있고 완료되면 `success`, 그 안에 끝나지 않으면 400. **틱톡**은 게시 완료까지 폴링(최대 2분, `TIKTOK_POLL_TIMEOUT_MS`)하며 그 안에 끝나면 `success`, 진행 중이면 `pending`(실패가 아니다 — "업로드 중" 으로 표시).
+  - **`success` 면 서버가 그 결과물을 쓰던 무비를 끝낸다**([끝내기](#끝내기-post-moviesidfinish)와 같은 동작, MOV-18) — 결과물 파일이 지워지므로 같은 결과물을 다른 플랫폼에 다시 올리면 404 다. `pending` 은 플랫폼이 나중에 파일을 가져가므로 끝내지 않는다.
   - `requiresUserAction`(계약 설명)은 틱톡 `video.upload` 받은함 스코프에서만 온다 — 앱은 틱톡 앱에서 마무리하라고 안내한다. `video.publish` 심사를 통과하면 이 필드는 오지 않는다.
-  - 실패 사유는 `sns_uploads.error_message` 에 저장된다(운영 추적용, 응답에는 없다).
+  - 성공·실패·진행 중 모두 이력(`sns_uploads`)에 남고, 실패 사유는 `error_message` 에 저장된다(운영 추적용, 응답에는 없다).
 
 ---
 
@@ -312,13 +337,14 @@ FE 가 알아야 할 동작:
 영수증 검증·통지는 RevenueCat 을 경유한다. **정기 구독 상품은 없다.**
 요구: [specs/credits-and-payment.md](./specs/credits-and-payment.md). **단위**: Movie export 1회 = **100크레딧**.
 
-> **잔액과 사용 가능 여부의 원천은 항상 백엔드다.** 클라이언트·RevenueCat 의 상태는 표시·동기화용이다.
-> 앱은 RevenueCat SDK 의 `app_user_id` 를 **Snaply `User.id` 로 고정**해야 한다 — 웹훅이 이 값으로 지급 대상을 찾는다.
+**잔액과 사용 가능 여부의 원천은 항상 백엔드다.** 클라이언트·RevenueCat 의 상태는 표시·동기화용이다.
+앱은 RevenueCat SDK 의 `app_user_id` 를 **Snaply `User.id` 로 고정**해야 한다 — 웹훅이 이 값으로 지급 대상을 찾는다
+(앱에는 아직 구매 화면과 SDK 가 없다 — [backlog](./backlog.md) C-1).
 
 - `GET /billing/products` (인증 불필요) — **가격·통화는 응답에 없다.** 현지 가격은 스토어가 원천이라 앱이 SDK `getOfferings()` 로 받는다. `credits` 수량은 잠정값 — [backlog A-2](./backlog.md).
 - `GET /billing/credits` 🔒 — `entries` 는 **최신순 최대 `CREDIT_ENTRY_LIMIT`건이며 전체 내역이 아니다**(페이지네이션 없음) — 앱은 "최근 내역" 으로 표시한다. `reason` 은 닫힌 집합(`creditReasonSchema`)이라 문구 매핑에 그대로 쓴다. `balance` 는 **음수가 될 수 있다**(사용 후 스토어 환불) — 음수면 신규 export 만 막히고 기존 결과물은 회수하지 않는다.
 - `POST /billing/sync` 🔒 — 웹훅 유실 보정. **앱이 구매 완료 직후 호출한다.** 이미 반영된 거래는 건너뛰므로 몇 번 호출해도 중복 지급되지 않는다(`granted: 0`).
-- `POST /billing/webhook/revenuecat` (RevenueCat 전용) — `Authorization` 헤더가 `REVENUECAT_WEBHOOK_AUTH_TOKEN` 과 일치해야 한다(불일치 401, 본문 미처리). `NON_RENEWING_PURCHASE` 는 같은 `transaction_id` 재전송에도 **한 번만** 지급, `REFUND` 도 한 번만 회수. 카탈로그에 없는 상품은 **500**(임의 지급 대신 RevenueCat 재시도에 맡긴다). 그 외 이벤트는 무시하고 200. 전역 rate limit 제외.
+- `POST /billing/webhook/revenuecat` (RevenueCat 전용) — `Authorization` 헤더가 `REVENUECAT_WEBHOOK_AUTH_TOKEN` 과 일치해야 한다(불일치 401, 본문 미처리). `NON_RENEWING_PURCHASE` 는 같은 `transaction_id` 재전송에도 **한 번만** 지급, `REFUND` 도 한 번만 회수. 카탈로그에 없는 상품은 **`500 UNKNOWN_PRODUCT`**(임의 지급 대신 RevenueCat 재시도에 맡긴다 — 매핑을 배포하면 그 재시도가 지급으로 이어진다). 그 외 이벤트는 무시하고 200. 전역 rate limit 제외.
 
 ---
 
@@ -326,8 +352,8 @@ FE 가 알아야 할 동작:
 
 요구: [specs/credits-and-payment.md](./specs/credits-and-payment.md) §보상형 광고 · 배경: [decisions/ad-reward-credits.md](./decisions/ad-reward-credits.md).
 
-> **앱이 지급을 요청하는 API 는 없다.** 지급의 유일한 트리거는 AdMob SSV 콜백이고, 앱은 세션을
-> 열고 상태를 조회할 뿐이다. 지급량도 앱이 정하지 않는다 — 세션 발급 시점에 서버가 스냅샷한 값이다.
+**앱이 지급을 요청하는 API 는 없다.** 지급의 유일한 트리거는 AdMob SSV 콜백이고, 앱은 세션을
+열고 상태를 조회할 뿐이다. 지급량도 앱이 정하지 않는다 — 세션 발급 시점에 서버가 스냅샷한 값이다.
 
 **앱의 흐름**: `POST /billing/ad-rewards`(광고 로드 직전) → `nonce` 를 AdMob SDK 의 `customData`,
 `ssvUserId` 를 `userId` 로 전달 → 광고 시청 → 닫힘 직후 `GET /billing/ad-rewards/{rewardId}` 를
@@ -338,13 +364,13 @@ FE 가 알아야 할 동작:
 - `POST /billing/ad-rewards` 🔒 — 세션 발급. **요청 본문 없음.** `rewardId` 는 폴링 전용이며 `nonce`(SSV 비밀)와 분리돼 있다. `expiresAt` 이후 도착한 SSV 는 지급되지 않는다. 거절은 전부 409 이고 에러에 "언제 다시 가능한지" 가 실린다: `AD_REWARD_COOLDOWN`(+`nextAvailableAt`) · `AD_REWARD_LIMIT_REACHED`(+`resetsAt`) · `AD_REWARD_SESSION_ACTIVE`(+`rewardId`, 이걸 계속 폴링하면 된다). 킬 스위치 off 는 `503 AD_REWARDS_DISABLED`.
 - `GET /billing/ad-rewards/{rewardId}` 🔒 — `abandoned` 는 앱이 포기해 슬롯을 비운 상태이며 **실패가 아니다**(만료 전 SSV 가 오면 `granted`). `credits` 는 `granted` 일 때만, `balance` 는 **항상** 현재 잔액. **`pending` 은 실패가 아니다** — 폴링이 타임아웃하면 "지급 확인 중" 으로 표시하고 끝낸다. IAP 의 `sync` 같은 보정 경로는 광고 쪽에 **의도적으로 없다**. 남의 `rewardId` 는 404.
 - `DELETE /billing/ad-rewards/{rewardId}` 🔒 — 세션 포기. 응답은 `GET` 과 같은 모양. **지급 자격은 남는다**(포기는 슬롯만 비운다). **멱등** — 이미 확정된 세션에 불러도 200 과 현재 상태. 이 경로로는 지급을 만들 수 없다.
-- `GET /billing/webhook/admob` (AdMob 전용) — SSV 콜백. **GET + 쿼리스트링**, 인증 미들웨어 없음(인증이 곧 서명). 서명·timestamp(±10분)·세션·사용자·광고 단위·일일 한도·계정 상태를 전부 통과해야 지급하고, 지급량은 세션 스냅샷 값이다. 재전송은 지급 없이 200, 검증 실패는 400(`ad_rewards.status = rejected`만 남김). 전역 rate limit 제외.
+- `GET /billing/webhook/admob` (AdMob 전용) — SSV 콜백. **GET + 쿼리스트링**, 인증 미들웨어 없음(인증이 곧 서명). 서명·timestamp(±10분)·세션·사용자·광고 단위(`ADMOB_SSV_ALLOWED_AD_UNITS`, 비어 있으면 전부 거절)·일일 한도·계정 상태를 전부 통과해야 지급하고, 지급량은 세션 스냅샷 값이다. 재전송은 지급 없이 200, 검증 실패는 400(`AD_REWARD_REJECTED` — 우리가 발급한 세션이면 `ad_rewards.status = rejected` 만 남긴다, 파라미터가 빠지면 `BAD_REQUEST`). 전역 rate limit 제외.
 
 ---
 
 ## 공통
 
-- `GET /health` (인증 불필요) — `contract/health.ts`.
+- `GET /health` (인증 불필요) — [`contract/health.ts`](../packages/shared-types/src/contract/health.ts). DB 에 붙지 못해도 200 이고 `db: error` 로 알린다.
 
 ### 공개 페이지 (HTML, 인증 불필요)
 
@@ -357,11 +383,12 @@ FE 가 알아야 할 동작:
 | `GET /legal/privacy` | 개인정보처리방침 |
 | `GET /:filename` · `GET /legal/:filename` | 플랫폼 URL/도메인 소유권 검증 파일 (`SITE_VERIFICATION_FILE_NAME`/`_CONTENT` 로 구동, 미설정 시 404) |
 
-> ⚠️ `GET /:filename` 은 최상위 파라미터 라우트다. 새 최상위 경로를 추가할 때 라우팅 충돌 여부를
-> [`routes/legal.ts`](../apps/api/src/routes/legal.ts)와 함께 확인한다.
+⚠️ `GET /:filename` 은 최상위 파라미터 라우트다. 새 최상위 경로를 추가할 때 라우팅 충돌 여부를
+[`routes/legal.ts`](../apps/api/src/routes/legal.ts)와 함께 확인한다(Fastify 는 정적 경로를 먼저 맞춘다).
+`SITE_VERIFICATION_META` 를 두면 이 페이지들의 `<head>` 에 검증용 메타 태그가 들어간다.
 
-> ⚠️ 약관·개인정보처리방침은 **법률 검토를 받지 않은 출시 전 초안**이다(페이지 상단에도 표기).
-> 앱 심사 제출·서비스 출시 전 정식 문서로 교체해야 한다.
+⚠️ 약관·개인정보처리방침은 **법률 검토를 받지 않은 출시 전 초안**이다(페이지 상단에도 표기). 정식 문서로의
+교체는 [backlog](./backlog.md) D-2.
 
 ### 인스타그램 웹훅 (Meta 전용)
 

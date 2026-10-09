@@ -5,26 +5,27 @@
 스냅 한도(2GB)와 무비 보관(30일 + 무료 재생성)은 2026-09-09 결정이 대체했다(아래 배너).
 **원천**: 2축 분리와 경계 규칙의 결정 근거. 현행 정책 값은 [specs/snap-library.md](../specs/snap-library.md) SNAP-9 ·
 [specs/movie.md](../specs/movie.md) MOV-16·19 · [specs/credits-and-payment.md](../specs/credits-and-payment.md) CRD-2·7 이 원천이다.
-**대체한 것**: [snap-source-of-truth.md](./snap-source-of-truth.md) §6.1의 "Free 한도 5GB"와
-§6.2에서 2GB를 기각했던 판단, §6.3의 원가 계산.
-**관련**: [credit-payment-model.md](./credit-payment-model.md)(과금 모델),
-[payment-channel-iap.md](./payment-channel-iap.md)(결제 채널),
-[movie-model.md](./movie-model.md)(`Movie` 엔티티)
-**후속 작업의 원천**: [backlog.md](../backlog.md) A-1·A-2
+**관련 문서**: [credit-payment-model.md](./credit-payment-model.md)(과금 모델) ·
+[payment-channel-iap.md](./payment-channel-iap.md)(결제 채널) ·
+[movie-model.md](./movie-model.md)(`Movie` 엔티티) · [snap-source-of-truth.md](./snap-source-of-truth.md) §6(이 문서가 대체한 용량 정책) ·
+[backlog.md](../backlog.md) A-1 · A-2
 
-> **2026-09-09 대체** — 아래 본문 중 다음은 현행이 아니다.
+> **대체**(2026-09-09): 아래 본문 중 다음은 현행이 아니다.
 > - **스냅**: §1 의 Free 원본 스냅 한도 2GB·산정 범위·초과 시 동작·한도 초과 시 무비 생성, §7 의 용량 환산 표기,
 >   §6 의 "한도를 보관 기간으로 전환"·"무료 유저의 원본을 30일 후 삭제" 기각 → 서버 보관은 업로드 후 15일 기간
 >   기준이다([snap-retention-period.md](./snap-retention-period.md)). 용량 한도를 남길지는 미결이다(A-2).
 > - **무비**: §1·§3 의 "생성 후 30일 보관 + 만료 무비 무료 재생성"과 §3.5 의 만료 D-3 알림 → 끝내면 결과물을
 >   지우고, 끝내지 않은 결과물만 30일 상한이며, 다시 만들기는 유료다([movie-cleanup-after-export.md](./movie-cleanup-after-export.md)).
->   만료 안내 방식은 미결이다(MOV-16). §4.3 의 "무비 영구 보관" 혜택은 이 전제가 바뀐 뒤 다시 정해지지 않았다.
+>   만료 안내 방식은 미결이다(MOV-16, backlog A-1). §4.3 의 "무비 영구 보관" 혜택은 이 전제가 바뀐 뒤 다시 정해지지 않았다.
 > - **유효**: §2 의 스냅당 용량·원가 구성, §4 의 2축 분리·경계 규칙·구독 만료 후 처리(기간 기준에도 맞는지는
 >   A-2 에서 확인), §5 의 IAP 확인.
 
 ---
 
 ## 1. 결정 요약
+
+이 결정은 [snap-source-of-truth.md](./snap-source-of-truth.md) §6.1의 "Free 한도 5GB"와 §6.2에서 2GB를 기각했던
+판단, §6.3의 원가 계산을 대체했다.
 
 | 항목 | 결정 | 종전 |
 |---|---|---|
@@ -141,8 +142,9 @@ $0.025/GB·월을 전제로 했다. 2026-08-14에 **3초 스냅 · 월 50편**�
 ### 3.5 부수 조건
 
 - 생성 완료 FCM 알림에 **보관 기간(30일)을 명시**하고, 만료 D-3에 알림을 보낸다. 없으면 CS로 온다.
-  *(선행 조건: 현재 무비 생성 완료 알림은 앱의 **로컬 알림**이고 FCM 파이프라인은 geofence 전용이다 —
-  FCM 완료 알림 연결은 [backlog.md](../backlog.md) A-1의 만료 구현에 포함해야 한다)*
+  *(선행 조건: 결정 당시 무비 생성 완료 알림은 앱의 **로컬 알림**이었고 FCM 파이프라인은 geofence 전용이었다 —
+  FCM 완료 알림 연결은 [backlog.md](../backlog.md) A-1의 만료 구현에 포함해야 한다. 완성 알림의 FCM 전환은
+  2026-09-11 에 끝났다 — [movie-ready-notification.md](./movie-ready-notification.md))*
 - SNS 게시는 안전하다 — 틱톡 `PULL_FROM_URL`, 인스타 릴스 컨테이너 모두 게시 시점에 URL을
   가져가고 이후 플랫폼이 자체 사본을 갖는다. 만료 후 재시도가 필요하면 재생성으로 커버한다.
 - 무비 만료 처리는 `Movie` 엔티티 구현([backlog.md](../backlog.md) A-1)에 포함한다.
@@ -231,7 +233,7 @@ Apple은 SBP 미가입 시 구독 1년차 30%·2년차 15%지만, 연 순수취 
   §2.3에서 무료 유저 원가에 상한이 생겼으므로 초기 가격을 오래 유지할 조건은 갖춰졌다.
 - **계정 귀속**: entitlement가 지속되므로 한 스토어 계정으로 여러 Snaply 계정에 복원을
   시도하는 악용이 가능하다. RevenueCat `app_user_id` 고정과 transfer 정책 설정이 필요하다.
-  [payment-channel-iap.md](./payment-channel-iap.md) §5의 "원천은 항상 백엔드" 원칙을
+  [payment-channel-iap.md](./payment-channel-iap.md) 결정 5의 "원천은 항상 백엔드" 원칙을
   구독 entitlement에도 동일하게 적용한다.
 
 ## 6. 기각한 대안
@@ -279,4 +281,4 @@ Intelligent-Tiering·Fargate Spot·NAT 제거 등으로 원가를 30~40% 줄일 
 - 구독 혜택에 워터마크 제거·고해상도 export를 포함할지
 - 무비 만료 알림의 발송 시점 세부
 
-위 항목은 [backlog.md](../backlog.md) A-2에서만 미결 상태를 관리한다.
+위 항목의 미결 상태는 [backlog.md](../backlog.md)에서만 관리한다 — 무비 만료 알림은 A-1 "결과물 만료 안내", 나머지는 A-2.

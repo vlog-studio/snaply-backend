@@ -126,7 +126,7 @@ Preference order for creating weight difference: **position → size → contras
 
 - **When.** A data-backed surface has no items — distinguish "nothing yet" from "nothing matched a filter" from "failed to load".
 - **Weight.** The resolving action is the clearest element (W1). Illustration may be W2 only here.
-- **Do not combine with.** A paragraph of explanation (project rule: one short line at most); a spinner; an empty state that hides the surface's controls, so the user cannot change the filter that caused it.
+- **Do not combine with.** A paragraph of explanation (project rule: one short line at most — [`Show State, Not Instructions`](principles.md#13--show-state-not-instructions)); a spinner; an empty state that hides the surface's controls, so the user cannot change the filter that caused it.
 - **Common misuse.** Using the same empty state for "no snaps yet" and "no results for this filter"; making the empty state prettier than the populated state; omitting the action that fills it.
 
 ## Loading State
@@ -134,7 +134,7 @@ Preference order for creating weight difference: **position → size → contras
 - **When.** Data or work is in flight.
 - **Weight.** Occupies the position of the content it replaces; never W1 unless the loading *is* the screen (generation progress).
 - **Do not combine with.** A blank screen; a layout that shifts when content arrives; a full-screen blocker for a partial update; a spinner where the final layout's shape is known (use a skeleton).
-- **Common misuse.** Blocking the whole app for a background operation; no distinction between "loading" and "empty"; long operations with no progress or no way to leave (see `interaction-patterns.md` → long-running process).
+- **Common misuse.** Blocking the whole app for a background operation; no distinction between "loading" and "empty"; long operations with no progress or no way to leave (see [`interaction-patterns.md` → Long-running process](interaction-patterns.md#12--long-running-process)).
 
 ## Error State
 

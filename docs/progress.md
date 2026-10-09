@@ -1,22 +1,27 @@
 # Snaply 모노레포 개발 진행 기록
 
-각 Phase 완료 시점의 구현 내용, 완료 조건 검증 결과, 특이사항을 기록합니다.
-**이 문서는 완료된 것만 담는다** — 아직 닫히지 않은 작업은 [backlog.md](./backlog.md)에 있다.
+**작성일**: 2026-07-22
+**상태**: 현행 — 끝난 구현·검증만 담는다. 닫히지 않은 작업은 [backlog.md](./backlog.md)에 있다
+**원천**: 완료된 구현·검증 결과와 그때 찾은 결함의 기록. 각 항목은 그 시점 기준이라 현재 구조·명령은
+[README.md](../README.md)·[ONBOARDING.md](../ONBOARDING.md), 현재 스키마·계약은 `apps/api/prisma/schema.prisma`와
+[`packages/shared-types/src/contract/`](../packages/shared-types/src/contract/)(Zod 계약, Swagger 의 원천)가 우선한다
+**관련 문서**: [backlog.md](./backlog.md) · [archive/progress-phase-1-9.md](./archive/progress-phase-1-9.md) ·
+[archive/progress-integrations-2026-08.md](./archive/progress-integrations-2026-08.md)
 
-**저장소**: https://github.com/vlog-studio/snaply-backend — 모바일·API·AI 워커 통합 모노레포
+항목 제목은 `## YYYY-MM-DD — 제목`, 같은 날 이어지면 `## YYYY-MM-DD (이어서) — 제목`이다
+([doc-conventions.md](./doc-conventions.md) §본문). 날짜로 찾고, 새 항목은 문서 끝에 붙인다. 이미 쓴 항목은
+그 시점의 기록이라 본문을 현재에 맞게 고치지 않는다.
 
-> **Phase 1~9(초기 개발)의 완료 기록은 [archive/progress-phase-1-9.md](./archive/progress-phase-1-9.md)로
-> 옮겼다** — 당시 기록이라 현행과 다른 부분이 있다(Stripe 구독·월 3편 제한은 제거됨).
-> 그 직후의 연동/수익화 트랙 하드닝(2026-08-03~08-10, 이후 제거된 Stripe 실키 검증 포함)은
-> [archive/progress-integrations-2026-08.md](./archive/progress-integrations-2026-08.md)로 옮겼다.
-> 착수 전 계획서는 [archive/snapvlog-backend-guide.md](./archive/snapvlog-backend-guide.md),
-> Dev B → Dev A 인수인계 기록은 [archive/integrations-handover.md](./archive/integrations-handover.md)(확인 완료).
-> 아래 기록도 각 완료 시점 기준이다. **현재 구조·명령은 README와 ONBOARDING,
-> 현재 스키마·계약은 Prisma와 `packages/shared-types/src/contract/`(Zod 계약, Swagger 의 원천)를 우선한다.**
+이 문서보다 앞선 기록은 archive 에 있다. Phase 1~9(초기 개발)는
+[archive/progress-phase-1-9.md](./archive/progress-phase-1-9.md), 그 직후의 연동/수익화 트랙 하드닝(2026-08-03~08-10,
+이후 제거된 Stripe 실키 검증 포함)은 [archive/progress-integrations-2026-08.md](./archive/progress-integrations-2026-08.md)다.
+당시 기록이라 현행과 다른 부분이 있다(Stripe 구독·월 3편 제한은 제거됨). 착수 전 계획서는
+[archive/snapvlog-backend-guide.md](./archive/snapvlog-backend-guide.md), Dev B → Dev A 인수인계 기록은
+[archive/integrations-handover.md](./archive/integrations-handover.md)(확인 완료).
 
 ---
 
-## 실검증 라운드 1 — 미디어/편집 트랙 (Dev A, 2026-08-04) ✅
+## 2026-08-04 — 실검증 라운드 1 — 미디어/편집 트랙 (Dev A)
 
 **목표**: Phase 3~5를 mock/합성 클립이 아닌 **아이폰 실촬영 영상(HEVC/.MOV)** 으로 end-to-end 재검증 (team.md §2 "바로 착수" 항목).
 
@@ -57,7 +62,7 @@
 
 ---
 
-## 실검증 라운드 2 — AI 워커 컨테이너 (Dev A, 2026-08-05) ✅
+## 2026-08-05 — 실검증 라운드 2 — AI 워커 컨테이너 (Dev A)
 
 **목표**: Phase 9에서 용량 문제로 생략했던 ai-worker 이미지 빌드와, compose 풀스택
 (postgres+redis+minio+api+ai-worker)에서의 실제 편집 1건 검증.
@@ -87,7 +92,7 @@
 
 ---
 
-## 환경변수 관리 정리 (2026-08-11)
+## 2026-08-11 — 환경변수 관리 정리
 
 **배경**: `.env` 가 세 곳(루트 · `apps/api` · `apps/ai-worker`)으로 갈라져 있었다. 루트 사본은
 어느 문서에도 없었지만 `docker compose` 의 `${VAR}` 보간을 떠받치고 있었고, `apps/api/.env` 와
@@ -145,7 +150,7 @@
 
 ---
 
-## Firebase 서비스 계정 키 로테이션 (2026-08-11)
+## 2026-08-11 (이어서) — Firebase 서비스 계정 키 로테이션
 
 새 키 발급 → `.env` 교체 → 기존 키 삭제. 키가 저장소에 들어온 적은 없다 — 이력 전체를 훑어도
 private key 재료가 걸리는 곳은 [apps/api/test/fcm.test.ts](../apps/api/test/fcm.test.ts) 의 `fake`
@@ -154,7 +159,7 @@ private key 재료가 걸리는 곳은 [apps/api/test/fcm.test.ts](../apps/api/t
 
 ---
 
-## 풀스택 Compose 공개 스토리지 주소 보간 수정 (2026-08-12)
+## 2026-08-12 — 풀스택 Compose 공개 스토리지 주소 보간 수정
 
 - `stack:up`이 Compose 보간용 env 파일을 지정하지 않아, `apps/api/.env`에
   `S3_PUBLIC_ENDPOINT=http://<PC의 LAN IP>:9200`을 설정해도 `docker-compose.yml`의 기본값
@@ -164,7 +169,7 @@ private key 재료가 걸리는 곳은 [apps/api/test/fcm.test.ts](../apps/api/t
 
 ---
 
-## 원커맨드 로컬 스택 migration 자동화 (2026-08-12)
+## 2026-08-12 (이어서) — 원커맨드 로컬 스택 migration 자동화
 
 - `npm run stack`이 최초 로컬 설치와 pull 후 업데이트를 모두 처리하도록 Compose에 일회성
   `migrate` 서비스를 추가했다.
@@ -174,7 +179,7 @@ private key 재료가 걸리는 곳은 [apps/api/test/fcm.test.ts](../apps/api/t
 
 ---
 
-## 계정 삭제 기능 (2026-08-12)
+## 2026-08-12 (이어서) — 계정 삭제 기능
 
 **정책**: soft delete + 30일 유예 + 배치 실삭제 — [decisions/account-deletion.md](./decisions/account-deletion.md).
 약관이 이미 계정 삭제를 약속하고 있었으나(`routes/legal.ts`) 구현이 없던 갭을 닫았다.
@@ -201,7 +206,7 @@ private key 재료가 걸리는 곳은 [apps/api/test/fcm.test.ts](../apps/api/t
 
 ---
 
-## 고아 pending 영상 정리 배치 (2026-08-12)
+## 2026-08-12 (이어서) — 고아 pending 영상 정리 배치
 
 **배경**: `GET /videos/upload-url` 은 presigned URL 발급과 함께 `status='pending'` 레코드를
 선생성하는데, 클라이언트가 업로드에 실패하거나 confirm(`POST /videos`)을 생략하면 pending 행이
@@ -227,7 +232,7 @@ private key 재료가 걸리는 곳은 [apps/api/test/fcm.test.ts](../apps/api/t
 
 ---
 
-## 삭제 대기 403 에 유예 만료 시각 동봉 (2026-08-12)
+## 2026-08-12 (이어서) — 삭제 대기 403 에 유예 만료 시각 동봉
 
 **배경**: `DELETE /auth/me` 는 `purgeAfter` 를 반환하지만, 앱이 그 값을 놓치거나 다른 기기에서
 로그인하면 남은 유예 기간을 알 방법이 없었다. 삭제 대기 계정이 받는
@@ -256,7 +261,7 @@ private key 재료가 걸리는 곳은 [apps/api/test/fcm.test.ts](../apps/api/t
 
 ---
 
-## 편집 작업 취소 API + 실패 분류 코드 (2026-08-13)
+## 2026-08-13 — 편집 작업 취소 API + 실패 분류 코드
 
 **배경**: FE 안건 2건을 닫은 것. ① `generating` 상태에서 잘못 시작한 편집을 멈출 방법이
 없어 워커 타임아웃 10분이 사실상의 상한이었다 — 취소 엔드포인트와 취소된 작업의 최종 상태
@@ -290,7 +295,7 @@ private key 재료가 걸리는 곳은 [apps/api/test/fcm.test.ts](../apps/api/t
 **후속(미결 아님, 정책 대기)**: 크레딧 차감/환급이 확정되면(backlog A-2) 취소 시 환급을
 이 엔드포인트에 연결한다. 앱 쪽은 `errorCode`→문구 매핑과 취소 UI를 이어받는다.
 
-## 크레딧 결제 구현 + Stripe·구독 제거 (2026-08-14)
+## 2026-08-14 — 크레딧 결제 구현 + Stripe·구독 제거
 
 기본 단위 **Movie export 1회 = 100크레딧**과 "유료 구독 없음"이 확정돼
 [archive/iap-migration.md](./archive/iap-migration.md)를 구현했다. 정책 근거는
@@ -351,7 +356,7 @@ private key 재료가 걸리는 곳은 [apps/api/test/fcm.test.ts](../apps/api/t
 - **미검증**: RevenueCat 실키 경로(`/billing/sync` REST 조회)와 실제 스토어 sandbox 구매 —
   스토어 상품 등록이 선행돼야 한다 (backlog C-1)
 
-## 보상형 광고 크레딧 (2026-08-14)
+## 2026-08-14 (이어서) — 보상형 광고 크레딧
 
 앱 팀의 계약 요청을 [decisions/ad-reward-credits.md](./decisions/ad-reward-credits.md)로 확정하고
 구현했다. 초안([archive/2026-08-12-rewarded-credit-review.md](./archive/2026-08-12-rewarded-credit-review.md) §4)의
@@ -418,7 +423,7 @@ AdMob SSV 콜백이고, 앱은 세션을 열고 상태를 조회할 뿐이다. �
 
 ---
 
-## 광고 보상 세션 수명·포기 (2026-08-18)
+## 2026-08-18 — 광고 보상 세션 수명·포기
 
 앱 팀의 실기기 검증 리포트(2026-08-14, AdMob 미연동이라 모든 세션이 SSV 없이 `pending`)로
 드러난 **대기 시간 역전**을 고쳤다 — 지급받은 사용자는 쿨다운 300초만 기다리는데, 콜백이 유실된
@@ -440,7 +445,7 @@ AdMob SSV 콜백이고, 앱은 세션을 열고 상태를 조회할 뿐이다. �
 
 ---
 
-## 광고 보상 정책 값 확정 — 20크레딧 · 일일 5회 (2026-08-18)
+## 2026-08-18 (이어서) — 광고 보상 정책 값 확정 — 20크레딧 · 일일 5회
 
 `credit-policy.ts` 의 잠정값이던 보상량·한도를 확정했다 — 1회 보상 **20크레딧**, 일일 한도 **3 → 5회**
 (`20 × 5 = 100 = MOVIE_EXPORT_COST`, 한도를 다 쓰면 정확히 export 1편). 값의 근거와 받아들인 트레이드오프는
@@ -457,7 +462,7 @@ AdMob SSV 콜백이고, 앱은 세션을 열고 상태를 조회할 뿐이다. �
 
 ---
 
-## 광고 보상 쿨다운 300초 확정 (2026-08-18)
+## 2026-08-18 (이어서) — 광고 보상 쿨다운 300초 확정
 
 A-2의 마지막 미결 값이었다. 값을 고른 것이 아니라 위아래가 모두 막혀 있음을 확인한 것이다 — 근거는
 [decisions/ad-reward-credits.md](./decisions/ad-reward-credits.md) §7 "쿨다운 300초".
@@ -471,7 +476,7 @@ A-2의 마지막 미결 값이었다. 값을 고른 것이 아니라 위아래�
 
 ---
 
-## 스냅 내용 분석 — 방향 확정 + 스파이크 하네스 (2026-08-19)
+## 2026-08-19 — 스냅 내용 분석 — 방향 확정 + 스파이크 하네스
 
 기능 방향(분석 결과는 내부 추천 입력 전용 · 추천 요청 시점의 후보 스냅만 분석 · 외부 vision API 에 프레임
 4장 · 추천은 비동기 job)을 정했다 — 결정과 기각한 대안은
@@ -482,7 +487,7 @@ A-2의 마지막 미결 값이었다. 값을 고른 것이 아니라 위아래�
 
 ---
 
-## 스냅 내용 분석 본구현 — 스키마·API·분석 워커·docker (2026-08-19)
+## 2026-08-19 (이어서) — 스냅 내용 분석 본구현 — 스키마·API·분석 워커·docker
 
 `POST /videos/:videoId/analysis` 로 요청하면 분석 워커가 스냅의 대표 프레임을 vision 모델에
 보내고, 결과가 `video_analyses` 에 남는다. 방향과 계획 대비 차이는
@@ -545,7 +550,7 @@ A-2의 마지막 미결 값이었다. 값을 고른 것이 아니라 위아래�
 
 ---
 
-## 약관·개인정보처리방침의 분석 고지 초안 (2026-08-19)
+## 2026-08-19 (이어서) — 약관·개인정보처리방침의 분석 고지 초안
 
 스냅 분석은 생산 스냅의 프레임을 외부 모델로 보내므로, `routes/legal.ts` 의 출시 전 초안에 분석 고지·
 수탁자·국외 이전 절을 넣었다. 테스트(`test/legal.test.ts`)가 전송 범위(프레임 4장·오디오 미전송·영상
@@ -557,11 +562,11 @@ A-2의 마지막 미결 값이었다. 값을 고른 것이 아니라 위아래�
   `ingest.us.sentry.io`)를 채웠다. Meta·TikTok 은 우리가 직접 호출하므로 표에 내렸고, Apple·Google 은
   우리가 직접 보내지 않아 표가 아니라 문장으로 관계만 적었다
 
-남은 법무 검토와 확정 항목은 [backlog.md](./backlog.md).
+남은 법무 검토와 확정 항목은 [backlog.md](./backlog.md) D-2.
 
 ---
 
-## 무비 템플릿 카탈로그 서버 이관 (2026-08-19)
+## 2026-08-19 (이어서) — 무비 템플릿 카탈로그 서버 이관
 
 템플릿 4개가 앱의 로컬 상수에 있었다. 슬롯의 **매칭 규칙**이 생기는 순간 정의와 규칙이 서로
 다른 저장소에 있게 되고, 그러면 한쪽만 고쳐진다. 그래서 카탈로그를 서버로 옮겼다 —
@@ -609,7 +614,7 @@ A-2의 마지막 미결 값이었다. 값을 고른 것이 아니라 위아래�
 
 ---
 
-## 템플릿 스냅 추천 API — 규칙 기반 점수화 (2026-08-19)
+## 2026-08-19 (이어서) — 템플릿 스냅 추천 API — 규칙 기반 점수화
 
 `POST /movie-recommendations` 로 후보 스냅과 템플릿을 주면, 후보의 분석 결과를 모아 슬롯에
 배정한 결과를 `GET /movie-recommendations/:id` 로 돌려준다. backlog A-6 의 2단계이며,
@@ -654,7 +659,7 @@ A-2의 마지막 미결 값이었다. 값을 고른 것이 아니라 위아래�
 
 ---
 
-## 앵커 어휘 사전 + 워커 빌드 컨텍스트 루트 통일 (2026-08-20)
+## 2026-08-20 — 앵커 어휘 사전 + 워커 빌드 컨텍스트 루트 통일
 
 editSpec v3 착수의 첫 단위. 계획과 결정 근거는
 [archive/edit-spec-v3-kickoff.md](./archive/edit-spec-v3-kickoff.md) §3.
@@ -714,7 +719,7 @@ editSpec v3 착수의 첫 단위. 계획과 결정 근거는
 
 ---
 
-## 스테이지별 시드 — 재현과 "다시 생성"의 분리 (2026-08-20)
+## 2026-08-20 (이어서) — 스테이지별 시드 — 재현과 "다시 생성"의 분리
 
 editSpec v3 착수의 두 번째 단위. 계획은
 [archive/edit-spec-v3-kickoff.md](./archive/edit-spec-v3-kickoff.md) §4.
@@ -756,7 +761,7 @@ editSpec v3 착수의 두 번째 단위. 계획은
 
 ---
 
-## 재생성 무효화 규칙 — 표가 아니라 데이터로 (2026-08-20)
+## 2026-08-20 (이어서) — 재생성 무효화 규칙 — 표가 아니라 데이터로
 
 editSpec v3 착수의 세 번째 단위이자 이 계획의 중심 산출물. 계획은
 [archive/edit-spec-v3-kickoff.md](./archive/edit-spec-v3-kickoff.md) §5.
@@ -788,7 +793,7 @@ editSpec v3 착수의 세 번째 단위이자 이 계획의 중심 산출물. �
 
 ---
 
-## 사전 기동 검증을 기계가 하게 (2026-08-20)
+## 2026-08-20 (이어서) — 사전 기동 검증을 기계가 하게
 
 커밋 2·3 에서 **연속으로 같은 것을 빠뜨렸다.** 새 사전을 만들고 `worker.py` 가 그 모듈을
 임포트하지 않으면 기동 시 검증이 일어나지 않는다 — 테스트는 전부 초록인데 컨테이너에서
@@ -821,7 +826,7 @@ progress.md 에 주의를 적는 것으로는 세 번째를 못 막는다. E-6(�
 
 ---
 
-## `anchorAffinity` 검증 — `fallback` 과 정반대 규칙 (2026-08-20)
+## 2026-08-20 (이어서) — `anchorAffinity` 검증 — `fallback` 과 정반대 규칙
 
 매니페스트 개정에서 anchor 어휘 절의 값 테이블을 지우기로 하면서, 그 절이 **값 대신 무엇을
 남겨야 하는지**를 정리하다 발견했다.
@@ -844,7 +849,7 @@ progress.md 에 주의를 적는 것으로는 세 번째를 못 막는다. E-6(�
 
 ---
 
-## 모노레포 문서 정합성 및 모바일 의존성 단일화 (2026-09-02)
+## 2026-09-02 — 모노레포 문서 정합성 및 모바일 의존성 단일화
 
 분리 저장소 시절의 경로와 역할 설명을 현재 모노레포 구조에 맞춰 정리했다. 루트 문서 지도를
 모바일 문서까지 확장하고, 환경변수·팀 소유권·API 계약·기능 상태 문서가 실제 코드와 같은 내용을
@@ -869,7 +874,7 @@ progress.md 에 주의를 적는 것으로는 세 번째를 못 막는다. E-6(�
 
 ---
 
-## API 계약을 스키마 우선으로 — Zod 계약 패키지 (2026-09-05)
+## 2026-09-05 — API 계약을 스키마 우선으로 — Zod 계약 패키지
 
 **배경**: 한 엔드포인트의 계약이 여섯 곳(shared-types 타입, 수기 JSON 스키마, 라우트 요청 인터페이스,
 모바일의 OpenAPI 스냅샷·생성 타입, 모바일 Zod, `api-spec.md`)에 손으로 적혀 있었고 어느 둘의 일치도
@@ -1217,7 +1222,7 @@ uuid 3건, 컴포즈·러너 갱신). API 394건. **실기기 미검증** — �
 않는다" 가 아니며, 앱은 그 경우와 이미 지난 경우에 재연동을 안내할 수 있다.
 
 검증: `npm test -w apps/api` 409건 통과(신규 6건). **남은 것은 운영 조치 하나** — 현재 저장된
-인스타 연동을 재연동하면 장기 토큰이 발급돼 만료 시각이 채워진다.
+인스타 연동을 재연동하면 장기 토큰이 발급돼 만료 시각이 채워진다([backlog.md](./backlog.md) G).
 
 ---
 
@@ -1268,7 +1273,7 @@ uuid 3건, 컴포즈·러너 갱신). API 394건. **실기기 미검증** — �
 폴백 경로)과 워커 이미지(zscale 있음, 톤매핑 경로) 모두 산출물이 `bt709,bt709,bt709` 로 나온다.
 실제 e2e 도 다시 돌려 `bt2020nc,smpte2084,bt2020` → `bt709,bt709,bt709` 로 바뀐 것을 확인했다.
 
-**남은 것**: 돌비비전 실물은 아직 검증하지 못했다(합성 HDR10 으로만 확인). `media:e2e` 에
+**남은 것**: 돌비비전 실물은 아직 검증하지 못했다(합성 HDR10 으로만 확인, [backlog.md](./backlog.md) F). `media:e2e` 에
 `--token` 을 추가해 Supabase 없이 auth 스텁 토큰으로도 돌릴 수 있게 했다.
 
 ---
@@ -2125,7 +2130,8 @@ ffmpeg 은 첫 입력의 전역 메타데이터를 출력에 옮긴다. 휴대�
 - **Android 에뮬레이터**(실제 로컬 API, 이 브랜치의 마이그레이션은 개발 DB 에 적용하지 않음): 시작하자마자 `GET /auth/me` 다음 기기에 남은 선택의
   `PATCH /auth/me` 가 한 번 갔고, 다시 실행하면 조회만 했다. 설정 화면이 계정 값을 보였고 무비 스위치 끄기 · 켜기와 조용한 시작 시각 22→23→22 가
   매번 DB 에 닿았다. API 를 내린 채 시각을 바꾸면 22:00 으로 돌아가고 거절 안내가 떴다. DB 값은 처음과 같게 끝났다.
-- **남은 것**: 휴대폰에서 권한이 없는 새 기기로 "켜졌는데 권한 없음" 안내를 본 적은 없다(에뮬레이터는 권한이 이미 있었다). OS 설정에서 권한을 준
+- **남은 것**: 휴대폰에서 권한이 없는 새 기기로 "켜졌는데 권한 없음" 안내를 본 적은 없다(에뮬레이터는 권한이 이미 있었다,
+  [backlog.md](./backlog.md) F). OS 설정에서 권한을 준
   뒤의 푸시 토큰 등록은 다음 실행이나 무비 스위치를 바꿀 때 일어난다 — 기능 문서 me.md 의 한계에 적었다.
 
 ## 2026-10-07 (이어서) — 지운 스냅을 보관 기간이 끝날 때까지 되살린다(SNAP-20, backlog A-4 휴지통 닫음)
@@ -2233,9 +2239,7 @@ Session Manager 셸에서 GitHub · GHCR · Docker Hub · 외부 API 로 나가�
 - **검증**: `npm test -w apps/api` 612 통과 · `typecheck` · `lint` 통과. ALB 뒤에서 180초 넘게 열어 두는 실측은 하지 않았다
   (테스터 앱 빌드 뒤 긴 편집으로 확인 — backlog B-8).
 
----
-
-## 2026-10-09 — 사내 서버를 접고 배포 대상을 AWS 하나로
+## 2026-10-09 (이어서) — 사내 서버를 접고 배포 대상을 AWS 하나로
 
 **결정**: 사내 물리 서버에는 올리지 않는다. 사내망 전용이라 실사용자를 받을 수 없었고, 바깥에서
 닿는 AWS 공모전 서버(backlog B-8)가 뜨면서 두 서버를 함께 둘 이유가 사라졌다. 배포 대상은

@@ -1,12 +1,17 @@
 # 인스타그램 · 틱톡 연동 셋업 (Dev B)
 
-실제 업로드를 로컬에서 검증하기 위한 준비 절차. 코드는 이미 실키를 받을 준비가 끝나 있고,
-`INSTAGRAM_APP_ID` / `TIKTOK_CLIENT_KEY` 가 채워지면 자동으로 mock → 실호출로 전환된다.
+**작성일**: 2026-08-04
+**상태**: 현행
+**원천**: 인스타그램·틱톡 앱 등록(콘솔 설정)과 로컬에서 실키 업로드를 검증하는 절차. API 계약은
+[contract/sns.ts](../packages/shared-types/src/contract/sns.ts)(동작 안내는 [api-spec.md](./api-spec.md) §SNS 연동),
+cloudflared 설치와 임시 주소의 주의사항은 [local-tunnel.md](./local-tunnel.md), 외부에서 닿는 AWS 서버에 키를 넣는 절차는
+[deployment-aws.md](./deployment-aws.md) §2
+**관련 문서**: [progress.md](./progress.md)(진행 기록) · [backlog.md](./backlog.md) C-2 · C-3 · C-5 · D-1 · D-3(닫히지 않은
+항목 — 받은함 미도착 · 심사 · 검수 URL · 고정 도메인 · prefix 재등록) · [decisions/sns-webhook-scope.md](./decisions/sns-webhook-scope.md)
 
-> 진행 기록은 [progress.md](./progress.md), API 계약은
-> [contract/sns.ts](../packages/shared-types/src/contract/sns.ts)(동작 안내는 [api-spec.md](./api-spec.md) §SNS 연동) 참고.
-> 닫히지 않은 항목(받은함 미도착·심사·검수 URL·고정 도메인·prefix 재등록)은 [backlog.md](./backlog.md)
-> C-2·C-3·C-5·D-1·D-3 에만 있다.
+실제 업로드를 로컬에서 검증하기 위한 준비 절차. 코드는 이미 실키를 받을 준비가 끝나 있고,
+`INSTAGRAM_APP_ID` / `TIKTOK_CLIENT_KEY` 가 채워지면 플랫폼별로 mock → 실호출로 전환된다. 단 `SNS_MOCK=true` 면 키가
+있어도 둘 다 mock 이다(`apps/api/src/config.ts` 의 `loadSnsConfig`) — compose 스택(`npm run stack`)은 이 값을 켠다.
 
 ---
 
@@ -21,14 +26,14 @@
 | 공개 HTTPS **영상 URL** | 플랫폼이 영상을 내려받아야 함. `localhost:9100` 은 도달 불가 | cloudflared 터널 → MinIO(:9100) + 버킷 익명 읽기 |
 
 코드에는 이미 가드가 있어서, 로컬 주소나 http 를 넘기면 외부 호출 **전에** 400 으로 막는다
-(`services/sns.service.ts` 의 `assertPubliclyFetchable`). 그래서 준비 없이 실키를 넣으면 바로 걸린다.
+(`apps/api/src/services/sns.service.ts` 의 `assertPubliclyFetchable`). 그래서 준비 없이 실키를 넣으면 바로 걸린다.
+기동 때도 같은 기준으로 판정해 `SNS 실업로드 불가 — …` 경고를 한 줄 남긴다(`snsUploadReadiness`).
 
 ---
 
 ## 1. 터널 + 공개 버킷 준비
 
-> cloudflared 설치와 임시 주소의 주의사항은 [local-tunnel.md](./local-tunnel.md) 가 원천이다.
-> 여기서는 인스타·틱톡에 필요한 두 터널과 공개 버킷만 다룬다.
+여기서는 인스타·틱톡에 필요한 두 터널과 공개 버킷만 다룬다(cloudflared 자체는 [local-tunnel.md](./local-tunnel.md)).
 
 ```bash
 # 1) 개발 버킷에 익명 읽기 정책 (로컬 MinIO 전용 — S3_ENDPOINT 없으면 실행 거부됨)
@@ -49,20 +54,27 @@ cloudflared tunnel --url http://localhost:9100
 INSTAGRAM_REDIRECT_URI=https://<A>.trycloudflare.com/sns/instagram/callback
 TIKTOK_REDIRECT_URI=https://<A>.trycloudflare.com/sns/tiktok/callback
 
-# publicUrl() 의 베이스. 운영에서는 실제 CloudFront 도메인이 들어간다.
+# 업로드 때 플랫폼에 넘기는 영상 URL 은 이 주소로 서명한 presigned URL 이다
+# (apps/api/src/services/storage.service.ts 의 createDownloadUrl). 비우면 S3_ENDPOINT(localhost)로
+# 서명돼 §0 의 가드에 걸린다. 앱이 받는 업로드·재생 URL 도 이 터널을 지난다.
+S3_PUBLIC_ENDPOINT=https://<B>.trycloudflare.com
+
+# publicUrl() 의 베이스 — 편집 결과의 edited_url 과 기동 경고(snsUploadReadiness)가 이 값을 본다.
+# 운영에서는 실제 CloudFront 도메인이 들어간다.
 CLOUDFRONT_DOMAIN=https://<B>.trycloudflare.com/snaply-dev
 ```
 
 확인:
 ```bash
-curl https://<A>.trycloudflare.com/health                       # {"status":"ok"}
+curl https://<A>.trycloudflare.com/health                       # {"success":true,"data":{"status":"ok",…}}
 curl https://<B>.trycloudflare.com/snaply-dev/<some-key>        # 200 (익명 읽기)
 ```
 
-터널 주소가 바뀌면 위 세 값과 각 플랫폼 콘솔의 리디렉션 URI·URL prefix 검증을 **다시 등록**해야
+터널 주소가 바뀌면 위 네 값과 각 플랫폼 콘솔의 리디렉션 URI·URL prefix 검증을 **다시 등록**해야
 한다(임시 주소의 성질과 주의사항은 [local-tunnel.md](./local-tunnel.md) §4). 고정 주소는
-[local-tunnel.md](./local-tunnel.md) §6 의 `dev-tunnel.sh` 로 만든다 — SNS 용으로는 `api-dev.<도메인>`(API :3000)과
-`media-dev.<도메인>`(MinIO :9100) 두 호스트가 생기고, 스크립트가 `.env` 와 콘솔에 넣을 값을 출력한다.
+[local-tunnel.md](./local-tunnel.md) §6 의 `apps/api/scripts/dev-tunnel.sh` 로 만든다 — SNS 용으로는 `api-dev.<도메인>`(API :3000)과
+`media-dev.<도메인>`(MinIO :9100) 두 호스트가 생기고, 스크립트가 `.env` 와 콘솔에 넣을 값을 출력한다. 출력에
+`S3_PUBLIC_ENDPOINT` 는 없으므로 `https://media-dev.<도메인>` 을 직접 넣는다.
 
 ---
 
@@ -101,7 +113,7 @@ INSTAGRAM_WEBHOOK_VERIFY_TOKEN=...   # 웹훅 등록을 요구할 때만
 Meta 에는 "Instagram 로그인" 이라는 사용 사례가 **없다**. Instagram Login 은 사용 사례가 아니라
 그 안에서 쓰는 인증 방식이다. 필요한 권한이 담긴 사용 사례는 하나뿐이다:
 
-> **인스타그램에서 메시지 및 콘텐츠 관리**
+**인스타그램에서 메시지 및 콘텐츠 관리**
 
 이름에 "메시지"가 앞에 붙지만 게시 권한이 같은 묶음에 있다. 우리가 요청하는 건 아래 둘뿐이다:
 
@@ -120,7 +132,7 @@ Meta 에는 "Instagram 로그인" 이라는 사용 사례가 **없다**. Instagr
 | 승인 취소 콜백 URL | 비워도 됨 | 앱 검수(출시) 시 필요. 사용자가 앱 연결을 해제하면 Meta 가 호출 |
 | 데이터 삭제 요청 URL | 비워도 됨 | 앱 검수(출시) 시 필요. 개인정보 삭제 요청 처리용 |
 
-OAuth 테스트에는 리디렉션 URI 하나만 있으면 된다. 위 두 개는 **앱 검수를 받을 때** 구현하면 된다.
+OAuth 테스트에는 리디렉션 URI 하나만 있으면 된다. 나머지 두 URL 은 **앱 검수를 받을 때** 구현하면 된다([backlog.md](./backlog.md) C-5).
 
 ### 웹훅 (요구될 때만)
 
@@ -132,7 +144,8 @@ Meta 가 등록 시 그 값을 담아 우리 서버로 GET 을 보내고, `hub.c
 인증 토큰:   INSTAGRAM_WEBHOOK_VERIFY_TOKEN 에 넣은 값
 ```
 
-구현은 `routes/sns-webhook.ts`. 릴스 게시 자체에는 웹훅이 필요 없고, 수신한 이벤트는 서명만 확인하고 무시한다.
+구현은 `apps/api/src/routes/sns-webhook.ts`. `INSTAGRAM_WEBHOOK_VERIFY_TOKEN` 이 비어 있으면 검증 요청을 403 으로 거부한다.
+릴스 게시 자체에는 웹훅이 필요 없고, 수신한 이벤트는 서명만 확인하고 무시한다.
 
 ### 인스타 쪽 알아둘 점
 - 토큰: 단기(1시간) → **장기(60일)** 교환까지 코드가 처리한다. 단기 토큰 응답에는 `expires_in` 이 없어
@@ -143,7 +156,7 @@ Meta 가 등록 시 그 값을 담아 우리 서버로 GET 을 보내고, `hub.c
 - 게시는 컨테이너 생성 → `status_code=FINISHED` 폴링 → 게시 순서다. 처리에 수십 초(실측 약 50초)가
   걸려 `POST /sns/instagram/upload` 응답도 그만큼 걸린다(최대 5분, `INSTAGRAM_POLL_TIMEOUT_MS`).
 - `user_id` 는 2^53 을 넘는 JSON 숫자로 온다. 코드는 토큰 응답에서 문자열로 추출하고, 게시는 ID 대신
-  `/me/media` 로 한다(회귀 테스트: `test/sns-realkey.test.ts` 의 "user_id 정밀도").
+  `/me/media` 로 한다(회귀 테스트: `apps/api/test/sns-realkey.test.ts` 의 "user_id 정밀도").
 - 영상 규격(길이·해상도·코덱)이 릴스 요건에 안 맞으면 컨테이너가 `ERROR` 로 떨어진다.
 
 ### 인스타 트러블슈팅
@@ -200,7 +213,7 @@ Production 앱의 키가 같은 방식으로 새면 판정이 달라진다. 그�
 심사 전 콘솔에는 `video.upload` 만 나온다. `TIKTOK_SCOPES` 로 전환하며, **엔드포인트는 코드가 자동 선택**한다.
 
 ```bash
-# 심사 전 (지금)
+# 심사 전 (심사는 backlog C-3)
 TIKTOK_SCOPES=user.info.basic,video.upload
 # 심사 통과 후
 TIKTOK_SCOPES=user.info.basic,video.publish   # 기본값
@@ -212,7 +225,7 @@ TIKTOK_SCOPES=user.info.basic,video.publish   # 기본값
 ### 콘솔 저장에 필요한 필수 항목
 
 틱톡은 앱 설정을 **저장**하는 것만으로도 아래를 요구한다(심사 제출 전에도).
-그래서 API 가 필요한 페이지를 직접 서빙한다(`routes/legal.ts`):
+그래서 API 가 필요한 페이지를 직접 서빙한다(`apps/api/src/routes/legal.ts`):
 
 | 필드 | 값 |
 |---|---|
@@ -220,13 +233,13 @@ TIKTOK_SCOPES=user.info.basic,video.publish   # 기본값
 | Terms of Service URL | `https://<A>.trycloudflare.com/legal/terms` |
 | Privacy Policy URL | `https://<A>.trycloudflare.com/legal/privacy` |
 
-> 법률 문서는 **출시 전 초안**이다(페이지 상단에도 표기) — 정식화는 [backlog.md](./backlog.md) D-2.
+법률 문서는 **출시 전 초안**이다(페이지 상단에도 표기) — 정식화는 [backlog.md](./backlog.md) D-2.
 
-> ⚠️ **틱톡 크리덴셜은 사전 검증이 불가능하다.** 토큰 엔드포인트
-> (`/v2/oauth/token/`)는 `code` 를 먼저 검사해서, **존재하지 않는 client_key 로도**
-> `invalid_grant: Authorization code is expired` 를 반환한다(실측 확인).
-> 즉 client_key/secret 이 맞는지는 **authorize 를 실제로 통과해봐야만** 알 수 있다.
-> (인스타는 authorize URL 요청만으로도 일부 판별이 되지만 틱톡은 안 된다.)
+⚠️ **틱톡 크리덴셜은 사전 검증이 불가능하다.** 토큰 엔드포인트
+(`/v2/oauth/token/`)는 `code` 를 먼저 검사해서, **존재하지 않는 client_key 로도**
+`invalid_grant: Authorization code is expired` 를 반환한다(실측 확인).
+즉 client_key/secret 이 맞는지는 **authorize 를 실제로 통과해봐야만** 알 수 있다.
+(인스타는 authorize URL 요청만으로도 일부 판별이 되지만 틱톡은 안 된다.)
 
 `.env`:
 ```bash
@@ -242,7 +255,7 @@ TIKTOK_CLIENT_SECRET=...
 
 **(2) PULL_FROM_URL 은 영상 URL의 URL prefix 소유권 검증을 요구한다.**
 영상을 내주는 호스트(로컬은 MinIO 터널)의 prefix 를 API 호스트와 **별개로** 검증해야 한다.
-`trycloudflare.com` 같은 공유 도메인도 파일 서빙 방식으로 통과한다 — 아래 "URL prefix 소유권 검증".
+`trycloudflare.com` 같은 공유 도메인도 파일 서빙 방식으로 통과한다 — [URL prefix 소유권 검증](#url-prefix-소유권-검증).
 
 ### URL prefix 소유권 검증
 
@@ -251,7 +264,7 @@ TIKTOK_CLIENT_SECRET=...
 - **서명은 property 별로 따로 발급된다.** `/legal/` 과 `/snaply-dev/` 가 서로 다른 코드를 받았다
   (앱 단위로 하나를 재사용하면 통과하지 못했다).
 - 검증할 prefix 가 2개다:
-  · API 호스트 `.../legal/` — 약관·개인정보 URL(콘솔 저장용) → `routes/legal.ts` 가 서빙(`SITE_VERIFICATION_*`)
+  · API 호스트 `.../legal/` — 약관·개인정보 URL(콘솔 저장용) → `apps/api/src/routes/legal.ts` 가 서빙(`SITE_VERIFICATION_*`)
   · MinIO 호스트 `.../snaply-dev/` — 영상 URL(PULL_FROM_URL) → 버킷에 파일 업로드(익명 읽기는 §1 의 `dev:public-bucket`)
 - 재등록의 미결 상태·완료 조건은 [backlog.md](./backlog.md) D-3.
 
@@ -264,7 +277,7 @@ authorize·업로드에서 만난 에러는 전부 콘솔 설정 문제였다(�
 | authorize 에서 `client_key` | **Login Kit 제품 미추가** — OAuth 는 Content Posting API 가 아니라 Login Kit 이 담당한다 | Login Kit 을 추가하고 리디렉션 URI 를 Login Kit 설정에 등록 |
 | Login Kit 을 넣어도 `client_key` | **Sandbox 는 자체 `client_key`/`secret`(`sb` 접두사)을 가진다.** Production 키로는 심사 전 authorize 가 안 된다(문서 미명시) | Manage apps → 앱 → 이름 옆 스위치를 **Sandbox** 로 → 그 상태의 Client key/secret 을 `.env` 에 |
 | `non_sandbox_target` | 로그인한 계정이 Sandbox **Target users** 에 없다 | Target users 에 실제로 로그인할 계정 추가 · 브라우저의 다른 TikTok 계정 로그아웃 · 반영에 최대 1시간 |
-| 업로드가 `403 URL ownership` | **영상 URL 호스트**의 prefix 소유권 미검증 — API 호스트와 **별개** | 위 "URL prefix 소유권 검증" |
+| 업로드가 `403 URL ownership` | **영상 URL 호스트**의 prefix 소유권 미검증 — API 호스트와 **별개** | [URL prefix 소유권 검증](#url-prefix-소유권-검증) |
 
 - 에러가 `client_key` → `non_sandbox_target` 으로 바뀌면 앞 단계(앱·제품·리디렉션 URI·URL 검증)는 통과한 것이다.
 - **API 성공은 받은함 도착을 뜻하지 않는다.** 받은함 모드 업로드는 `platformPostId` 가 `v_inbox_url~` 로
@@ -279,8 +292,10 @@ authorize·업로드에서 만난 에러는 전부 콘솔 설정 문제였다(�
 # 1) 서버 재기동 (.env 반영)
 npm run dev:api
 
-# 2) 연동 URL 받기 — 이제 mock:// 이 아니라 실제 authorize URL 이 나와야 한다
-npm run auth:stub -w apps/api          # 토큰 발급
+# 2) 연동 URL 받기 — 응답의 data.authorizeUrl 이 mock:// 이 아니라 실제 authorize URL 이어야 한다
+#    토큰은 Supabase 로그인 토큰, 또는 스텁 토큰(SUPABASE_URL 을 스텁으로 돌려야 한다 — ONBOARDING.md §4
+#    "인증 없이 로컬에서 API 찔러보기")
+npm run auth:stub -w apps/api          # 스텁 기동 + 토큰 출력
 curl -H "Authorization: Bearer <토큰>" http://localhost:3000/sns/instagram/connect
 
 # 3) 그 URL을 브라우저에서 열어 인스타 로그인 → 승인
@@ -291,7 +306,8 @@ curl -H "Authorization: Bearer <토큰>" http://localhost:3000/sns/instagram/con
 curl -H "Authorization: Bearer <토큰>" http://localhost:3000/sns/connections
 
 # 5) 편집 완료 영상으로 업로드
-#    videos.edited_url 이 https://<B>.trycloudflare.com/snaply-dev/... 형태여야 한다
+#    플랫폼에 넘어가는 URL 은 edited_s3_key 로 만든 presigned URL 이다 — S3_PUBLIC_ENDPOINT(§1)가 터널 주소여야 한다
+#    (edited_s3_key 가 없는 옛 행만 저장된 edited_url 을 그대로 쓴다)
 curl -X POST -H "Authorization: Bearer <토큰>" -H 'content-type: application/json' \
   -d '{"videoId":"<uuid>","caption":"테스트"}' \
   http://localhost:3000/sns/instagram/upload

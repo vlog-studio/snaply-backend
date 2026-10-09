@@ -62,7 +62,7 @@ Rules for the report:
 
 - Stay inside the approved scope ([Escalation and confirmation](#escalation-and-confirmation)); findings beyond it are reported, not implemented.
 - Respect the architecture: FSD layers, slice public APIs, no cross-feature imports. A UX improvement that breaks the boundary rules is not shippable — restructure the proposal instead.
-- Reuse existing components and patterns from [`../conventions/cookbook.md`](../conventions/cookbook.md) before adding new ones. A new local component that duplicates a shared one creates an `Inconsistent Twin`.
+- Reuse the shared components before adding new ones — `src/shared/ui` (`BottomSheet`, `Toast`, `SnaplyButton`, `BackBar`, …) and `src/widgets` (the snap grid's picking rules and selection bar) — built the way [`../conventions/cookbook.md`](../conventions/cookbook.md) describes. A new local component that duplicates a shared one creates an `Inconsistent Twin`.
 - Copy changes touch the string's single source; do not fork a string per screen.
 - Every state in the proposal must exist in code: empty, loading, error, offline, partial.
 - Accessibility is part of the change, not a follow-up: labels, roles, hit targets, largest font scale, no color-only signals.

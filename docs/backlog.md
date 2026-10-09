@@ -1,15 +1,23 @@
 # 미결 작업 백로그
 
-> 저장소 전체의 **닫히지 않은 작업**을 모은 단일 목록이다. 항목이 여러 문서에 흩어져 있으면
-> 하나를 닫아도 나머지가 낡으므로, 미결 항목은 이 문서에만 둔다.
-> 이 문서만 읽어도 다음에 결정하거나 구현할 일을 빠짐없이 찾을 수 있어야 한다.
-> 결정 문서(`docs/decisions/`)는 **확정된 결정의 배경과 기각한 대안**을 담고,
-> 계획 문서(`docs/plans/`)는 착수 전 구현 제안을 담으며,
-> 진행 기록([progress.md](./progress.md))은 **완료된 것**만 담는다.
->
-> 각 항목은 `왜 막혀 있는지` + `무엇이 있으면 닫히는지(완료 조건)` 형식이다.
-> 닫힌 항목은 본문을 지우고 문서 끝 [닫은 항목](#닫은-항목)에 한 줄만 남긴다. 번호는 재사용하지 않으며,
-> 빠진 번호는 거기에 있다.
+**작성일**: 2026-08-10
+**상태**: 현행 — 저장소 전체의 닫히지 않은 작업을 모은 단일 목록
+**원천**: 다음에 결정하거나 구현할 일의 유일한 원천. 확정된 결정의 배경·기각한 대안은
+[decisions/](./decisions/README.md), 착수 전 구현 제안은 [plans/](./plans/README.md), 요구별 구현 상태는
+[specs/](./specs/README.md)의 라벨, 끝난 일은 [progress.md](./progress.md)가 원천이다
+**관련 문서**: [progress.md](./progress.md) · [decisions/README.md](./decisions/README.md) ·
+[specs/README.md](./specs/README.md) · [doc-conventions.md](./doc-conventions.md) §본문
+
+미결 항목은 이 문서에만 둔다 — 여러 문서에 흩어져 있으면 하나를 닫아도 나머지가 낡는다. 이 문서만 읽어도
+다음에 결정하거나 구현할 일을 빠짐없이 찾을 수 있어야 하고, 다른 문서는 항목을 ID(`A-4`)로 가리킨다.
+
+**항목 형식**: 각 항목은 **왜 막혀 있는지**와 **무엇이 있으면 닫히는지(완료 조건)**를 적는다. 결정의 배경은
+결정 문서에 두고 여기서는 링크한다. 항목 앞의 `앱` · `서버` · `서버작업` 라벨은 작업할 곳(모바일 앱 · 저장소의
+서버 코드 · 서버 머신에서 손으로 하는 일)이다.
+
+**닫는 법**: 끝난 항목(끝난 체크 항목 `[x]` 포함)은 본문을 지우고 문서 끝 [닫은 항목](#닫은-항목)에
+`- **ID** 요약 — 날짜 → progress 날짜 "제목"` 한 줄만 남긴다. 일부만 끝났으면 끝난 부분만 옮기고 남은 것을
+둔다. 번호는 재사용하지 않으며, 빠진 번호는 닫은 항목에 있다.
 
 ---
 
@@ -35,11 +43,13 @@ MOV-16~19 다. 만료의 동작 구조(2단계 삭제 · 만료 스냅 식별 ·
 
 - [ ] **`앱`** **서버 전환 실기기 검증** — 단위 테스트와 인메모리 목으로만 검증됐다.
       Android dev build 에서 실제 서버에 대해: ① 촬영 직후 담은 초안이 업로드가 끝난 뒤 서버에 생긴다
-      ② 편집이 PATCH 된다 ③ 생성 → **완성 푸시가 한 번만** 오고 탭하면 그 무비가 열린다(cold start 포함 —
+      ② 편집이 PATCH 된다 — **2026-10-01 통과**(Galaxy S22 Ultra 에서 고른 전환 · 구간이 DB 에 `user` 로 닿았다,
+      [progress.md](./progress.md) 2026-10-01 "경계별 전환 실기기 확인" · "자동 편집 실기기 확인")
+      ③ 생성 → **완성 푸시가 한 번만** 오고 탭하면 그 무비가 열린다(cold start 포함 —
       Android 에서 FCM 과 expo-notifications 가 같은 탭을 둘 다 보고하는지, 중복 억제 창 2초)
       ④ 끝내기 → 결과물이 사라지고 초안으로 돌아온다 ⑤ 앱 삭제·재설치 → 로그인 → 무비 목록이 돌아온다 —
       **2026-09-27 통과**(Galaxy S22, [progress.md](./progress.md) 2026-09-27) ⑥ 계정 전환 → 다른 계정 무비가 보이지 않는다.
-      **완료 조건**: 여섯 가지가 통과하면 MOV-2·17·18·19·NTF-6 의 "실기기 미검증" 표기를 지운다
+      **완료 조건**: 여섯 가지가 통과하면 MOV-2·17 · NTF-6·8 의 "실기기 미검증" 표기를 지운다
 
 - [ ] **`서버`** **`POST /edit-jobs` 폐기** — 결정 ⑤ 는 "한 버전 공존 후 폐기"다. 앱이 Movie export 로
       옮긴 릴리스의 **다음 릴리스**에서 제거한다. 시점을 항목으로 남기지 않으면 영구 공존이
@@ -60,7 +70,7 @@ MOV-16~19 다. 만료의 동작 구조(2단계 삭제 · 만료 스냅 식별 ·
 - [ ] **결과물 만료 안내** — 끝내지 않은 결과물의 30일 상한(MOV-16)을 어떤 알림으로 줄지 정해지지 않았다:
       완성 알림 본문에 보관 기간을 적을지와 만료 전 알림을 언제 보낼지
       ([storage-and-subscription-policy.md](./decisions/storage-and-subscription-policy.md) §3.5 는 본문 명시와
-      D-3 알림을 적었다). 완성 알림은 서버 FCM 이라(`services/movie-ready-notice.service.ts`) 문구를 서버가
+      D-3 알림을 적었다). 완성 알림은 서버 FCM 이라(`apps/api/src/services/movie-ready-notice.service.ts`) 문구를 서버가
       쥔다. 끝내기(MOV-17)가 붙은 뒤 사용자가 실제로 결과물을 얼마나 방치하는지 보고 정한다
 
 ### A-2. 크레딧 결제 세부 정책 확정
@@ -85,7 +95,8 @@ MOV-16~19 다. 만료의 동작 구조(2단계 삭제 · 만료 스냅 식별 ·
   "기간"으로 옮겨간다. **정해지기 전까지 스냅 만료 구현은 전원 15일을 가정한다**
 - **구독 혜택에 워터마크 제거·고해상도 export를 포함할지**
 - **용량 한도(2GB)를 존치할지** — 기간 만료가 누적을 대신 막아 평균 사용자는 닿지 않는다.
-  권장은 폐기하고 남용 방지 상한만 별도로 두는 것(결정 문서 §후속 판단). SNAP-9 가 미결로 표시 중
+  권장은 폐기하고 남용 방지 상한만 별도로 두는 것([snap-retention-period.md](./decisions/snap-retention-period.md#이-결정이-남긴-후속-판단)).
+  SNAP-9 가 미결로 표시 중
 - [ ] **구독 만료·보관 정책 변경 때의 사전 고지** — 스냅 만료 예고(D-3 · D-1, KST 10시)는 정해졌지만
   ([decisions/expiry-notice-schedule.md](decisions/expiry-notice-schedule.md)), 사용자 구독이 끝날 때와
   우리가 보관 정책을 바꿀 때 언제 알릴지는 정해지지 않았다
@@ -105,7 +116,8 @@ MOV-16~19 다. 만료의 동작 구조(2단계 삭제 · 만료 스냅 식별 ·
 스키마·API·분석 워커·docker 배선은 2026-08-19 에 들어갔다([progress.md](./progress.md) 2026-08-19,
 계획 대비 차이는 [decisions/snap-content-analysis.md](./decisions/snap-content-analysis.md) §9).
 
-분석은 `POST /videos/:videoId/analysis` 로만 시작된다 — **업로드 시 자동 분석은 없다.**
+분석은 명시적 요청으로만 시작된다(ANA-1) — `POST /videos/:videoId/analysis` 와 추천 요청
+(`POST /movie-recommendations` 가 후보 스냅의 분석을 적재한다). **업로드 시 자동 분석은 없다.**
 
 **2026-09-27 실동작화 착수 결정**: 분석·추천 경로를 실제 모델로 돌리고 넓히는 순서는
 [plans/snap-analysis-recommendation-rollout.md](./plans/snap-analysis-recommendation-rollout.md).
@@ -121,11 +133,9 @@ MOV-16~19 다. 만료의 동작 구조(2단계 삭제 · 만료 스냅 식별 ·
 **2026-09-29 옵트인 결정**: 법무 검토 전에도 **분석에 동의한 사용자에게는** 켤 수 있다(ANA-5·REC-4,
 [결정 문서](./decisions/snap-content-analysis.md) §6.1). 동의 기록·서버 집행·앱의 동의 화면·약관 초안 반영은
 같은 날 들어갔다([progress.md](./progress.md) 2026-09-29). 그래서 생산 활성화를 막는 것은 법무 검토가 아니라
-위의 팀 스냅 실측과 아래 운영 모델 고정이다.
+위의 팀 스냅 실측과 아래 운영 모델 고정이다. 분석 고지의 법무 확정(동의 문구 포함)은 여전히 필요하지만 켜는
+조건이 아니며, D-2 "분석 고지"에서만 관리한다.
 
-- [ ] **약관·개인정보처리방침의 분석 고지 확정** — 켜는 조건은 아니게 됐지만 법무 검토는 여전히 필요하다(동의
-      문구 포함). 초안은 `routes/legal.ts`, 남은 확정 항목(DPA · AWS 리전 · Apple·Google 취급 · Sentry 보관
-      기간 · 별도 동의 필요 여부)은 D-2 가 원천이다
 - [ ] **운영 모델 고정** — `OPENAI_VISION_MODEL` 기본값 `gpt-5.6-luna` 는 잠정값이다.
       실제 스냅으로 모델을 비교해 고정한다
 - [ ] **품질·단가 기준선** — 요약 사실성·핵심 사물/행동 포함률·환각 비율·`usableForEdit`
@@ -143,6 +153,11 @@ MOV-16~19 다. 만료의 동작 구조(2단계 삭제 · 만료 스냅 식별 ·
 
 **후속 기능**: 대주제 기반 자동 스냅 선택은 **A-6** 으로 열렸다(2026-08-19).
 `usableForEdit=true` 인 분석 결과를 점수화해 슬롯을 채우는 경로다.
+
+**계획 문서의 보관**: 실측(위 "팀 스냅 30~100편으로 실측")이 끝나면
+[plans/snap-analysis-recommendation-rollout.md](./plans/snap-analysis-recommendation-rollout.md)를 archive 로 보낸다 — §4.1 의
+실측 절차는 [decisions/snap-content-analysis.md](./decisions/snap-content-analysis.md) §9.3 으로, 아직 시작하지 않은 2~5단계는
+이 항목과 A-6 · A-9 의 체크박스로 옮긴다(2026-10-09 결정 — 실측 결과가 2단계 이후 결정의 입력이라 그때까지 둔다).
 
 ### A-4. 스냅 서버 원천 전환의 미결 항목
 
@@ -167,10 +182,11 @@ MOV-16~19 다. 만료의 동작 구조(2단계 삭제 · 만료 스냅 식별 ·
       변환은 워커 계약 테스트(합성 HDR10)로만 확인됐다 — 2026-09-15 스트레스 검증의 아이폰 영상은 H.264 였고,
       **실제 아이폰 HEVC·돌비비전 원본으로 돌린 적이 없다**(아래 F 의 돌비비전 항목과 같은 공백). iPhone 실기기가
       생기면 iPhone 촬영 → Android 도착·재생, 그리고 그 반대를 확인한다. iOS 시뮬레이터에서 받은 사본의 재생은 확인했다
-- [ ] **iOS 출시 전 — iOS 실기기 검증 절차 문서** — `apps/mobile/docs/workflows/ios-device-verification.md` 는
-      오너에게 iOS 기기가 없어 쓰지 못했다([apps/mobile/AGENTS.md](../apps/mobile/AGENTS.md) "Planned documentation").
-      그때까지는 시뮬레이터 절차로 대신하고 실기기 미검증을 밝힌다. iPhone 실기기가 생기면 절차를 써서
-      AGENTS.md 의 문서 표에 올린다
+- [ ] **iOS 출시 전 — iOS 실기기 검증 절차 문서** — 계획만 있고 아직 없는 문서다
+      (`apps/mobile/docs/workflows/ios-device-verification.md`, [apps/mobile/AGENTS.md](../apps/mobile/AGENTS.md)
+      "Planned documentation" 표). 오너에게 iOS 기기가 없어 쓰지 못했다. 그때까지는 시뮬레이터 절차로 대신하고
+      실기기 미검증을 밝힌다. **완료 조건**: iPhone 실기기가 생기면 절차를 써서 `apps/mobile/AGENTS.md` 의 문서 표로
+      옮기고 "Planned documentation" 행을 지운다
 - [ ] **`앱`** **최근 삭제의 실기기 확인**(SNAP-20 `구현됨(실기기 미검증)`) — 서버 · 앱 자동 테스트와 Android 에뮬레이터(개발 DB 의
       복사본)로만 확인했다([progress.md](./progress.md) 2026-10-07). 휴대폰 두 대(또는 휴대폰 + 에뮬레이터)에서: ① 한 기기에서 모든 기기에서 삭제 →
       다른 기기에서도 사라진다 ② 되돌리기 → 두 기기 모두에 다시 나타나고, 지운 기기에서는 처음 재생할 때 받아 온다 ③ 최근 삭제에서 되살리기도 같다
@@ -211,7 +227,7 @@ MOV-16~19 다. 만료의 동작 구조(2단계 삭제 · 만료 스냅 식별 ·
       팀 스냅 실측과 운영 모델 고정(A-3). 2026-09-29 옵트인 결정으로 법무 검토(D-2)는 켜는 조건에서 빠졌고,
       켜도 분석에 동의한 사용자에게만 돈다(REC-4). 켜지 않으면 추천 경로에서 분석이 돌지 않는다
 - [ ] **상한 값 재조정**: 추천 상한(REC-3, [specs/template-and-recommendation.md](./specs/template-and-recommendation.md))은
-      잠정값이다. A-3 의 단가 실측이 나오면 `services/recommendation/recommendation-policy.ts` 의 숫자만 바꾼다
+      잠정값이다. A-3 의 단가 실측이 나오면 `apps/api/src/services/recommendation/recommendation-policy.ts` 의 숫자만 바꾼다
 - [ ] **키워드 매칭의 오탐·미탐** — 슬롯 힌트와 분석값을 부분 문자열로 맞춰 `담` 이 `담요` 에 맞고 `커피` 가 `아메리카노` 에
       맞지 않는다(개발 DB 분석 7건에서도 맞은 3쌍 중 2쌍이 오탐). 개념 사전으로 바꾸는 계획과 테스트 순서는
       [plans/content-vocabulary.md](./plans/content-vocabulary.md) — 현행 고정 테스트(§5.1) → A-3 실측에 매칭 채점을 얹기(§5.4) → 도입.
@@ -235,9 +251,12 @@ MOV-16~19 다. 만료의 동작 구조(2단계 삭제 · 만료 스냅 식별 ·
 [plans/trend-editing-pipeline.md](./plans/trend-editing-pipeline.md),
 스펙 v3 의 확정 결정은 [decisions/edit-spec-v3.md](./decisions/edit-spec-v3.md).
 
-**진행 상황(2026-08-20)**: 스펙 v3 의 설계 결정이 확정됐고 공유 어휘 사전 3종(앵커 · 스테이지·시드 ·
-재생성 무효화)이 구현·검증됐다 — [progress.md](./progress.md). **아래 미결은 그대로다** — 사전은
-계약을 고정한 것이지 파이프라인을 구현한 것이 아니다.
+**진행 상황**: 스펙 v3 의 설계 결정이 확정됐고 공유 어휘 사전 3종(앵커 · 스테이지·시드 · 재생성 무효화)이
+구현·검증됐다([progress.md](./progress.md) 2026-08-20). 2026-10-01 에는 v3 의 `timeline`(컷 · 경계별 전환)만
+먼저 들어가 무비 생성이 `edit-v3` 큐로 렌더한다(A-11, [progress.md](./progress.md) 2026-10-01 "경계별 전환의 렌더") —
+색보정·음악은 아직 v2 프리셋(`stylePreset`)이 정한다. 두 스키마 초안(editSpec v3 · 에셋 팩 매니페스트)은
+2026-10-03 main 에 들어왔다([닫은 항목](#닫은-항목)). **아래 미결은 그대로다** — 사전과 초안은 계약을 고정한
+것이지 파이프라인을 구현한 것이 아니다.
 
 v3 는 **Movie export 에 붙인다** — `POST /edit-jobs` 는 한 버전 공존 후 폐기하기로 했으므로
 (A-1, [decisions/movie-export-policy.md](./decisions/movie-export-policy.md) ⑤) 두 곳에 붙이지 않는다.
@@ -249,26 +268,16 @@ v3 는 **Movie export 에 붙인다** — `POST /edit-jobs` 는 한 버전 공�
   `subtitles` 설명([`contract/edit-jobs.ts`](../packages/shared-types/src/contract/edit-jobs.ts))과
   MOV-9 가 안내한다. 새 라이브러리는 0이지만 **결정 문서가 선행**이다
 - **워터마크 결정이 레이어 설계 입력** — A-2에서 넣기로 하면 v3 `layers` 가 표현해야 한다
-- **BGM 음원이 없다** — `assets/bgm/` 에 README 뿐이라 비트 싱크·덕킹·무드 매칭이 전부 검증
+- **BGM 음원이 없다** — `apps/ai-worker/assets/bgm/` 에 README 뿐이라 비트 싱크·덕킹·무드 매칭이 전부 검증
   불가다. 확보는 F 의 "실BGM 기준 whisper 자막 인식 재확인"의 선행이기도 하다
 - **스티커 에셋도 없다** — 배치 코드가 있어도 아트가 없으면 검증할 게 없다
 
 **결정할 것**
 
-- [ ] 번인 자막으로 전환할 것인가 — [decisions/subtitle-rendering.md](./decisions/subtitle-rendering.md)(미결)
+- [ ] 번인 자막으로 전환할 것인가 — [decisions/subtitle-rendering.md](./decisions/subtitle-rendering.md)(미결).
+      어느 쪽이든 앱에서 자막을 켤 길이 없어 MOV-9 가 `부분`이다 — 소프트 유지면 앱에 스위치를, 번인이면 계약 변경을 함께 한다
 - [ ] BGM 을 어디서 확보할 것인가(AI 생성 음원 포함)와 예산 — [decisions/bgm-sourcing.md](./decisions/bgm-sourcing.md)(미결)
 - [ ] `bgm_tracks` 스키마 신설 — `schema.prisma` 는 공유 파일이라 [team.md](./team.md) §2·§3 적용
-- [x] **스티커 팩 매니페스트 스키마** — 에셋 URL·앵커 적합성·무드 태그·스케일 범위·기본 모션.
-      뒤로 미룰수록 마이그레이션 비용이 커진다(trend-editing-pipeline §8.3).
-      **설계는 확정됐다**([edit-spec-v3.md](./decisions/edit-spec-v3.md) §2 C·D, 폰트 형식은 C-1) — 앵커 어휘는
-      이미 공유 사전에 있고, 매니페스트 본문은 초안 [plans/asset-pack-manifest.md](./plans/asset-pack-manifest.md)
-      §5(스티커 팩) · §9(anchor 어휘)에 있다(2026-10-03 main 에 들어옴)
-- [x] **editSpec v3·에셋 매니페스트 초안의 남은 개정** — 확정 결정([decisions/edit-spec-v3.md](./decisions/edit-spec-v3.md))을
-      두 스키마 초안에 반영하는 일. 초안은 2026-08-20 에 이미 개정돼 있었는데 미병합 브랜치에만 있었고, 2026-10-03
-      main 에 들어왔다([plans/edit-spec-v3.md](./plans/edit-spec-v3.md) · [plans/asset-pack-manifest.md](./plans/asset-pack-manifest.md)).
-      들일 때 확인한 것: `prefer` 가 남지 않았고(`ref`), anchor 어휘가 매니페스트 §9 로 떨어져 있고 `defaultAnchor` 가 없으며,
-      editSpec §10.3 이 `resolved.xy` 를 "범위 무제약"으로 적는다. 결정 A-1~D-8 의 각 항목은 초안에서 대응하는 서술을
-      찾는 정도로 대조했다
 - [ ] 스티커를 어디서 확보할 것인가(디자이너 커미션 여부와 스타일 방향) —
       [decisions/sticker-asset-sourcing.md](./decisions/sticker-asset-sourcing.md) 결정 1(미결)
 - [ ] 스티커를 어떤 경로로 등록·관리할 것인가(관리자 페이지 도입 여부) — 같은 문서 결정 2(미결)
@@ -283,7 +292,7 @@ v3 는 **Movie export 에 붙인다** — `POST /edit-jobs` 는 한 버전 공�
       조달 단계에서 **"신규 배포 중단 / 기존 저작물 유지" 분리 조항**을 협상 항목으로 올린다.
       이 조항이 확보되면 팩 상태를 셋(`experimental → active → deprecated`)으로 줄이고
       `retired` 를 법적 차단 전용으로 좁힌다([edit-spec-v3.md](./decisions/edit-spec-v3.md) §2 C-2)
-- [ ] **강조 어휘를 사전 파일로** — v3 초안은 `accents[].kind` 의 자리만 두고 값을 닫지 않았다. 전환 `kind` 와
+- [ ] **강조·수정 어휘를 사전 파일로** — v3 초안은 `accents[].kind` · `reason.code` · `userEdits.locked` 의 자리만 두고 값을 닫지 않았다. 전환 `kind` 와
       컷 `role` 은 사전으로 닫혔다([`transition-vocabulary.json`](../packages/shared-types/src/transition-vocabulary.json) ·
       [`cut-role-vocabulary.json`](../packages/shared-types/src/cut-role-vocabulary.json), 2026-10-01)
 - [ ] **컷 타이밍의 기준을 컷마다** — 결정 B-6(`beatLength` 가 기준)은 사용자가 자른 컷과 음악 없는 무비를
@@ -291,8 +300,24 @@ v3 는 **Movie export 에 붙인다** — `POST /edit-jobs` 는 한 버전 공�
       ([auto-edit-draft.md](./decisions/auto-edit-draft.md) §2.4). 사용자 수정을 값별 주인으로 표현할지,
       v3 초안의 `userEdits` 로 표현할지도 함께 정한다(같은 문서 §2.2)
 
+- [ ] **v3 의 정본 모양** — 2026-10-01 에 들어간 `editSpecV3Schema`([`contract/edit-jobs.ts`](../packages/shared-types/src/contract/edit-jobs.ts))는
+      컷에 `videoId` 를 직접 두고 최상위 `stylePreset` 을 쓰지만, 초안([plans/edit-spec-v3.md](./plans/edit-spec-v3.md))은
+      `clipId` → `source.clips` · `intent.styleBundleId` 다. 확정 때 어느 쪽으로 맞출지 정한다
+- [ ] **끝낸 무비를 구성 그대로 다시 만들 때의 재현** — 무료 "만료 후 재생성"은 2026-09-09 에 폐기됐다(MOV-16 · MOV-19 —
+      다시 만들기는 유료 새 생성). 그래서 [decisions/edit-spec-v3.md](./decisions/edit-spec-v3.md) §5 · §6 과 무효화 사전의
+      `expired-regenerate`(시드 `attempt` 유지 → 같은 결과) 행이 쓰일 곳을 잃었다. 구성을 바꾸지 않고 다시 만들 때
+      (a) `attempt` 를 유지해 같은 결과를 낼지(MOV-14 의 재현 약속과 맞다) (b) "다시 생성"처럼 `attempt` 를 올릴지 정하고,
+      사전 행과 그 `note`(`packages/shared-types/src/invalidation-vocabulary.json` — 폐기된 전제인 storage-and-subscription-policy §3
+      을 아직 근거로 든다)를 고치거나 지운다. E-5(BGM 재현성)와 함께 본다
+- [ ] **팩을 긴급 차단(`retired`)할 때 사용자에게 무엇을 보일지** — [plans/asset-pack-manifest.md](./plans/asset-pack-manifest.md) §12
+- [ ] **편집 경로의 기본 처리** — 회전 검증 · 클립별 음량 정규화 · 컷 경계 마이크로 페이드 · `loudnorm` 과 클립 간 색 맞춤
+      `grade.match` 는 [plans/edit-recipe-tools.md](./plans/edit-recipe-tools.md) §2 가 v1 로 두었으나 편집 워커
+      (`apps/ai-worker/src/pipeline/`)에 없다([plans/trend-editing-pipeline.md](./plans/trend-editing-pipeline.md) §10 의 5번)
+- [ ] **편집 워커 동시성** — 단계별 CPU·메모리를 실측한 뒤 값을 정한다(같은 문서 §10 의 16번 · §2.3)
+
 **완료 조건**: 위 선행 결정·조달 확정 → `editSpec` v3 확정(계약 `editSpecSchema` 와 `openapi.json` 을 같은
-변경에서 갱신) → `bgm_tracks` + 오프라인 비트 그리드 →
+변경에서 갱신하고, `parseEditSpec` 이 모르는 스펙을 v1 `일상` 으로 삼키는 폴백을 거절로 바꾼다 —
+[decisions/edit-spec-v3.md](./decisions/edit-spec-v3.md) §1 A-1) → `bgm_tracks` + 오프라인 비트 그리드 →
 1단계(출력 옵션 · ASS 자막 · VAD 무음 컷 · 비트 스냅) 구현 → 계약·골든 프레임 테스트 위에서
 e2e 실검증.
 
@@ -340,10 +365,10 @@ e2e 실검증.
 - [ ] 나 탭의 `준비 중` 을 걷고 편집 화면을 되살린다(되살릴 화면은 계획 §4.4)
 - [ ] 닉네임·아바타 수정 화면 — 서버는 받지만 앱에 화면이 없다(같은 ACC-5)
 
-### A-10. 제품 콘셉트에서 정하지 않은 것 — 앱 안 피드 · 재생성 버전 · 무비 길이
+### A-10. 제품 콘셉트에서 정하지 않은 것 — 앱 안 피드 · 재생성 버전 · 무비 길이 · 출력 비율 · 동시 생성
 
 제품 방향(스튜디오 · 스냅/무비 모델 · 무비 화면)은 [decisions/product-concept.md](./decisions/product-concept.md)가
-정했지만 아래 셋은 정하지 않은 채 남았다. 앱이 지금 하는 일은 [무비 기능 문서](../apps/mobile/docs/features/movie.md).
+정했지만 아래는 정하지 않은 채 남았다. 앱이 지금 하는 일은 [무비 기능 문서](../apps/mobile/docs/features/movie.md).
 
 - [ ] **앱 안 피드(소셜)를 들일 것인가** — 지금은 내보내기와 외부 앱 공유만 있다. 피드를 들이면 탭 구조가
       바뀐다. **완료 조건**: 들일지 정하고, 들인다면 탭 구조까지 정한 결정 문서가 생긴다
@@ -353,6 +378,12 @@ e2e 실검증.
 - [ ] **무비 길이 상한** — 지금은 컷 10개 × 스냅 최대 5초 = 최대 50초다. 트림으로 줄일지, 목표 길이를 먼저
       정할지 정하지 않았다(editSpec v3 는 목표 길이를 `intent.targetDurationMs` 로 받는다 — A-7).
       **완료 조건**: 상한 또는 목표 길이를 정해 스펙에 적는다
+- [ ] **출력 비율을 고르게 할 것인가(MOV-8 `부분`)** — 무비에는 출력 프로필·맞춤 방식이 없어 생성은 늘 기본값(세로 ·
+      블러 배경)이다. 고를 수 있는 길은 폐기 예정인 `POST /edit-jobs`(A-1) 뿐이라, 그대로 폐기하면 고를 길이 사라진다.
+      **완료 조건**: 9:16 하나로 두기로 하면 MOV-8 을 그렇게 고치고, 고르게 한다면 무비 계약과 앱에 넣는다
+- [ ] **진행 중인 생성을 사용자당 하나로 묶을 것인가(MOV-11 `부분`)** — 지금은 앱이 한 무비의 중복 생성만 막고
+      서로 다른 무비는 동시에 생성된다. **완료 조건**: 사용자당 1개를 유지하면 서버·앱에 구현하고, 무비당 1개로
+      바꾸면 MOV-11 을 고친다
 
 ### A-11. AI 편집 초안 — 구현됨, 문턱값 실측 남음
 
@@ -360,43 +391,35 @@ e2e 실검증.
 [decisions/auto-edit-draft.md](./decisions/auto-edit-draft.md), 툴 목록과 착수 순서의 제안은
 [plans/edit-recipe-tools.md](./plans/edit-recipe-tools.md).
 
-**막힌 이유**: 초안 선택에 쓸 컷 역할 어휘와 구간의 주인이 없고(A-7), 고르기·자르기에 쓸 로컬 신호가 없다.
-전환 어휘 · 무효화 액션(`cut-trim`·`transition-edit`) · 무비 계약의 경계별 전환과 그 주인 · 경계별 렌더(editSpec v3,
-`edit-v3` 큐) · 편집 화면의 경계별 선택과 미리보기는 2026-10-01 에 들어왔다([progress.md](./progress.md)).
+컷 역할 사전 · 구간의 주인 · 로컬 신호 · 초안 제안 API · 앱 흐름 · 실기기 확인(초안의 구간·전환을 고쳐 만든
+결과물이 편집 화면과 같다)과 경계별 전환(MOV-22)은 2026-10-01 에 끝났다([닫은 항목](#닫은-항목)). 상한(30 / 분석 12 /
+24시간 10)·바로 표시·미업로드 포함·빠진 스냅 알림은 같은 날 정했다([auto-edit-draft.md](./decisions/auto-edit-draft.md) §5).
 
-상한(30 / 분석 12 / 24시간 10)·바로 표시·미업로드 포함·빠진 스냅 알림은 2026-10-01 에 정했다
-([결정 §5](./decisions/auto-edit-draft.md)).
+**막힌 이유**: 거르기·중복 문턱값(`DRAFT_THRESHOLDS`)이 잠정값이다 — 합성 클립과 개발 DB 의 실제 스냅 6개로만 잡았고,
+어둡고 흐린 시험 스냅으로 다시 정해야 한다([edit-director.md](./decisions/edit-director.md) §2.1 · §2.2).
 
-- [x] **컷 역할 사전** — [`cut-role-vocabulary.json`](../packages/shared-types/src/cut-role-vocabulary.json), TS·워커 로더와
-      정합성 테스트(2026-10-01). editSpec 에 싣는 일은 아래 "완료 조건에 넣지 않는 후속"에 있다
-- [x] **무비 계약: 구간의 주인(`ai`·`user`)** — 컷마다 `trimOwner`(2026-10-01). 생략하면 `user`, 기존 행도 `user`.
-      앱은 아직 보내지 않는다 — 초안을 옮기는 앱 흐름에서 `ai` 를 보내고 다시 보낼 때 유지한다
-- [x] **로컬 신호 reader** — 밝기 · 흐림 · 프레임 해시 · 100ms 움직임 · VAD 발화 구간을 렌디션 작업이 계산해
-      `video_signals` 에 둔다(2026-10-01, [edit-director.md](./decisions/edit-director.md) §8.1)
 - [ ] **거르기·중복의 문턱값** — 실제 스냅의 신호 분포로 어둠·흐림·해시 거리 문턱값을 정해
       [edit-director.md](./decisions/edit-director.md) §2 를 고친다. 이때 점수·거르기의 `quality` 에 밝기를 넣을지도 정한다 —
-      지금은 선명도(`log1p(sharpness)`)만 쓰는데 결정 문서 §2.1 · §4 는 "밝기·흐림"이라 적었다(2026-10-02 리뷰)
-- [x] **초안 제안 API 와 선택 단계(edit-director)** — `POST /movie-drafts`(2026-10-01). 업로드되지 않은 스냅은 `localId` 로
-      받아 그 자리에 둔다. 규칙은 [edit-director.md](./decisions/edit-director.md)
-- [x] **앱의 진입 경로와 흐름** — 스튜디오 `스냅 골라 자동 편집` · 고르기 상한 30 · 제안으로 무비 만들기(`arranger: ai` ·
-      `trimOwner: ai`, 고치면 `user`) · 넣지 않은 스냅의 개수와 다시 넣기(2026-10-01, Android 에뮬레이터 확인). 스타일은 마지막 무비의 것이다
-- [x] **실기기 확인** — Galaxy S22 Ultra 에서 초안 → 경계 하나를 `겹쳐 녹이기` · 구간 하나 수정 → 생성 → 결과물이 편집 화면과 같았다
-      (2026-10-01, [progress.md](./progress.md))
+      지금은 선명도(`log1p(sharpness)`)만 쓰고 밝기는 어둠 문턱값에만 쓴다(같은 문서 §4)
 
-**완료 조건에 넣지 않는 후속**: "다시 편집"은 v1 에 두지 않았다(결정 §5). 붙일 때는 시드 `attempt` 를 올려 `ai`
-값만 다시 고른다.
+- [ ] **초안의 vision 분석** — 초안 1회에 분석을 최대 12개 요청하고 늦게 도착한 결과를 다음 초안에 얹기로
+      정했지만([auto-edit-draft.md](./decisions/auto-edit-draft.md) §5) 구현되지 않았다 — `apps/api/src/services/movie-draft.service.ts`
+      는 신호만 계산하고 분석을 요청하지 않는다. 켜는 조건은 A-3 · REC-4 를 따른다
 
-- [ ] **컷 역할을 선택 단계 밖으로 싣기** — 선택 단계(`edit-director.ts`)가 컷마다 역할을 정하지만(결정 §6), v1 에서 결과를 바꾸는
+**완료 조건에 넣지 않는 후속**: "다시 편집"은 v1 에 두지 않았다([auto-edit-draft.md](./decisions/auto-edit-draft.md) §5).
+붙일 때는 시드 `attempt` 를 올려 `ai` 값만 다시 고른다.
+
+- [ ] **컷 역할을 선택 단계 밖으로 싣기** — 선택 단계(`apps/api/src/services/edit-director.ts`)가 컷마다 역할을 정하지만([edit-director.md](./decisions/edit-director.md) §6), v1 에서 결과를 바꾸는
       것은 `hook`·`closer` 의 컷 길이뿐이다. 가운데 컷의 역할(`establish`·`detail`·`action`)과 그것을 위한 움직임 순위는 계산만 되고
       제안 응답에도 무비에도 실리지 않는다 — 초안 제안 API 와 함께 싣기로 했던 일이 빠졌다(2026-10-02 리뷰). editSpec 의
       `timeline.cuts[].role`([plans/edit-recipe-tools.md](./plans/edit-recipe-tools.md) §3)로 싣거나(무비에 역할을 저장해야 한다),
       쓸 곳이 생기기 전까지 가운데 컷의 계산을 걷어 낼지 정한다
 
-**완료 조건**: 위 항목이 끝나고, 고른 스냅으로 받은 초안에서 구간과 전환을 고친 뒤 생성한 결과물이 편집
-화면에서 본 것과 같음을 실기기에서 확인한다. 그러면 MOV-21 이 `구현됨` 이 된다. 경계별 전환(MOV-22)은 모든 무비에서
-먼저 끝났다(2026-10-01 실기기 확인).
+**완료 조건**: 문턱값이 실측으로 정해져 결정 문서 §2 가 고쳐지고 초안의 vision 분석이 붙으면 MOV-21 이
+`구현됨` 이 된다(실기기 확인은 2026-10-01 에 끝났다).
 
-**의존**: A-7(어휘 · 무효화 액션 · 컷 타이밍 · v3 큐). 분석을 쓰는 부분은 A-3 · D-2(REC-4 와 같은 조건).
+**의존**: 컷 타이밍의 기준(A-7 "컷 타이밍의 기준을 컷마다")과 역할을 싣는 `timeline.cuts[].role`(A-7 editSpec v3).
+분석을 쓰는 부분은 A-3 의 활성화 조건과 분석 동의(REC-4)를 따른다.
 
 ---
 
@@ -416,7 +439,7 @@ e2e 실검증.
 원래 `POST /billing/checkout` 이 결제 고객을 이메일 없이 생성하던 문제에서 나온
 항목인데, IAP 전환으로 Checkout 이 제거되면서(2026-08-14) 그 필요성은 사라졌다
 ([decisions/payment-channel-iap.md](./decisions/payment-channel-iap.md)). 결제 외 용도로
-`request.user`에 email을 싣는 것이 필요한지는 별도 판단이다. `plugins/auth.ts`는
+`request.user`에 email을 싣는 것이 필요한지는 별도 판단이다. `apps/api/src/plugins/auth.ts`는
 **공동 소유**라 변경 시 합의가 필요하다.
 
 **완료 조건**: email 이 필요한 기능이 생기면 공동 소유 합의 후 추가하고 닫는다. 그런 기능이 없다고
@@ -428,9 +451,11 @@ geofence 쿨다운 판정용 이력이 무한히 쌓인다. 쿨다운은 30분 �
 조회에 쓰이지 않는다.
 
 **2026-09-11 이후 만료 예고 행도 여기 쌓인다**(`kind = snap_expiry`). 다만 성격이 다르다 —
-이쪽은 "이 스냅의 D-3 을 보냈는가" 를 판정하는 **유일한 근거**라, 스냅이 살아 있는 동안은
-지우면 안 된다(지우면 예고가 다시 나간다). 스냅이 purge 되면 FK Cascade 로 함께 사라지므로
-방치해도 무한히 쌓이지는 않는다. 보관 정책을 정할 때 두 종류를 같은 기준으로 묶지 말 것.
+이쪽은 "이 스냅의 D-3 을 보냈는가" 를 판정하는 **유일한 근거**라, 스냅이 보관 기간 안에 있는 동안은
+지우면 안 된다(지우면 예고가 다시 나간다). 스냅 파일이 purge 돼도 `videos` 행은 툼스톤으로 남으므로
+(`apps/api/src/services/retention.service.ts` 의 `purgeVideoAssets`, SNAP-12) FK Cascade 로 사라지지 않는다 — 스냅당 최대 2행(D-3 · D-1)이
+계정이 지워질 때까지 남는다. 보관 기간이 끝난 스냅은 예고 대상이 아니므로(`apps/api/src/services/expiry-notice.service.ts` 의
+`findDueSnaps`) 그 뒤의 행은 판정에 쓰이지 않는다. 보관 정책을 정할 때 두 종류를 같은 기준으로 묶지 말 것.
 
 **결정할 것**: 보관 기간(감사 목적이 있는지), 정리 방식(주기적 삭제 / 파티셔닝).
 
@@ -453,8 +478,11 @@ geofence 쿨다운 판정용 이력이 무한히 쌓인다. 쿨다운은 30분 �
 
 ### B-7. 트랙 소유 표에 새 모듈 배정
 
-[team.md](./team.md) §1 의 수직 도메인 분담 표에 그 뒤 생긴 모듈이 없다 — DB 모델 `Movie`·`MovieClip`,
-API 라우트 `movies`·`video-analyses`, 모바일 `features/{finish-movie,rename-movie,reconcile-snaps,manage-recordings}`·
+[team.md](./team.md) §1 의 수직 도메인 분담 표에 그 뒤 생긴 모듈이 없다 — DB 모델
+`Movie`·`MovieClip`·`MovieDraft`·`VideoSignals`·`UserConsent`, API 라우트 `movies`·`movie-drafts`·`video-analyses`와
+표에 파일명으로 없는 `billing-webhook`·`sns-webhook`·`health`(`apps/api/src/routes/`), 알림 발송 워커
+`apps/api/src/notification-worker.ts`, 모바일
+`features/{finish-movie,rename-movie,reconcile-snaps,manage-recordings,restore-snap,save-snap-to-album,analysis-consent}`·
 `entities/{capture-session,session}`. 누가 맡을지는 두 트랙이 합의해야 한다.
 
 **완료 조건**: 각 모듈의 담당을 합의해 team.md §1 표에 적는다.
@@ -487,6 +515,9 @@ API 라우트 `movies`·`video-analyses`, 모바일 `features/{finish-movie,rena
       버전 관리가 꺼져 있어 지운 영상은 되돌릴 수 없다(deployment-aws.md §5). 만료 정리 배치가
       매일 돌므로 잘못 지우면 복구 수단이 없다 (B-1 에서 승계)
 - [ ] **수명** — 요청서의 종료일이 비어 있다
+- [ ] **DB 복구 리허설과 절차** — [deployment-aws.md](./deployment-aws.md) §5 의 복구는 "빈 DB 에 붓는다"까지만 있다.
+      api · 워커를 멈추고 DB 를 비우고 덤프를 부은 뒤 다시 올리는 순서를 한 번 리허설해 그 절에 적는다(덤프는 `pg_dump`
+      기본값이라 DROP 문이 없어 데이터가 있는 DB 에 부으면 섞인다)
 - [ ] **용량 실측** — `t3.large`(2 vCPU · 8GiB, 24시간 평균 CPU 30% 를 넘으면 추가 요금)에 편집 · 렌디션 · 분석 워커가 함께 돈다.
       이미지가 배포마다 약 3GB 라 `/data`(50GB)의 이미지 정리 주기도 함께 본다
 
@@ -510,7 +541,7 @@ RevenueCat 웹훅 URL은 `POST /billing/webhook/revenuecat`, Authorization 헤�
 **Snaply `User.id` 로 고정**해야 웹훅이 지급 대상을 찾는다(앱에는 아직 SDK 가 없다).
 
 **완료 조건**: A-2에서 크레딧 묶음 확정 → `credit-policy.ts` 값 교체 → 양 스토어 consumable 상품 등록 →
-RevenueCat 프로젝트·웹훅 URL 설정 → sandbox 구매 → 웹훅 수신 → 크레딧 지급 →
+RevenueCat 프로젝트·웹훅 URL 설정 → 앱에 구매 화면과 RevenueCat SDK(CRD-4 `부분`의 빠진 것) → sandbox 구매 → 웹훅 수신 → 크레딧 지급 →
 같은 트랜잭션 웹훅 재전송 시 중복 지급 없음까지 한 번 통과하면 닫힌다.
 
 **구독 상품은 A-2 결정 뒤다.** 무엇을 팔지(용량인지 보관 기간인지)부터 미확정이다(A-2, CRD-7).
@@ -550,17 +581,18 @@ RevenueCat 프로젝트·웹훅 URL 설정 → sandbox 구매 → 웹훅 수신 
 **현재**: `video.upload`(받은함) 방식. 사용자가 틱톡 앱에서 마무리해야 게시되고,
 응답에 `requiresUserAction: true` 가 실린다.
 
-**완료 조건**: 앱 심사로 `video.publish` 승인 → `.env` 한 줄만 변경
+**완료 조건**: 앱 심사로 `video.publish` 승인 → `TIKTOK_SCOPES` 값만 바꾼다(로컬은 `apps/api/.env`, 서버는 시크릿)
 ```bash
 TIKTOK_SCOPES=user.info.basic,video.publish
 ```
-엔드포인트는 코드가 자동 분기한다(`/inbox/video/init/` → `/video/init/`).
-  `requiresUserAction` 이 응답에서 사라지므로 **모바일 안내 문구도 함께 정리**해야 한다
+이 값은 코드 기본값이기도 하다 — 심사 전에는 `user.info.basic,video.upload` 를 **명시해야** 받은함 방식이 된다
+([sns-setup.md](./sns-setup.md) §3 "틱톡 스코프"). 엔드포인트는 코드가 자동 분기한다(`/inbox/video/init/` → `/video/init/`).
+`requiresUserAction` 이 응답에서 사라지므로 **모바일 안내 문구도 함께 정리**해야 한다
 ([api-spec.md](./api-spec.md) SNS 연동 절).
 
 **대안 후보(미결정)**: 영상 바이트를 우리가 직접 올리는 `FILE_UPLOAD` 방식 — 틱톡이 우리 URL 에서 영상을
 가져가지 않으므로 URL prefix 소유권 검증(D-3)이 필요 없어진다. 클라이언트 구현이 추가로 필요하고, 지금은
-`PULL_FROM_URL` 만 구현돼 있다(`services/sns/tiktok.client.ts`).
+`PULL_FROM_URL` 만 구현돼 있다(`apps/api/src/services/sns/tiktok.client.ts`).
 
 ### C-4. FCM 실기기 수신
 
@@ -575,7 +607,7 @@ quiet hours 판정 → 기기 푸시 수신을 한 번 통과하고, 실패 시 
 
 ### C-5. Meta 앱 검수용 URL 2개
 
-`routes/legal.ts` 가 서비스 소개·약관·개인정보처리방침은 서빙하지만, 앱 검수 제출 시
+`apps/api/src/routes/legal.ts` 가 서비스 소개·약관·개인정보처리방침은 서빙하지만, 앱 검수 제출 시
 추가로 요구되는 두 개는 미구현이다 (OAuth 테스트에는 불필요해서 미뤘다).
 
 - **승인 취소 콜백 URL** — 사용자가 앱 연결을 해제하면 Meta 가 호출 (`signed_request` POST)
@@ -642,9 +674,9 @@ URL prefix 소유권 검증은 주소가 바뀌면 다시 등록해야 하므로
 
 ### D-2. 법률 문서 정식화
 
-`routes/legal.ts` 의 약관·개인정보처리방침은 **코드 기준으로 실제 수집 항목을 정확히 기술했지만
+`apps/api/src/routes/legal.ts` 의 약관·개인정보처리방침은 **코드 기준으로 실제 수집 항목을 정확히 기술했지만
 법률 검토를 받지 않은 출시 전 초안**이다(페이지 상단에도 표기). 아직 출시 전이므로 약관 "개정" 절차
-(사전 공지·재동의)는 필요 없다 — 정식 문서화에 합친다. 남은 것(`routes/legal.ts` 상단 주석에도 적혀 있다):
+(사전 공지·재동의)는 필요 없다 — 정식 문서화에 합친다. 남은 것(`apps/api/src/routes/legal.ts` 상단 주석에도 적혀 있다):
 
 - [ ] **분석 고지** — 동의 문구와 함께 확정한다. 2026-09-29 옵트인 결정으로 생산 활성화의 조건은 아니게 됐다
       (동의한 사용자에게만 돈다 — [snap-content-analysis.md](./decisions/snap-content-analysis.md) §6.1)
@@ -666,7 +698,7 @@ URL prefix 소유권 검증은 주소가 바뀌면 다시 등록해야 하므로
 - [ ] **스냅 보관 기간이 법률 문서에 없다** — 개인정보처리방침의 "보관 및 파기"와 이용약관 어디에도 스냅의 서버
       보관(업로드 후 15일, SNAP-9)과 끝내지 않은 결과물의 보관 상한(30일, MOV-16)이 없다. 사용자가 지운 스냅도 원래 보관 기간이
       끝날 때까지 서버가 파일을 남긴다는 것(최근 삭제, SNAP-20)도 함께 적어야 한다. 보관 기간을 정할 때 고지가
-      필요하다고 적어 두었다([snap-retention-period.md](./decisions/snap-retention-period.md) §이 결정이 영향을 주는 곳).
+      필요하다고 적어 두었다([snap-retention-period.md](./decisions/snap-retention-period.md#이-결정이-영향을-주는-곳)).
       사본을 남기는 방법(앨범 저장, SNAP-17)을 함께 적는다
 - [ ] `LEGAL_CONTACT_EMAIL` 이 미설정이면 `support@snaply.app` 로 표시된다 — 실제 주소로 교체
 
@@ -678,7 +710,7 @@ URL prefix 소유권 검증은 주소가 바뀌면 다시 등록해야 하므로
 (API 호스트 `/legal/` · 미디어 호스트 `/snaply-dev/`)과 서빙 방식·서명 발급 단위의 실측은
 [sns-setup.md](./sns-setup.md) §3 "URL prefix 소유권 검증". 운영에서 CloudFront 도메인 하나로 합쳐지면
 검증도 한 번으로 줄어든다. 운영에서도 **검증 파일 경로만은 익명 읽기**여야 한다 — 개발용
-`npm run dev:public-bucket` 은 로컬 MinIO 전용이라(`S3_ENDPOINT` 없으면 실행 거부) 운영에서는 쓰지 않는다.
+`npm run dev:public-bucket -w apps/api` 는 로컬 MinIO 전용이라(`S3_ENDPOINT` 없으면 실행 거부) 운영에서는 쓰지 않는다.
 
 **완료 조건**: 운영 도메인에서 필요한 prefix 가 검증되고, 그 도메인의 영상 URL 로 PULL_FROM_URL 업로드가
 `403 URL ownership` 없이 통과한다.
@@ -690,8 +722,8 @@ URL prefix 소유권 검증은 주소가 바뀌면 다시 등록해야 하므로
 (그 사용자가 다시 오면 그 자리에서 확정된다) 행이 계속 쌓인다.
 
 **지금 하지 않는 이유**: 크레딧이 아니라 행만 늘고, 상한도 "진행 중 1개 + TTL 300초"가 정한다
-(사용자당 하루 최대 288행). 실사용 규모에서 실제로 문제가 되면
-`orphan-video-cleanup` 과 같은 방식의 배치를 붙인다.
+(사용자당 하루 최대 288행). 실사용 규모에서 실제로 문제가 되면 고아 pending 영상 정리
+(`npm run videos:purge-pending -w apps/api`, [progress.md](./progress.md) 2026-08-12)와 같은 방식의 배치를 붙인다.
 
 ---
 
@@ -726,12 +758,69 @@ MinIO 커뮤니티 에디션은 이미지 배포를 멈췄고(Docker Hub 이미�
   노출하던 문제는 사라졌고, 공급(이미지를 못 받는 것)만 남았다
 
 **결정할 것**: 대체 S3 호환 서버(RustFS · Garage · SeaweedFS 등)로 바꿀지, 미러로 둘지. 코드는 `S3_ENDPOINT` 만 바꾸는
-구조라 교체 비용은 compose 2곳 · [ONBOARDING.md](../ONBOARDING.md) · [deployment-aws.md](./deployment-aws.md)
+구조라 교체 비용은 compose 2곳(`docker-compose.yml` · `docker-compose.dev.yml`) · CI(`.github/workflows/ci.yml` 의 MinIO 단계) ·
+[ONBOARDING.md](../ONBOARDING.md) · [deployment-aws.md](./deployment-aws.md)
 와, MinIO 전용 API 에 기대는 곳이 있는지 확인(`dev:public-bucket` 스크립트 · 헬스체크 경로) 정도다.
 GHCR 패키지를 공개로 돌릴지도 정한다 — 공개면 새 개발자가 로그인 없이 받고, 로컬 빌드(몇 분)를 건너뛴다.
 
-**완료 조건**: 대체 여부 결정 → 바꾼다면 compose 3곳 + 문서 갱신 + `npm test -w apps/api`
+**완료 조건**: 대체 여부 결정 → 바꾼다면 compose 2곳 · CI + 문서 갱신 + `npm test -w apps/api`
 (통합 테스트가 MinIO 를 쓴다) 통과. 두기로 하면 이 항목을 "소스 빌드 미러 유지"로 좁혀 닫는다.
+
+### E-18. 지운 스냅의 분석 결과가 남는다 — 개인정보처리방침과 다르다 ⚠️
+
+ANA-3 은 영상을 지우면 그 분석 결과도 파기하라고 하고, 개인정보처리방침(`apps/api/src/routes/legal.ts` "파기")도
+"영상을 삭제하면 그 영상의 분석 결과도 함께 삭제됩니다"라고 고지한다. 그런데 서버는 지운 영상(최근 삭제)과 만료된
+영상의 `videos` 행을 툼스톤으로 남기고(`apps/api/src/services/retention.service.ts` `purgeVideoAssets`),
+`video_analyses` 는 행이 실제로 삭제될 때만 Cascade 로 지워지므로 분석 결과가 계정 삭제 때까지 남는다.
+
+**완료 조건**: 되살릴 수 없게 되는 시점(최근 삭제의 보관 기간이 끝나거나 만료로 정리될 때)에 `video_analyses` 를
+지우고 테스트로 고정한다(권장 — 고지와 맞춘다). 아니면 방침 문구를 실제 동작으로 고친다(D-2 와 함께).
+어느 쪽이든 ANA-3 이 `구현됨` 이 된다.
+
+### E-19. RLS 정책이 없는 테이블이 다섯 개다
+
+[`apps/api/prisma/rls-policies.sql`](../apps/api/prisma/rls-policies.sql)은 "모든 테이블에 RLS 를 켠다"는 원칙으로 쓰였는데, 그 뒤에
+생긴 `user_consents` · `video_signals` · `movie_recommendations` · `movie_recommendation_items` · `movie_drafts` 에는 정책이 없다.
+API 는 서버 권한으로 DB 에 붙고 소유권을 코드에서 검사하므로 지금 새는 것은 없다. RLS 가 실제로 효력을 갖는 것은 클라이언트가
+Supabase 로 DB 에 직접 닿을 수 있는 공유 Supabase DB 를 쓸 때뿐이다 — 로컬과 AWS 서버는 각자의 Postgres 를 쓴다
+([ONBOARDING.md](../ONBOARDING.md) §3).
+
+**결정할 것**: (a) 다섯 테이블에 다른 테이블과 같은 모양(`user_id = auth.uid()`)의 정책을 더한다 — 원칙 유지, 공유 DB 로 돌아가도 안전
+(b) RLS 를 쓰지 않는 구성이 현행이므로 파일의 원칙 문구를 "공유 Supabase DB 에서만 쓰는 방어선"으로 고치고 정책 추가를 멈춘다.
+
+**완료 조건**: 고른 쪽으로 SQL 이나 원칙 문구를 고치고, (a) 면 새 테이블을 만들 때 정책을 함께 쓰라는 줄을
+[team.md](./team.md) §3 에 넣는다.
+
+### E-21. SNS 업로드 준비 경고가 실제 업로드 주소를 보지 않는다
+
+인스타 · 틱톡은 우리가 넘긴 URL 에서 영상을 내려받는다. 그 URL 은 결과물의 presigned GET 이고 서명 호스트는
+`S3_PUBLIC_ENDPOINT ?? S3_ENDPOINT` 다(`apps/api/src/services/storage.service.ts` `presignClient`). 그런데 기동 때 이 주소가 외부에서
+닿는지 미리 경고하는 `snsUploadReadiness`(`apps/api/src/services/sns.service.ts`, `apps/api/src/app.ts` 에서 호출)는
+`config.storage.publicBaseUrl` — `CLOUDFRONT_DOMAIN` 우선의 공개 URL — 을 판정한다. `CLOUDFRONT_DOMAIN` 만 터널 주소이고
+`S3_PUBLIC_ENDPOINT` 가 localhost 면 **경고 없이** 업로드가 400 이 된다. 터널 안내 스크립트(`apps/api/scripts/dev-tunnel.sh`)의 출력에도
+`S3_PUBLIC_ENDPOINT` 가 없어 문서([sns-setup.md](./sns-setup.md) §1 · [local-tunnel.md](./local-tunnel.md) §6)가 손으로 넣으라고 보완하고 있다.
+
+**완료 조건**: 판정 대상을 presign 호스트로 바꾸고 테스트로 고정한다 · `dev-tunnel.sh` 가 `S3_PUBLIC_ENDPOINT=https://<미디어 호스트>`
+줄을 출력하게 한다 · presigned 전환(2026-08-10) 이후 이 터널 경로로 실키 업로드를 다시 돌린 기록이 없으므로 한 번 실검증한다
+(C-2 · D-3 와 같은 자리에서).
+
+### E-22. `API_HOST_PORT` 가 환경변수 원천에 없다
+
+`API_HOST_PORT` 는 `docker-compose.yml` · `docker-compose.ci.yml` 의 포트 매핑, `scripts/smoke-images.sh`, 배포 잡의 헬스체크
+(`deploy.yml` 의 `vars.API_HOST_PORT`)가 읽는데 [`apps/api/src/env-spec.ts`](../apps/api/src/env-spec.ts)에 선언되지 않았다
+(AGENTS.md: 새 변수는 env-spec 부터). `env-spec.test.ts` 는 앱 코드가 읽는 변수만 검사해 잡지 못한다.
+
+**완료 조건**: `API_HOST_PORT` 를 `POSTGRES_HOST_PORT` 처럼 `origin: 'local'` 로 선언하고 [`.env.example`](../.env.example)에 예시를 넣는다 ·
+`npm test -w apps/api`(env-spec 테스트) 통과.
+
+### E-23. 같은 동작의 권한 버튼 라벨이 둘이다
+
+권한이 거절된 뒤 시스템 설정으로 보내는 버튼이 앨범 · 알림 화면은 `설정에서 권한 켜기`인데
+(`apps/mobile/src/features/save-snap-to-album/model/album-save-copy.ts` · `pages/me/ui/me-album-page.tsx` · `pages/me/ui/me-notifications-page.tsx`),
+촬영 화면의 카메라 · 마이크 거절만 `설정에서 권한 열기`다(`apps/mobile/src/pages/capture-record/ui/capture-record-page.tsx`).
+UX 규칙상 같은 동작에 라벨이 둘인 `Inconsistent Twin` 이다([interaction-patterns.md](../apps/mobile/docs/ux/interaction-patterns.md) §8).
+
+**완료 조건**: 촬영 화면을 `설정에서 권한 켜기`로 맞추고 그 화면의 테스트 · [capture-flow.md](../apps/mobile/docs/features/capture-flow.md)를 함께 고친다.
 
 ---
 
@@ -740,10 +829,20 @@ GHCR 패키지를 공개로 돌릴지도 정한다 — 공개면 새 개발자�
 - [ ] **돌비비전 실물 원본으로 HDR 경로 확인** — 스트레스 검증(2026-09-15)의 HDR 수정은 합성 HDR10 으로만
       확인했다. 실제 DV 원본이 생기면 편집 결과물과 렌디션 모두 다시 확인한다(아이폰 원본은 A-4 "iOS 출시 전"과
       같은 공백)
-- [ ] 실BGM 기준 whisper 자막 인식 재확인 (현재는 dev BGM 기준으로만 확인)
+- [ ] 실BGM 기준 whisper 자막 인식 재확인 (현재는 dev BGM 기준으로만 확인) — 실BGM 이 아직 없다(A-7 BGM 조달)
 - [ ] **워커 쪽 취소 중단·실패 환급** — 취소된 작업이 진행률 갱신에서 멈추는 것(`JobCanceled`)과 워커 실패 시
       예약 크레딧 환급(`refund_export_credits` 호출)은 문법 검증만 했다([progress.md](./progress.md)
-      2026-08-13 · 2026-08-14). 실제 워커로 각각 한 번 확인한다
+      2026-08-13 · 2026-08-14). 실제 워커로 각각 한 번 확인한다. 취소 쪽은 앱 기능 문서에 2026-08-13 실서버 기기 검증 기록
+      (취소한 작업이 40초 뒤에도 `canceled`)이 있다([movie.md](../apps/mobile/docs/features/movie.md) "만들기 취소") — 워커 로그로
+      중단을 확인하면 취소 쪽은 닫고 실패 환급만 남긴다
+- [ ] **`앱`** **다른 기기에서 지운 스냅의 컷 표시**(SNAP-12) — 컷이 사라진 사유(`unavailableReason`)는 2026-10-07 에 들어갔지만
+      다른 기기에서 지운 스냅의 컷이 "스냅이 삭제됐어요"로 보이는 것을 실기기에서 보지 않았다([progress.md](./progress.md)
+      2026-10-07 "무비 컷이 사라진 사유를 싣는다"). 두 기기로 한 번 확인한다
+- [ ] **`앱`** **알림 설정의 실기기 확인**(NTF-7 `구현됨(실기기 미검증)`) — 앱이 계정의 알림 설정을 읽고 쓰는 것은
+      Android 에뮬레이터로만 확인했고, 에뮬레이터는 권한이 이미 있었다([progress.md](./progress.md) 2026-10-07
+      "알림 설정은 계정에 있다"). 휴대폰에서: 권한이 없는 새 기기로 로그인하면 계정에서 켜진 알림에 "기기 설정에서 …
+      받을 수 있어요" 안내와 `설정에서 권한 켜기` 가 뜬다.
+      **완료 조건**: 통과하면 NTF-7 의 `(실기기 미검증)` 을 지운다
 
 ---
 
@@ -755,9 +854,163 @@ GHCR 패키지를 공개로 돌릴지도 정한다 — 공개면 새 개발자�
       프로페셔널로 바뀌어 실패 원인은 사라졌다. 코드 쪽 대응은 E-1 에서 끝났지만(다음 게시 때
       서버가 갱신을 시도해 만료 시각을 알아낸다) **이미 만료된 뒤라면 갱신도 실패**하므로
       재연동이 확실한 길이다
+- [ ] **자동 편집 실기기 확인에 쓴 시험 데이터** — 2026-10-01 실기기 확인에서 만든 시험 무비 두 편과 지급한 크레딧 100 은
+      "정리는 오너 확인 뒤"로 남았다([progress.md](./progress.md) 2026-10-01 "자동 편집 실기기 확인"). 이미 정리했는지 확인하고
+      남았으면 지운다
+- [ ] **낡은 코드 주석·설명** — 동작은 맞고 글만 낡았다. 한 번에 고친다(API 설명을 바꾸면 `npm run openapi:write -w apps/api`):
+  - `.github/workflows/deploy.yml` 머리 주석의 "실제 배포 대상/자격증명은 리포지토리 Secrets로 주입" — 지금은 self-hosted runner 와
+    Secrets Manager 에서 배포 때 만든 env 파일이다([deployment-aws.md](./deployment-aws.md) §2)
+  - `apps/api/src/routes/auth.ts` 분석 동의 철회(`DELETE /auth/me/analysis-consent`)의 description — 파기 대상에 편집 초안 기록이 빠졌다
+    (`withdrawAnalysisConsent` 는 `movieDraft` 도 지운다)
+  - `apps/api/prisma/schema.prisma` `AdReward.status` 주석이 `pending | granted | expired | rejected` — `abandoned` 가 빠졌다
+    (`apps/api/src/services/ad-reward.service.ts` `AD_REWARD_STATUS`)
+  - `.env.example` Redis 섹션 머리말의 "운영: Upstash" — AWS 서버도 compose 의 redis 컨테이너를 쓴다
+  - `scripts/media-cleanup.mjs` 상단 주석 "공유 Supabase 라 통합 테스트 후 자기 데이터를 정리" — 통합 테스트는 `snaply_test` 만 쓰고,
+    정리 대상은 `media:e2e` 가 만든 데이터다
+  - `apps/api/src/services/retention-policy.ts` `EXPIRY_NOTICE_HOUR_KST`(10) 는 로그 표시용이고 실제 시각은 `deploy/batches.cron` 이 정한다 —
+    둘이 따로 움직이지 않게 주석에 원천을 적는다
+  - 앱의 "(global) deep-link handler" 주석 — 실제로는 Expo Router 가 `/auth/callback` · `/auth/reset` 화면(`pages/auth-callback`)으로 보내
+    코드를 교환한다: `apps/mobile/src/features/sign-up/model/supabase-sign-up-provider.ts` · `features/sign-up/ui/email-sent-notice.tsx` ·
+    `features/reset-password/model/reset-password-provider.ts` · `features/reset-password/model/supabase-reset-password-provider.ts` ·
+    `entities/session/model/session-store.ts` · `entities/session/api/session-gateway.ts` · `shared/lib/supabase/auth-redirect.ts`
+  - `apps/mobile/.prettierignore` — 없는 대상(`src/shared/api/schema.d.ts` · `docs/api/openapi.json` · `docs/guides/**/*.html`)과 없는 스크립트
+    (`api:gen` · `api:pull`)를 가리키는 줄을 지운다
 - [ ] **테스트 게시물 정리** — 인스타 릴스는 API 로 삭제할 수 없으므로 앱에서 수동으로 지운다.
       **틱톡 받은함 초안 3건은 지우지 않는다** — C-2("API 는 ok 인데 알림 미도착")의 유일한 증거물이라
       C-2 가 닫힌 뒤에 정리한다.
+
+---
+
+## H. 작은 판단 — 문서 · 규칙 · 문구
+
+2026-10-09 문서 전수 감사에서 나온, 코드 동작은 그대로이고 **규칙이나 문서를 어느 쪽으로 맞출지만 정하면 되는** 판단이다.
+각 항목에 배경 · 선택지 · 권장(있으면) · 완료 조건을 적었다. 정하면 해당 문서(와 필요한 경우 코드 · 테스트)를 고치고 닫는다.
+
+### H-1. UX 문구 규칙의 범위 — `지워요` · `촬영` · `장면`
+
+[ux-writing.md](../apps/mobile/docs/ux/ux-writing.md) 용어표의 금지어와 앱의 실제 문구가 세 곳에서 어긋난다. 규칙을 좁힐지
+문구를 바꿀지 하나씩 정한다.
+
+- **`삭제` 행** — `지우기` · `지울까요` 를 금지하는데, 앱은 결과를 설명하는 문장에 `지워요` 를 쓴다: `보관 중인 N개만 지워요`
+  (스냅 삭제 확인), `끄면 분석 결과를 지워요`(분석 동의 시트 · 설정 — 동의 문구), `최대 30일 보관한 뒤 지워요`.
+  (a) 규칙을 "사용자가 누르는 버튼과 묻는 질문"으로 좁힌다 — **권장**, 동의 문구를 건드리지 않는다 (b) 문구를 `삭제해요` 로 바꾼다
+- **`촬영`** — 2026-09-24 결정은 "카메라 컨트롤에 `촬영` · `담기` 금지"인데, 캡처의 ✕ 접근성 라벨이 `촬영 닫기` 이고 오류 문구에
+  `촬영을 완료하지 못했어요` · `소리와 함께 촬영하려면…` 이 있다. 규칙이 컨트롤 라벨(접근성 라벨 포함)만인지 메시지까지인지 정한다
+- **`장면`** — `컷` 행은 `장면` 을 금지하는데, 템플릿 슬롯 힌트 `처음 본 장면`
+  (`apps/mobile/src/entities/movie-template/lib/movie-template-catalog.ts`, 서버 카탈로그를 못 받을 때의 fallback)에 있다.
+  컷이 아니라 찍을 대상을 묘사하는 말이라 금지 대상인지 정한다
+
+**완료 조건**: 정한 대로 ux-writing.md 용어표를 고치거나 앱 문구와 그 테스트를 바꾼다.
+
+### H-2. 결정이 끝난 결정 문서의 제목
+
+`snap-retention-period.md` · `local-copy-after-upload.md` · `movie-cleanup-after-export.md` · `movie-export-policy.md` 의 제목이
+아직 "결정 요청 —"으로 시작한다(상태 줄은 이미 `결정`). `storage-and-subscription-policy.md` 의 제목 "구독 상품 도입"은 구독이
+미확정(CRD-7 `보류`)인 지금 "구독을 들였다"로 읽힌다. 선례 [movie-model.md](./decisions/movie-model.md)는 결정 뒤 제목이 결정을
+말한다. 제목을 가리키는 앵커 링크는 없다(2026-10-09 확인).
+
+**선택지**: (a) 접두사를 걷고 결정 내용을 말하는 제목으로 바꾼다 — **권장**, 인덱스 · 검색에서 미결처럼 보이지 않는다
+(b) 결정 당시의 기록으로 둔다.
+
+**완료 조건**: (a) 면 다섯 문서의 제목을 바꾸고 [decisions/README.md](./decisions/README.md)가 그대로 맞는지 확인한다.
+
+### H-3. `movie-snap-expiry-exemption.md` 의 형식
+
+상태는 `결정(잠정)`인데 [decisions/README.md](./decisions/README.md)에서는 "결정 대기" 표에 있다. 미결 문서 규격(배경 · 영향 ·
+선택지 · 결과 · 권장 · 빈 결정 기록 표)과 비교하면 앞의 넷은 있으나 "권장" 절과 "결정 기록" 표가 없다 — "유력한 대안"으로 적은
+C 문단이 사실상 권장이다.
+
+**선택지**: (a) `결정(잠정)` 을 유지하고 결정 기록 표를 만들어 잠정 결정 A(예외 없음)를 채운다 — 2026-09-15 잠정 결정의
+결정자 기록이 커밋에도 없어 그 칸은 비운다 (b) `미결` 로 되돌리고 권장 = C 로 구조화한다 — 현행 동작(예외 없음)의 근거가
+약해진다 (c) 그대로 둔다.
+
+**완료 조건**: 고른 형식으로 문서와 인덱스의 표 위치를 맞춘다. 요금제(A-2) · A-1 과 같은 자리에서 본다.
+
+### H-4. 테스트의 한국어 문자열 이스케이프 관례
+
+[writing-unit-tests.md](../apps/mobile/docs/workflows/writing-unit-tests.md)는 테스트 안의 한국어를 `\uXXXX` 이스케이프로 쓰는 것이
+관례라고 하는데, 모바일 테스트 172개 중 46개 파일이 코드(주석 제외)에 한글 리터럴을 그대로 쓴다(예: `me-notifications-page.test.tsx`,
+`client.test.ts`). 관례를 둔 이유(편집 도구가 이스케이프를 풀어 쓰는 문제)가 지금도 유효한지 먼저 본다.
+
+**선택지**: (a) 규칙을 "권장"으로 완화하고 리터럴을 허용한다 (b) 46개 파일을 일괄 변환해 규칙을 지킨다.
+
+**완료 조건**: writing-unit-tests.md 와 실제 테스트가 같은 말을 한다.
+
+### H-6. 모바일 로컬 개발 문서의 환경 프로필
+
+[local-development-and-testing.md](../apps/mobile/docs/workflows/local-development-and-testing.md)의 명령 예시가 구형 Intel Mac 기준이다
+(Xcode 16.4, `iPhone 16` 시뮬레이터, AVD `Pixel_API_35`, `~/.expo` 캐시의 `Expo-Go-57.0.4`). 지금 작업하는 Mac 은 Xcode 27 ·
+`iPhone 17` · AVD `snaply_api35` 이고 Expo Go 를 api.expo.dev 에서 받는다. 코드로는 확인할 수 없어 정리 때 고치지 않았다.
+
+**완료 조건**: 지금 프로필을 기본으로 바꾸거나 두 프로필을 함께 적는다(구형 장비가 더는 없으면 구형 절을 걷는다).
+
+### H-7. 모바일 런타임 에셋의 위치 규칙
+
+[expo-router.md](../apps/mobile/docs/frameworks/expo-router.md)와 [feature-sliced-design.md](../apps/mobile/docs/architecture/feature-sliced-design.md)는
+"여러 slice 가 쓰면 `shared/assets`, 한 slice 만 쓰면 그 근처"라고 하는데 `src/shared/assets` 는 없고 화면 이미지가 루트
+`apps/mobile/assets/images`(`@/assets/*` 별칭)에 있다 — 로그인 화면 하나만 쓰는 `brand-glyph-white.png` 도 그렇다.
+
+**선택지**: (a) 루트 `assets` 를 규칙에 반영한다(앱 아이콘 · 스플래시처럼 네이티브가 읽는 파일과 같은 곳) (b) 파일을 규칙대로 옮긴다.
+
+**완료 조건**: 두 문서와 실제 위치가 같다.
+
+### H-8. `runOnJS` 와 `scheduleOnRN`
+
+[animations-and-gestures.md](../apps/mobile/docs/frameworks/animations-and-gestures.md)는 UI 스레드에서 JS 로 넘길 때 `runOnJS` 를
+처방하고 코드 5개 파일이 그렇게 쓰는데, `apps/mobile/src/_app/routes/animated-splash-overlay.tsx` 만 `react-native-worklets` 의
+`scheduleOnRN` 을 쓴다.
+
+**완료 조건**: Reanimated 4.5 · worklets 의 권장에 맞춰 하나로 통일하고 문서와 코드를 맞춘다.
+
+### H-9. ONBOARDING 의 "모노레포 통합 이전에 분기한 브랜치" 절
+
+[ONBOARDING.md](../ONBOARDING.md) §5 의 이 절은 통합 전에 분기한 브랜치를 옮기는 법을 다루는데, 원격에는 `main` 만 있고 로컬에도
+통합 전 브랜치가 없다(2026-10-09 확인).
+
+**선택지**: (a) 지우고 "`apps/mobile` 이력은 통합 커밋 이전으로 내려가지 않는다"는 한 줄만 남긴다 (b) 그대로 둔다.
+
+### H-10. 결정 문서의 결정 ID 가 백로그 ID 와 같은 모양이다
+
+[decisions/edit-spec-v3.md](./decisions/edit-spec-v3.md)와 그 초안([plans/edit-spec-v3.md](./plans/edit-spec-v3.md) ·
+[plans/asset-pack-manifest.md](./plans/asset-pack-manifest.md))은 결정 항목을 `A-1`~`D-8`(`B-6` · `B-9` · `D-4` …)로 부른다.
+백로그 ID 와 모양이 같아 grep 과 독자가 헷갈린다 — 예: 닫힌 백로그 B-6(알림 설정)과 결정 B-6(컷 타이밍 기준). 2026-10-09 에 두
+초안에는 "괄호 안의 A-1~D-8 은 결정 항목이다"는 안내를 넣었다.
+
+**선택지**: (a) 결정 쪽 ID 에 접두를 붙인다(`결정 B-6` 또는 `V3-B6`) — 이 ID 를 인용하는 백로그 A-7 · 코드 주석도 함께 바꾼다
+(b) 안내만으로 둔다.
+
+### H-11. `env-management.md` 의 "후속 연계" 절
+
+[decisions/env-management.md](./decisions/env-management.md)의 "후속 연계"는 작성 뒤에 덧붙인 내용인데 배너가 아니라 본문 절로 남아
+있다([doc-conventions.md](./doc-conventions.md) §헤더: 작성 뒤의 정정 · 후속은 헤더 아래 배너). 현재 사실을 가리키는 링크 위주라
+2026-10-09 정리에서는 구조를 유지했다.
+
+**완료 조건**: 배너로 압축하거나, 본문 절로 두는 이유를 그 절 첫 줄에 적는다.
+
+### H-12. 모바일 UX 문서 체계의 두 군데
+
+- [guardrails.md](../apps/mobile/docs/ux/guardrails.md)는 자체 규칙 없이 "잘못된 수 → 원천 규칙 링크" 22개로 된 색인이 됐다.
+  그대로 둘지 [agent-protocol.md](../apps/mobile/docs/ux/agent-protocol.md)의 한 절로 합칠지 — 짧고 중복이 없어 **유지 권장**
+- [principle-priority.md](../apps/mobile/docs/ux/principle-priority.md)의 목표 문장이 [philosophy.md](../apps/mobile/docs/ux/philosophy.md)의
+  같은 문장과 표현이 다르다(능력 · 통제를 잃게 하지 않는다는 조건이 더해졌다). 하나로 통일할지
+
+**완료 조건**: 정한 대로 두 문서를 맞추고 [ux/README.md](../apps/mobile/docs/ux/README.md)의 라우팅 표를 확인한다.
+
+### H-13. 모바일 기능 문서의 상태 라벨 두 개와 앱 맵 순서
+
+- [snap-extract.md](../apps/mobile/docs/features/snap-extract.md)의 `Partial` 근거가 "Android 실기기 검증 대기, iOS 미빌드"인데 추출
+  화면을 Android 실기기로 검증한 기록은 progress 에 없다. 휴대폰에서 추출을 써 봤다면 `Functional` 로 올리고 기록한다
+- [movie-templates.md](../apps/mobile/docs/features/movie-templates.md)의 Stage 2(서버 추천)는 앱이 다 만들어졌지만 서버 플래그
+  (`MOVIE_RECOMMENDATION_ENABLED`)가 꺼져 사용자에게 효과가 없다. 상태 어휘로는 `Not implemented`(효과를 완료할 수 없음)에 가깝다 —
+  (a) 앱 기준 `Functional`(dormant) 유지 (b) `Not implemented`(dormant)로
+- 2026-10-09 정리에서 [features/README.md](../apps/mobile/docs/features/README.md)의 앱 맵을 `root-layout.tsx` 의 실제 선언 순서
+  (= 가드의 우선순위)로 재정렬했다. 예전 "개념 순서"가 더 낫다면 되돌린다
+
+### H-14. 백로그 A-1 ② 의 통과 판정
+
+2026-10-09 정리에서 A-1 "서버 전환 실기기 검증"의 ② "편집이 PATCH 된다"를, 경계별 전환 · 자동 편집 화면에서 고친 값이 DB 에
+닿은 실기기 기록([progress.md](./progress.md) 2026-10-01)으로 통과 처리했다. ② 가 더 좁은 경로(촬영 직후 아웃박스의 PATCH 등)를
+뜻했다면 되돌린다.
 
 ---
 
@@ -779,7 +1032,7 @@ GHCR 패키지를 공개로 돌릴지도 정한다 — 공개면 새 개발자�
 - **A-1** 앱의 무비 서버 전환 · 끝내기 버튼 · 로컬 완료 알림 제거 · 모바일 기능 문서 — 2026-09-12 → progress 2026-09-12 "무비 서버 전환 · 끝내기 · 완료 알림 정리"
 - **A-1** 푸시 탭 라우팅 — 2026-09-12 → progress 2026-09-12 "알림 탭 라우팅"(실기기 확인은 A-1 "서버 전환 실기기 검증" ③)
 - **A-1** 스냅 목록의 만료 표시 — 2026-09-27 → progress 2026-09-27 "스냅이 기기와 재설치를 넘어 보인다"
-- **A-2** 광고 보상 정책 값(20크레딧 · 일일 5회 · 쿨다운 300초 · 세션 TTL 300초) — 2026-08-18 → progress 2026-08-18 · [ad-reward-credits.md](./decisions/ad-reward-credits.md) §7
+- **A-2** 광고 보상 정책 값(20크레딧 · 일일 5회 · 쿨다운 300초 · 세션 TTL 300초) — 2026-08-18 → progress 2026-08-18 "광고 보상 세션 수명·포기" · "광고 보상 정책 값 확정 — 20크레딧 · 일일 5회" · "광고 보상 쿨다운 300초 확정" · [ad-reward-credits.md](./decisions/ad-reward-credits.md) §7
 - **A-2** 스냅 만료 예고 리드타임(D-3 · D-1, KST 10시) — 2026-09-09 → [expiry-notice-schedule.md](./decisions/expiry-notice-schedule.md) · progress 2026-09-09 "SNS 게시 자동 끝내기 · 만료 예고 알림"
 - **A-3** 분석 고지의 보유 기간 · 학습 이용 확인과 국외 이전 표의 수탁자 — 2026-08-19 → progress 2026-08-19 "약관·개인정보처리방침의 분석 고지 초안"
 - **A-4** `capturedAt` 전달 · 저장(SNAP-10) — 2026-09-09 → progress 2026-09-09 "촬영 시각 저장 · 무비 서버 엔티티"
@@ -792,7 +1045,15 @@ GHCR 패키지를 공개로 돌릴지도 정한다 — 공개면 새 개발자�
 - **A-4** 스냅 휴지통(삭제 유예) — 2026-10-07 → [decisions/snap-trash.md](./decisions/snap-trash.md) · progress 2026-10-07 "지운 스냅을 보관 기간이 끝날 때까지 되살린다"(실기기 확인은 A-4 에 남음)
 - **A-5** FE-BE 연동 범위 · 일정 확정 — 2026-09-02, 같은 개발자가 FE·BE 를 함께 맡게 되어 따로 둘 이유가 없어졌다
 - **A-7** CI 의 ffmpeg 설치(골든 프레임 · ffprobe 계약 테스트) — 2026-09-15 → progress 2026-09-15 "산출물 계약 테스트와 CI 의 ffmpeg"
-- **B-5** API 계약 스키마 우선 1~5단계 — 2026-09-05 → progress 2026-09-05 · [api-contract-schema-first.md](./decisions/api-contract-schema-first.md)(남은 다듬기는 B-5)
+- **A-7** 스티커 팩 매니페스트 스키마와 editSpec v3·에셋 매니페스트 초안의 남은 개정 — 2026-10-03, 2026-08-20 에 개정된 초안이 미병합 브랜치에서 main 에 들어왔다 → [plans/edit-spec-v3.md](./plans/edit-spec-v3.md) · [plans/asset-pack-manifest.md](./plans/asset-pack-manifest.md) §5 · §9(들일 때 `prefer` 가 남지 않고(`ref`), anchor 어휘가 매니페스트 §9 로 떨어져 `defaultAnchor` 가 없으며, editSpec §10.3 이 `resolved.xy` 를 범위 무제약으로 적는 것을 확인했다. 결정 A-1~D-8 은 초안에서 대응하는 서술을 찾는 정도로 대조했다)
+- **A-11** 경계별 전환(MOV-22) — 전환 어휘 · 무효화 액션 `cut-trim`·`transition-edit` · 무비 계약의 경계별 전환과 주인 · editSpec v3 렌더(`edit-v3` 큐) · AI 의 전환 규칙 · 편집 화면의 선택과 미리보기 · 실기기 확인 — 2026-10-01 → progress 2026-10-01 "Android 실기기에서 영상 두 개를 겹친 `crossfade`" ~ "경계별 전환 실기기 확인"
+- **A-11** 컷 역할 사전(`cut-role-vocabulary.json`, TS·워커 로더와 정합성 테스트) — 2026-10-01 → progress 2026-10-01 "컷 역할 사전"
+- **A-11** 무비 계약: 컷 구간의 주인(`trimOwner`) — 2026-10-01 → progress 2026-10-01 "무비 계약: 컷 구간의 주인"
+- **A-11** 로컬 신호 reader(밝기 · 흐림 · 프레임 해시 · 움직임 · VAD 발화 → `video_signals`) — 2026-10-01 → progress 2026-10-01 "스냅 로컬 신호"
+- **A-11** 초안 제안 API 와 선택 단계(`POST /movie-drafts`, edit-director) — 2026-10-01 → progress 2026-10-01 "편집 초안 제안 API"
+- **A-11** 앱의 진입 경로와 흐름(스튜디오 `스냅 골라 자동 편집`, 에뮬레이터 확인) — 2026-10-01 → progress 2026-10-01 "앱: 자동 편집" · "자동 편집 에뮬레이터 확인"
+- **A-11** 실기기 확인(초안 → 구간·전환 수정 → 생성한 결과물이 편집 화면과 같다) — 2026-10-01 → progress 2026-10-01 "자동 편집 실기기 확인"
+- **B-5** API 계약 스키마 우선 1~5단계 — 2026-09-05 → progress 2026-09-05 "API 계약을 스키마 우선으로 — Zod 계약 패키지" · [api-contract-schema-first.md](./decisions/api-contract-schema-first.md)(남은 다듬기는 B-5)
 - **B-6** 알림 설정의 서버 반영(서버) — 2026-09-15 → progress 2026-09-15 "알림 설정이 서버에 닿는다"
 - **B-6** 앱의 알림 설정을 서버에 쓰기(서버가 원천 · 위치 · 무비 기본 꺼짐) — 2026-10-07 → progress 2026-10-07 "알림 설정은 계정에 있다"
 - **C-7** 회사 OpenAI API 키 발급 — 2026-09-29 → progress 2026-09-29 "실제 모델로 스냅 분석 · 템플릿 추천 첫 실행"(남은 확인 중 사용 한도 · rate limit 은 A-3, 운영 키 분리는 B-8 로 옮김)
@@ -812,6 +1073,8 @@ GHCR 패키지를 공개로 돌릴지도 정한다 — 공개면 새 개발자�
 - **E-15** 앱이 편집 초안의 스냅 상한(`max`)을 읽지 않는다 — 2026-10-03 → progress 2026-10-03 "편집 초안의 스냅 상한을 서버에서 배운다"
 - **E-16** 대표 프레임 하나를 못 뽑으면 중복 비교의 위치가 어긋난다 — 2026-10-02 → progress 2026-10-02 "대표 프레임 해시의 자리"
 - **E-17** 결과물이 원본의 위치 태그를 싣는다(무비 결과물에서 지움 — 배포본은 A-4 위치 항목으로) — 2026-10-07 → progress 2026-10-07 "무비 결과물이 찍은 곳을 싣고 나가지 않는다"
+- **E-20** 사내 서버 오버레이만 바꾼 머지는 배포되지 않는다 — 2026-10-09 사내 서버 경로를 지우면서(`docker-compose.prod.yml` 삭제) 사라졌다 → progress 2026-10-09 "사내 서버를 접고 배포 대상을 AWS 하나로"(낡은 머리 주석은 G)
 - **F** HDR · 장시간 · 10클립 스트레스 실검증 — 2026-09-15 → progress 2026-09-15 "스트레스 실검증과 HDR 색 태그 결함"(돌비비전 실물은 F 에 남음)
 - **G** Firebase 서비스 계정 키 로테이션(루트 키 파일 없음 확인 포함) — 2026-08-11 → progress 2026-08-11 "Firebase 서비스 계정 키 로테이션"
 - **G** 틱톡 Sandbox `client_key` 이력 노출 — 2026-08-11 제거하지 않기로 판정 → [sns-setup.md](./sns-setup.md) §3 "Sandbox client_key 의 이력 노출"
+- **H-5** 배포 문서 두 개를 합칠지 — 2026-10-09 사내 서버를 접으며 `docs/deployment.md` 가 보관돼 [deployment-aws.md](./deployment-aws.md) 하나가 됐다 → progress 2026-10-09 "사내 서버를 접고 배포 대상을 AWS 하나로"

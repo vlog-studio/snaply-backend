@@ -3,7 +3,8 @@
 **작성일**: 2026-09-05
 **상태**: 미결 — 결정 대기
 **출처**: [meetings/2026-08-31-dev-sync.md](../meetings/2026-08-31-dev-sync.md) §3 "스티커, 에셋확보(관리자페이지 도입 필요함)"
-**관련 문서**: [backlog.md](../backlog.md) A-7(스티커 팩 매니페스트 · 디자이너 커미션 · 관리자 페이지) · [edit-spec-v3.md](edit-spec-v3.md) §2 ·
+**관련 문서**: [backlog.md](../backlog.md) A-7(스티커 조달 · 등록·관리 경로 · 에셋 영구 라이선스) · [edit-spec-v3.md](edit-spec-v3.md) §2 ·
+매니페스트 초안 [plans/asset-pack-manifest.md](../plans/asset-pack-manifest.md) §5 ·
 착수 순서는 [README.md](README.md) §결정 대기
 
 ## 한 줄 요약
@@ -28,7 +29,7 @@
 | 서버 스키마 | 팩·스티커 테이블(매니페스트 저장)과 상태(`experimental → active → deprecated`) |
 | 워커 | 렌더 시 스티커 파일을 내려받아 합성. 파일 저장 위치(S3 버킷)와 접근 방식 |
 | 인증·권한 | 관리자 페이지를 만들면 관리자 판별(예: Supabase 커스텀 클레임), `/admin/*` 라우트 가드, 감사 로그가 필요하다 |
-| 만료 무비 재생성 | 결과물을 다시 만들 때 스티커가 더 이상 배포 불가면 재생성이 깨진다. 끝낸 무비도 다시 만들 수 있으므로(MOV-19, [movie-cleanup-after-export.md](movie-cleanup-after-export.md)) 에셋 계약에 영구 사용권(기존 저작물 유지) 조항을 요구할지가 열려 있다([backlog.md](../backlog.md) A-7) |
+| 다시 만들기 | 결과물을 다시 만들 때 스티커가 더 이상 배포 불가면 재생성이 깨진다. 끝낸 무비도 다시 만들 수 있으므로(MOV-19, [movie-cleanup-after-export.md](movie-cleanup-after-export.md)) 에셋 계약에 영구 사용권(기존 저작물 유지) 조항을 요구할지가 열려 있다([backlog.md](../backlog.md) A-7) |
 
 ---
 
@@ -52,7 +53,7 @@
 | **C. A 로 시작하고 팩이 늘어나면 B** | 지금 필요한 것만 만든다. B 로 옮길 때 A 의 매니페스트 형식을 그대로 읽게 설계하면 이행 비용이 작다 |
 
 권장: **C.** 관리자 페이지는 팩 상태 전이가 잦아지거나 비개발자 운영이 필요해질 때
-`decisions/admin-console.md` 로 범위·인증·호스팅을 따로 결정한다.
+새 결정 문서에서 범위·인증·호스팅을 따로 정한다.
 
 ## 결정 기록
 

@@ -6,6 +6,11 @@
 **관련 문서**: [sns-setup.md](../sns-setup.md) §웹훅 · [specs/sns-sharing.md](../specs/sns-sharing.md) SNS-5~7 · [backlog.md](../backlog.md) D-1 · B-8 · C-1 · C-6 ·
 착수 순서는 [README.md](README.md) §결정 대기
 
+> **후속 결정**(2026-10-08): 외부에서 닿는 서버가 생겼다 — AWS 공모전 서버(`https://snaply-api.dweaxai.com`)가 공모전
+> 기간 동안 고정 HTTPS 도메인과 그 뒤의 실제 서버를 채운다([aws-contest-server.md](./aws-contest-server.md), backlog B-8).
+> §이 결정이 영향을 주는 곳의 "외부에서 닿는 실사용 서버가 따로 있어야 한다"와 §권장의 도메인 작업 순서는 그 전의
+> 기록이다. 이 문서가 묻는 "어느 웹훅을 받을 것인가"는 여전히 미결이다.
+
 ## 한 줄 요약
 
 웹훅은 "외부 서비스가 우리 서버로 사건을 알려주는 HTTPS 호출"이다. 받으려면 외부에서 항상 접근 가능한

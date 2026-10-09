@@ -54,9 +54,9 @@ Snaply 는 20~30대를 위한 **숏폼 브이로그 AI 자동 편집 앱**이다
 | 스펙 | 범위 |
 |---|---|
 | [account.md](account.md) | 가입·로그인, 프로필, 계정 삭제와 복구 |
-| [snap-library.md](snap-library.md) | 스냅 촬영·추출, 라이브러리, 앨범 저장, 서버 보관과 한도, 기기 간 동기화와 이 기기에서만 삭제 |
-| [movie.md](movie.md) | 무비 구성(초안 편집)과 AI 생성, 결과물 보관·공유 |
-| [template-and-recommendation.md](template-and-recommendation.md) | 템플릿으로 시작, 스냅 자동 추천, 스냅 내용 분석 |
+| [snap-library.md](snap-library.md) | 스냅 촬영·추출, 라이브러리, 앨범 저장, 서버 보관(기간·만료 예고·한도), 기기 간 동기화, 이 기기에서만 삭제, 최근 삭제(되살리기) |
+| [movie.md](movie.md) | 무비 모델, 초안 편집(순서의 주인·경계별 전환), AI 편집 초안, AI 생성, 결과물 보관·공유·끝내기 |
+| [template-and-recommendation.md](template-and-recommendation.md) | 템플릿으로 시작, 스냅 자동 추천, 스냅 내용 분석과 분석 동의 |
 | [credits-and-payment.md](credits-and-payment.md) | 크레딧 과금, 인앱결제, 보상형 광고 |
-| [notifications.md](notifications.md) | 위치 도착 알림, 무비 완성 알림, 알림 설정 |
+| [notifications.md](notifications.md) | 위치 도착 알림, 무비 완성 알림, 알림 탭의 목적지, 알림 설정(스냅 만료 예고는 SNAP-13) |
 | [sns-sharing.md](sns-sharing.md) | 인스타그램·틱톡 연동과 업로드 |

@@ -49,7 +49,7 @@ Recurring conflicts, pre-decided so reviews do not re-argue them. Each resolutio
 
 ## Conflict report format
 
-When a conflict shaped the design, say so — the reasoning is the deliverable, and an undocumented conflict gets re-litigated next month.
+When a conflict shaped the design, say so — the reasoning is the deliverable, and an undocumented conflict gets re-litigated in the next review.
 
 ```text
 Conflict   <principle A> vs. <principle B>

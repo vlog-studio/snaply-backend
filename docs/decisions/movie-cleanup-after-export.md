@@ -1,15 +1,13 @@
 # 결정 요청 — 내보내기가 끝난 프로젝트(무비)와 결과물을 지울 것인가
 
 **작성일**: 2026-09-05 (2026-09-09 결정)
-**상태**: 결정 — **결과물(브이로그)만 지우고 프로젝트(무비)는 남긴다.** 사용자가 다운로드·게시로
-"끝내면" 서버의 결과물 파일을 삭제하고, 다시 보기는 제공하지 않는다. 프로젝트는 영구 보존되어
-편집 화면에서 다시 고쳐 다시 생성할 수 있다(새 생성이므로 크레딧 100 을 다시 낸다).
-선택지 A 를 **결과물 축에만** 적용한 형태다 — 결정 전 화면 비교(보관)는
-[archive/movie-cleanup-ux-comparison.md](../archive/movie-cleanup-ux-comparison.md).
-§결정 기록 앞의 요약·설명·선택지·권장은 결정 요청(2026-09-05) 당시의 기록이며, 확정 내용은 §결정 기록이다.
+**상태**: 결정 — **결과물(브이로그)만 지우고 프로젝트(무비)는 남긴다**(선택지 A 를 결과물 축에만). 끝낸 뒤 다시 생성은 크레딧 100 을 다시 낸다
 **출처**: [meetings/2026-08-31-dev-sync.md](../meetings/2026-08-31-dev-sync.md) §4 "내보내기(완성하면 프로젝트 삭제!)", "vlog … 진행하면 삭제!"
-**관련 문서**: [specs/movie.md](../specs/movie.md) MOV-4 · MOV-14 · MOV-16 · [storage-and-subscription-policy.md](storage-and-subscription-policy.md) §3 ·
-[movie-model.md](movie-model.md) · [backlog.md](../backlog.md) A-1 · A-7(에셋 영구 라이선스)
+**관련 문서**: [specs/movie.md](../specs/movie.md) MOV-4 · MOV-14 · MOV-16~19 · [storage-and-subscription-policy.md](storage-and-subscription-policy.md) §3 ·
+[movie-model.md](movie-model.md) · [backlog.md](../backlog.md) A-1 · A-7(에셋 영구 라이선스) ·
+결정 전 화면 비교(보관) [archive/movie-cleanup-ux-comparison.md](../archive/movie-cleanup-ux-comparison.md)
+
+[결정 기록](#결정-기록) 앞의 요약·설명·선택지·권장은 결정 요청(2026-09-05) 당시의 기록이며, 확정 내용은 결정 기록이다.
 
 ## 한 줄 요약
 
@@ -36,7 +34,7 @@
 | 크레딧 | 다시 만들려면 처음부터 프로젝트를 새로 짜고 100크레딧을 다시 낸다. "만료 무비 무료 재생성" 약속이 없어진다 |
 | 결제·구독 | 결과물이 서버에 남지 않으면 보관 축 구독의 대상이 스냅만으로 줄어든다 |
 | 에셋 라이선스 | 재생성이 없으면 "라이선스 만료 후 재렌더가 가능한가"(A-7 영구 조항) 논의가 필요 없어진다 — 단순해진다 |
-| SNS 업로드 | 게시 시점에 플랫폼이 파일을 가져가므로 게시 후 삭제는 안전하다(§3.5). 단 게시 실패 후 재시도는 파일이 있어야 한다 |
+| SNS 업로드 | 게시 시점에 플랫폼이 파일을 가져가므로 게시 후 삭제는 안전하다([storage-and-subscription-policy.md](storage-and-subscription-policy.md) §3.5). 단 게시 실패 후 재시도는 파일이 있어야 한다 |
 | 서버 스키마 | 삭제로 가면 만료 배치·재생성 API 가 필요 없다. 대신 "다운로드/게시 완료" 이벤트로 삭제하는 로직이 필요하다 |
 
 ## 선택지와 그 결과
@@ -93,7 +91,7 @@ A-2 구독 상품 범위를 다시 정하는 것까지 같은 결정에 포함�
 
 ### ⚠️ 구현 시 반드시 지킬 것 — "끝냈다"는 자동으로 알 수 없다
 
-`shared/lib/sharing/share-file.ts` 가 직접 적어둔 대로, 시스템 공유 시트는 사용자가 실제로
+`apps/mobile/src/shared/lib/sharing/share-file.ts` 의 `shareFile` 이 직접 적어둔 대로, 시스템 공유 시트는 사용자가 실제로
 저장했는지 알려주지 않는다 — **"A share is therefore 'offered', never 'confirmed'."**
 시트를 열었다 그냥 닫아도 성공과 똑같이 끝난다.
 

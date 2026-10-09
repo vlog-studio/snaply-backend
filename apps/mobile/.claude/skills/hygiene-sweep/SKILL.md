@@ -76,7 +76,7 @@ the docs resolve against the same base as the scanner:
 
 ```bash
 cd apps/mobile
-node .claude/skills/hygiene-sweep/scripts/scan.mjs all --src src --docs docs
+node .claude/skills/hygiene-sweep/scripts/scan.mjs all --src src --docs docs --entry src/app/
 ```
 
 Do not run the scanner from the monorepo root with prefixed `--src apps/mobile/src` paths: its
@@ -84,7 +84,8 @@ doc-reference checks resolve unprefixed paths against the current directory and 
 
 Adjust `--src`, `--docs`, `--alias`, and `--entry` to the repo (`scan.mjs` with no arguments
 prints the options). `--entry` matters for framework routers: files a router discovers by
-filesystem convention are imported by nothing and would otherwise all report as orphans.
+filesystem convention are imported by nothing and would otherwise all report as orphans — here,
+the Expo Router files under `src/app/`.
 
 Run `dupes` a second time at `--min 6`. A duplicated block usually has *different* first and
 last lines — a renamed style key, a different prop name — which shears the ends off the match

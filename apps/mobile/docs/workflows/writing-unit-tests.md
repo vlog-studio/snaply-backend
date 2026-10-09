@@ -102,7 +102,7 @@ The copy-followable skeleton for each module kind lives in the
 - **Hooks** — `await renderHook`, `act`/`waitFor`, and an explicit isolation boundary:
   [cookbook §15c](../conventions/cookbook.md#15c-hook-test-with-an-explicit-boundary).
 - **Zustand stores** — exercise through exported hooks, mock the persistence backend,
-  reset in `afterEach`: [cookbook §15d](../conventions/cookbook.md#15d-zustand-store).
+  reset between tests: [cookbook §15d](../conventions/cookbook.md#15d-zustand-store).
 - **Forms** — cover the rules in the schema's own table-driven test, and the wiring in a
   component test whose every interaction is awaited inside `act` (async validation that
   escapes a test breaks the *next* one):

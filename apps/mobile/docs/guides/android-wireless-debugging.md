@@ -91,7 +91,7 @@ macOS 방화벽이 8081 포트 수신을 차단하거나 공유기가 기기 간
 adb -s 192.168.0.42:40913 reverse tcp:8081 tcp:8081
 ```
 
-`adb reverse` 는 무선 연결에서도 동일하게 동작하며, 기기의 `127.0.0.1:8081` 요청이 adb를 통해 Mac의 Metro로 전달됩니다.
+`adb reverse` 는 무선 연결에서도 동일하게 동작하며, 기기의 `127.0.0.1:8081` 요청이 adb를 통해 Mac의 Metro로 전달됩니다. 로컬 API·MinIO까지 `127.0.0.1`로 쓰는 설정이면 `npm run android:device:reverse`가 8081과 그 포트들(`EXPO_PUBLIC_API_BASE_URL`·`S3_PUBLIC_ENDPOINT`)을 한 번에 다시 겁니다 — adb가 재연결되면 reverse가 풀리므로 그때마다 실행합니다.
 
 기기가 하나만 연결돼 있으면 `-s ...` 는 생략해도 됩니다. 에뮬레이터가 함께 떠 있으면 반드시 `-s <IP:포트>` 로 실기기를 지정하세요("more than one device" 오류 방지).
 

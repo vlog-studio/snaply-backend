@@ -1,8 +1,9 @@
 # 무비 완성 알림 — 누가 보내는가
 
 **작성일**: 2026-09-11
-**상태**: 결정 — 구현 완료
-**관련**: [expiry-notice-schedule.md](./expiry-notice-schedule.md) · [backlog.md](../backlog.md) A-1
+**상태**: 결정 — 편집 워커가 알림 요청을 큐에 넣고 Node 쪽 알림 워커가 발송한다
+**관련 문서**: [specs/notifications.md](../specs/notifications.md) NTF-6 · [expiry-notice-schedule.md](./expiry-notice-schedule.md) ·
+[notification-preferences.md](./notification-preferences.md) · [backlog.md](../backlog.md) A-1(실기기 검증)
 
 ---
 
@@ -23,7 +24,7 @@
 
 ## 왜 Redis pub/sub 이 아닌가
 
-워커는 이미 진행률을 pub/sub 으로 흘린다(`edit-jobs:{id}` 채널). 거기 얹는 것이 자연스러워
+워커는 이미 진행률을 pub/sub 으로 흘린다(`edit-progress:{id}` 채널). 거기 얹는 것이 자연스러워
 보이지만 두 가지가 걸린다.
 
 - pub/sub 은 **그 순간 구독자가 없으면 메시지를 버린다.** 발송 쪽을 재배포하는 사이에 끝난

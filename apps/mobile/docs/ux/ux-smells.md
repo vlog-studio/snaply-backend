@@ -65,7 +65,7 @@ How to use it: run the Detection Rules in [`principles.md`](principles.md) while
 - **Cause.** "While we're here" additions; reusing a screen for reporting and acting at once.
 - **User cost.** Scan cost; the relevant part hides inside the irrelevant part; the primary action loses relative weight.
 - **Principles.** `Progressive Disclosure`, `One Thing per Page`.
-- **Remediation.** Ask per block: is this required to act, to trust the action, or to report the state of this goal? If none, move it below the primary block, behind one disclosure, or to the screen that owns it. Do not delete it silently — see [`guardrails.md`](guardrails.md).
+- **Remediation.** Ask per block: is this required to act, to trust the action, or to report the state of this goal? If none, move it below the primary block, behind one disclosure, or to the screen that owns it. Do not delete it silently — [G1](guardrails.md#g1--do-not-simplify-by-deletion).
 
 ## Decision Dump
 
@@ -129,7 +129,7 @@ How to use it: run the Detection Rules in [`principles.md`](principles.md) while
 - **Cause.** Only the populated success state was designed.
 - **User cost.** Users cannot tell whether the app is broken, slow, or simply empty — the worst kind of ambiguity, because no action follows from it.
 - **Principles.** `Errors Are Design Failures First`, `Show State, Not Instructions`.
-- **Remediation.** Design all five states for every data-backed surface. Prefer skeletons matching the final layout. Every non-success state names the state and offers the one action that resolves it. See [`interaction-patterns.md`](interaction-patterns.md).
+- **Remediation.** Design all five states for every data-backed surface. Prefer skeletons matching the final layout. Every non-success state names the state and offers the one action that resolves it. The patterns: [empty](interaction-patterns.md#9--empty-state), [loading](interaction-patterns.md#11--loading), [failure](interaction-patterns.md#15--failure), [offline](interaction-patterns.md#17--offline).
 
 ## Blaming Error
 
@@ -153,7 +153,7 @@ How to use it: run the Detection Rules in [`principles.md`](principles.md) while
 - **Cause.** Parallel feature work without a shared pattern reference.
 - **User cost.** Re-learning per screen; broken generalization; maintenance cost that grows the divergence.
 - **Principles.** `Consistent Interaction Pattern`, `Speak the User's Domain`.
-- **Remediation.** Pick the canonical pattern from [`../conventions/cookbook.md`](../conventions/cookbook.md), migrate the outlier, and unify the wording. If both are needed, articulate the semantic difference — otherwise it is duplication.
+- **Remediation.** Pick the canonical one — the shared component in `src/shared/ui` or `src/widgets` ([reuse rule](agent-protocol.md#implementation-rules)) — migrate the outlier, and unify the wording. If both are needed, articulate the semantic difference — otherwise it is duplication.
 
 ## Flat Hierarchy
 
