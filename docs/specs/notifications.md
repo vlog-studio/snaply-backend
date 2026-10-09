@@ -31,7 +31,7 @@
 
 ## 알림 설정
 
-- **NTF-7** `구현됨`(실기기 미검증) — 사용자는 알림을 **종류별로** 켜고 끌 수 있다.
+- **NTF-7** `구현됨`(위치 알림의 권한 안내는 실기기 미검증 — [backlog.md](../backlog.md) F) — 사용자는 알림을 **종류별로** 켜고 끌 수 있다.
   설정은 **계정에** 있어 기기를 바꾸거나 앱을 다시 설치해도 따라온다. 서버가 원천이고 앱은 `GET /auth/me` 로 읽고
   `PATCH /auth/me` 로 쓴다: `notificationEnabled`(전체) · `locationNotificationEnabled` · `movieNotificationEnabled` ·
   `quietStart`/`quietEnd`. 전체를 끄면 종류와 무관하게 아무것도 가지 않는다(앱에는 전체 스위치가 없다).
