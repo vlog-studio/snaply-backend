@@ -180,7 +180,7 @@ function CaptureRecordScreen() {
           <ThemedText style={styles.permissionDescription}>{permissions.message}</ThemedText>
           {permissions.isPermissionReady ? (
             <SnaplyButton
-              title={permissions.canAskAgain ? '카메라·마이크 권한 허용' : '설정에서 권한 열기'}
+              title={permissions.canAskAgain ? '카메라·마이크 권한 허용' : '설정에서 권한 켜기'}
               onPress={
                 permissions.canAskAgain
                   ? permissions.requestPermissions

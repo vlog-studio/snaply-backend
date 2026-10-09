@@ -31,7 +31,7 @@ While the recorder is `idle`, a `3초 / 5초` segment toggle sits above the shut
 | Capability | Status | Platform and behavior |
 | --- | --- | --- |
 | Dark-pinned viewfinder chrome | `Functional` | The whole screen is wrapped in `<ThemeScope scheme="dark">` and mounts its own light status bar: its ground is the camera feed and near-black scrims, so its chrome ignores the app theme mode and always uses the dark palette. |
-| Camera and microphone permission flow | `Functional` | iOS and Android request missing permissions and can open system settings after denial. |
+| Camera and microphone permission flow | `Functional` | iOS and Android request missing permissions and can open system settings after denial. The denied screen's button reads 카메라·마이크 권한 허용 while the OS can still ask, and 설정에서 권한 켜기 once it cannot — the label every permission row in the app uses for opening the OS settings — which opens them. |
 | Press-and-hold 3- or 5-second video recording | `Functional` | iOS and Android record at 720p while the shutter is held. Releasing the finger stops the recording early; the native `maxDuration` ends it automatically when the ring completes. Holds of 250ms or less are treated as accidental taps: the temp recording is discarded (never saved) and the screen silently returns to idle. |
 | Sound toggle | `Functional` | Recording can be muted; enabling sound requires microphone permission. During review the toggle mutes/unmutes the looping playback without restarting it. |
 | Front/back camera toggle | `Functional` | Available while the recorder is idle. |

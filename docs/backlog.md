@@ -797,15 +797,6 @@ Supabase 로 DB 에 직접 닿을 수 있는 공유 Supabase DB 를 쓸 때뿐�
 **완료 조건**: `API_HOST_PORT` 를 `POSTGRES_HOST_PORT` 처럼 `origin: 'local'` 로 선언하고 [`.env.example`](../.env.example)에 예시를 넣는다 ·
 `npm test -w apps/api`(env-spec 테스트) 통과.
 
-### E-23. 같은 동작의 권한 버튼 라벨이 둘이다
-
-권한이 거절된 뒤 시스템 설정으로 보내는 버튼이 앨범 · 알림 화면은 `설정에서 권한 켜기`인데
-(`apps/mobile/src/features/save-snap-to-album/model/album-save-copy.ts` · `pages/me/ui/me-album-page.tsx` · `pages/me/ui/me-notifications-page.tsx`),
-촬영 화면의 카메라 · 마이크 거절만 `설정에서 권한 열기`다(`apps/mobile/src/pages/capture-record/ui/capture-record-page.tsx`).
-UX 규칙상 같은 동작에 라벨이 둘인 `Inconsistent Twin` 이다([interaction-patterns.md](../apps/mobile/docs/ux/interaction-patterns.md) §8).
-
-**완료 조건**: 촬영 화면을 `설정에서 권한 켜기`로 맞추고 그 화면의 테스트 · [capture-flow.md](../apps/mobile/docs/features/capture-flow.md)를 함께 고친다.
-
 ### E-25. 알림이 앱의 알림 채널을 쓰지 않는다
 
 앱은 Android 채널 `default`("기본 알림")를 만들지만(`apps/mobile/src/shared/lib/notifications/local.ts` `ensureNotificationChannel`) 어떤 알림도 그
@@ -1087,6 +1078,7 @@ C 문단이 사실상 권장이다.
 - **E-17** 결과물이 원본의 위치 태그를 싣는다(무비 결과물에서 지움 — 배포본은 A-4 위치 항목으로) — 2026-10-07 → progress 2026-10-07 "무비 결과물이 찍은 곳을 싣고 나가지 않는다"
 - **E-18** 지운 스냅의 분석 결과가 남는다(ANA-3, 개인정보처리방침과 다름) — 2026-10-09 → progress 2026-10-09 "지운 스냅의 분석 결과를 지운다"
 - **E-20** 사내 서버 오버레이만 바꾼 머지는 배포되지 않는다 — 2026-10-09 사내 서버 경로를 지우면서(`docker-compose.prod.yml` 삭제) 사라졌다 → progress 2026-10-09 "사내 서버를 접고 배포 대상을 AWS 하나로"(낡은 머리 주석은 G)
+- **E-23** 같은 동작의 권한 버튼 라벨이 둘이다(촬영 화면을 `설정에서 권한 켜기` 로) — 2026-10-09 → progress 2026-10-09 "촬영 화면의 권한 버튼 라벨을 맞춘다"
 - **E-24** 보드 · 그리드의 `다시 시도` 가 거절을 말하지 않는다(카드에 거절의 첫 문장을 띄움, 실기기 확인은 F) — 2026-10-09 → progress 2026-10-09 "실패한 무비 카드가 다시 시도의 거절을 말한다"
 - **F** HDR · 장시간 · 10클립 스트레스 실검증 — 2026-09-15 → progress 2026-09-15 "스트레스 실검증과 HDR 색 태그 결함"(돌비비전 실물은 F 에 남음)
 - **F** 한 번에 하나씩 만들기의 실기기 확인(MOV-11 `구현됨`) · 다른 기기에서 지운 스냅의 컷 표시(SNAP-12) — 2026-10-09 → progress 2026-10-09 "휴대폰과 에뮬레이터로 — 다른 기기 · 삭제 · 업로드 전 무비"
