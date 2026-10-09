@@ -13,6 +13,11 @@
 > [ONBOARDING.md](../../ONBOARDING.md) §3-8 대로 `DATABASE_URL` 한 줄만 둔 워커 파일이 나머지 키(`OPENAI_API_KEY`·S3 등)를
 > 모두 가렸다. 지금은 두 파일을 모두 읽고 같은 키만 워커 파일이 이긴다(`apps/ai-worker/src/config.py` 의 `_load_dotenv`,
 > [progress.md](../progress.md) 2026-09-29).
+> **후속 결정**(2026-10-08): 배포 플랫폼은 AWS 공모전 서버다([aws-contest-server.md](./aws-contest-server.md)) — 이 결정의 구조는 그대로다.
+> 배포가 Secrets Manager 의 시크릿 하나를 `/data/compose/.env`(600)로 옮기고 compose 가 읽는다. 저장소 · 이미지에는 들어가지 않고,
+> **빈 값은 옮기지 않는다**(빈 문자열을 미설정으로 보지 않는 코드가 있다 — `LOG_LEVEL` · `RATE_LIMIT_GLOBAL_MAX`). 절차는
+> [deployment-aws.md](../deployment-aws.md) §2, 남은 서버 작업은 [backlog.md](../backlog.md) B-8. 사내 서버 안은 2026-10-09 에 접었다
+> ([archive/on-prem-deployment.md](../archive/on-prem-deployment.md)).
 
 ---
 
@@ -152,15 +157,3 @@ compose 가 읽으면 `LEGAL_CONTACT_EMAIL`·`SITE_VERIFICATION_META`·`STRIPE_P
 이 정리와 함께 고친 결함(빈 `CLOUDFRONT_DOMAIN` 이 공개 URL 을 깨뜨리던 것, `.env.example` 의
 `S3_ENDPOINT` 예시 포트, `.env.example` 에 없던 변수 12개)은 [progress.md](../progress.md)
 2026-08-11 "환경변수 관리 정리"에 있다.
-
-## 후속 연계
-
-이 결정은 배포 플랫폼을 고르지 않는다 — 어느 플랫폼이든 위 구조는 유지한다. 플랫폼은
-[aws-contest-server.md](./aws-contest-server.md)가 정했고, 남은 서버 작업은
-[backlog.md](../backlog.md) B-8에서만 관리한다. (사내 서버 안은 2026-10-09 에 접었다 —
-[archive/on-prem-deployment.md](../archive/on-prem-deployment.md).)
-
-- **AWS 공모전 서버**([aws-contest-server.md](./aws-contest-server.md))에는 Secrets Manager 가 있다. 배포가 시크릿 하나를
-  compose 용 파일 `/data/compose/.env`(600)로 옮기고 compose 가 그 파일을 읽는다. 파일은 배포 때마다 시크릿에서 다시
-  만들어지고 저장소·이미지에는 들어가지 않는다. **빈 값은 옮기지 않는다** — 빈 문자열을 미설정으로 보지 않는 코드가 있어서다
-  (`LOG_LEVEL`·`RATE_LIMIT_GLOBAL_MAX` 등). 절차는 [deployment-aws.md](../deployment-aws.md) §2.

@@ -819,14 +819,6 @@ Supabase 로 DB 에 직접 닿을 수 있는 공유 Supabase DB 를 쓸 때뿐�
 2026-10-09 문서 전수 감사에서 나온, 코드 동작은 그대로이고 **규칙이나 문서를 어느 쪽으로 맞출지만 정하면 되는** 판단이다.
 각 항목에 배경 · 선택지 · 권장(있으면) · 완료 조건을 적었다. 정하면 해당 문서(와 필요한 경우 코드 · 테스트)를 고치고 닫는다.
 
-### H-11. `env-management.md` 의 "후속 연계" 절
-
-[decisions/env-management.md](./decisions/env-management.md)의 "후속 연계"는 작성 뒤에 덧붙인 내용인데 배너가 아니라 본문 절로 남아
-있다([doc-conventions.md](./doc-conventions.md) §헤더: 작성 뒤의 정정 · 후속은 헤더 아래 배너). 현재 사실을 가리키는 링크 위주라
-2026-10-09 정리에서는 구조를 유지했다.
-
-**완료 조건**: 배너로 압축하거나, 본문 절로 두는 이유를 그 절 첫 줄에 적는다.
-
 ### H-12. 모바일 UX 문서 체계의 두 군데
 
 - [guardrails.md](../apps/mobile/docs/ux/guardrails.md)는 자체 규칙 없이 "잘못된 수 → 원천 규칙 링크" 22개로 된 색인이 됐다.
@@ -945,3 +937,4 @@ Supabase 로 DB 에 직접 닿을 수 있는 공유 Supabase DB 를 쓸 때뿐�
 - **H-8** `runOnJS` 와 `scheduleOnRN`(`scheduleOnRN` 으로 통일 — Reanimated 4 가 `runOnJS` 를 폐기 예정으로) — 2026-10-10 → progress 2026-10-10 "워크릿에서 JS 로 넘길 때는 scheduleOnRN 을 쓴다"
 - **H-9** ONBOARDING 의 "모노레포 통합 이전에 분기한 브랜치" 절(한 줄로) — 2026-10-10 → progress 2026-10-10 "ONBOARDING 의 통합 전 브랜치 절을 걷는다"
 - **H-10** 결정 문서의 결정 ID 가 백로그 ID 와 같은 모양이다(`V3-A1` 꼴로) — 2026-10-10 → progress 2026-10-10 "editSpec v3 결정 ID 에 접두를 붙인다"
+- **H-11** `env-management.md` 의 "후속 연계" 절(헤더 배너로) — 2026-10-10 → progress 2026-10-10 "env-management 의 후속 연계를 배너로 옮긴다"
