@@ -1,12 +1,10 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import type { CancellationOutcome } from '@/features/compose-movie';
+import { generationRefusalMessage, type CancellationOutcome } from '@/features/compose-movie';
 import { SnaplyButton } from '@/shared/ui/snaply-button';
 import { Radius, Spacing, useTheme } from '@/shared/ui/theme';
 import { ThemedText } from '@/shared/ui/themed-text';
-
-import { GenerationRefusalMessages } from './refusal-notice';
 
 export type CancelRunControlProps = {
   /** Asks the backend to stop the run; the movie leaves `generating` on its word. */
@@ -65,7 +63,7 @@ export function CancelRunControl({ cancel }: CancelRunControlProps) {
       </ThemedText>
       {unreachable ? (
         <ThemedText type="note" themeColor="danger">
-          {GenerationRefusalMessages.unreachable}
+          {generationRefusalMessage('unreachable')}
         </ThemedText>
       ) : null}
       <View style={styles.actions}>

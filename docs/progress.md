@@ -2355,3 +2355,20 @@ MOV-11 은 사용자당 진행 중 생성을 한 번에 하나로 요구하는�
   `npm test -w apps/api` 41개 파일 624건 통과. 앱 — 거절 사유 · 409 매핑 · 문구 테스트를 더했고 `npm run verify:mobile` 통과
   (173개 스위트 1390건, lint 경고 1건은 원래 있던 `notification-settings-store.ts` 의 것). 실기기는 확인하지 않았다 — backlog F.
 - **남은 것**: 보드 · 그리드의 `다시 시도` 는 거절 이유를 말하지 않는다(원래 있던 한계, 이제 더 자주 보인다) — backlog E-24.
+
+## 2026-10-09 (이어서) — 실패한 무비 카드가 다시 시도의 거절을 말한다(MOV-12, backlog E-24 닫음)
+
+스튜디오 보드와 무비 탭의 실패 카드에서 `다시 시도` 가 거절되면(다른 무비를 만드는 중 · 올라가는 중 · 크레딧 부족 등) 아무것도 바뀌지
+않았다 — 거절 문구는 무비 화면에만 있었다. 한 번에 하나씩 만들게 된 뒤(MOV-11) 이 거절이 흔해져서 카드에서 답하게 했다.
+
+- **스펙** — MOV-12 에 "재시도가 시작되지 못하면 누른 자리에서 그 이유를 알린다"를 더했다([specs/movie.md](./specs/movie.md)).
+- **카드에 짧게 답한다** — `MovieFailureNotice`(`apps/mobile/src/widgets/movie-shelf/ui/movie-failure-notice.tsx`)가 거절되면 실패 사유 줄
+  자리에 거절의 첫 문장을 띄운다("다른 무비를 만드는 중이에요.", "크레딧이 부족해요 · 40/100." 등). 그리드에서는 사유처럼 한 줄로 잘라
+  타일 높이가 그대로다. 다음 누름의 답이 올 때까지 남고, 시작 요청이 진행 중이면 버튼을 막아 두 번째 누름이 첫 요청 때문에 거절되지 않게 했다.
+  무비 화면으로 보내는 안은 누른 자리와 다른 곳에 떨어뜨리는 이동이라(UX `Unpredictable Jump`) 고르지 않았다.
+- **문구 원천을 하나로** — 생성 거절 문구를 `pages/movie/ui/refusal-notice.tsx` 에서 `features/compose-movie/lib/generation-refusal-copy.ts` 로
+  옮겼다. 무비 화면(`generationRefusalMessage`, 전체 문장)과 카드(`generationRefusalHeadline`, 첫 문장)가 한 표에서 읽는다 — 페이지와 위젯은
+  서로 import 할 수 없다. 기능 문서 [movie.md](../apps/mobile/docs/features/movie.md) · [studio.md](../apps/mobile/docs/features/studio.md).
+- **검증**: 카드 테스트(거절 이유 표시 · 누를 때마다 그 답 · 진행 중 중복 시작 없음)와 문구 테스트를 더했다. 카드의 수정을 빼면 카드 테스트
+  네 건이 모두 실패한다. `npm run verify:mobile` 통과
+  (175개 스위트 1397건, lint 경고는 원래 있던 것). 실기기 · 에뮬레이터에서는 보지 않았다 — backlog F 의 MOV-11 실기기 확인에 합쳤다.
