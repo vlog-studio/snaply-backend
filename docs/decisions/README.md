@@ -21,7 +21,6 @@
 | [sns-webhook-scope.md](sns-webhook-scope.md) | "웹훅 연동"이 어느 웹훅을 뜻하는지 | D-1 | 2026-08-31 회의 |
 | [sticker-asset-sourcing.md](sticker-asset-sourcing.md) | 스티커 조달 경로 · 등록 경로(관리자 페이지 시점) | A-7 | 2026-08-31 회의 |
 | [bgm-sourcing.md](bgm-sourcing.md) | BGM 조달(AI 생성 · 라이선스 구독 · 커미션) — 법적 검토 6항목 선행 | A-7 · E-5 | 2026-08-31 회의 |
-| [movie-snap-expiry-exemption.md](movie-snap-expiry-exemption.md) | 무비가 참조 중인 스냅의 만료 예외 — 잠정 결정은 "예외 없음"(현행 유지), 다음 회의에서 다시 본다 | A-1 · A-2 | 2026-09-15 잠정 결정 |
 
 각 결정의 착수 순서와, 결정을 기다리지 않고 시작할 수 있는 일:
 
@@ -33,12 +32,12 @@
 - **sticker-asset-sourcing** — 에셋 조달 → 매니페스트 시드 등록 → (필요해지면) 관리자 페이지 순이다. 에셋
   라이선스 조사는 결정 전에 시작할 수 있다.
 - **subtitle-rendering** — 다른 결정과 독립이다.
-- **movie-snap-expiry-exemption** — 요금제 설계(A-2)와 같은 자리에서 본다.
 
 ## 결정 완료 — 현행 정책의 근거
 
 | 문서 | 결정 | 구현 |
 |---|---|---|
+| [movie-snap-expiry-exemption.md](movie-snap-expiry-exemption.md) | **잠정** — 무비가 참조 중인 스냅도 만료 예외 없음(현행 유지). 다음 회의에서 요금제(A-2)와 함께 C(편집하면 기간 갱신)부터 다시 본다 | 코드 변경 없음(현행) |
 | [api-contract-schema-first.md](api-contract-schema-first.md) | API 계약 원천을 `packages/shared-types` Zod 스키마로 통일 | 완료 |
 | [snap-content-analysis.md](snap-content-analysis.md) | 스냅 내용 분석(vision) 도입. 법무 검토 전에는 사용자 동의(옵트인)로 켠다(2026-09-29 §6.1) | 분석·동의 완료. 생산 활성화는 A-3 |
 | [template-snap-recommendation.md](template-snap-recommendation.md) | 템플릿 기반 스냅 자동 추천 — 앱 로컬 매칭 + 서버 추천 2단계, 서버 카탈로그, 무료 추천과 상한, 규칙 기반 점수화. 켜는 조건은 2026-09-29 부터 옵트인 | 완료, 생산 활성화 대기(A-6) |
