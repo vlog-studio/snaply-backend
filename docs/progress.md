@@ -2570,3 +2570,28 @@ env-spec 부터). `POSTGRES_HOST_PORT` 처럼 `origin: 'local'` 로 선언하고
   `failed`(`INTERNAL`)가 되고 워커가 `refund_export_credits` 로 환급했다 — 원장 `export_refund +100` 한 번, 잔액 1300.
 - **찾은 것** — 실패 5초 뒤 BullMQ 가 같은 작업을 다시 넘겼고(`attempts: 3`), 워커는 `mark_processing` 거절을 "편집 취소 감지"로 적고 끝냈다.
   재시도가 실제로는 재시도하지 않고 일시적 실패도 첫 시도에서 확정된다 — backlog E-27. 환급은 두 번 되지 않았다.
+
+## 2026-10-10 — 일시적 실패는 워커가 다시 시도한다(MOV-12, backlog E-27 닫음)
+
+편집 큐는 `attempts: 3` 으로 넣는데 워커가 첫 예외에서 실패를 확정하고 환급해, 큐의 재시도는 시작에서 거절되며 "편집 취소 감지"로
+찍히기만 했다(2026-10-09 "워커 쪽 취소 중단 · 실패 환급 실검증"). S3 일시 오류도 사용자에게 바로 실패로 갔다. 스펙 MOV-10 은 이미
+"자동 재시도로 추가 차감되지 않는다"고 재시도를 전제하고 있었다.
+
+- **스펙** — MOV-12 에 "일시적인 오류는 서버가 스스로 다시 시도(최대 3회) · 그동안 만드는 중 · 진행 줄이 '다시 시도하는 중' · 진행률은
+  뒤로 가지 않음 · 마지막 시도까지 실패해야 실패로 알림 · 원본 없음 · 시간 초과는 바로 알림"을 더했다([specs/movie.md](./specs/movie.md)).
+- **워커** — `process_edit_job`(`apps/ai-worker/src/worker.py`)이 마지막 시도(`attemptsMade + 1 >= attempts`)에서만 `failed` · 환급을
+  확정한다. 그 전의 실패는 작업을 `queued` · 진행률 0 으로 되돌리고(`db.requeue_for_retry`, 그 사이 취소됐으면 다시 시도하지 않는다)
+  `{progress: 0, step: "다시 시도"}` 를 보낸 뒤 큐에 맡긴다. 원본 없음 · 시간 초과는 `job.discarded` 로 남은 시도를 버리고 바로 확정한다
+  (bullmq 파이썬 2.14 는 `UnrecoverableError` 를 따로 다루지 않는다). 시작이 거절되면 상태를 읽어 취소와 이미 끝난 작업(`JobSettled`)을
+  가른다 — 끝난 작업을 "취소"로 적지 않는다.
+- **앱** — 단계 문구 표에 `다시 시도` → "다시 시도하는 중"을 더하고(`lib/edit-step-label.ts`), 러너가 보여 준 진행률보다 낮게 보고된 단계는
+  반영하지 않는다(`reportedStep`) — 다시 시작한 작업의 앞 단계가 문구를 거꾸로 돌리지 않게, 재시도 알림만 예외다. 기능 문서
+  [movie.md](../apps/mobile/docs/features/movie.md) Progress.
+- **API 문서** — 작업 상태가 `processing` → `queued` 로 돌아갈 수 있음을 route 설명(`openapi.json` 재생성)과 [api-spec.md](./api-spec.md)
+  WebSocket 절에 적었다. 코드 변경은 없다(앱은 `queued` 를 "계속 기다림"으로 읽고, MOV-11 판정 · 취소는 `queued` 를 이미 다룬다).
+- **검증** — 워커: `tests/test_edit_worker.py` 8건(일시적 실패는 되돌리고 확정하지 않음 · 마지막에 확정 · 재시도 없는 큐는 바로 확정 · 실패 중
+  취소면 다시 시도 안 함 · 원본 없음 · 시간 초과는 바로 확정 · 끝난 작업은 settled · 취소된 작업은 canceled). 수정을 빼면 5건이 실패한다.
+  앱: 문구 · `reportedStep` · 러너 테스트, 수정을 빼면 6건 실패. 로컬 실스택(auth 스텁 · API · 워커)으로 두 번 돌렸다 — 원본을 지운 채
+  시작해 첫 시도 실패(작업 `queued` · 0, 환급 없음) 뒤 원본을 되돌리자 5초 뒤 재시도가 `done`(원장은 예약 -100 하나), 원본을 지운 채
+  두면 0 · 5 · 10초 뒤 세 번 시도하고 마지막에만 `failed`(INTERNAL) · 환급 1회. 워커 220건 · `npm test -w apps/api` 41개 파일 626건 ·
+  `npm run verify:mobile` 176개 스위트 1412건 통과(lint 경고 1건은 원래 있던 것). 기기 화면은 보지 않았다.
