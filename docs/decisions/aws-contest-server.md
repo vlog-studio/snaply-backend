@@ -3,14 +3,14 @@
 **작성일**: 2026-10-08
 **상태**: 결정(2026-10-08) — 저장소 쪽 구현 완료. 서버 작업과 남은 판단은 [backlog.md](../backlog.md) B-8
 **원천**: AWS 공모전 서버를 이렇게 구성한 이유와 기각한 대안. 절차·시크릿·배치는 [deployment-aws.md](../deployment-aws.md)
-**관련 문서**: [deployment-aws.md](../deployment-aws.md) · [on-prem-deployment.md](./on-prem-deployment.md) ·
+**관련 문서**: [deployment-aws.md](../deployment-aws.md) · [archive/on-prem-deployment.md](../archive/on-prem-deployment.md) ·
 [env-management.md](./env-management.md) · 사내 위키 "AWS 서비스 요청서 — snaply"(요청)와 "snaply — AWS 구성 · 인프라 접속"(인프라팀 답)
 
 ---
 
 ## 배경
 
-사내 공모전 테스터가 각자 폰으로, 집이나 밖에서 LTE 로 접속해야 한다. 사내 서버([on-prem-deployment.md](./on-prem-deployment.md))는
+사내 공모전 테스터가 각자 폰으로, 집이나 밖에서 LTE 로 접속해야 한다. 사내 서버([archive/on-prem-deployment.md](../archive/on-prem-deployment.md))는
 사내망 전용이라 닿지 않는다. 그래서 인프라팀에 요청서를 내 회사 AWS 계정에 **전용 서버 방식**(EC2 한 대 + Docker Compose)으로
 받았다 — EC2(`t3.large`, 공인 IP 없음, 데이터는 별도 `/data` 볼륨) 앞에 공용 ALB(`https://snaply-api.dweaxai.com`), 영상은 S3,
 시크릿은 Secrets Manager. 공모전이 끝나면 내린다.

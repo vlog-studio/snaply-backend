@@ -1,5 +1,10 @@
 # 배포와 운영 — 사내 서버
 
+> **보관(2026-10-09).** 사내 서버는 **하지 않기로 했다** — 배포 대상은 AWS 공모전 서버 하나다
+> ([decisions/aws-contest-server.md](../decisions/aws-contest-server.md) · [deployment-aws.md](../deployment-aws.md)).
+> 사내망 전용이라 실사용자를 받을 수 없었고, 외부에서 닿는 서버가 생기면서 둘을 함께 둘 이유가 사라졌다.
+> 아래는 그때의 기록이다 — **판단 근거로 인용하지 않는다.**
+
 **작성일**: 2026-09-15
 **상태**: 현행 — 배포 절차·시크릿·배치의 원천. 서버 구성이 바뀌면 이 문서를 고친다
 **관련**: [decisions/on-prem-deployment.md](./decisions/on-prem-deployment.md)(왜 이 구성인지) ·

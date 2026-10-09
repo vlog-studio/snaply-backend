@@ -11,9 +11,10 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 export SNAPLY_ENV_FILE="${SNAPLY_ENV_FILE:-/etc/snaply/snaply.env}"
-# 어느 서버의 compose 인가 — 사내 서버는 base + 운영 오버레이(기본값), AWS 서버는 단독 파일이라 cron 이
-# `COMPOSE_FILE=docker-compose.aws.yml` 을 준다(deploy/aws/render-cron.sh). compose 가 이 변수를 직접 읽는다.
-export COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yml:docker-compose.prod.yml}"
+# 어느 서버의 compose 인가. 지금 배포 대상은 AWS 서버 하나이고 cron 이
+# `COMPOSE_FILE=docker-compose.aws.yml` 을 준다(deploy/aws/render-cron.sh) — 기본값도 같은 파일로 둔다.
+# compose 가 이 변수를 직접 읽는다.
+export COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.aws.yml}"
 # postgres 에 exec 만 해도 compose 는 파일 전체를 해석한다 — 이미지 태그(`:?`)도 있어야 한다.
 # 읽은 값은 내보내야 compose(자식 프로세스)가 본다.
 if [ -f deploy/.current-images ]; then

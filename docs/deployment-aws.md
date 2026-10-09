@@ -3,7 +3,7 @@
 **작성일**: 2026-10-08
 **상태**: 현행 — AWS 서버의 설치·배포·시크릿·배치 절차의 원천. 서버 구성이 바뀌면 이 문서를 고친다
 **관련 문서**: [decisions/aws-contest-server.md](./decisions/aws-contest-server.md)(왜 이 구성인지) ·
-[deployment.md](./deployment.md)(사내 서버 — 배치 시각표 §3 은 두 서버가 같다) · [backlog.md](./backlog.md) B-8 ·
+[backlog.md](./backlog.md) B-8 ·
 인프라 구성과 접속은 사내 위키 "snaply — AWS 구성 · 인프라 접속"(이하 인프라 문서)
 
 ---
@@ -115,8 +115,20 @@ main 머지
 ## 4. 배치
 
 `/etc/cron.d/snaply` 가 [`deploy/batches.cron`](../deploy/batches.cron) 과 **같은 시각**으로 돈다 —
-[`render-cron.sh`](../deploy/aws/render-cron.sh) 가 경로와 compose 파일만 바꿔 깐다. 시각표와 "예고와 정리를 같은 시각에
-묶지 않는다"는 규칙은 [deployment.md](./deployment.md) §3. 로그는 `/var/log/snaply/*.log`.
+[`render-cron.sh`](../deploy/aws/render-cron.sh) 가 경로와 compose 파일만 바꿔 깐다 — **시각의 원천은 그 파일 하나**다.
+로그는 `/var/log/snaply/*.log`.
+
+| 시각(KST) | 무엇 | 로그 |
+|---|---|---|
+| 03:30 | DB 백업 | `backup.log` |
+| 04:00 | 만료 정리(스냅 · 결과물 · 남은 객체) | `purge-expired.log` |
+| 04:20 | 계정 실삭제 | `accounts-purge.log` |
+| 04:40 | pending 영상 회수 | `purge-pending.log` |
+| **10:00** | **만료 예고 알림** | `notify-expiring.log` |
+
+**예고와 정리를 같은 시각에 묶지 않는다.** 조용한 시간대(22–08시)에 보낸 예고는 발송되지 않고 버려지고,
+그러면 예고 없는 삭제가 된다([decisions/expiry-notice-schedule.md](./decisions/expiry-notice-schedule.md)).
+배치는 하나라도 빠뜨리면 배포는 성공하고 에러도 없이 알림이 영영 안 가거나 파일이 무한히 쌓인다.
 
 손으로 한 건 돌릴 때(배치는 `--yes` 가 붙어 실제로 지운다):
 

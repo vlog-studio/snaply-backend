@@ -15,9 +15,10 @@ BATCH="${1:?실행할 배치 이름 (예: media:purge-expired)}"
 cd "$(dirname "$0")/.."
 
 export SNAPLY_ENV_FILE="${SNAPLY_ENV_FILE:-/etc/snaply/snaply.env}"
-# 어느 서버의 compose 인가 — 사내 서버는 base + 운영 오버레이(기본값), AWS 서버는 단독 파일이라 cron 이
-# `COMPOSE_FILE=docker-compose.aws.yml` 을 준다(deploy/aws/render-cron.sh). compose 가 이 변수를 직접 읽는다.
-export COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yml:docker-compose.prod.yml}"
+# 어느 서버의 compose 인가. 지금 배포 대상은 AWS 서버 하나이고 cron 이
+# `COMPOSE_FILE=docker-compose.aws.yml` 을 준다(deploy/aws/render-cron.sh) — 기본값도 같은 파일로 둔다.
+# compose 가 이 변수를 직접 읽는다.
+export COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.aws.yml}"
 # 이미지 태그는 배포가 기록해 둔 값을 쓴다 — 지금 돌고 있는 그 버전으로 배치를 돌려야
 # 스키마와 코드가 어긋나지 않는다.
 # 읽은 값은 내보내야 compose(자식 프로세스)가 본다 — `.` 만으로는 이 셸의 변수일 뿐이다.

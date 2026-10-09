@@ -402,38 +402,6 @@ e2e 실검증.
 
 ## B. 개발 합의 필요 (A·B 트랙 공동 소유)
 
-### B-1. 배포 — 사내 서버 가동 ★
-
-**2026-09-15 방향 결정**: **사내 물리 서버**에 docker compose 로 올린다. 고른 이유는
-[decisions/on-prem-deployment.md](./decisions/on-prem-deployment.md), 절차·시크릿·배치는
-[deployment.md](./deployment.md). 사내망 전용이라 실사용자는 받을 수 없고 팀 공용 통합 서버가 된다 —
-외부에서 우리를 불러야 하는 SNS 게시·결제 웹훅·광고 검증은 mock 이다(deployment.md §0).
-
-저장소 쪽 준비(운영 compose 오버레이 · self-hosted runner 배포 잡 · 배치 cron · DB 백업)는 끝났다.
-**남은 것은 서버에서 하는 일**이다(단계는 deployment.md §1):
-
-- [ ] **`서버작업`** Docker 설치 · `snaply` 계정 · 저장소 체크아웃(`/opt/snaply`)
-- [ ] **`서버작업`** 시크릿 파일 `/etc/snaply/snaply.env` 작성 — `root:snaply` `640`(배포 계정이 읽어야 한다, deployment.md §1-2), 개발 기본 자격증명 금지. `OPENAI_API_KEY` 는 로컬
-      개발 키와 다른 프로젝트 키로 받는다 — 한쪽을 폐기해도 다른 쪽이 살아 있다(C-7 에서 옮김)
-- [ ] **`서버작업`** self-hosted runner 설치 — 라벨에 `snaply` 포함, 서비스로 등록
-- [ ] **`서버작업`** `deploy/batches.cron` 등록 · 로그·백업 디렉터리 생성
-- [ ] **`서버작업`** 저장소 Variables 에 `DEPLOY_ENABLED=true` → 첫 배포 확인
-- [ ] **DB 백업의 외부 보관** — 지금 덤프는 같은 서버에 쌓인다. 서버가 통째로 죽으면 함께 사라진다
-- [ ] **실사용 서버** — 사내망 전용이라 이 서버로는 사용자를 받을 수 없다. 외부 접속이 되는
-      곳이 생기면 고정 도메인(D-1)과 SNS·결제·광고 mock 해제만 추가하면 된다
-- [ ] **운영 오버레이가 base 의 개발용 값을 지우지 못한다** — `docker compose config` 로 풀면 postgres · redis 포트가
-      `127.0.0.1` 과 모든 주소에 둘 다 잡힌다(compose 는 `ports` 를 덮지 않고 합친다 — DB 가 사내망에 열리거나 같은 포트를
-      두 번 잡다 기동 실패). base 의 `SENTRY_DSN: ""` 도 남아 시크릿의 Sentry 를 끈다. `!reset` 으로 지우거나
-      `docker-compose.aws.yml` 처럼 단독 파일로 만든다
-
-**API 만 띄우면 안 된다** — 상주 프로세스와 스케줄 배치를 하나라도 빠뜨리면 배포는 성공하고 에러도 없이
-알림이 영영 안 가거나 파일이 무한히 쌓인다. 특히 만료 예고가 빠진 채 정리만 돌면 사용자가 예고 없이
-영상을 잃는다. 배치 시각과 "예고와 정리를 같은 시각에 묶지 않는다"는 규칙은 [deployment.md](./deployment.md) §3,
-만료 예고가 FCM 서비스 계정 없이는 시작하지 않는 것은 §5 가 원천이다.
-
-**연결된 병목**: **고정 도메인**(D-1)이 SNS 콜백·결제(RevenueCat) 웹훅·Meta 검수의 전제 —
-B 트랙 잔여 검증이 전부 여기서 막힌다.
-
 ### B-2. FCM 멀티 디바이스
 
 `users.fcm_token` 이 **단일 컬럼**이라 기기 하나만 등록된다. 새 기기로 로그인하면
@@ -510,7 +478,6 @@ API 라우트 `movies`·`video-analyses`, 모바일 `features/{finish-movie,rena
       (완료 조건)
 - [ ] **외부 연동 켜기** — RevenueCat · AdMob · Instagram · TikTok 콘솔에 콜백 · 웹훅 주소를 등록한 뒤 시크릿을 채운다
       (deployment-aws.md §2). 지금은 비어 있어 mock · 꺼짐이다
-- [ ] **사내 서버(B-1)와의 관계** — 대체인지 공모전 동안 병행인지 정하고, 결정 문서와 배포 절차를 그에 맞춘다
 - [ ] **TikTok 게시** — 버킷이 퍼블릭 차단이고 CloudFront 가 없어 미디어 호스트의 URL prefix 검증(D-3) 파일을 둘 곳이 없다.
       공모전 시연에 필요하면 인프라에 CloudFront(또는 검증 경로 공개)를 요청하거나 C-3(직접 업로드)으로 간다
 - [ ] **수명** — 요청서의 종료일이 비어 있다
@@ -749,7 +716,7 @@ MinIO 커뮤니티 에디션은 이미지 배포를 멈췄고(Docker Hub 이미�
 
 **결정할 것**: 대체 S3 호환 서버(RustFS · Garage · SeaweedFS 등)로 바꿀지, 사내 서버만 바꿀지,
 실사용 서버는 AWS S3 라 무관하므로 로컬 · CI 는 미러로 둘지. 코드는 `S3_ENDPOINT` 만 바꾸는
-구조라 교체 비용은 compose 3곳 · [ONBOARDING.md](../ONBOARDING.md) · [deployment.md](./deployment.md)
+구조라 교체 비용은 compose 2곳 · [ONBOARDING.md](../ONBOARDING.md) · [deployment-aws.md](./deployment-aws.md)
 와, MinIO 전용 API 에 기대는 곳이 있는지 확인(`dev:public-bucket` 스크립트 · 헬스체크 경로) 정도다.
 GHCR 패키지를 공개로 돌릴지도 정한다 — 공개면 새 개발자가 로그인 없이 받고, 로컬 빌드(몇 분)를 건너뛴다.
 
@@ -788,6 +755,12 @@ GHCR 패키지를 공개로 돌릴지도 정한다 — 공개면 새 개발자�
 
 닫힌 항목의 한 줄 색인이다 — 같은 일을 다시 올리지 않기 위해 둔다. 구현·검증 내역은
 [progress.md](./progress.md)의 같은 날짜 항목이 원천이다.
+
+- **B-1. 배포 — 사내 서버 가동** — **2026-10-09 접었다.** 사내망 전용이라 실사용자를 받을 수 없었고,
+  외부에서 닿는 AWS 공모전 서버(B-8)가 뜨면서 둘을 함께 둘 이유가 사라졌다. 저장소 쪽 산출물
+  (`docker-compose.prod.yml`, `deploy.yml` 의 `deploy` 잡, `docs/deployment.md`)은 지우거나
+  [archive/](./archive/README.md)로 옮겼다. 배치 cron · 백업 스크립트는 AWS 와 공유라 남아 있다.
+  그때의 기록은 [archive/on-prem-deployment.md](./archive/on-prem-deployment.md).
 
 - **A-1** 무비 서버 엔티티 · CRUD · export — 2026-09-09 → progress 2026-09-09 "촬영 시각 저장 · 무비 서버 엔티티"
 - **A-1** 스냅 15일 · 결과물 30일 만료 정리 배치(툼스톤, 만료 → 실삭제 2단계) — 2026-09-09 → progress 2026-09-09 "보관 기간 만료 정리 배치"

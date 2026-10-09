@@ -2021,7 +2021,7 @@ AI 편집 초안(MOV-21)을 시작했다. 상한·표시 시점·미업로드·�
 - **시크릿 파일 권한** — 절차가 `600 root:root` 로 만들게 했는데 runner · cron 은 `snaply` 로 돌고 compose 는 이 파일을 부른 쪽에서
   읽는다. `640 root:snaply` 로 바꿨다(`snaply` 는 `docker` 그룹이라 root 전용으로 둬도 막아 주는 것이 없다). 워크플로는 compose 를
   부르기 전에 파일을 읽을 수 있는지 먼저 확인한다.
-- [deployment.md](./deployment.md) §1-2 · §2 · §4 · §5 와 backlog B-1 의 서버 작업 항목을 함께 고쳤다. 배포는 `/opt/snaply`
+- [archive/deployment-on-prem.md](./archive/deployment-on-prem.md) §1-2 · §2 · §4 · §5 와 backlog B-1 의 서버 작업 항목을 함께 고쳤다. 배포는 `/opt/snaply`
   체크아웃을 갱신하지 않으므로 `deploy/` 를 고친 커밋이 들어오면 거기서 `git pull` 한다는 절차도 적었다.
 - **검증**: 더미 시크릿 파일로 `docker compose config` 를 돌려 `--env-file` 없이는 치환에서 멈추고 있으면 통과하는 것을 확인했다.
   두 스크립트를 `docker` 대역(인자 · 환경을 기록하고 같은 인자로 `compose config` 를 돌린다)으로 실행해, main 의 스크립트는 태그 없이
@@ -2232,3 +2232,30 @@ Session Manager 셸에서 GitHub · GHCR · Docker Hub · 외부 API 로 나가�
   메시지 계약은 그대로다. [api-spec.md](./api-spec.md) WebSocket 절 · [deployment-aws.md](./deployment-aws.md) §6 갱신.
 - **검증**: `npm test -w apps/api` 612 통과 · `typecheck` · `lint` 통과. ALB 뒤에서 180초 넘게 열어 두는 실측은 하지 않았다
   (테스터 앱 빌드 뒤 긴 편집으로 확인 — backlog B-8).
+
+---
+
+## 2026-10-09 — 사내 서버를 접고 배포 대상을 AWS 하나로
+
+**결정**: 사내 물리 서버에는 올리지 않는다. 사내망 전용이라 실사용자를 받을 수 없었고, 바깥에서
+닿는 AWS 공모전 서버(backlog B-8)가 뜨면서 두 서버를 함께 둘 이유가 사라졌다. 배포 대상은
+[decisions/aws-contest-server.md](./decisions/aws-contest-server.md) 하나다.
+
+지운 것 — **쓰이지 않는 배포 경로를 남겨 두면 다음 사람이 어느 쪽이 현행인지 묻게 된다.**
+
+- `docker-compose.prod.yml`(사내 서버 전용 오버레이)
+- `deploy.yml` 의 `deploy` 잡(`runs-on: [self-hosted, snaply]`). 남은 배포 잡은 `deploy-aws` 하나다
+- `docs/deployment.md` → [archive/deployment-on-prem.md](./archive/deployment-on-prem.md),
+  `docs/decisions/on-prem-deployment.md` → [archive/on-prem-deployment.md](./archive/on-prem-deployment.md)
+  (둘 다 상단 배너로 뒤집힌 사실을 적었다)
+
+남긴 것 — **배치 cron · 배치 실행 · DB 백업 스크립트는 AWS 와 공유**다(`deploy/aws/render-cron.sh` 가
+`deploy/batches.cron` 에서 경로와 compose 파일만 바꿔 깐다). 다만 `run-batch.sh` · `backup-db.sh` 의
+`COMPOSE_FILE` 기본값이 지워진 오버레이를 가리키고 있어 `docker-compose.aws.yml` 로 바꿨다 — 그대로
+뒀으면 `COMPOSE_FILE` 없이 손으로 돌릴 때 없는 파일을 찾았다.
+
+[deployment-aws.md](./deployment-aws.md) §4 가 배치 시각표를 **직접** 담는다. 전에는 사내 서버 문서에
+맡겨 두었는데 그 문서가 archive 로 가면서 현행 문서가 보관 문서를 가리키게 되기 때문이다.
+
+함께 닫힌 것: 사내 서버 운영 오버레이의 포트·`SENTRY_DSN` 결함(파일이 사라졌다), B-8 의
+"사내 서버와의 관계" 항목.

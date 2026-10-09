@@ -20,7 +20,7 @@ RUNNER_SHA256="af4b794c1bc41d73d40535e3fe092a39f9679cd8d965954c2aca25a05ca41d32"
 RUNNER_DIR="/opt/actions-runner"
 RUNNER_NAME="dweax-snaply"
 RUNNER_LABEL="snaply-aws"
-# 배포(runner)와 cron 배치를 같은 계정이 돌린다 — 사내 서버(docs/deployment.md)와 같은 이름이다.
+# 배포(runner)와 cron 배치를 같은 계정이 돌린다.
 SERVICE_USER="snaply"
 SNAPLY_DIR="/data/compose"
 BACKUP_DIR="/data/backup"

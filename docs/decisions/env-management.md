@@ -157,13 +157,10 @@ compose 가 읽으면 `LEGAL_CONTACT_EMAIL`·`SITE_VERIFICATION_META`·`STRIPE_P
 ## 후속 연계
 
 이 결정은 배포 플랫폼을 고르지 않는다 — 어느 플랫폼이든 위 구조는 유지한다. 플랫폼은
-[on-prem-deployment.md](./on-prem-deployment.md)가 정했고(사내 서버, 아래 항목), 남은 서버 작업은
-[backlog.md](../backlog.md) B-1에서만 관리한다.
+[aws-contest-server.md](./aws-contest-server.md)가 정했고, 남은 서버 작업은
+[backlog.md](../backlog.md) B-8에서만 관리한다. (사내 서버 안은 2026-10-09 에 접었다 —
+[archive/on-prem-deployment.md](../archive/on-prem-deployment.md).)
 
-- **사내 서버**([on-prem-deployment.md](./on-prem-deployment.md))에는 시크릿 저장소가 없어, 결정 2 의
-  "플랫폼 주입"을 root 만 읽는 서버 파일 `/etc/snaply/snaply.env` 로 대신한다. compose 가 그 파일을
-  `env_file` 과 `--env-file` 로 읽으며, 저장소·이미지에는 들어가지 않는다 — 절차는
-  [deployment.md](../deployment.md) §1-2.
 - **AWS 공모전 서버**([aws-contest-server.md](./aws-contest-server.md))에는 Secrets Manager 가 있다. 배포가 시크릿 하나를
   compose 용 파일 `/data/compose/.env`(600)로 옮기고 compose 가 그 파일을 읽는다. 파일은 배포 때마다 시크릿에서 다시
   만들어지고 저장소·이미지에는 들어가지 않는다. **빈 값은 옮기지 않는다** — 빈 문자열을 미설정으로 보지 않는 코드가 있어서다
