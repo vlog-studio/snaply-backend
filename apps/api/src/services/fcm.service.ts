@@ -31,6 +31,14 @@ export function initFcm(config: FirebaseConfig): void {
   }
 }
 
+/**
+ * 모든 알림이 들어가는 Android 채널. 앱이 같은 id 로 만든다
+ * (apps/mobile/src/shared/lib/notifications/local.ts `ANDROID_CHANNEL_ID`). 종류별로 나누지 않는다 —
+ * 종류별 끄기는 계정의 알림 설정(NTF-7)이 맡고, 만료 예고는 따로 끌 수 없게 둔다(backlog E-25).
+ * 지정하지 않으면 Android 가 FCM 기본 채널에 넣어 휴대폰 설정에 앱이 정하지 않은 이름이 보인다.
+ */
+const ANDROID_CHANNEL_ID = 'default';
+
 export interface PushMessage {
   title: string;
   body: string;
@@ -68,6 +76,7 @@ export async function sendToUser(
       token: user.fcmToken,
       notification: { title: message.title, body: message.body },
       data: message.data,
+      android: { notification: { channelId: ANDROID_CHANNEL_ID } },
     });
     return { sent: true, dryRun: false };
   } catch (err) {
