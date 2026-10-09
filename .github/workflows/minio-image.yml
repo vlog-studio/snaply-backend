@@ -1,7 +1,7 @@
 name: MinIO image
 
 # MinIO 커뮤니티 이미지는 더 이상 받을 곳이 없어(Docker Hub 삭제, quay.io 401) 소스에서 빌드해
-# GHCR 로 올린다. 로컬 · CI · 사내 서버 compose 가 이 이미지를 쓴다. 배경은 backlog E-7.
+# GHCR 로 올린다. 로컬 · CI compose 가 이 이미지를 쓴다. 배경은 backlog E-7.
 #
 # PR 에서는 빌드와 스모크만 하고, main 과 수동 실행에서만 올린다 — 공유 태그를 리뷰 전에
 # 덮어쓰지 않는다. 태그는 업스트림 릴리스 그대로라, 같은 Dockerfile 이면 같은 이미지다.

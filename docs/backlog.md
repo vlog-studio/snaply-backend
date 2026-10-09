@@ -478,6 +478,8 @@ API 라우트 `movies`·`video-analyses`, 모바일 `features/{finish-movie,rena
       (완료 조건)
 - [ ] **외부 연동 켜기** — RevenueCat · AdMob · Instagram · TikTok 콘솔에 콜백 · 웹훅 주소를 등록한 뒤 시크릿을 채운다
       (deployment-aws.md §2). 지금은 비어 있어 mock · 꺼짐이다
+- [ ] **`OPENAI_API_KEY` 를 로컬 개발 키와 분리** — 서버 시크릿에는 다른 프로젝트 키를 넣는다. 한쪽이 새거나
+      폐기돼도 다른 쪽이 살아 있어야 한다(C-7 에서 B-1 을 거쳐 옮겨 온 항목)
 - [ ] **TikTok 게시** — 버킷이 퍼블릭 차단이고 CloudFront 가 없어 미디어 호스트의 URL prefix 검증(D-3) 파일을 둘 곳이 없다.
       공모전 시연에 필요하면 인프라에 CloudFront(또는 검증 경로 공개)를 요청하거나 C-3(직접 업로드)으로 간다
 - [ ] **수명** — 요청서의 종료일이 비어 있다
@@ -621,15 +623,18 @@ URL prefix 소유권 검증을 다시 등록해야 한다.**
 `snaply.com` / `snaply.co` 는 제3자 소유이고 Cloudflare 가 아니라 named tunnel 을 쓸 수 없다
 (NS: linode.com). 보유 도메인이 생기면 쓸 절차: [local-tunnel.md](./local-tunnel.md) §6.
 
-**2026-08-31 개발자 회의**: SNS 웹훅 연동에 HTTPS 도메인이 필요해 **사내 AWS 등록 현황을 파악한 뒤
-도메인을 추가**하기로 했다([meetings/2026-08-31-dev-sync.md](./meetings/2026-08-31-dev-sync.md) §1).
-사내 AWS 도메인으로 가면 위 cloudflared named tunnel 경로는 쓰지 않고 운영 배포(B-1) 경로에서
-해결된다 — 그 경우 개발 검증은 임시 터널을 계속 쓴다. "웹훅 연동"이 어느 웹훅을 뜻하는지는
-[decisions/sns-webhook-scope.md](./decisions/sns-webhook-scope.md)(미결)에서 정한다 — 도메인 작업은 그 답과 무관하게 진행한다.
+**2026-10-08 — 공모전 기간에는 채워졌다.** AWS 공모전 서버(B-8)가 ALB 뒤에서
+`https://snaply-api.dweaxai.com` 으로 바깥에서 닿는다. 콜백 · 웹훅 · 검수에 쓸 HTTPS 주소가 생겼으므로
+그 기간에는 cloudflared 임시 터널이 필요 없다. "웹훅 연동"이 어느 웹훅을 뜻하는지는
+[decisions/sns-webhook-scope.md](./decisions/sns-webhook-scope.md)(미결)에서 정한다 — 도메인 작업은 그 답과 무관하다.
 
-**완료 조건**: Cloudflare 에 등록된 보유 도메인 확보, 또는 사내 AWS 도메인을 운영 도메인으로 확정.
-운영 도메인이 정해지면 그것이 `CLOUDFRONT_DOMAIN` / `S3_PUBLIC_ENDPOINT` 의 실제 값이 되므로
-자연스럽게 해결된다.
+**그래서 아직 열려 있다**: 이 주소는 **공모전이 끝나면 내려간다**(B-8 "수명"). 콘솔에 등록한 리디렉션 URI 와
+URL prefix 소유권 검증은 주소가 바뀌면 다시 등록해야 하므로, 서버가 내려가기 전에 **계속 쓸 도메인**을
+정해 두어야 한다. 또 이 서버에는 CloudFront 가 없고 버킷이 퍼블릭 차단이라 **미디어 호스트 주소는 아직 없다**
+(B-8 "TikTok 게시").
+
+**완료 조건**: 공모전과 무관하게 유지되는 도메인이 정해지고, 그것이 `CLOUDFRONT_DOMAIN` /
+`S3_PUBLIC_ENDPOINT` 의 실제 값이 된다.
 
 ### D-2. 법률 문서 정식화
 
@@ -699,7 +704,7 @@ A-7 의 비트 싱크가 들어오면 컷 지점까지 달라져 피해가 커�
 **완료 조건**: 선택된 트랙 ID·난수 시드를 `editSpec` 에 핀으로 남기고, 재생성이 같은 산출물을
 내는 것을 테스트로 고정한다. 트랙 ID 를 가지려면 `bgm_tracks` 가 필요하므로 A-7 과 함께 간다.
 
-### E-7. MinIO 커뮤니티 이미지의 수명 — 로컬·CI·사내 서버 스토리지 대체 검토 ⚠️
+### E-7. MinIO 커뮤니티 이미지의 수명 — 로컬·CI 스토리지 대체 검토
 
 MinIO 커뮤니티 에디션은 이미지 배포를 멈췄고(Docker Hub 이미지 삭제, quay.io 익명 pull 차단) 유료 AIStor 로
 대체되는 중이다. 지금은 같은 릴리스(`RELEASE.2025-09-07T16-13-09Z`)를 아카이브된 소스에서 빌드한 GHCR 미러를
@@ -711,11 +716,11 @@ MinIO 커뮤니티 에디션은 이미지 배포를 멈췄고(Docker Hub 이미�
 **왜 열려 있는지**: 미러는 공급 문제만 푼다.
 
 - 커뮤니티 릴리스는 2025-09-07 이후 패치가 없다. 보안 수정은 AIStor 에만 간다 — 우리가 빌드해도 같다
-- **사내 서버(B-1)는 MinIO 를 운영 스토리지로 쓰고 사내망에 열려 있다** — 패치가 끊긴 S3 서버를
-  계속 노출하는 것은 로컬 개발용보다 무거운 문제다
+- **2026-10-09 로 급박함이 줄었다.** 사내 서버를 접으면서(배포 대상은 AWS S3 하나다) MinIO 가 네트워크에
+  노출되는 자리가 없어졌다 — 남은 쓰임은 로컬 개발과 CI 뿐이다. 패치가 끊긴 서버를 **운영에서**
+  노출하던 문제는 사라졌고, 공급(이미지를 못 받는 것)만 남았다
 
-**결정할 것**: 대체 S3 호환 서버(RustFS · Garage · SeaweedFS 등)로 바꿀지, 사내 서버만 바꿀지,
-실사용 서버는 AWS S3 라 무관하므로 로컬 · CI 는 미러로 둘지. 코드는 `S3_ENDPOINT` 만 바꾸는
+**결정할 것**: 대체 S3 호환 서버(RustFS · Garage · SeaweedFS 등)로 바꿀지, 미러로 둘지. 코드는 `S3_ENDPOINT` 만 바꾸는
 구조라 교체 비용은 compose 2곳 · [ONBOARDING.md](../ONBOARDING.md) · [deployment-aws.md](./deployment-aws.md)
 와, MinIO 전용 API 에 기대는 곳이 있는지 확인(`dev:public-bucket` 스크립트 · 헬스체크 경로) 정도다.
 GHCR 패키지를 공개로 돌릴지도 정한다 — 공개면 새 개발자가 로그인 없이 받고, 로컬 빌드(몇 분)를 건너뛴다.
@@ -785,7 +790,7 @@ GHCR 패키지를 공개로 돌릴지도 정한다 — 공개면 새 개발자�
 - **B-5** API 계약 스키마 우선 1~5단계 — 2026-09-05 → progress 2026-09-05 · [api-contract-schema-first.md](./decisions/api-contract-schema-first.md)(남은 다듬기는 B-5)
 - **B-6** 알림 설정의 서버 반영(서버) — 2026-09-15 → progress 2026-09-15 "알림 설정이 서버에 닿는다"
 - **B-6** 앱의 알림 설정을 서버에 쓰기(서버가 원천 · 위치 · 무비 기본 꺼짐) — 2026-10-07 → progress 2026-10-07 "알림 설정은 계정에 있다"
-- **C-7** 회사 OpenAI API 키 발급 — 2026-09-29 → progress 2026-09-29 "실제 모델로 스냅 분석 · 템플릿 추천 첫 실행"(남은 확인 중 사용 한도 · rate limit 은 A-3, 운영 키 분리는 B-1 로 옮김)
+- **C-7** 회사 OpenAI API 키 발급 — 2026-09-29 → progress 2026-09-29 "실제 모델로 스냅 분석 · 템플릿 추천 첫 실행"(남은 확인 중 사용 한도 · rate limit 은 A-3, 운영 키 분리는 B-8 로 옮김)
 - **D-4** 개발 버킷 익명 읽기 정책 — D-3 에 합쳤다(운영의 검증 파일 경로 익명 읽기)
 - **E-1** 만료 시각을 모르는 인스타 토큰의 코드 대응 — 2026-09-15 → progress 2026-09-15 "만료 시각을 모르는 SNS 연동"(재연동은 G)
 - **E-2** `S3_PUBLIC_ENDPOINT` 기동 경고 — 2026-09-11 → progress 2026-09-11 "이미지 스모크 검사 · e2e 무비 경로 전환"

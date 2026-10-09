@@ -1,13 +1,14 @@
-# Snaply 야간·정기 배치 (사내 서버)
+# Snaply 야간·정기 배치 — **시각과 순서의 원천은 이 파일 하나**다.
 #
-# 설치:
-#   sudo cp deploy/batches.cron /etc/cron.d/snaply
-#   sudo chown root:root /etc/cron.d/snaply && sudo chmod 644 /etc/cron.d/snaply
+# 서버에 직접 깔지 않는다. deploy/aws/render-cron.sh 가 아래 SNAPLY_DIR 줄을 서버 값으로 바꿔
+# /etc/cron.d/snaply 로 깔며(install.sh), 사본을 여러 벌 두면 한쪽만 고쳐져 예고 없이 정리만 도는
+# 서버가 생긴다.
 #
 # 빠뜨려도 **배포는 성공하고 에러도 나지 않는다.** 대신 알림이 영영 안 가거나 파일이 무한히
 # 쌓인다. 특히 만료 예고가 빠진 채 정리만 돌면 사용자가 예고 없이 영상을 잃는다.
 #
-# 경로(SNAPLY_DIR)는 저장소를 체크아웃한 위치로 맞춘다.
+# 아래 SNAPLY_DIR 은 렌더링 전 기본값이다 — render-cron.sh 가 이 줄을 찾아 서버의 경로와
+# compose 파일·env 파일·백업 폴더로 바꾼다. 줄 형식을 바꾸면 그 스크립트도 함께 고친다.
 SHELL=/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 CRON_TZ=Asia/Seoul
@@ -23,6 +24,6 @@ SNAPLY_DIR=/opt/snaply
 20 4 * * *  snaply  $SNAPLY_DIR/deploy/run-batch.sh accounts:purge          >> /var/log/snaply/accounts-purge.log 2>&1
 40 4 * * *  snaply  $SNAPLY_DIR/deploy/run-batch.sh videos:purge-pending    >> /var/log/snaply/purge-pending.log 2>&1
 
-# DB 백업 — 관리형 DB 가 아니므로 이것이 유일한 안전망이다. 영상 파일은 MinIO 에 있지만
+# DB 백업 — 관리형 DB 가 아니므로 이것이 유일한 안전망이다. 영상 파일은 S3 에 따로 있지만
 # DB 가 날아가면 무엇이 누구 것인지를 잃는다.
 30 3 * * *  snaply  $SNAPLY_DIR/deploy/backup-db.sh                          >> /var/log/snaply/backup.log 2>&1
