@@ -150,11 +150,14 @@ export function useGenerationRunner({ announce = false }: GenerationRunnerOption
 
     const finish = (
       movie: Movie,
-      result: { uri?: string; videoId?: string; thumbnailUrl?: string },
+      result: { uri?: string; videoId?: string; thumbnailUrl?: string; completedAt?: number },
       durationSec: number,
     ) => {
       settled.add(movie.id);
-      const renderedAt = Date.now();
+      // The backend's own completion time, so every device dates a render alike —
+      // a device that adopted the run, or came back to it late, would otherwise
+      // date it by when it found out. Now only when the backend gave none.
+      const renderedAt = result.completedAt ?? Date.now();
       completeMovieJob(movie.id, {
         // The id is the durable handle — the URL the lookup got is time-limited
         // (a signed link to a private bucket), so watch mode re-asks by id and
@@ -266,6 +269,7 @@ export function useGenerationRunner({ announce = false }: GenerationRunnerOption
         {
           ...(uri ? { uri } : null),
           ...(thumbnailUrl ? { thumbnailUrl } : null),
+          ...(state.completedAt !== undefined ? { completedAt: state.completedAt } : null),
           videoId: state.videoId,
         },
         uri && serverDurationSec ? serverDurationSec : cutsSec(ready),

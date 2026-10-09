@@ -230,6 +230,28 @@ describe('useGenerationRunner', () => {
     expect(mockDownloadThumbnail).not.toHaveBeenCalled();
   });
 
+  // A device that adopts a run and learns of its end later must still say when
+  // it was made, not when this device found out (2026-10-09: a movie made at
+  // 8:20 on a phone read 8:37 on the emulator).
+  it('dates the render from the backend’s completion time, not from when it was learned', async () => {
+    mockMovies.mockReturnValue([generatingMovie()]);
+    mockGetEditJob.mockResolvedValue({
+      status: 'done',
+      progress: 100,
+      videoId: 'result-1',
+      completedAt: Date.parse('2026-10-09T11:20:00.000Z'),
+    });
+
+    await act(async () => {
+      await renderHook(() => useGenerationRunner());
+    });
+
+    expect(mockFinish).toHaveBeenCalledWith(
+      'm1',
+      expect.objectContaining({ renderedAt: Date.parse('2026-10-09T11:20:00.000Z') }),
+    );
+  });
+
   it('finishes a job that ended while the app was away, without any frame arriving', async () => {
     mockMovies.mockReturnValue([generatingMovie()]);
     mockGetEditJob.mockResolvedValue({ status: 'done', progress: 100, videoId: 'result-1' });
