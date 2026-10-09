@@ -318,8 +318,13 @@ export async function purgeStalePendingVideos(
  * 영상 삭제. **올라간 스냅이 보관 기간 안이면 파일을 남긴다** — 최근 삭제(휴지통)에서 원래 보관 기간이 끝날 때까지
  * 되살릴 수 있다(SNAP-20, docs/decisions/snap-trash.md). 남긴 파일은 그 기간이 끝나면 정리 배치가 지운다
  * (`retention.service.ts` `findOrphanedObjects`). 그 밖의 영상 — 올라가는 중인 스냅, 보관 기간이 끝난 스냅,
- * 결과물 — 은 지금처럼 파일을 바로 지운다. 어느 쪽이든 목록 · 상세 · 무비에서는 곧바로 사라지고, 다른 기기는
- * `POST /videos/lookup` 의 `removed` 로 알아 자기 원본을 지운다(되살리면 서버 사본을 받는다).
+ * 결과물 — 은 지금처럼 파일을 바로 지운다. 어느 쪽이든 목록 · 상세에서는 곧바로 사라지고 그 스냅을 쓰던 무비의 컷은
+ * `unavailable` 로 남으며, 다른 기기는 `POST /videos/lookup` 의 `removed` 로 알아 자기 원본을 지운다(되살리면 서버
+ * 사본을 받는다).
+ *
+ * **분석 결과는 어느 쪽이든 바로 파기한다**(ANA-3) — 개인정보처리방침이 "영상을 삭제하면 그 영상의 분석 결과도 함께
+ * 삭제"한다고 고지한다. 휴지통에서 되살린 스냅은 분석이 필요해질 때 다시 분석된다(분석은 요청 시점에만 돈다, ANA-1).
+ * 진행 중이던 분석은 워커가 결과를 쓸 행이 없어 버린다(`apps/ai-worker/src/analysis_db.py` `save_result`).
  *
  * 돌려주는 `restorableUntil` 은 되살릴 수 있는 마지막 시각이고, 되살릴 수 없으면 `null` 이다.
  */
@@ -339,10 +344,13 @@ export async function deleteVideo(params: {
   const now = new Date();
   const restorableUntil = restorableUntilOf(video, now);
   if (restorableUntil) {
-    await prisma.video.update({
-      where: { id: video.id },
-      data: { deletedAt: now, status: 'deleted', removalReason: 'user', keptForRestore: true },
-    });
+    await prisma.$transaction([
+      prisma.videoAnalysis.deleteMany({ where: { videoId: video.id } }),
+      prisma.video.update({
+        where: { id: video.id },
+        data: { deletedAt: now, status: 'deleted', removalReason: 'user', keptForRestore: true },
+      }),
+    ]);
     return { restorableUntil: restorableUntil.toISOString() };
   }
 
@@ -355,11 +363,14 @@ export async function deleteVideo(params: {
     }
   }
 
-  await prisma.video.update({
-    where: { id: video.id },
-    // 사유를 남긴다 — 사용자가 지운 것과 기간 만료로 사라진 것은 보여줄 문구가 다르다(SNAP-12).
-    data: { deletedAt: now, status: 'deleted', removalReason: 'user' },
-  });
+  await prisma.$transaction([
+    prisma.videoAnalysis.deleteMany({ where: { videoId: video.id } }),
+    prisma.video.update({
+      where: { id: video.id },
+      // 사유를 남긴다 — 사용자가 지운 것과 기간 만료로 사라진 것은 보여줄 문구가 다르다(SNAP-12).
+      data: { deletedAt: now, status: 'deleted', removalReason: 'user' },
+    }),
+  ]);
   return { restorableUntil: null };
 }
 
