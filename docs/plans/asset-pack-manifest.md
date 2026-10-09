@@ -31,7 +31,7 @@
   닫혔다. ⚠️ `platform` 허용 집합과 무드 태그 집합은 **아직 사전 파일이 없다** — 파일을 몇 개로 묶을지가 미결이다.
 - **미결 결정** — [backlog.md](../backlog.md) A-7.
 
-괄호 안의 `B-3`·`C-1`·`D-8` 같은 ID 는 [decisions/edit-spec-v3.md](../decisions/edit-spec-v3.md) §1·§2 표의 결정 항목이다 —
+괄호 안의 `V3-B3`·`V3-C1`·`V3-D8` 같은 ID 는 [decisions/edit-spec-v3.md](../decisions/edit-spec-v3.md) §1·§2 표의 결정 항목이다 —
 백로그 ID 가 아니다.
 
 ---
@@ -87,7 +87,7 @@ registry.json                        ← 짧은 TTL. 어떤 팩이 존재하는�
 ```
 
 ⚠️ **`minAppVersion` 은 클라이언트 전용이다.** 워커는 앱 버전을 모른다. 표시하지 않으면
-렌더가 앱 버전에 의존하게 된다(D-4).
+렌더가 앱 버전에 의존하게 된다(V3-D4).
 
 **`rollout` 은 번들에만 둔다.** 팩 단위로 굴리면 번들이 참조하는 팩이 유저마다 달라져
 번들 자체가 재현 불가가 된다. 값은 0~1 비율이며 **신규 생성 경로에서만** 평가된다(§11).
@@ -131,9 +131,9 @@ registry.json                        ← 짧은 TTL. 어떤 팩이 존재하는�
 | `expiresAt` | `null` | §12.1 참조 |
 
 `attributionRequired: true` 면 `attributionText` 와 `attributionUrl` 이 필수다. boolean 만으로는
-무엇을 어디에 적을지 알 수 없다(D-3).
+무엇을 어디에 적을지 알 수 없다(V3-D3).
 
-**`license` 는 아이템이 팩을 덮는다**(D-2). BGM 처럼 트랙마다 출처가 다른 경우를 위한 것이다.
+**`license` 는 아이템이 팩을 덮는다**(V3-D2). BGM 처럼 트랙마다 출처가 다른 경우를 위한 것이다.
 
 ---
 
@@ -229,11 +229,11 @@ registry.json                        ← 짧은 TTL. 어떤 팩이 존재하는�
 
 **`grain`·`vignette`·`halation` 은 여기 없다.** `.cube` 는 `lut3d` 필터 한 줄이고 halation 은
 밝은 영역 추출 + 블러 + 스크린 블렌드라 필터그래프가 붙는다. 구현 비용도 재인코딩 영향도
-다르므로 후처리 파라미터로 분리해 번들이 갖는다(D-1, §10).
+다르므로 후처리 파라미터로 분리해 번들이 갖는다(V3-D1, §10).
 
 ⚠️ **`inputColorspace` 는 필드만으로 지켜지지 않는다.** "톤매핑 → LUT" 순서는
 [edit-spec-v3.md](./edit-spec-v3.md) §11.4 의 파이프라인 계약이다. 순서가 안 정해지면 필드만
-있고 아무도 안 지킨다(C-4).
+있고 아무도 안 지킨다(V3-C4).
 
 `sceneAffinity` 는 신규 생성 경로에서만 평가되는 쿼리형 필드다(§11).
 
@@ -260,11 +260,11 @@ registry.json                        ← 짧은 TTL. 어떤 팩이 존재하는�
 전환 시점에 피크를 맞추려면 그만큼 먼저 재생해야 한다. 이 값이 없으면 효과음이 미묘하게
 늦게 들리고 원인을 찾기 어렵다.
 
-⚠️ **프리롤이 타임라인 0 이전이 되면 클램프한다**(D-7). 첫 전환에서 실제로 발생한다.
+⚠️ **프리롤이 타임라인 0 이전이 되면 클램프한다**(V3-D7). 첫 전환에서 실제로 발생한다.
 
-**`gainDb` 는 기본값이다.** 스펙의 `audio.sfx[].gainDb` 가 있으면 그쪽이 이긴다(D-8).
+**`gainDb` 는 기본값이다.** 스펙의 `audio.sfx[].gainDb` 가 있으면 그쪽이 이긴다(V3-D8).
 
-**`triggerKinds` 는 전환 어휘의 상위집합이다** — `"sticker"` 를 포함한다(D-5).
+**`triggerKinds` 는 전환 어휘의 상위집합이다** — `"sticker"` 를 포함한다(V3-D5).
 `hardcut`·`crossfade` 는 의도적으로 어떤 아이템에도 없다(무음).
 
 전환 `kind` 의 **집합은 사전**이고 §10 의 `transitionWeights` 는 그 집합에 매기는 **가중치**다.
@@ -329,7 +329,7 @@ registry.json                        ← 짧은 TTL. 어떤 팩이 존재하는�
 ```
 
 ⚠️ **서버 렌더용은 TTF/OTF 다.** woff2 는 웹 전용 포맷이라 libass → fontconfig/freetype 경로가
-인식하지 못한다(C-1).
+인식하지 못한다(V3-C1).
 
 **폰트 적재는 `fc-cache` 가 아니라 `ass` 필터의 `fontsdir=` 로 한다.** 팩 폰트는 런타임에
 도착하므로 빌드 타임 `fc-cache` 로는 안 잡히고, 컨테이너 안에서 시스템 폰트 설정을 매번
@@ -364,7 +364,7 @@ registry.json                        ← 짧은 TTL. 어떤 팩이 존재하는�
 }
 ```
 
-7번째 팩 타입이다(B-3). 불변 버전 + 계속 서빙 + 갱신 주기가 다른 팩과 같다.
+7번째 팩 타입이다(V3-B3). 불변 버전 + 계속 서빙 + 갱신 주기가 다른 팩과 같다.
 
 **값(수치)은 팩이고 키(플랫폼 이름)는 사전이다.** `insets` 는 플랫폼 UI 개편을 따라 바뀌는
 측정값이라 팩이 맞다. `platform` 의 허용 집합은 코드가 스위치하는 어휘이므로
@@ -426,7 +426,7 @@ MediaPipe Face Detection 6키포인트에 `cheekL`·`cheekR`·`chin` 이 없으�
 파생한다. 공식은 **파이썬 단독 구현**이며 `derivationVersion` 으로 버전드다.
 
 `resolved` 가 재계산 가능한 캐시인 이상 재계산 가능성이 곧 재현성이므로,
-버전은 [edit-spec-v3.md](./edit-spec-v3.md) §5 `assetRefs.derivationVersion` 에 핀된다(C-3).
+버전은 [edit-spec-v3.md](./edit-spec-v3.md) §5 `assetRefs.derivationVersion` 에 핀된다(V3-C3).
 
 ⚠️ **파생은 클램프하지 않는다.** 프레임 밖 좌표가 그대로 나온다 —
 [edit-spec-v3.md](./edit-spec-v3.md) §10.3 참조.

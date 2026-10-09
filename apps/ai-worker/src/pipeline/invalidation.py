@@ -66,7 +66,7 @@ def reinterpreted_refs_for(action: str) -> tuple[str, ...]:
 
 
 def pin_promotion_for(action: str) -> tuple[str, ...]:
-    """A-5 의 세 번째 축. 무효화도 재해석도 아닌 별개 정책이다."""
+    """V3-A5 의 세 번째 축. 무효화도 재해석도 아닌 별개 정책이다."""
     return tuple(_entry(action)["pinPromotion"])
 
 

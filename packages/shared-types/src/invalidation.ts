@@ -102,7 +102,7 @@ export function reinterpretedRefsFor(action: InvalidationAction): string[] {
 }
 
 /**
- * 핀을 더 최신 버전으로 올릴 수 있는 액션인지 — A-5 의 세 번째 축이다.
+ * 핀을 더 최신 버전으로 올릴 수 있는 액션인지 — V3-A5 의 세 번째 축이다.
  * 무효화도 재해석도 아니다: 더 나은 `analysisVersion` 이 나중에 생겼을 때 그것을 쓸 것인가는
  * 별개의 정책이고, 그 경계가 `attempt` 경계와 정확히 일치한다.
  */

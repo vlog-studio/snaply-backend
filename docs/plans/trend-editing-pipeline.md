@@ -98,14 +98,14 @@ v3, `POST /edit-jobs` 는 v2 그대로다([api-spec.md](../api-spec.md) §AI 편
 - **시각의 권위는 `(cutId, offsetInCutMs)` + `durationMs` 다.** 절대 ms 와 `atBeat` 는 파생값이다.
   클립 인덱스나 절대 ms 를 기준으로 두면 컷이 바뀌거나 지워질 때 전부 어긋난다. 안정된 `cutId` 를
   기준으로 두고 지속시간을 따로 두므로 스티커가 컷 경계를 넘어 살아남고, 앵커 컷이 삭제될 때만
-  드롭된다([decisions/edit-spec-v3.md](../decisions/edit-spec-v3.md) §1 B-7).
+  드롭된다([decisions/edit-spec-v3.md](../decisions/edit-spec-v3.md) §1 V3-B7).
 - **스티커 좌표는 픽셀이 아니라 앵커 의미로 저장한다** — `{ kind: "face", ref: "forehead" }` +
   폴백 + `scaleRef`. 해상도 독립이고, 재현 가능하며, **검출 실패 시의 행동이 스펙에 드러난다**(§5.2).
   자유 배치(`freezone`)에서만 정규화 좌표(0~1)를 쓴다.
 - **워커는 스펙을 신뢰하되 검증한다.** 현행 `parse_render_spec` 이 이미 그 태도다 —
   범위를 벗어난 값은 폴백이 아니라 거부한다.
 
-컷 길이를 비트 단위로 적는 `beatLength`([decisions/edit-spec-v3.md](../decisions/edit-spec-v3.md) §1 B-6)는
+컷 길이를 비트 단위로 적는 `beatLength`([decisions/edit-spec-v3.md](../decisions/edit-spec-v3.md) §1 V3-B6)는
 `movie_template_slots` 와 자연스럽게 맞물린다 — 슬롯이 "몇 비트짜리 자리인가"를 가지면 추천 결과를
 그대로 타임라인으로 펼칠 수 있다. 다만 이는 A-6 앱 연동 이후의 후속이다.
 

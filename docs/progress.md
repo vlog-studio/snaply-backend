@@ -2640,3 +2640,15 @@ env-spec 부터). `POSTGRES_HOST_PORT` 처럼 `origin: 'local'` 로 선언하고
 오너가 권장안을 골랐다. [ONBOARDING.md](../ONBOARDING.md) §5 의 "모노레포 통합(2026-08-31) 이전에 분기한 브랜치" 절은 그런 브랜치가 원격 · 로컬
 어디에도 없어 지우고, 지금도 쓸모 있는 한 가지 — `apps/mobile` 의 `git log` · `git blame` 이 통합 커밋 `d13f921` 이전으로 내려가지 않는다는 것 — 만
 §5 목록의 한 줄로 남겼다. 그 절을 가리키는 링크는 없었다.
+
+## 2026-10-10 (이어서) — editSpec v3 결정 ID 에 접두를 붙인다(backlog H-10 닫음)
+
+[decisions/edit-spec-v3.md](./decisions/edit-spec-v3.md)의 결정 항목 ID(`A-1`~`D-8`, 27개)가 백로그 ID 와 모양이 같아 grep 과 독자가 헷갈렸다
+(백로그 B-6 은 알림 설정, 결정 B-6 은 컷 타이밍). 오너 결정으로 `V3-A1` · `V3-B6` 꼴로 바꿨다 — 접두를 붙이고 가운데 하이픈을 빼 백로그 ID 와
+겹치지 않는다.
+
+- **바꾼 곳** — 결정 문서(34곳)와 두 초안 [plans/edit-spec-v3.md](./plans/edit-spec-v3.md) · [plans/asset-pack-manifest.md](./plans/asset-pack-manifest.md)
+  (24 · 14곳), 이 ID 를 인용하는 [backlog.md](./backlog.md) A-7 · [auto-edit-draft.md](./decisions/auto-edit-draft.md) ·
+  [trend-editing-pipeline.md](./plans/trend-editing-pipeline.md), 무효화 사전의 `note` 세 곳(`packages/shared-types/src/invalidation-vocabulary.json`),
+  코드 주석(`invalidation.ts` · `invalidation.py` · 두 무효화 테스트). 같은 문서에 섞인 백로그 ID(A-3 · A-7 · C-7 등)와 만료 예고의 D-3 · D-1 은 그대로다.
+  결정 문서 헤더에 정정 배너를 달아, 그 전의 기록(이 progress 포함)은 옛 ID 를 쓴다고 적었다.

@@ -107,12 +107,12 @@ class DocumentedRulesTest(unittest.TestCase):
         self.assertTrue(invalidation.is_preserving_action("expired-regenerate"))
 
     def test_output_profile_change_preserves_everything(self) -> None:
-        # resolved.xy 가 소스 정규화라 성립한다(B-1). 캔버스 정규화였다면 fitMode 가 바뀔 때마다
+        # resolved.xy 가 소스 정규화라 성립한다(V3-B1). 캔버스 정규화였다면 fitMode 가 바뀔 때마다
         # 오버레이를 전부 다시 계산해야 했다.
         self.assertTrue(invalidation.is_preserving_action("output-profile-change"))
 
     def test_bgm_swap_within_guard_keeps_the_cut_composition(self) -> None:
-        # beatLength 가 권위고 길이는 파생이다(B-6). 컷 구성은 두고 그리드에 다시 투영한다.
+        # beatLength 가 권위고 길이는 파생이다(V3-B6). 컷 구성은 두고 그리드에 다시 투영한다.
         self.assertEqual(
             invalidation.layer_state("bgm-swap", "timeline.cuts"), invalidation.RETIMED
         )

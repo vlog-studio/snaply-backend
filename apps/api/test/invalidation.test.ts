@@ -137,12 +137,12 @@ describe('계획이 약속한 규칙', () => {
   });
 
   it('출력 프로필·fitMode 변경은 아무것도 무효화하지 않는다', () => {
-    // resolved.xy 가 소스 정규화라 성립한다(B-1).
+    // resolved.xy 가 소스 정규화라 성립한다(V3-B1).
     expect(isPreservingAction('output-profile-change')).toBe(true);
   });
 
   it('가드 안의 BGM 교체는 컷 구성을 유지한다', () => {
-    // beatLength 가 권위고 길이는 파생이다(B-6).
+    // beatLength 가 권위고 길이는 파생이다(V3-B6).
     expect(layerState('bgm-swap', 'timeline.cuts')).toBe('retimed');
     expect(layerState('bgm-swap', 'music')).toBe('invalidated');
   });
