@@ -23,7 +23,9 @@ if [ -f deploy/.current-images ]; then
   . deploy/.current-images
   set +a
 fi
-DEST="${SNAPLY_BACKUP_DIR:-/var/backups/snaply}"
+# 기본값은 AWS 서버의 백업 폴더다 — `/data` 는 인프라가 매일 스냅샷한다. 다른 곳에 쓰면
+# 덤프가 스냅샷 밖에 떨어지고, deployment-aws.md 의 복구 절차가 보는 자리와도 어긋난다.
+DEST="${SNAPLY_BACKUP_DIR:-/data/backup}"
 KEEP_DAYS="${SNAPLY_BACKUP_KEEP_DAYS:-14}"
 mkdir -p "$DEST"
 
