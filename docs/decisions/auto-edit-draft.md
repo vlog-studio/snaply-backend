@@ -1,13 +1,22 @@
 # AI 편집 초안 — 고른 스냅으로 고칠 수 있는 무비 초안을 만든다
 
 **작성일**: 2026-09-28
-**상태**: 결정 — 입력·결과물·편집 범위·과금(§1)은 오너가 정했고(2026-09-28), §2 는 그 결정에서 따라 나오는
-규칙이다. §2 가 열어 둔 상한·표시 시점·미업로드·빠진 스냅(§5)은 오너가 2026-10-01 에 정했다. 구현 중이다
-**원천**: 스냅 여러 개를 AI 가 편집 초안으로 만드는 기능의 범위와, 그 범위가 요구하는 설계 규칙의 근거.
-남은 작업은 [backlog.md](../backlog.md) A-11
-**관련 문서**: [specs/movie.md](../specs/movie.md) MOV-21·MOV-22 · [edit-spec-v3.md](edit-spec-v3.md) ·
+**상태**: 결정 — §1 은 오너가 정했고(2026-09-28) §2 는 거기서 따라 나오는 규칙이다. §2 가 열어 둔 것은 오너가 2026-10-01 에 정했다(§5).
+§6 의 툴 기준과 범위는 §2.3 에서 따라 나온 v1 이다
+**원천**: 스냅 여러 개를 AI 가 편집 초안으로 만드는 기능의 범위와, 그 범위가 요구하는 설계 규칙의 근거. 편집 툴마다 정할 것과
+v1 범위(§6). 고르고 자르는 규칙은 [edit-director.md](edit-director.md), 전환은 [transition-director.md](transition-director.md)가 원천이다
+**관련 문서**: [backlog.md](../backlog.md) A-11 · [specs/movie.md](../specs/movie.md) MOV-21·MOV-22 · [edit-spec-v3.md](edit-spec-v3.md) ·
 [template-snap-recommendation.md](template-snap-recommendation.md) · [movie-export-policy.md](movie-export-policy.md) ① ·
-[product-concept.md](product-concept.md) · [plans/snap-analysis-recommendation-rollout.md](../plans/snap-analysis-recommendation-rollout.md) §4.3
+[product-concept.md](product-concept.md) · [plans/snap-analysis-recommendation-rollout.md](../plans/snap-analysis-recommendation-rollout.md) §4.3 ·
+툴 계획(보관) [archive/edit-recipe-tools.md](../archive/edit-recipe-tools.md)
+
+> **후속 결정**(2026-10-01): §2.5 가 빠졌다고 적은 두 액션 `cut-trim`·`transition-edit` 은 레이어별 판단과 함께
+> [`invalidation-vocabulary.json`](../../packages/shared-types/src/invalidation-vocabulary.json)에 들어갔다.
+
+> **대체**(2026-10-01): §5 끝의 "초안 API 는 업로드된 스냅에 대한 제안만 돌려주고, 앱이 미업로드 스냅을 끼워 넣는다"는
+> 같은 날 edit-director 결정으로 바뀌었다 — 업로드되지 않은 스냅도 `localId` 와 촬영 시각으로 넘기고 서버가 촬영 시각 자리에
+> 둔다(`POST /movie-drafts`, [edit-director.md](edit-director.md) §0·§1). 초안 API 가 무비를 만들지 않고 앱이 `POST /movies` 로
+> 만드는 것은 그대로다.
 
 ---
 
@@ -67,7 +76,7 @@ v3 초안의 `userEdits`(사용자 수정을 스펙 안에 목록으로 모으�
   속성**으로만 둔다.
 
 AI 가 쓰는 툴이 하나 늘 때마다 그 값을 고치는 UI 와 미리보기도 하나씩 늘어난다(§1 "전부 고칠 수 있다").
-초안의 툴을 작게 시작하는 이유다.
+초안의 툴을 작게 시작하는 이유다. 툴마다 정할 것과 v1 범위는 §6 이다.
 
 ### 2.4 사용자가 자른 구간은 비트에 맞추지 않는다
 
@@ -98,7 +107,7 @@ B-6). 사용자가 자른 구간을 비트에 맞춰 옮기면 사용자가 정�
 
 vision 분석은 사용자가 동의해야 돈다(REC-4·ANA-5). 초안이 분석을 조건으로 삼으면 동의하지 않은 사용자에게는
 기능 전체가 없는 것과 같다. 그래서 초안은 촬영 순서와 로컬 신호(중복·밝기·흐림·발화 구간 —
-[계획](../plans/edit-recipe-tools.md) §4)로 만들어지고, 분석이 켜지면 더 나아진다.
+[edit-director.md](edit-director.md#81-신호는-어디서-오나) §8.1)로 만들어지고, 분석이 켜지면 더 나아진다.
 
 템플릿 추천이 이미 같은 구조다 — 로컬 매칭이 먼저 채우고, 서버 결과는 사용자가 손대지 않은 슬롯에만
 얹는다(REC-1). §2.2 의 주인 규칙이 있으면 초안에도 같은 방식을 쓸 수 있다. 초안을 바로 보여줄지,
@@ -120,7 +129,7 @@ vision 분석은 사용자가 동의해야 돈다(REC-4·ANA-5). 초안이 분�
 - **선택은 규칙과 시드로 한다.** 모델은 스냅 내용 인식에만 쓰고, 무엇을 고를지는 스타일 번들의 가중치와
   시드로 정한다([edit-spec-v3.md](edit-spec-v3.md) §5, [template-snap-recommendation.md](template-snap-recommendation.md) §7).
   무비 한 편당 모델 비용이 늘지 않고, 같은 입력이 같은 초안을 낸다.
-- **분석은 동의한 사용자에게만 돈다**(REC-4·ANA-5, 2026-09-29 옵트인 결정) — 서버 스위치와 회사 키(C-7)도 필요하다.
+- **분석은 동의한 사용자에게만 돈다**(REC-4·ANA-5, 2026-09-29 옵트인 결정) — 서버 스위치와 회사 키(C-7 — 2026-09-29 발급)도 필요하다.
 
 ---
 
@@ -142,7 +151,7 @@ vision 분석은 사용자가 동의해야 돈다(REC-4·ANA-5). 초안이 분�
 | 항목 | 결정 | 근거 |
 |---|---|---|
 | 넘길 수 있는 스냅 수 | **30** | 컷 상한(10)의 3배라 고를 여지가 있다. 로컬 신호는 업로드 때 계산해 두므로 수가 늘어도 초안 요청은 느려지지 않는다 |
-| 초안 1회의 vision 분석 수 | **12** | 템플릿 추천 1회와 같다 — 초안 1회의 분석 비용이 추천 1회를 넘지 않는다. 로컬 신호로 거른 뒤에만 보낸다(계획 §4) |
+| 초안 1회의 vision 분석 수 | **12** | 템플릿 추천 1회와 같다 — 초안 1회의 분석 비용이 추천 1회를 넘지 않는다. 로컬 신호로 거른 뒤에만 보낸다(거르기는 [edit-director.md](edit-director.md) §2) |
 | 최근 24시간 초안 수 | **10** | 초안은 무비를 하나 만드는 일이라 화면 재진입마다 부르는 추천(20)보다 드물다 |
 | 표시 시점 | **바로** | 분석을 기다리면 동의하지 않은 사용자와 흐름이 갈린다(§2.7). vision 결과는 나중에 `ai` 주인 값에만 얹는다 — 템플릿의 REC-1 과 같은 구조 |
 | "다시 편집" | **v1 에 두지 않는다** | 시드의 `attempt` 가 이미 자리를 갖고 있어 나중에 붙일 수 있다. 무엇이 바뀌었는지 보여줄 UI 가 더 필요하다 |
@@ -156,3 +165,56 @@ vision 분석은 사용자가 동의해야 돈다(REC-4·ANA-5). 초안이 분�
 **업로드된 스냅에 대한 제안**(쓸 스냅·순서·구간과 넣지 않은 스냅)을 돌려준다. 앱이 그 제안에 미업로드 스냅을
 촬영 시각 자리에 끼워 넣어 무비를 만들고, 무비는 지금과 같은 경로(`POST /movies`)로 서버에 간다. 전환은 그때
 `transition-director` 가 고른다. 템플릿 추천이 이미 이 모양이다(제안 → 앱이 병합 → 일반 무비).
+
+---
+
+## 6. 편집 툴 — 툴마다 정할 것과 v1 범위
+
+(2026-10-09 plans/edit-recipe-tools.md §1·§2 에서 옮김 — [보관 원문](../archive/edit-recipe-tools.md))
+
+**툴**은 AI 가 초안에서 쓰고 사용자가 고칠 수 있는 편집 수단 하나다(경계 하나의 전환, 컷 하나의 구간 등). 값의 원천은
+어휘 사전이고, 이 절은 툴을 넣는 기준이다. 경계마다 고르는 전환의 범위는
+[transition-director.md](transition-director.md#0-전제--고를-수-있는-전환과-겹침형의-여분-프레임) §0 이다.
+
+### 6.1 툴 카드 — 툴마다 정할 것
+
+사전에 이름만 올리면 AI 가 고를 수 없고, 사용자가 고친 값을 검증할 수도 없다. 툴마다 아래를 정한다. 오른쪽 열은 v1
+전환([`transition-vocabulary.json`](../../packages/shared-types/src/transition-vocabulary.json))에서 그 항목이 있는 곳이다.
+
+| 항목 | 뜻 | v1 전환에서 |
+|---|---|---|
+| 이름 | 닫힌 집합의 이름 | `kinds` 의 키(`kind`) |
+| 보이는 이름 | 사용자가 고르는 툴만 갖는다 — 내부 값(컷 역할)에는 없다 | `label` |
+| 레이어 | 붙는 곳. 무효화 사전의 레이어 이름 | `timeline.transitions` |
+| 파라미터 | 이름·범위·기본값. **범위 밖은 폴백하지 않고 거부한다** | `durationMs`(`min`·`max`·`default`) · `split` · `easing` · `color` · `scaleFrom`. 거부는 `validateTransition` · `validate_transition` |
+| 시간 성격 | 겹침형(두 컷의 프레임을 섞는다) / 경계형(각 컷 안에서 끝난다) | `timing` |
+| 적용 조건 | 최소 컷 길이 · 여분 프레임 · 원본 해상도 · 필요한 신호 | 해석(`resolveTransition`)이 컷 길이·여분 프레임에 맞춰 길이를 줄인다. 해상도는 transition-director §0.3 |
+| 폴백 | 조건이 맞지 않을 때 | `fallback` — 사슬은 `hardcut` 에서 끝난다(transition-director §2) |
+| 미리보기 | 편집 화면에서 보이는가. 안 보이면 경계마다 고르게 할 수 없다(§2.3) | 앱 무대 — transition-director §0.1 |
+| 효과음 | 에셋 팩 매니페스트(초안) `triggerKinds` 의 짝 | 정하지 않았다(A-7). 무효화 사전에 `audio.sfx` 레이어만 있다 |
+| 렌더 | 필터·재인코딩 영향 | `editor.edit_timeline` — 겹침형은 `xfade`·`acrossfade`, `dip`·`flash` 는 `fade`, `zoompunch` 는 `zoompan` |
+| reason 코드 | AI 가 고른 이유(닫힌 코드) | 닫지 않았다(A-7 "강조·수정 어휘를 사전 파일로") |
+
+### 6.2 v1 에 넣는 기준
+
+- **음원·스티커·자막 결정 없이 만들고 검증할 수 있다.** 그 결정들은 열려 있다(A-7).
+- **사용자가 고칠 수 있는 값이면 편집 화면이 미리 보여줄 수 있다**(§2.3). AI 가 툴을 하나 쓸 때마다 고치는 UI 가 하나
+  늘어나므로 적게 시작한다. 미리 보여줄 수 없는 효과는 툴이 아니라 스타일에 딸린 속성이나 항상 적용하는 처리로 둔다.
+- **툴을 먼저 만들어 사람 손으로 검증하고, AI 는 그 위에서 고른다.** 툴은 AI 없이도 쓸모가 있다 — 경계별 전환은 사용자가
+  직접 고른 무비에도 생긴다(MOV-22).
+
+### 6.3 v1 툴과 나중으로 둔 툴
+
+| 자리 | 툴 | 범위 | 이유 · 조건 |
+|---|---|---|---|
+| 컷 사이 `timeline.transitions[].kind` | 전환 | v1 다섯 | 목록과 미리보기, 넣지 않은 `slide`·`whip` 은 [transition-director.md](transition-director.md#01-고를-수-있는-전환은-v1-다섯이다) §0.1 |
+| 컷 안 `timeline.cuts` | 구간(트림) | v1 | 고치는 UI 가 이미 있다(MOV-4). AI 는 로컬 신호로 고른다([edit-director.md](edit-director.md) §7) |
+| 컷 안 | 속도 `speed` | 나중 | 렌더는 쉽지만 컷마다 고치는 UI 가 새로 필요하다. 슬로모션 하한은 원본 fps 로 정한다 |
+| 컷 안 | 줌 `zoom`(천천히 확대·축소) | 나중 | 속도와 같은 이유. 배율 상한은 transition-director §0.3 |
+| 컷 안 | 리프레임(가로 원본 → 세로) | 나중 | 얼굴 검출(MediaPipe)이 필요하다. 그전까지는 `blur_background`(`apps/ai-worker/src/pipeline/render_spec.py` 의 기본 맞춤) |
+| 영상 전체 | 스타일(감성·여행·일상) | v1 | 색보정 · 전환 경향(transition-director §1) · 컷 길이(edit-director §3)를 정한다. 경계마다 고친 전환은 그 위에 얹힌다 |
+| 영상 전체 | 클립 간 색 맞춤 `grade.match` | 툴이 아니다 | 렌더에서만 보이므로 스타일에 딸린 속성이다(§2.3). 에셋이 필요 없고, 시간·장소가 다른 스냅을 붙일 때 가장 눈에 띄는 차이다. 넣는 일은 A-7 |
+| 오디오 | 기본 처리 — 경계 마이크로 페이드 · 클립별 음량 정규화 · `loudnorm` | 툴이 아니다 | 항상 적용하고 사용자가 고르지 않는다([trend-editing-pipeline.md](../plans/trend-editing-pipeline.md) §10 1단계). 넣는 일은 A-7 |
+| 오디오 | 컷별 원본 소리(켜기·줄이기·끄기) | 후보 | 미리보기는 플레이어 음량으로 된다. AI 기본값은 발화 구간 신호(edit-director §8.1 `speech`)로 정할 수 있다. 정하기 전에는 전부 켠다 |
+| 오디오 | J/L컷(소리가 화면보다 먼저·늦게 넘어간다) | 나중 | 미리보기가 어렵다 — 넣으면 경계마다가 아니라 스타일 속성이다 |
+| — | LUT · grain · 강조(`hookBoost`) · BGM · 비트 싱크 · 효과음 · 자막 · 스티커 | 나중 | 에셋 또는 결정 대기(A-7) |

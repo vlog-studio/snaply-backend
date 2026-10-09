@@ -1,5 +1,5 @@
 {
-  "_note": "컷 사이 전환 어휘의 단일 원본. TypeScript(transition.ts)·워커(pipeline/transition.py)가 같은 파일을 읽고, 앱 미리보기와 렌더가 같은 값으로 그려야 편집 화면에서 본 것이 결과물이 된다(MOV-22). 닫힌 집합이다 — 경계마다 고를 수 있는 전환은 편집 화면이 미리 보여줄 수 있는 것뿐이다(decisions/auto-edit-draft.md §2.3). v1 목록과 툴 카드는 plans/edit-recipe-tools.md §1·§2.1.",
+  "_note": "컷 사이 전환 어휘의 단일 원본. TypeScript(transition.ts)·워커(pipeline/transition.py)가 같은 파일을 읽고, 앱 미리보기와 렌더가 같은 값으로 그려야 편집 화면에서 본 것이 결과물이 된다(MOV-22). 닫힌 집합이다 — 경계마다 고를 수 있는 전환은 편집 화면이 미리 보여줄 수 있는 것뿐이다(decisions/auto-edit-draft.md §2.3). v1 목록과 겹침형의 여분 프레임은 decisions/transition-director.md §0, 툴 카드는 decisions/auto-edit-draft.md §6.1.",
 
   "transitionVocabularyVersion": 1,
 
@@ -64,7 +64,7 @@
       "scaleFrom": 1.08,
       "easing": "easeOutCubic",
       "fallback": "hardcut",
-      "_note": "들어오는 컷이 scaleFrom 배로 확대된 채 시작해 제자리(1.0)로 돌아간다. 앱 촬영 원본은 720p 라 1080×1920 출력에서 이미 1.5배 확대돼 있다 — 1.1 을 넘기면 뭉개진다(plans/edit-recipe-tools.md §2.4)."
+      "_note": "들어오는 컷이 scaleFrom 배로 확대된 채 시작해 제자리(1.0)로 돌아간다. 앱 촬영 원본은 720p 라 1080×1920 출력에서 이미 1.5배 확대돼 있다 — 1.1 을 넘기면 뭉개진다(decisions/transition-director.md §0.3)."
     }
   }
 }

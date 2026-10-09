@@ -1,15 +1,30 @@
 # 편집 레시피의 툴 — v1 목록과 툴 카드 제안
 
+> **보관**(2026-10-09): 착수 순서(§5) 1~5 가 대부분 구현돼 계획의 수명이 끝났다 — 어휘 사전 · 무비 계약 · 렌더러와
+> 편집 화면 · 로컬 신호와 초안 생성은 2026-10-01([progress.md](../progress.md)), v3 초안의 main 반입은 2026-10-03 이다.
+> 아래는 착수 전 제안이라 판단 근거로 인용하지 않는다.
+>
+> 현행 원천: 툴 카드와 v1 범위(§1·§2) → [decisions/auto-edit-draft.md](../decisions/auto-edit-draft.md#6-편집-툴--툴마다-정할-것과-v1-범위) §6 ·
+> 고를 수 있는 전환 · 겹침형의 여분 프레임 · 줌 계열의 상한(§1.1·§2.1·§2.4) →
+> [decisions/transition-director.md](../decisions/transition-director.md#0-전제--고를-수-있는-전환과-겹침형의-여분-프레임) §0 ·
+> 컷 역할(§3) → [decisions/edit-director.md](../decisions/edit-director.md#6-역할) §6 과
+> [`cut-role-vocabulary.json`](../../packages/shared-types/src/cut-role-vocabulary.json) · 신호(§4) →
+> [decisions/edit-director.md](../decisions/edit-director.md#81-신호는-어디서-오나) §8.1 · 남은 일(§2.3 의 기본 처리 · §1 의 reason 코드 ·
+> §5 의 6 vision 분석) → [backlog.md](../backlog.md) A-7 · A-11.
+>
+> 이동으로 깨지는 상대 링크(같은 디렉터리를 가리키던 `README.md` · `trend-editing-pipeline.md` · `edit-spec-v3.md` ·
+> `asset-pack-manifest.md` → `../plans/…`)만 고쳤다.
+
 **작성일**: 2026-09-28
-**상태**: 제안 — 착수 전이며 현행 사실이 아니다. 어휘가 확정되면 값의 원천은
-`packages/shared-types/src/*-vocabulary.json` 이다. **전환 `kind` v1 5종은 2026-10-01 에 확정됐다** —
-종류·길이 범위·폴백의 원천은 [`transition-vocabulary.json`](../../packages/shared-types/src/transition-vocabulary.json)이고,
-아래 표의 값과 다르면 그 파일이 맞다
+**상태**: 제안 — 현행 사실이 아니다. 어디까지 구현됐는지는 [계획 인덱스](../plans/README.md)
 **원천**: AI 편집 초안(MOV-21·MOV-22)이 쓸 편집 툴의 v1 목록, 툴마다 정할 항목, 착수 순서의 제안.
-미결은 [backlog.md](../backlog.md) A-7·A-11 에만 둔다
+확정된 값은 어휘 사전([`transition-vocabulary.json`](../../packages/shared-types/src/transition-vocabulary.json) ·
+[`cut-role-vocabulary.json`](../../packages/shared-types/src/cut-role-vocabulary.json)), 확정된 규칙은
+[transition-director.md](../decisions/transition-director.md) · [edit-director.md](../decisions/edit-director.md)가 원천이며
+아래 표와 다르면 그쪽이 맞다. 미결은 [backlog.md](../backlog.md) A-7·A-11 에만 둔다
 **관련 문서**: [decisions/auto-edit-draft.md](../decisions/auto-edit-draft.md) · [decisions/edit-spec-v3.md](../decisions/edit-spec-v3.md) ·
-[trend-editing-pipeline.md](trend-editing-pipeline.md) · v3 스키마 초안([edit-spec-v3.md](edit-spec-v3.md) ·
-[asset-pack-manifest.md](asset-pack-manifest.md))
+[trend-editing-pipeline.md](../plans/trend-editing-pipeline.md) · v3 스키마 초안([edit-spec-v3.md](../plans/edit-spec-v3.md) ·
+[asset-pack-manifest.md](../plans/asset-pack-manifest.md))
 
 ---
 
@@ -43,14 +58,16 @@
 
 ### 1.1 겹침형 전환은 여분 프레임을 쓴다
 
-지금 편집기는 crossfade 를 두 컷 안에서 겹친다. 그래서 무비가 짧아지고 컷의 앞뒤가 섞인다 — `감성`의
-0.8초 crossfade 면 3초 스냅 가운데 컷은 1.4초만 온전히 보이고, 10컷이면 7.2초가 줄어든다
-([editor.py:157](../../apps/ai-worker/src/pipeline/editor.py:157)). 사용자가 구간을 자를 수 있게 되면(MOV-22)
-이 방식은 **사용자가 자른 구간을 전환이 먹는** 것이 된다.
+작성 당시 편집기는 crossfade 를 두 컷 안에서 겹쳤다 — 지금도 `POST /edit-jobs`(v2) 경로는 그렇다
+([editor.py](../../apps/ai-worker/src/pipeline/editor.py) `_crossfade`). 그래서 무비가 짧아지고 컷의 앞뒤가 섞인다 — `감성`의
+0.8초 crossfade 면 3초 스냅 가운데 컷은 1.4초만 온전히 보이고, 10컷이면 7.2초가 줄어든다. 사용자가 구간을 자를 수
+있게 되면(MOV-22) 이 방식은 **사용자가 자른 구간을 전환이 먹는** 것이 된다.
 
 제안: 겹침형 전환은 컷 구간 밖의 **여분 프레임**(트림으로 잘려 나간 앞뒤)을 쓴다. 여분이 모자라면 전환을
 줄이고, 최소 길이보다 짧아지면 경계형으로 바꾼다. 그러면 사용자가 자른 구간은 전부 보이고 무비 길이는
 컷 길이의 합이 된다. AI 는 겹침형을 쓰고 싶은 경계에서 구간을 조금 안쪽으로 잡아 여분을 만든다.
+무비 생성(editSpec v3)의 렌더(`editor.edit_timeline`)는 이 규칙을 따르고, 겹침형이 들어가지 않을 때 무엇으로
+바꾸는지는 [transition-director.md](../decisions/transition-director.md) §2 다.
 
 ---
 
@@ -76,14 +93,10 @@
 | `slide` | 다음 컷이 밀고 들어온다 | 겹침형 | 가로 이동 | ⏭ crossfade 로 겹침형을 검증한 뒤 |
 | `whip` | 휙 패닝하며 흐려진다 | 겹침형 | 흐림은 앱에서 어렵다 | ⏭ 움직임 방향 신호도 필요 |
 
-**2026-09-28 확인** — 편집 화면의 무대와 같은 구조(플레이어 둘 · Android TextureView · 불투명도로 슬롯 선택)의
-임시 화면으로 돌렸다([progress.md](../progress.md) 2026-09-28). iOS 시뮬레이터에서는 위 표의 v1 다섯 종과 `slide` 가
-모두 의도대로 그려졌다. Android 에뮬레이터에서는 **`crossfade` 만 실패**했다 — 위 영상이 반투명인 동안 아래 영상이
-검게 나온다. 반투명 단색(`dip`·`flash`)과 나란한 영상 두 개(`slide`)는 된다.
-
-**2026-10-01 확인** — Android 실기기(Galaxy S22 Ultra)에서도 같은 방식은 실패했지만, 페이드하는 플레이어를 감싼 뷰에
-그 동안만 `renderToHardwareTextureAndroid` 를 켜면 두 영상이 움직이는 채로 섞인다([progress.md](../progress.md)
-2026-10-01). 그래서 `crossfade` 미리보기는 영상 두 개를 겹치는 방식으로 간다.
+**미리보기 확인** — 편집 화면의 무대와 같은 구조(플레이어 둘 · Android TextureView · 불투명도로 슬롯 선택)의
+임시 화면으로 v1 다섯 종과 `slide` 를 돌렸다. Android 에서만 `crossfade` 가 실패했고(위 영상이 반투명인 동안 아래
+영상이 검다), 페이드하는 플레이어를 감싼 뷰에 그 동안만 `renderToHardwareTextureAndroid` 를 켜서 풀었다. 그래서
+`crossfade` 미리보기는 영상 두 개를 겹치는 방식으로 간다. 기기별 결과는 [progress.md](../progress.md) 2026-09-28 · 2026-10-01.
 
 ### 2.2 컷 안 — `timeline.cuts`
 
@@ -100,7 +113,7 @@
 |---|---|---|
 | 스타일 번들(감성·여행·일상) | ✅ | 이미 있다. 번들이 전환 가중치·기본 전환 길이·색 맞춤 여부를 갖고, 경계마다 고친 전환은 그 위에 얹힌다 |
 | 클립 간 색 맞춤 `grade.match` | ✅ | 렌더에서만 보이므로 스타일에 딸린 속성으로 둔다. 에셋이 필요 없다 — 시간·장소가 다른 스냅을 붙일 때 가장 눈에 띄는 차이다 |
-| 기본 처리: 경계 마이크로 페이드 · 클립별 음량 정규화 · `loudnorm` | ✅ | 툴이 아니라 항상 적용하고, 사용자가 고르지 않는다. [trend-editing-pipeline.md](trend-editing-pipeline.md) §10 1단계의 항목이다 |
+| 기본 처리: 경계 마이크로 페이드 · 클립별 음량 정규화 · `loudnorm` | ✅ | 툴이 아니라 항상 적용하고, 사용자가 고르지 않는다. [trend-editing-pipeline.md](../plans/trend-editing-pipeline.md) §10 1단계의 항목이다 |
 | 컷별 원본 소리(켜기·줄이기·끄기) 🆕 | 후보 | 미리보기는 플레이어 음량으로 된다. AI 기본값은 발화 구간(§4)이 있어야 의미가 있어서, 그전에는 전부 켜기다 |
 | J/L컷(소리가 화면보다 먼저·늦게 넘어간다) 🆕 | ⏭ | 미리보기가 어렵다 — 경계마다가 아니라 스타일 속성으로 둔다 |
 | LUT · grain · 강조(`hookBoost`) · BGM·비트 싱크 · 효과음 · 자막 · 스티커 | ⏭ | 에셋 또는 결정 대기(A-7) |
@@ -139,36 +152,36 @@ v3 초안이 "가장 먼저 닫아야 하는 어휘"로 적은 것이다. 무효
 ## 4. 툴보다 먼저 — 고르기·자르기·순서의 신호
 
 초안의 질을 가장 크게 가르는 것은 전환이 아니라 무엇을 빼고, 어느 구간을 쓰고, 어떤 순서로 놓느냐다.
-그 신호의 현황이다.
+그 신호들이다. 로컬 신호의 계산 방법과 쓰임은 [edit-director.md](../decisions/edit-director.md) §8.1 이 원천이다.
 
-| 신호 | 지금 | 방법 | 분석 활성화(REC-4)와의 관계 |
+| 신호 | 어디에 있나 | 방법 | 분석 활성화(REC-4)와의 관계 |
 |---|---|---|---|
-| 촬영 시각 | 있다(`capturedAt`, SNAP-10) | — | 무관 |
-| 스냅 사이 중복 | 있다(2026-10-01, `video_signals.frame_hashes`) | 스냅별 대표 프레임 해시 비교 | 무관 |
-| 밝기·흐림(못 쓰는 스냅) | 있다(2026-10-01, `brightness`·`sharpness`). 분석의 `usableForEdit` 도 | ffmpeg 프레임 통계 | 로컬은 무관 |
-| 스냅 안의 좋은 구간 | 있다(2026-10-01, 100ms 마다의 `motion`) | 움직임 점수 · 발화 구간 | 무관 |
-| 발화 구간 | 있다(2026-10-01, `speech` — whisper 모델 없이 VAD 만) | faster-whisper 의 VAD | 무관 |
+| 촬영 시각 | `capturedAt`(SNAP-10) | — | 무관 |
+| 스냅 사이 중복 | `video_signals.frame_hashes` | 스냅별 대표 프레임 해시 비교 | 무관 |
+| 밝기·흐림(못 쓰는 스냅) | `video_signals` 의 `brightness`·`sharpness`. 분석의 `usableForEdit` 도 | ffmpeg 프레임 통계 | 로컬은 무관 |
+| 스냅 안의 좋은 구간 | `video_signals` 의 100ms 마다의 `motion` | 움직임 점수 · 발화 구간 | 무관 |
+| 발화 구간 | `video_signals.speech` — whisper 모델 없이 VAD 만 | faster-whisper 의 VAD | 무관 |
 | 장면 내용(role 판단) | vision 분석 | — | 켜져야 쓴다 |
 
 - 로컬 신호는 분석이 꺼져 있어도 쓸 수 있다. "분석이 꺼져 있어도 초안은 나온다"(결정 §2.7)의 실제 내용이 이것이다.
 - vision 분석은 로컬 신호로 거른 짧은 목록에만 보낸다. 비용이 넘긴 스냅 수에 비례하지 않게 한다.
-- 신호는 서버에 올라간 스냅에서만 계산된다. 업로드 중인 스냅의 취급은 A-11 이다.
+- 신호는 서버에 올라간 스냅에서만 계산된다. 업로드 중인 스냅은 검사 없이 촬영 순서 자리에 넣는다
+  ([auto-edit-draft.md](../decisions/auto-edit-draft.md) §5).
 
 ---
 
 ## 5. 착수 순서
 
 1~4 는 AI 없이도 쓸모가 있다 — 사용자가 직접 고른 무비에도 경계별 전환이 생긴다. 툴을 먼저 만들어
-사람 손으로 검증하고, AI 는 그 위에서 고른다.
+사람 손으로 검증하고, AI 는 그 위에서 고른다. 어디까지 구현됐는지는 [계획 인덱스](../plans/README.md),
+남은 일은 [backlog.md](../backlog.md) A-11·A-7 이 원천이다.
 
-1. **v3 초안을 main 에 들인다** — 남은 개정을 포함한다(A-7 기존 항목)
-2. **어휘를 사전 파일로 닫는다** — 전환 `kind`(v1 5종) · 컷 `role` · 무효화 사전의 `cut-trim`·`transition-edit`(A-7).
-   전환과 무효화 액션, 컷 `role`([`cut-role-vocabulary.json`](../../packages/shared-types/src/cut-role-vocabulary.json))은
-   2026-10-01 에 닫았다([progress.md](../progress.md))
+1. **v3 초안을 main 에 들인다** — 남은 개정을 포함한다(A-7)
+2. **어휘를 사전 파일로 닫는다** — 전환 `kind`(v1 5종) · 컷 `role` · 무효화 사전의 `cut-trim`·`transition-edit`(A-7)
 3. **무비 계약** — 경계별 전환과 값별 주인(`ai`·`user`). `packages/shared-types` 계약 · `openapi.json` ·
    [api-spec.md](../api-spec.md)를 같은 변경에서 고친다(A-11)
 4. **렌더러와 편집 화면** — v1 전환 5종, 여분 프레임 규칙(§1.1), 기본 오디오 처리. 경계별 전환은 v2 에
    필드를 더해 넣지 않는다 — 구버전 워커가 조용히 무시한다([edit-spec-v3.md](../decisions/edit-spec-v3.md) §4).
    v3 의 컷·전환 부분을 `edit-v3` 큐로 먼저 낸다. 앱은 경계별 선택과 미리보기(A-11)
 5. **로컬 신호 reader 와 초안 생성**(edit-director) — §4 의 신호로 고르기·자르기·순서·전환을 정한다(A-11)
-6. **vision 분석 연결** — REC-4 의 조건이 풀린 뒤(A-3·D-2·C-7)
+6. **vision 분석 연결** — REC-4 의 조건(서버 스위치, A-3)이 풀린 뒤

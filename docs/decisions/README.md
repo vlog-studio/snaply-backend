@@ -43,9 +43,9 @@
 | [snap-content-analysis.md](snap-content-analysis.md) | 스냅 내용 분석(vision) 도입. 법무 검토 전에는 사용자 동의(옵트인)로 켠다(2026-09-29 §6.1) | 분석·동의 완료. 생산 활성화는 A-3 |
 | [template-snap-recommendation.md](template-snap-recommendation.md) | 템플릿 기반 스냅 자동 추천 — 앱 로컬 매칭 + 서버 추천 2단계, 서버 카탈로그, 무료 추천과 상한, 규칙 기반 점수화. 켜는 조건은 2026-09-29 부터 옵트인 | 완료, 생산 활성화 대기(A-6) |
 | [edit-spec-v3.md](edit-spec-v3.md) | editSpec v3·에셋 매니페스트·어휘 사전의 설계 규칙(시드·핀·무효화·큐 분리·사전 로딩) | 어휘 사전 5종 구현(전환·컷 역할은 2026-10-01) · 큐 분리(`edit-v3`)와 v3 `timeline`(컷·경계별 전환) 부분 구현(2026-10-01). 스키마 본문은 [plans/](../plans/README.md) 초안, 확정·파이프라인은 A-7 |
-| [transition-director.md](transition-director.md) | AI 가 경계마다 전환을 고르는 규칙 — 스타일 경향 · 30분 장면 전환 · 두 컷을 키로 한 시드. 여분이 없어 들어가지 않는 `crossfade` 는 `dip` 으로 | 완료(2026-10-01, 편집 화면의 선택·미리보기 포함 — Galaxy 실기기 확인) |
+| [transition-director.md](transition-director.md) | 고를 수 있는 전환 v1 다섯과 겹침형의 여분 프레임 규칙. AI 가 경계마다 전환을 고르는 규칙 — 스타일 경향 · 30분 장면 전환 · 두 컷을 키로 한 시드. 여분이 없어 들어가지 않는 `crossfade` 는 `dip` 으로 | 완료(2026-10-01, 편집 화면의 선택·미리보기 포함 — Galaxy 실기기 확인) |
 | [edit-director.md](edit-director.md) | AI 편집 초안이 스냅을 고르고 자르는 규칙 — 극단만 거르기(절반 한도) · 10분 안의 중복 · 10컷을 넘으면 촬영 흐름을 묶음으로 나눠 고르기 · 촬영순 · 스타일별 컷 길이와 겹침용 여분 | 구현됨(2026-10-01) — 문턱값은 잠정 |
-| [auto-edit-draft.md](auto-edit-draft.md) | 고른 스냅 여러 개로 AI 가 고칠 수 있는 무비 초안을 만든다 — 결과는 렌더가 아닌 초안, 구간·경계별 전환까지 사용자가 고친다 | 구현됨(2026-10-01, `POST /movie-drafts` · 앱의 자동 편집, Galaxy 실기기 확인) — 거르기·중복 문턱값은 잠정(A-11) |
+| [auto-edit-draft.md](auto-edit-draft.md) | 고른 스냅 여러 개로 AI 가 고칠 수 있는 무비 초안을 만든다 — 결과는 렌더가 아닌 초안, 구간·경계별 전환까지 사용자가 고친다. 편집 툴마다 정할 것(툴 카드)과 v1 범위 | 구현됨(2026-10-01, `POST /movie-drafts` · 앱의 자동 편집, Galaxy 실기기 확인) — 거르기·중복 문턱값은 잠정(A-11). §6.3 의 기본 처리·색 맞춤은 A-7 |
 | [ad-reward-credits.md](ad-reward-credits.md) | 보상형 광고 크레딧 지급 규칙 | 완료, 기본 꺼짐(C-6) |
 | [snap-retention-period.md](snap-retention-period.md) | 스냅 서버 보관은 기간 기준 — 업로드 후 15일 만료 (구독 혜택으로 연장할지는 미확정, A-2) | 완료(서버 2026-09-09 · 앱 만료 표시 2026-09-27). 용량 한도 존치는 A-2 |
 | [expiry-notice-schedule.md](expiry-notice-schedule.md) | 스냅 만료 예고는 삭제 전 두 번, 정리 배치와 분리된 낮 시간 배치가 보낸다 | 완료(서버 2026-09-09). 앱의 남은 기간 표시는 SNAP-13 |

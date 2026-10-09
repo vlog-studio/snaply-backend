@@ -241,7 +241,7 @@ def edit(
 # transition-vocabulary.json 이 원천이고, 고른 값을 컷에 맞추는 해석(`resolve_transition`)은 앱
 # 미리보기와 같은 규칙이다 — 편집 화면에서 본 전환이 결과물이 된다.
 #
-# **겹침형(crossfade)은 컷 구간 밖의 여분 프레임을 쓴다**(plans/edit-recipe-tools.md §1.1). 경계를
+# **겹침형(crossfade)은 컷 구간 밖의 여분 프레임을 쓴다**(decisions/transition-director.md §0.2). 경계를
 # 가운데에 두고 나가는 컷은 구간 끝 뒤로, 들어오는 컷은 구간 시작 앞으로 절반씩 늘려 정규화한 뒤
 # 그만큼 겹친다. 그래서 사용자가 자른 구간은 전부 보이고 무비 길이는 컷 길이의 합이다.
 # 경계형(dip·flash·zoompunch)은 각 컷 안에서 끝나므로 구간을 늘리지 않고 이어 붙인다.

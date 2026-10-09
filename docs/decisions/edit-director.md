@@ -1,13 +1,12 @@
 # AI 편집 초안이 스냅을 고르고 자르는 규칙
 
 **작성일**: 2026-10-01
-**상태**: 결정 — 이 문서로 정한 v1 이다. 컷 길이·컷 수(§3·§4)는 오너가 v1 값을 맡겼고(2026-10-01), 신호의 문턱값(§2)은
-잠정값이며 실제 스냅으로 다시 정한다(backlog A-11). 구현됨(2026-10-01,
-[`edit-director.ts`](../../apps/api/src/services/edit-director.ts) · `POST /movie-drafts` · 앱의 자동 편집)
+**상태**: 결정 — v1. 컷 길이·컷 수(§3·§4)는 오너가 v1 값을 맡겼고(2026-10-01), 신호의 문턱값(§2)은 잠정값이다(backlog A-11)
 **원천**: AI 편집 초안(MOV-21)의 선택 단계(edit-director)가 넘겨받은 스냅 중 무엇을 쓰고, 어떤 순서로 놓고, 컷마다 어느
-구간을 자르는지. 전환은 [transition-director.md](transition-director.md)가 맡는다
-**관련 문서**: [specs/movie.md](../specs/movie.md) MOV-5 · MOV-21 · MOV-22 · [auto-edit-draft.md](auto-edit-draft.md) ·
-[transition-director.md](transition-director.md) · [plans/edit-recipe-tools.md](../plans/edit-recipe-tools.md) §3·§4 ·
+구간을 자르는지. 코드는 [`edit-director.ts`](../../apps/api/src/services/edit-director.ts)(값은 `DRAFT_THRESHOLDS`·`CUT_LENGTHS`)와
+[`movie-draft.service.ts`](../../apps/api/src/services/movie-draft.service.ts). 전환은 [transition-director.md](transition-director.md)가 맡는다
+**관련 문서**: [backlog.md](../backlog.md) A-11 · [specs/movie.md](../specs/movie.md) MOV-5 · MOV-21 · MOV-22 · [auto-edit-draft.md](auto-edit-draft.md) ·
+[transition-director.md](transition-director.md) · 툴 계획(보관) [archive/edit-recipe-tools.md](../archive/edit-recipe-tools.md) ·
 [`cut-role-vocabulary.json`](../../packages/shared-types/src/cut-role-vocabulary.json) · [edit-spec-v3.md](edit-spec-v3.md) §5
 
 ---
@@ -60,7 +59,7 @@
 - 두 스냅의 **대표 프레임 해시가 문턱값 이내**이고 **촬영 시각이 10분 안**이면 중복이다. 시각 조건은 흰 벽 카페 두
   곳처럼 비슷해 보이는 다른 장면을 지키기 위해서다. 거리는 대표 프레임 셋(25·50·75%) 각각의 해밍 거리의 중앙값이고,
   **잠정 문턱값은 10**이다 — 같은 장면은 0, 다른 장면은 30 안팎이었다(합성 클립 · 실제 스냅 6개 사이 최소 16). 한 스냅 안의
-  유사 프레임 제거(`frame_sampler.py`)는 5 를 쓴다.
+  유사 프레임 제거(`apps/ai-worker/src/pipeline/video_analysis/frame_sampler.py` 의 `DUPLICATE_HAMMING_THRESHOLD`)는 5 를 쓴다.
 - 중복 묶음에서는 **점수(§4)가 가장 높은 하나**를 남긴다. 같으면 먼저 찍은 것이다.
 - 중복은 연쇄로 묶는다(A≈B, B≈C 면 셋이 한 묶음).
 - **대표 프레임 셋을 다 가진 스냅끼리만** 잰다. 하나라도 못 뽑은 스냅(짧은 스냅에서 seek 가 끝을 넘을 때)은 해시가 비어 있고
@@ -106,7 +105,7 @@
 
 ## 5. 순서는 촬영순이다
 
-초안은 `arranger: ai` 로 만들어지고, 서버는 `ai` 무비를 촬영순으로 정렬한다(`resolveClips`). 그래서 v1 의 순서는
+초안은 `arranger: ai` 로 만들어지고, 서버는 `ai` 무비를 촬영순으로 정렬한다(`apps/api/src/services/movie.service.ts` 의 `resolveClips`). 그래서 v1 의 순서는
 촬영순이고, 사용자가 옮기면 그 뒤로 사용자 것이다([movie-export-policy.md](movie-export-policy.md) ①). 가장 눈길을 끄는
 컷을 앞으로 당기는 일은 하지 않는다(§9).
 
@@ -120,6 +119,9 @@
 - 분석이 있을 때: `places`·`objects`·`actions` 가 있으면 `establish`·`detail`·`action` 이 된다. 여럿이면 사전 순서가 앞인 것.
 - **v1 에서 역할이 바꾸는 것은 컷 길이(§3)와 구간(§7)뿐이다.** 순서는 바꾸지 않는다(§5). 역할은 내부 값이라 화면에 보이지
   않는다.
+- **역할 어휘는 닫힌 사전이다**(2026-10-09 plans/edit-recipe-tools.md §3 에서 옮김). 역할의 이름·뜻·놓이는 자리·판단에 쓰는
+  신호와 그 출처는 사전이 원천이다. 닫아 둔 것은 무효화 사전이 "순서가 바뀌면 어느 컷이 hook 인지 바뀐다"를 근거로 삼기
+  때문이다 — 역할이 열린 문자열이면 그 근거에 계약이 없다([plans/edit-spec-v3.md](../plans/edit-spec-v3.md) §11.1).
 
 ## 7. 구간 고르기
 
@@ -132,7 +134,7 @@
      뒤 여분 안에서 시작한 발화는 담지 않는다(2026-10-02, 처음에는 여분 밖의 발화를 보지 않아 창이 말 한가운데서 시작했다).
 2. 그 안에서 **움직임 합이 가장 큰 창**을 고른다. `hook` 은 움직임이 가장 큰 창을 그대로 쓰고, 다른 역할도 같다.
 3. 같으면 스냅 가운데에 가까운 창이다.
-4. 신호가 없으면 **가운데**다(계획 §2.2 "좋은 구간 신호가 없으면 가운데").
+4. 신호가 없으면 **가운데**다.
 
 창은 **앱의 트림 격자(100ms) 위에** 놓인다 — 시작·끝·길이가 모두 100ms 의 배수다. 격자 밖이면 사용자가 한쪽 핸들을 처음 끌 때
 다른 끝도 격자에 맞춰 움직여, 건드리지 않은 끝이 바뀐다(2026-10-01 Galaxy 에서 2750 이 2800 이 되는 것을 봤다). 그래서 발화를
@@ -155,6 +157,8 @@
 
 업로드가 끝나면 렌디션 워커가 원본으로 계산해 `video_signals` 에 둔다(스냅당 한 행,
 [`snap_signals.py`](../../apps/ai-worker/src/pipeline/snap_signals.py)). 모델을 부르지 않고 스냅 하나에 1초 안팎이다.
+모델 출력이 아니므로 분석 동의(REC-4·ANA-5)와 무관하게 계산하고 쓴다 — 분석이 꺼져 있어도 초안이 나오는 근거다
+([auto-edit-draft.md](auto-edit-draft.md) §2.7).
 
 | 신호 | 계산 | 이 문서에서 |
 |---|---|---|

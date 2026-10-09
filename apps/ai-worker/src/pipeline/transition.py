@@ -4,7 +4,8 @@
 읽는다. 해석(`resolve_transition`)은 앱 미리보기와 렌더가 같은 답을 내야 하므로 TS 구현과 같은
 픽스처(`packages/shared-types/fixtures/transition-resolution.json`)로 고정한다.
 
-결정: docs/decisions/auto-edit-draft.md §2.3 · 툴 카드: docs/plans/edit-recipe-tools.md §1
+결정: docs/decisions/auto-edit-draft.md §2.3 · 툴 카드: 같은 문서 §6.1 ·
+v1 전환과 여분 프레임: docs/decisions/transition-director.md §0
 """
 
 import math

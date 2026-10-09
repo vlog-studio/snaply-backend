@@ -26,6 +26,7 @@
 | [edit-spec-v3-kickoff.md](./edit-spec-v3-kickoff.md) | editSpec v3 착수 계획(어휘 사전·시드·무효화 규칙 커밋 1~4). 커밋 1~3 은 2026-08-20 구현 | 확정 결정 [decisions/edit-spec-v3.md](../decisions/edit-spec-v3.md) · 남은 개정 [backlog.md](../backlog.md) A-7 |
 | [plan-limits.md](./plan-limits.md) | 정기 구독 시절 플랜 차등 집행 보류 결정과 기술 보호 제한 표 | 기각 근거 [decisions/credit-payment-model.md](../decisions/credit-payment-model.md) · 현행 요청 제한 [api-spec.md](../api-spec.md) |
 | [ai-vlog-studio/concept.md](./ai-vlog-studio/concept.md) (+ [목업](./ai-vlog-studio/studio-mockup.html)) | 2026-08-03 확정 제품 기획과 그 시점의 화면 목업. 원래 위치는 `apps/mobile/docs/guides/ai-vlog-studio/` | 결정 [decisions/product-concept.md](../decisions/product-concept.md) · 앱 동작 [apps/mobile/docs/features/](../../apps/mobile/docs/features/README.md) |
+| [edit-recipe-tools.md](./edit-recipe-tools.md) | AI 편집 초안(MOV-21·MOV-22)이 쓸 편집 툴의 계획(2026-09-28) — 툴 카드 · v1 툴 목록 · 컷 역할 · 신호 · 착수 순서. 착수 순서 1~5 는 2026-10-01 에 대부분 구현 | 툴 카드·v1 범위 [decisions/auto-edit-draft.md](../decisions/auto-edit-draft.md#6-편집-툴--툴마다-정할-것과-v1-범위) §6 · 전환 범위·여분 프레임·줌 상한 [decisions/transition-director.md](../decisions/transition-director.md#0-전제--고를-수-있는-전환과-겹침형의-여분-프레임) §0 · 컷 역할·신호 [decisions/edit-director.md](../decisions/edit-director.md) §6·§8.1 · 미결 [backlog.md](../backlog.md) A-7·A-11 |
 
 ## 왜 옮겼는지
 
@@ -50,3 +51,6 @@
   진행 기록에 표시 없이 남아 있었다.
 - **제품 콘셉트**: 실무 가이드 폴더에 놓인 결정 기록이었고, 구현과 어긋난 부분까지 현행 문서가 근거로
   인용했다. 아직 유효한 결정만 [decisions/product-concept.md](../decisions/product-concept.md)로 옮겼다.
+- **편집 레시피의 툴**(2026-10-09): 착수 순서가 대부분 구현됐는데 코드 주석·어휘 사전의 `_note` 가 계획의 절을 규칙의
+  근거로 인용하고 있었다. 살아 있는 규칙(툴 카드 · v1 범위 · 겹침형의 여분 프레임 · 줌 계열의 상한 · 역할 어휘)은 결정
+  문서 셋으로 옮기고 인용을 바꿨다. 남은 일(기본 처리 · 초안의 vision 분석 · 컷 역할 싣기)은 이미 백로그에 있다.

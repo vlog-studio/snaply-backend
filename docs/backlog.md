@@ -311,7 +311,7 @@ v3 는 **Movie export 에 붙인다** — `POST /edit-jobs` 는 한 버전 공�
       을 아직 근거로 든다)를 고치거나 지운다. E-5(BGM 재현성)와 함께 본다
 - [ ] **팩을 긴급 차단(`retired`)할 때 사용자에게 무엇을 보일지** — [plans/asset-pack-manifest.md](./plans/asset-pack-manifest.md) §12
 - [ ] **편집 경로의 기본 처리** — 회전 검증 · 클립별 음량 정규화 · 컷 경계 마이크로 페이드 · `loudnorm` 과 클립 간 색 맞춤
-      `grade.match` 는 [plans/edit-recipe-tools.md](./plans/edit-recipe-tools.md) §2 가 v1 로 두었으나 편집 워커
+      `grade.match` 는 [decisions/auto-edit-draft.md](./decisions/auto-edit-draft.md#63-v1-툴과-나중으로-둔-툴) §6.3 이 툴이 아닌 기본 처리 · 스타일 속성으로 두었으나 편집 워커
       (`apps/ai-worker/src/pipeline/`)에 없다([plans/trend-editing-pipeline.md](./plans/trend-editing-pipeline.md) §10 의 5번)
 - [ ] **편집 워커 동시성** — 단계별 CPU·메모리를 실측한 뒤 값을 정한다(같은 문서 §10 의 16번 · §2.3)
 
@@ -385,8 +385,9 @@ e2e 실검증.
 ### A-11. AI 편집 초안 — 구현됨, 문턱값 실측 남음
 
 고른 스냅 여러 개로 AI 가 고칠 수 있는 무비 초안을 만든다(MOV-21·MOV-22). 범위와 규칙은
-[decisions/auto-edit-draft.md](./decisions/auto-edit-draft.md), 툴 목록과 착수 순서의 제안은
-[plans/edit-recipe-tools.md](./plans/edit-recipe-tools.md).
+[decisions/auto-edit-draft.md](./decisions/auto-edit-draft.md)(편집 툴의 기준과 v1 범위는 §6), 고르고 자르는 규칙은
+[decisions/edit-director.md](./decisions/edit-director.md), 전환은 [decisions/transition-director.md](./decisions/transition-director.md).
+툴 목록과 착수 순서의 계획은 2026-10-09 에 보관했다([archive/edit-recipe-tools.md](./archive/edit-recipe-tools.md)).
 
 컷 역할 사전 · 구간의 주인 · 로컬 신호 · 초안 제안 API · 앱 흐름 · 실기기 확인(초안의 구간·전환을 고쳐 만든
 결과물이 편집 화면과 같다)과 경계별 전환(MOV-22)은 2026-10-01 에 끝났다([닫은 항목](#닫은-항목)). 상한(30 / 분석 12 /
@@ -409,8 +410,11 @@ e2e 실검증.
 - [ ] **컷 역할을 선택 단계 밖으로 싣기** — 선택 단계(`apps/api/src/services/edit-director.ts`)가 컷마다 역할을 정하지만([edit-director.md](./decisions/edit-director.md) §6), v1 에서 결과를 바꾸는
       것은 `hook`·`closer` 의 컷 길이뿐이다. 가운데 컷의 역할(`establish`·`detail`·`action`)과 그것을 위한 움직임 순위는 계산만 되고
       제안 응답에도 무비에도 실리지 않는다 — 초안 제안 API 와 함께 싣기로 했던 일이 빠졌다(2026-10-02 리뷰). editSpec 의
-      `timeline.cuts[].role`([plans/edit-recipe-tools.md](./plans/edit-recipe-tools.md) §3)로 싣거나(무비에 역할을 저장해야 한다),
-      쓸 곳이 생기기 전까지 가운데 컷의 계산을 걷어 낼지 정한다
+      `timeline.cuts[].role`(역할 어휘 [`cut-role-vocabulary.json`](../packages/shared-types/src/cut-role-vocabulary.json))로 싣거나
+      (무비에 역할을 저장해야 한다), 쓸 곳이 생기기 전까지 가운데 컷의 계산을 걷어 낼지 정한다. 쓸 곳의 후보로 템플릿 슬롯에도 같은
+      역할을 붙여 점수 계산(`apps/api/src/services/recommendation/score-slots.ts`)을 함께 쓰는 안이 있다 — 템플릿은 정해진 역할 순서,
+      초안은 AI 가 고른 역할 순서가 된다. 지금 슬롯도 대부분 들어간다(출발 · 도착 → `establish`, 가게 · 메뉴판 · 음료 → `detail`,
+      한 컷 → `hook`, 돌아오는 길 · 마무리 → `closer`)
 
 **완료 조건**: 문턱값이 실측으로 정해져 결정 문서 §2 가 고쳐지고 초안의 vision 분석이 붙으면 MOV-21 이
 `구현됨` 이 된다(실기기 확인은 2026-10-01 에 끝났다).
