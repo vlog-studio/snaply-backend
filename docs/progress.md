@@ -2634,3 +2634,9 @@ env-spec 부터). `POSTGRES_HOST_PORT` 처럼 `origin: 'local'` 로 선언하고
 브랜드 글리프도 루트 `apps/mobile/assets/images` 에 있었다. 지금 구조를 규칙으로 적었다 — 이미지와 폰트는 모두 루트 `assets` 에 두고
 `@/assets/*` 로 불러온다([expo-router.md](../apps/mobile/docs/frameworks/expo-router.md) §Asset placement,
 [feature-sliced-design.md](../apps/mobile/docs/architecture/feature-sliced-design.md)의 `shared` 트리에서 `assets` 를 뺐다). 파일은 옮기지 않았다.
+
+## 2026-10-10 (이어서) — ONBOARDING 의 통합 전 브랜치 절을 걷는다(backlog H-9 닫음)
+
+오너가 권장안을 골랐다. [ONBOARDING.md](../ONBOARDING.md) §5 의 "모노레포 통합(2026-08-31) 이전에 분기한 브랜치" 절은 그런 브랜치가 원격 · 로컬
+어디에도 없어 지우고, 지금도 쓸모 있는 한 가지 — `apps/mobile` 의 `git log` · `git blame` 이 통합 커밋 `d13f921` 이전으로 내려가지 않는다는 것 — 만
+§5 목록의 한 줄로 남겼다. 그 절을 가리키는 링크는 없었다.

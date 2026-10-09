@@ -371,24 +371,8 @@ curl -H "Authorization: Bearer <출력된 토큰>" http://localhost:3000/auth/me
 - **⚠️ 테스트는 반드시 `npm test -w apps/api`로**: 다른 경로의 `npx vitest`는 개발 DB를 `TRUNCATE`할 수 있다 — 이유와 사고 이력은 [AGENTS.md](./AGENTS.md) §테스트.
 - **크리덴셜 파일**: Firebase 서비스 계정 JSON 같은 키 파일은 `.gitignore` 에 패턴으로 막혀 있지만
   (`*firebase-adminsdk*.json`, `*.pem` 등), 레포 안에 두지 말고 `.env` 에 base64 로 넣는 것을 권장한다.
-
-### 모노레포 통합(2026-08-31) 이전에 분기한 브랜치
-
-앱 저장소는 `d13f921 chore: unify app and backend monorepos`에서 이 저장소로 합쳐졌다. 내 브랜치가
-통합 전 분기인지는 다음으로 확인한다(종료 코드 0이면 통합 후 분기).
-
-```bash
-git merge-base --is-ancestor d13f921 <branch>
-```
-
-- 통합 전에 분기한 원격 브랜치는 커밋이 다른 해시로 main에 들어가 있을 수 있다. 그대로 rebase하면
-  같은 내용끼리 충돌하니 `git cherry -v main <branch>`로 미병합 커밋(`+`)만 골라 cherry-pick한다.
-- 그 브랜치가 고친 `apps/api/src/schemas/responses.ts`·`packages/shared-types/src/api.ts`·`domain.ts`는
-  삭제됐다(`855cf05`). 내용은 `packages/shared-types/src/contract/*.ts`로 옮겨 적는다. 같은 시기에 Fastify 5로
-  올라갔다 — WebSocket 핸들러는 소켓을 직접 받고, `setErrorHandler`의 에러 타입은 `FastifyError`이며,
-  `decorateRequest`는 `null` 초기값을 받지 않는다.
-- `apps/mobile` 아래 파일은 `git log`·`git blame`이 통합 커밋 이전으로 내려가지 않는다(이력이 squash됐다).
-  그 이전 맥락은 옛 앱 저장소에서 찾는다.
+- **`apps/mobile` 의 이력**: 앱 저장소는 `d13f921 chore: unify app and backend monorepos` 에서 이 저장소로 합쳐졌다(2026-08-31).
+  `apps/mobile` 아래 파일은 `git log` · `git blame` 이 그 커밋 이전으로 내려가지 않는다(이력이 squash 됐다) — 그 전 맥락은 옛 앱 저장소에서 찾는다.
 
 ---
 
