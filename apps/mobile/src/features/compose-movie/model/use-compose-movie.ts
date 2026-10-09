@@ -4,6 +4,7 @@ import {
   MovieDraftSnapLimit,
   MovieSnapLimit,
   exportRemoteMovie,
+  getGeneratingMovies,
   getLatestMovieStyle,
   getMovieById,
   isAiArranged,
@@ -29,6 +30,7 @@ import { ApiError } from '@/shared/api';
 import { cancelEditJob } from '../api/cancel-edit-job';
 import { readCreditShortfall, type CreditShortfall } from '../lib/read-credit-shortfall';
 import { readDraftSnapLimit } from '../lib/read-draft-snap-limit';
+import { readGeneratingMovieId } from '../lib/read-generating-movie';
 
 import { sendMovie, snapResolvers } from './movie-outbox';
 
@@ -95,11 +97,17 @@ export type DraftOutcome =
  * (`402 INSUFFICIENT_CREDITS`). Its own refusal rather than a `rejected`,
  * because it is the one the screen can do something about: say the numbers and
  * point at where credits come from.
+ * `busy` — another movie is being made right now, and an account makes one at a
+ * time (MOV-11). Checked here against the movies this device knows to be
+ * `generating`, before anything is sent; the backend's
+ * `409 GENERATION_IN_PROGRESS` answers the run this device does not know about
+ * yet — one started on another device. It names the running movie when it can,
+ * because opening it is where the user waits it out or cancels it.
  * `unreachable` — the request itself failed. Nothing was queued and the movie is
  * left exactly as it was, so pressing again is the whole recovery.
  */
 export type GenerationRefusal =
-  'frozen' | 'empty' | 'uploading' | 'rejected' | 'no-credit' | 'unreachable';
+  'frozen' | 'empty' | 'uploading' | 'rejected' | 'no-credit' | 'busy' | 'unreachable';
 
 export type GenerationOutcome = {
   started: boolean;
@@ -113,6 +121,12 @@ export type GenerationOutcome = {
   message?: string;
   /** The 402's numbers, when a `no-credit` refusal carried them. */
   shortfall?: CreditShortfall;
+  /**
+   * With `busy`: the movie being made right now, when it is known — always for
+   * one this device holds, and for the backend's 409 when that run belongs to
+   * a movie. The id may name a movie this device has not read back yet.
+   */
+  generatingMovieId?: string;
 };
 
 /**
@@ -154,9 +168,22 @@ export function canEditMovie(movie: Movie): boolean {
  * regeneration, and it is the same act with the same rules, so it is not a
  * second code path. `beginMovieJob` drops the previous render and error, so the
  * old result never outlives the movie that replaced it.
+ *
+ * This is the movie's own rule. Whether *another* movie's run is in the way is
+ * the account's (MOV-11) — {@link runningMovieOtherThan}.
  */
 function canGenerate(movie: Movie): boolean {
   return movie.status !== 'generating';
+}
+
+/**
+ * The movie, other than this one, that a job owns right now — the run that
+ * keeps this one from starting, since an account makes one movie at a time
+ * (MOV-11). Only what this device knows: a run started elsewhere and not yet
+ * read back is the backend's to refuse (`409 GENERATION_IN_PROGRESS`).
+ */
+function runningMovieOtherThan(movieId: string): Movie | undefined {
+  return getGeneratingMovies().find((movie) => movie.id !== movieId);
 }
 
 /**
@@ -197,7 +224,8 @@ function arrangeByCaptureTime(
  *
  * It concentrates the rules that guard a movie: at least one cut, at most
  * {@link MovieSnapLimit}, no edits while a job owns the movie, and no
- * generation while one is already running. Enforcing those only in the UI would
+ * generation while one is already running — on this movie or, since an account
+ * makes one at a time, on any other. Enforcing those only in the UI would
  * leave each one a forgotten `disabled` prop away from being bypassed.
  *
  * The movie is read at call time rather than subscribed to: these run from event
@@ -446,6 +474,12 @@ export function useComposeMovie() {
    * no way to explain the result. So is a movie whose cuts are still uploading —
    * the run is made from the server's copies, and the movie cannot be sent
    * until every cut can be named there.
+   *
+   * And none starts while another movie is being made (MOV-11): the run this
+   * device knows about is answered here, before the arrangement is written or
+   * anything is sent, so a refused start changes nothing; the one it does not
+   * know about comes back as the backend's `409 GENERATION_IN_PROGRESS`. Both
+   * are `busy`, naming the running movie when they can.
    */
   const startGeneration = useCallback(
     async (movieId: string): Promise<GenerationOutcome> => {
@@ -453,6 +487,8 @@ export function useComposeMovie() {
       if (!movie) return { started: false, refused: 'frozen' };
       if (!canGenerate(movie)) return { started: false, refused: 'frozen' };
       if (movie.snapRefs.length === 0) return { started: false, refused: 'empty' };
+      const running = runningMovieOtherThan(movieId);
+      if (running) return { started: false, refused: 'busy', generatingMovieId: running.id };
 
       // A movie the AI still arranges gets arranged before it runs, so what the
       // user sees afterwards is what was made. A movie the user arranged is left
@@ -489,6 +525,21 @@ export function useComposeMovie() {
         }
         if (error instanceof ApiError && error.status === 402) {
           return { started: false, refused: 'no-credit', shortfall: readCreditShortfall(error) };
+        }
+        // Two 409s: another movie's run is in the way (MOV-11) — one this
+        // device has not heard of yet, since the check above answers the rest —
+        // or this movie is already being made (`CONFLICT`).
+        if (
+          error instanceof ApiError &&
+          error.status === 409 &&
+          error.code === 'GENERATION_IN_PROGRESS'
+        ) {
+          const generatingMovieId = readGeneratingMovieId(error);
+          // The running one is this movie after all: a job owns it.
+          if (generatingMovieId === movieId) return { started: false, refused: 'frozen' };
+          return generatingMovieId === undefined
+            ? { started: false, refused: 'busy' }
+            : { started: false, refused: 'busy', generatingMovieId };
         }
         if (error instanceof ApiError && error.status === 409) {
           return { started: false, refused: 'frozen' };

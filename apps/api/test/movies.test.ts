@@ -372,6 +372,101 @@ describe('POST /movies/:id/export', () => {
   });
 });
 
+describe('사용자당 진행 중 생성은 하나다(MOV-11)', () => {
+  async function readyMovie(user: TestUser): Promise<string> {
+    const snapId = await createSnap(user);
+    return (await createMovie(user, { clips: [{ videoId: snapId }] })).json().data.id;
+  }
+  function exportMovie(user: TestUser, movieId: string) {
+    return h.app.inject({ method: 'POST', url: `/movies/${movieId}/export`, headers: user.auth });
+  }
+  async function balanceOf(user: TestUser): Promise<number> {
+    const agg = await h.prisma.creditLedger.aggregate({ _sum: { delta: true }, where: { userId: user.id } });
+    return agg._sum.delta ?? 0;
+  }
+
+  it('다른 무비가 생성 중이면 409 GENERATION_IN_PROGRESS 와 그 무비 id 다 — 크레딧은 예약하지 않는다', async () => {
+    const user = await h.createUser();
+    await h.prisma.creditLedger.create({
+      data: { userId: user.id, delta: MOVIE_EXPORT_COST * 2, reason: 'promo' },
+    });
+    const first = await readyMovie(user);
+    const second = await readyMovie(user);
+    expect((await exportMovie(user, first)).statusCode).toBe(202);
+
+    const res = await exportMovie(user, second);
+
+    expect(res.statusCode).toBe(409);
+    // 선언되지 않은 키는 직렬화에서 지워진다 — `movieId` 는 계약의 409 스키마에 있어야 앱에 닿는다.
+    expect(res.json().error).toMatchObject({ code: 'GENERATION_IN_PROGRESS', movieId: first });
+    expect(await balanceOf(user)).toBe(MOVIE_EXPORT_COST);
+    expect((await getMovie(user, second)).json().data.status).toBe('draft');
+  });
+
+  it('동시에 두 무비를 보내도 하나만 생성된다', async () => {
+    const user = await h.createUser();
+    await h.prisma.creditLedger.create({
+      data: { userId: user.id, delta: MOVIE_EXPORT_COST * 2, reason: 'promo' },
+    });
+    const [a, b] = [await readyMovie(user), await readyMovie(user)];
+
+    const results = await Promise.all([exportMovie(user, a), exportMovie(user, b)]);
+
+    expect(results.map((res) => res.statusCode).sort()).toEqual([202, 409]);
+    expect(await h.prisma.editJob.count({ where: { userId: user.id } })).toBe(1);
+  });
+
+  it.each(['done', 'failed', 'canceled'])('앞선 작업이 %s 이면 다음 무비를 만들 수 있다', async (status) => {
+    const user = await h.createUser();
+    await h.prisma.creditLedger.create({
+      data: { userId: user.id, delta: MOVIE_EXPORT_COST * 2, reason: 'promo' },
+    });
+    const first = await readyMovie(user);
+    const second = await readyMovie(user);
+    const jobId = (await exportMovie(user, first)).json().data.jobId as string;
+    await h.prisma.editJob.update({ where: { id: jobId }, data: { status } });
+
+    expect((await exportMovie(user, second)).statusCode).toBe(202);
+  });
+
+  it('다른 사용자의 생성은 막지 않는다', async () => {
+    const [user, other] = [await h.createUser(), await h.createUser()];
+    for (const owner of [user, other]) {
+      await h.prisma.creditLedger.create({
+        data: { userId: owner.id, delta: MOVIE_EXPORT_COST, reason: 'promo' },
+      });
+    }
+    expect((await exportMovie(other, await readyMovie(other))).statusCode).toBe(202);
+
+    expect((await exportMovie(user, await readyMovie(user))).statusCode).toBe(202);
+  });
+
+  it('무비 없이 POST /edit-jobs 로 만든 작업이 진행 중이면 movieId 는 null 이다', async () => {
+    const user = await h.createUser();
+    await h.prisma.creditLedger.create({
+      data: { userId: user.id, delta: MOVIE_EXPORT_COST * 2, reason: 'promo' },
+    });
+    const snapId = await createSnap(user);
+    const job = await h.app.inject({
+      method: 'POST',
+      url: '/edit-jobs',
+      headers: user.auth,
+      payload: {
+        clips: [{ videoId: snapId, startMs: 0, endMs: 3000 }],
+        stylePreset: '일상',
+        outputProfile: 'short_vertical',
+        fitMode: 'contain',
+      },
+    });
+    expect(job.statusCode).toBe(202);
+
+    const res = await exportMovie(user, await readyMovie(user));
+
+    expect(res.statusCode).toBe(409);
+    expect(res.json().error).toMatchObject({ code: 'GENERATION_IN_PROGRESS', movieId: null });
+  });
+});
+
 describe('생성이 끝난 뒤의 무비 상태', () => {
   /**
    * 워커는 무비를 모른다 — 편집 작업과 결과물 영상만 갱신한다. 그래서 무비 상태는 읽는

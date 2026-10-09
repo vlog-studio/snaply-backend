@@ -575,6 +575,15 @@ export function getMovieById(id: string): Movie | undefined {
   return useMovieStore.getState().movies.find((movie) => movie.id === id);
 }
 
+/**
+ * Non-reactive read of the movies a job owns right now (`generating`), for the
+ * compose flow's call-time check that one run per account is going at a time
+ * (MOV-11). The rule is the feature's; this only answers which movies are running.
+ */
+export function getGeneratingMovies(): Movie[] {
+  return useMovieStore.getState().movies.filter((movie) => movie.status === 'generating');
+}
+
 /** Non-reactive reads and writes for the sync worker's drain loop. */
 export function getMovieOutbox(): {
   pending: Record<string, PendingWrite>;
