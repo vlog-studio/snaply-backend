@@ -76,6 +76,14 @@ aws secretsmanager put-secret-value --profile dweax-snaply --secret-id dweax/ser
 
 - **넣는 키**: [`env-spec.ts`](../apps/api/src/env-spec.ts) 에서 `origin` 이 `local` 이 아닌 것 중 쓰는 것과
   `POSTGRES_PASSWORD`(접속 URL 에 들어가므로 영숫자만). 목록은 요청서 4장.
+- **`OPENAI_API_KEY` 는 로컬 개발(`apps/api/.env`)과 다른 키다.** 한쪽이 새거나 폐기돼도 다른 쪽이 살아 있게 한다. 한쪽이 새면
+  그쪽 키만 바꾼다 — 로컬을 바꿔도 된다. 둘이 다른지는 값을 꺼내지 않고 해시로 본다(저장소 루트에서, `SAME`/`DIFFERENT` 만 나온다):
+
+  ```bash
+  [ "$(aws secretsmanager get-secret-value --profile dweax-snaply --secret-id dweax/service/snaply/env --query SecretString --output text | jq -r .OPENAI_API_KEY | shasum)" = "$(grep '^OPENAI_API_KEY=' apps/api/.env | cut -d= -f2- | shasum)" ] && echo SAME || echo DIFFERENT
+  ```
+
+  서버 쪽이 비어 있어도 `DIFFERENT` 다 — 빈 키면 `analysis-worker` 가 기동 단계에서 종료한다(§6).
 - **넣지 않는 키**: compose 가 정한다 — `DATABASE_URL` · `DIRECT_URL` · `REDIS_URL` · `NODE_ENV` · `API_PORT` ·
   `TRUST_PROXY`. S3 키 · `S3_ENDPOINT` · `S3_PUBLIC_ENDPOINT` · `CLOUDFRONT_DOMAIN` 은 넣어도 ""로 덮인다 — 이 서버는
   인스턴스 역할로만 S3 에 붙는다.
