@@ -39,8 +39,7 @@ src/
     ├── ui/
     ├── lib/
     ├── config/
-    ├── routes/
-    └── assets/
+    └── routes/
 ```
 
 `src/app` and `src/_app` are separate because Expo Router interprets ordinary files under `src/app` as routes. Keep only routes and Router-special files such as `_layout.tsx` under `src/app`. Put providers and global initialization in `_app`, and screen implementations in `pages`. See [Expo Router integration](../frameworks/expo-router.md) for details.
@@ -123,7 +122,8 @@ Shared code can be explained without knowing a specific product use case.
 - `lib`: focused independent libraries for concerns such as dates, colors, or storage
 - `config`: environment variables, app-wide configuration, and global feature flags
 - `routes`: href builders for targets more than one screen navigates to
-- `assets`: runtime assets reused across slices
+
+Images and fonts are not in `shared`: they live in the root `assets` directory and are imported through `@/assets/*` ([Expo Router integration](../frameworks/expo-router.md#asset-placement)).
 
 `shared` is not a dumping ground: the broad names the [naming rules](../conventions/module-boundaries.md#naming-rules) forbid are forbidden here too. Use focused responsibilities such as `shared/lib/datetime` or `shared/lib/secure-storage`.
 

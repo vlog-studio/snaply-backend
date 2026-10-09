@@ -2627,3 +2627,10 @@ env-spec 부터). `POSTGRES_HOST_PORT` 처럼 `origin: 'local'` 로 선언하고
 
 오너가 권장안을 골랐다. [writing-unit-tests.md](../apps/mobile/docs/workflows/writing-unit-tests.md)가 리터럴과 `\uXXXX` 이스케이프를 둘 다 허용한다.
 편집 도구가 리터럴로 되써 규칙이 지켜지지 않았다(46개 파일). 스타일을 바꾸려고 파일을 변환하지 않는다.
+
+## 2026-10-10 (이어서) — 모바일 에셋은 루트 assets 에 둔다(backlog H-7 닫음)
+
+오너가 권장안을 골랐다. 규칙은 "여러 slice 가 쓰면 `shared/assets`, 한 slice 만 쓰면 그 근처"였지만 `src/shared/assets` 는 없고 화면이 그리는
+브랜드 글리프도 루트 `apps/mobile/assets/images` 에 있었다. 지금 구조를 규칙으로 적었다 — 이미지와 폰트는 모두 루트 `assets` 에 두고
+`@/assets/*` 로 불러온다([expo-router.md](../apps/mobile/docs/frameworks/expo-router.md) §Asset placement,
+[feature-sliced-design.md](../apps/mobile/docs/architecture/feature-sliced-design.md)의 `shared` 트리에서 `assets` 를 뺐다). 파일은 옮기지 않았다.

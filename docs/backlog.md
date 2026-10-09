@@ -839,16 +839,6 @@ C 문단이 사실상 권장이다.
 
 **완료 조건**: 지금 프로필을 기본으로 바꾸거나 두 프로필을 함께 적는다(구형 장비가 더는 없으면 구형 절을 걷는다).
 
-### H-7. 모바일 런타임 에셋의 위치 규칙
-
-[expo-router.md](../apps/mobile/docs/frameworks/expo-router.md)와 [feature-sliced-design.md](../apps/mobile/docs/architecture/feature-sliced-design.md)는
-"여러 slice 가 쓰면 `shared/assets`, 한 slice 만 쓰면 그 근처"라고 하는데 `src/shared/assets` 는 없고 화면 이미지가 루트
-`apps/mobile/assets/images`(`@/assets/*` 별칭)에 있다 — 로그인 화면 하나만 쓰는 `brand-glyph-white.png` 도 그렇다.
-
-**선택지**: (a) 루트 `assets` 를 규칙에 반영한다(앱 아이콘 · 스플래시처럼 네이티브가 읽는 파일과 같은 곳) (b) 파일을 규칙대로 옮긴다.
-
-**완료 조건**: 두 문서와 실제 위치가 같다.
-
 ### H-8. `runOnJS` 와 `scheduleOnRN`
 
 [animations-and-gestures.md](../apps/mobile/docs/frameworks/animations-and-gestures.md)는 UI 스레드에서 JS 로 넘길 때 `runOnJS` 를
@@ -994,3 +984,4 @@ C 문단이 사실상 권장이다.
 - **H-2** 결정이 끝난 결정 문서의 제목(결정을 말하는 제목으로) — 2026-10-10 → progress 2026-10-10 "결정이 끝난 결정 문서의 제목을 바꾼다"
 - **H-4** 테스트의 한국어 문자열 이스케이프 관례(리터럴 · 이스케이프 둘 다 허용) — 2026-10-10 → progress 2026-10-10 "테스트의 한국어는 리터럴도 된다"
 - **H-5** 배포 문서 두 개를 합칠지 — 2026-10-09 사내 서버를 접으며 `docs/deployment.md` 가 보관돼 [deployment-aws.md](./deployment-aws.md) 하나가 됐다 → progress 2026-10-09 "사내 서버를 접고 배포 대상을 AWS 하나로"
+- **H-7** 모바일 런타임 에셋의 위치 규칙(이미지 · 폰트는 루트 `assets`, `@/assets/*`) — 2026-10-10 → progress 2026-10-10 "모바일 에셋은 루트 assets 에 둔다"
