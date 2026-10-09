@@ -2622,3 +2622,8 @@ env-spec 부터). `POSTGRES_HOST_PORT` 처럼 `origin: 'local'` 로 선언하고
 오너가 권장안을 골랐다. "결정 요청 —"으로 시작하던 네 문서(`snap-retention-period` · `local-copy-after-upload` · `movie-cleanup-after-export` ·
 `movie-export-policy`)와 구독을 들인 것처럼 읽히던 `storage-and-subscription-policy` 의 제목을 결정을 말하는 제목으로 바꿨다. 옛 제목을 인용하거나
 앵커로 가리키는 곳은 없었고, [decisions/README.md](./decisions/README.md)는 파일 이름과 요약으로 적혀 있어 그대로 맞다.
+
+## 2026-10-10 (이어서) — 테스트의 한국어는 리터럴도 된다(backlog H-4 닫음)
+
+오너가 권장안을 골랐다. [writing-unit-tests.md](../apps/mobile/docs/workflows/writing-unit-tests.md)가 리터럴과 `\uXXXX` 이스케이프를 둘 다 허용한다.
+편집 도구가 리터럴로 되써 규칙이 지켜지지 않았다(46개 파일). 스타일을 바꾸려고 파일을 변환하지 않는다.

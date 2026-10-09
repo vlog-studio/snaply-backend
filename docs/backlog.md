@@ -831,16 +831,6 @@ C 문단이 사실상 권장이다.
 
 **완료 조건**: 고른 형식으로 문서와 인덱스의 표 위치를 맞춘다. 요금제(A-2) · A-1 과 같은 자리에서 본다.
 
-### H-4. 테스트의 한국어 문자열 이스케이프 관례
-
-[writing-unit-tests.md](../apps/mobile/docs/workflows/writing-unit-tests.md)는 테스트 안의 한국어를 `\uXXXX` 이스케이프로 쓰는 것이
-관례라고 하는데, 모바일 테스트 172개 중 46개 파일이 코드(주석 제외)에 한글 리터럴을 그대로 쓴다(예: `me-notifications-page.test.tsx`,
-`client.test.ts`). 관례를 둔 이유(편집 도구가 이스케이프를 풀어 쓰는 문제)가 지금도 유효한지 먼저 본다.
-
-**선택지**: (a) 규칙을 "권장"으로 완화하고 리터럴을 허용한다 (b) 46개 파일을 일괄 변환해 규칙을 지킨다.
-
-**완료 조건**: writing-unit-tests.md 와 실제 테스트가 같은 말을 한다.
-
 ### H-6. 모바일 로컬 개발 문서의 환경 프로필
 
 [local-development-and-testing.md](../apps/mobile/docs/workflows/local-development-and-testing.md)의 명령 예시가 구형 Intel Mac 기준이다
@@ -1002,4 +992,5 @@ C 문단이 사실상 권장이다.
 - **G** 낡은 코드 주석 · 설명(배포 잡 머리말 · 분석 동의 철회 설명 · `AdReward.status` · Redis 머리말 · `media-cleanup.mjs` · 만료 예고 시각 · 앱의 딥링크 처리 · `.prettierignore`) — 2026-10-09 → progress 2026-10-09 "낡은 코드 주석 · 설명을 고친다"
 - **H-1** UX 문구 규칙의 범위(금지어는 버튼 · 질문 · 컨트롤 라벨에만, `카메라 닫기`, 템플릿 힌트의 `장면` 허용) — 2026-10-10 → progress 2026-10-10 "UX 문구 규칙의 범위를 좁힌다"
 - **H-2** 결정이 끝난 결정 문서의 제목(결정을 말하는 제목으로) — 2026-10-10 → progress 2026-10-10 "결정이 끝난 결정 문서의 제목을 바꾼다"
+- **H-4** 테스트의 한국어 문자열 이스케이프 관례(리터럴 · 이스케이프 둘 다 허용) — 2026-10-10 → progress 2026-10-10 "테스트의 한국어는 리터럴도 된다"
 - **H-5** 배포 문서 두 개를 합칠지 — 2026-10-09 사내 서버를 접으며 `docs/deployment.md` 가 보관돼 [deployment-aws.md](./deployment-aws.md) 하나가 됐다 → progress 2026-10-09 "사내 서버를 접고 배포 대상을 AWS 하나로"

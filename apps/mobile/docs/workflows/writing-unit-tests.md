@@ -81,13 +81,13 @@ Co-location keeps FSD ownership explicit and lets a slice move as one unit. A te
 - **Write regression tests with bug fixes.** When feasible, reproduce the bug with a failing test first, then make the smallest behavior change that turns it green.
 - **Protect async boundaries explicitly.** For mutations and long-lived effects, consider duplicate invocation, cancellation/unmount, stale responses, cleanup, and cache invalidation instead of testing only the successful first request.
 - **Table-driven cases.** Use `it.each` for a family of inputs that exercise the same rule (supported vs. fallback values, each variant of an enum). This is the established style — follow it instead of copy-pasting near-identical `it` blocks.
-- **Korean strings as escapes.** Assertions against Korean user-facing copy are written with `\uXXXX` escape sequences so the source stays ASCII-only and diffs stay stable. Match the existing tests:
+- **Korean strings: literals or escapes.** Assertions against Korean user-facing copy may be written as plain literals or as `\uXXXX` escapes — the suite holds both, and both read the same to Jest and TypeScript. Escapes used to be the rule, to keep sources ASCII-only, but editing tools routinely write the literal back, so the rule could not hold; do not convert a file from one style to the other just to switch. When an escape is used, put the readable text in a trailing comment:
 
   ```ts
   const buttonTitle = '\uCD2C\uC601 \uC2DC\uC791'; // 촬영 시작
   ```
 
-  Prefer asserting a message the module owns over re-typing long strings; when a literal is unavoidable, escape it.
+  Either way, prefer asserting a message the module owns over re-typing long strings.
 - **Reset shared state.** Call `jest.clearAllMocks()` in `beforeEach`, and reset module-level singletons (Zustand stores, in-memory registries) between tests so ordering never matters.
 
 ## Patterns by module kind
