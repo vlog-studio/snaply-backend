@@ -2667,3 +2667,10 @@ CI(`.github/workflows/ci.yml`)가 문서만 바꾼 PR 과 `main` push 에도 네
 인덱스에서는 "결정 대기" 표에 있었다. 상태는 그대로 두고 결정 기록 표를 새로 만들어 잠정 결정 A(예외 없음, 2026-09-15)와 기각 이유를 채웠다 —
 결정자는 커밋에도 남지 않아 "기록 없음"으로 적었다. [decisions/README.md](./decisions/README.md)에서는 "결정 완료" 표로 옮기고 "잠정 · 다음 회의에서
 C 부터"라고 밝혔다. 다시 볼 안건은 그대로 backlog A-1 에 있다.
+
+## 2026-10-10 (이어서) — 모바일 로컬 개발 문서를 지금 Mac 에 맞춘다(backlog H-6 닫음)
+
+[local-development-and-testing.md](../apps/mobile/docs/workflows/local-development-and-testing.md)의 명령이 구형 Intel Mac(Xcode 16.4 · `iPhone 16` ·
+AVD `Pixel_API_35` · 캐시의 Expo Go)을 기준으로 했다. 지금 작업하는 Mac(Xcode 27 · `iPhone 17` · 손으로 만든 AVD `snaply_api35` · Expo Go 를
+api.expo.dev 에서 받는다)을 기본으로 바꾸고, 두 프로필을 표로 나란히 적었다. 구형 장비가 아직 쓰이는지 알 수 없어 구형 절은 걷지 않았다.
+Expo Go 를 받는 명령은 `https://api.expo.dev/v2/versions` 의 응답(`sdkVersions["57.0.0"].iosClientUrl` → `Expo-Go-57.0.9.tar.gz`)으로 확인했다.
