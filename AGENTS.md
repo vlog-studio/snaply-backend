@@ -60,6 +60,7 @@
 | 새 환경변수 | [`apps/api/src/env-spec.ts`](apps/api/src/env-spec.ts) 선언 + [`.env.example`](.env.example) 예시 |
 | 명령·로컬 인프라·CI 검사 (루트 `package.json` scripts · `scripts/` · `docker-compose.dev.yml`·`docker-compose.yml` · `.github/workflows/ci.yml`) | [`ONBOARDING.md`](ONBOARDING.md) — §3 절차 · §4 명령 표 · §5 트러블슈팅 |
 | 서버 배포 구성 (`docker-compose.aws.yml` · `.github/workflows/deploy.yml` · `deploy/`) | [`docs/deployment-aws.md`](docs/deployment-aws.md) |
+| 새 모듈 (모바일 feature·entity·page, API 라우트·서비스, DB 모델, 워커·배치) | [`docs/team.md`](docs/team.md) §1 표의 해당 트랙 칸 |
 | 백로그 항목을 끝냄 | [`docs/backlog.md`](docs/backlog.md)에서 "닫은 항목"으로 옮기고 [`docs/progress.md`](docs/progress.md)에 검증 결과를 기록 |
 
 - 미결 작업은 [`docs/backlog.md`](docs/backlog.md)에만 기록한다. 결정 문서·진행 기록에 미결

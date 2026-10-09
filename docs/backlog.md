@@ -476,17 +476,6 @@ geofence 쿨다운 판정용 이력이 무한히 쌓인다. 쿨다운은 30분 �
   그보다 엄격한 필드 단위 검증이 필요한 응답이 있는지는 정해지지 않았다. **완료 조건**: 대상 응답(없음 포함)을
   정하고 그 문서의 정책 절에 반영한다
 
-### B-7. 트랙 소유 표에 새 모듈 배정
-
-[team.md](./team.md) §1 의 수직 도메인 분담 표에 그 뒤 생긴 모듈이 없다 — DB 모델
-`Movie`·`MovieClip`·`MovieDraft`·`VideoSignals`·`UserConsent`, API 라우트 `movies`·`movie-drafts`·`video-analyses`와
-표에 파일명으로 없는 `billing-webhook`·`sns-webhook`·`health`(`apps/api/src/routes/`), 알림 발송 워커
-`apps/api/src/notification-worker.ts`, 모바일
-`features/{finish-movie,rename-movie,reconcile-snaps,manage-recordings,restore-snap,save-snap-to-album,analysis-consent}`·
-`entities/{capture-session,session}`. 누가 맡을지는 두 트랙이 합의해야 한다.
-
-**완료 조건**: 각 모듈의 담당을 합의해 team.md §1 표에 적는다.
-
 ### B-8. AWS 공모전 서버 가동 ★
 
 **2026-10-08**: 사내 공모전 테스트용으로 회사 AWS 계정에 서버가 생겼다 — 사내 위키 "snaply — AWS 구성 · 인프라 접속"
@@ -1056,6 +1045,7 @@ C 문단이 사실상 권장이다.
 - **B-5** API 계약 스키마 우선 1~5단계 — 2026-09-05 → progress 2026-09-05 "API 계약을 스키마 우선으로 — Zod 계약 패키지" · [api-contract-schema-first.md](./decisions/api-contract-schema-first.md)(남은 다듬기는 B-5)
 - **B-6** 알림 설정의 서버 반영(서버) — 2026-09-15 → progress 2026-09-15 "알림 설정이 서버에 닿는다"
 - **B-6** 앱의 알림 설정을 서버에 쓰기(서버가 원천 · 위치 · 무비 기본 꺼짐) — 2026-10-07 → progress 2026-10-07 "알림 설정은 계정에 있다"
+- **B-7** 트랙 소유 표에 새 모듈 배정 — 2026-10-09, 만든 사람 · 고쳐 온 사람의 커밋 이력으로 트랙과 담당을 정해 [team.md](./team.md) §1 표에 모두 넣었다 → progress 2026-10-09 "문서 전수 정리 · constitution 확정 · 팀 분담"
 - **C-7** 회사 OpenAI API 키 발급 — 2026-09-29 → progress 2026-09-29 "실제 모델로 스냅 분석 · 템플릿 추천 첫 실행"(남은 확인 중 사용 한도 · rate limit 은 A-3, 운영 키 분리는 B-8 로 옮김)
 - **D-4** 개발 버킷 익명 읽기 정책 — D-3 에 합쳤다(운영의 검증 파일 경로 익명 읽기)
 - **E-1** 만료 시각을 모르는 인스타 토큰의 코드 대응 — 2026-09-15 → progress 2026-09-15 "만료 시각을 모르는 SNS 연동"(재연동은 G)
