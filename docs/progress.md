@@ -2695,3 +2695,8 @@ Expo Go 를 받는 명령은 `https://api.expo.dev/v2/versions` 의 응답(`sdkV
 오너가 권장안을 골랐다. [guardrails.md](../apps/mobile/docs/ux/guardrails.md)는 그대로 둔다. 목표 문장은 [philosophy.md](../apps/mobile/docs/ux/philosophy.md)를
 원천으로 두고 [principle-priority.md](../apps/mobile/docs/ux/principle-priority.md)에만 있던 조건("능력 · 통제를 잃지 않고")을 더했으며,
 principle-priority 는 그 문장을 그대로 인용한다. [ux/README.md](../apps/mobile/docs/ux/README.md)의 라우팅 표는 바꿀 것이 없었다.
+
+## 2026-10-10 (이어서) — A-1 ② 의 통과를 유지한다(backlog H-14 닫음)
+
+2026-10-09 정리에서 A-1 "서버 전환 실기기 검증"의 ② "편집이 PATCH 된다"를 2026-10-01 실기기 기록으로 통과 처리한 것을 오너가 그대로 두기로 했다 —
+② 는 무비 편집이 서버에 PATCH 로 닿는다는 뜻이다. 2026-10-09 휴대폰에서 바꾼 스타일이 결과물에 반영된 것도 같은 경로다.
