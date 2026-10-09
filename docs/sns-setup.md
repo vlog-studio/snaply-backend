@@ -73,8 +73,8 @@ curl https://<B>.trycloudflare.com/snaply-dev/<some-key>        # 200 (익명 �
 터널 주소가 바뀌면 위 네 값과 각 플랫폼 콘솔의 리디렉션 URI·URL prefix 검증을 **다시 등록**해야
 한다(임시 주소의 성질과 주의사항은 [local-tunnel.md](./local-tunnel.md) §4). 고정 주소는
 [local-tunnel.md](./local-tunnel.md) §6 의 `apps/api/scripts/dev-tunnel.sh` 로 만든다 — SNS 용으로는 `api-dev.<도메인>`(API :3000)과
-`media-dev.<도메인>`(MinIO :9100) 두 호스트가 생기고, 스크립트가 `.env` 와 콘솔에 넣을 값을 출력한다. 출력에
-`S3_PUBLIC_ENDPOINT` 는 없으므로 `https://media-dev.<도메인>` 을 직접 넣는다.
+`media-dev.<도메인>`(MinIO :9100) 두 호스트가 생기고, 스크립트가 `.env` 와 콘솔에 넣을 값을 출력한다
+(`S3_PUBLIC_ENDPOINT=https://media-dev.<도메인>` 포함). 값이 내부 주소로 남으면 API 가 기동할 때 "SNS 실업로드 불가" 경고를 남긴다.
 
 ---
 

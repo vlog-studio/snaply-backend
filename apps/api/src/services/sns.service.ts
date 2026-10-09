@@ -269,24 +269,27 @@ function isUnreachableHost(hostname: string): boolean {
  *
  * **미설정만 보지 않는다.** `S3_PUBLIC_ENDPOINT=http://localhost:9200` 처럼 값이 있어도
  * 플랫폼이 도달하지 못하는 주소면 결과는 같으므로, 업로드 때와 같은 기준으로 판정한다.
+ *
+ * 받는 값은 **서명 URL 의 호스트**(`StorageConfig.presignOrigin`)다 — 플랫폼에 넘기는 것이 presigned GET
+ * 이라 CloudFront 주소(`publicBaseUrl`)가 공개여도 서명 호스트가 내부면 업로드는 400 이 된다(backlog E-21).
  */
-export function snsUploadReadiness(publicBaseUrl: string): string | null {
+export function snsUploadReadiness(presignOrigin: string): string | null {
   const platforms: SnsPlatform[] = ['instagram', 'tiktok'];
   if (platforms.every((p) => providerConfig(p).mock)) {
     return null; // 전부 mock 이면 실업로드 자체를 하지 않는다
   }
   let url: URL;
   try {
-    url = new URL(publicBaseUrl);
+    url = new URL(presignOrigin);
   } catch {
-    return `미디어 공개 URL(${publicBaseUrl || '미설정'})이 URL 형식이 아니다`;
+    return `서명 URL 의 호스트(${presignOrigin || '미설정'})가 URL 형식이 아니다`;
   }
   if (isUnreachableHost(url.hostname)) {
-    return `미디어 공개 URL 이 외부에서 도달할 수 없는 주소(${url.hostname})다`
-      + ' — S3_PUBLIC_ENDPOINT 또는 CLOUDFRONT_DOMAIN 을 공개 주소로 설정할 것';
+    return `서명 URL 의 호스트가 외부에서 도달할 수 없는 주소(${url.hostname})다`
+      + ' — S3_PUBLIC_ENDPOINT 를 공개 https 주소로 설정할 것(CLOUDFRONT_DOMAIN 은 서명 URL 을 바꾸지 않는다)';
   }
   if (url.protocol !== 'https:') {
-    return `미디어 공개 URL 이 https 가 아니다(${url.protocol.replace(':', '')})`
+    return `서명 URL 의 호스트가 https 가 아니다(${url.protocol.replace(':', '')})`
       + ' — 인스타·틱톡은 https 로만 내려받는다';
   }
   return null;
@@ -310,7 +313,7 @@ function assertPubliclyFetchable(videoUrl: string, platform: SnsPlatform): void 
   if (isUnreachableHost(url.hostname)) {
     throw AppError.badRequest(
       `영상이 외부에서 접근할 수 없는 주소(${url.hostname})에 있습니다. `
-        + 'SNS 업로드를 실검증하려면 CloudFront 등 공개 URL로 전환해야 합니다.',
+        + 'SNS 업로드를 실검증하려면 S3_PUBLIC_ENDPOINT 를 공개 https 주소로 설정해야 합니다.',
     );
   }
   if (url.protocol !== 'https:') {

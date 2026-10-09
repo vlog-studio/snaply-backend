@@ -135,9 +135,10 @@ export async function buildApp(
   initSns(config.sns);
   // SNS 는 우리가 준 URL 을 플랫폼이 직접 내려받는다. 도달할 수 없는 주소면 업로드를
   // 시도해야 비로소 400 이 나므로, 기동 시점에 한 줄 남겨 원인 추적을 앞당긴다(backlog E-2).
-  const snsBlocker = snsUploadReadiness(config.storage.publicBaseUrl);
+  // 판정 대상은 서명 URL 의 호스트다 — SNS 에 넘기는 것이 presigned GET 이다(backlog E-21).
+  const snsBlocker = snsUploadReadiness(config.storage.presignOrigin);
   if (snsBlocker) {
-    app.log.warn({ publicBaseUrl: config.storage.publicBaseUrl }, `SNS 실업로드 불가 — ${snsBlocker}`);
+    app.log.warn({ presignOrigin: config.storage.presignOrigin }, `SNS 실업로드 불가 — ${snsBlocker}`);
   }
   initBilling(config.billing);
   initSupabaseAdmin({ url: config.supabaseUrl, serviceRoleKey: config.supabaseServiceRoleKey });

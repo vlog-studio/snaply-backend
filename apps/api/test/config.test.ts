@@ -72,6 +72,47 @@ describe('S3 자격증명', () => {
   });
 });
 
+// SNS 는 우리가 서명한 다운로드 URL 을 플랫폼이 직접 내려받는다. 서명 호스트는 presignClient 의
+// endpoint(S3_PUBLIC_ENDPOINT → S3_ENDPOINT → AWS S3)이고, CloudFront 는 끼지 않는다(backlog E-21).
+describe('서명 URL 의 호스트(presignOrigin)', () => {
+  it('AWS 서버 — 엔드포인트가 비면 AWS S3 의 주소다', () => {
+    setEnv({
+      S3_ENDPOINT: '',
+      S3_PUBLIC_ENDPOINT: '',
+      AWS_ACCESS_KEY_ID: '',
+      AWS_SECRET_ACCESS_KEY: '',
+      S3_BUCKET_NAME: 'snaply-media',
+      AWS_REGION: 'ap-northeast-2',
+    });
+    expect(loadConfig().storage.presignOrigin).toBe(
+      'https://snaply-media.s3.ap-northeast-2.amazonaws.com',
+    );
+  });
+
+  it('공개 엔드포인트가 있으면 그것이다', () => {
+    setEnv({
+      S3_ENDPOINT: 'http://localhost:9100',
+      S3_PUBLIC_ENDPOINT: 'https://media-dev.snaply.app/',
+      AWS_ACCESS_KEY_ID: 'minioadmin',
+      AWS_SECRET_ACCESS_KEY: 'minioadmin123',
+    });
+    expect(loadConfig().storage.presignOrigin).toBe('https://media-dev.snaply.app');
+  });
+
+  it('CloudFront 만 공개 주소이면 서명 호스트는 여전히 내부 엔드포인트다', () => {
+    setEnv({
+      S3_ENDPOINT: 'http://localhost:9100',
+      S3_PUBLIC_ENDPOINT: '',
+      CLOUDFRONT_DOMAIN: 'https://media-dev.snaply.app/snaply-dev',
+      AWS_ACCESS_KEY_ID: 'minioadmin',
+      AWS_SECRET_ACCESS_KEY: 'minioadmin123',
+    });
+    const { storage } = loadConfig();
+    expect(storage.publicBaseUrl).toBe('https://media-dev.snaply.app/snaply-dev');
+    expect(storage.presignOrigin).toBe('http://localhost:9100');
+  });
+});
+
 describe('TRUST_PROXY', () => {
   it('없거나 비면 아무 프록시도 믿지 않는다', () => {
     setEnv({ TRUST_PROXY: '' });

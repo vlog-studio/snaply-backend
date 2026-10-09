@@ -128,8 +128,7 @@ Cloudflare에 등록된 도메인이 있으면 named tunnel로 고정 서브도�
 ./apps/api/scripts/dev-tunnel.sh <도메인> --run
 ```
 
-스크립트는 `apps/api/.env`에 넣을 값과 콘솔에 등록할 값을 출력하지만, 출력에 `S3_PUBLIC_ENDPOINT`는 없다 —
-`S3_PUBLIC_ENDPOINT=https://media-dev.<도메인>`을 직접 넣는다.
+스크립트는 `apps/api/.env`에 넣을 값(`S3_PUBLIC_ENDPOINT=https://media-dev.<도메인>` 포함)과 콘솔에 등록할 값을 출력한다.
 
 운영용 고정 도메인은 별개 작업이다 — [backlog.md](./backlog.md) D-1. 로컬이 아니라 배포된 서버로 외부
 콜백을 받아도 되면, AWS 공모전 서버는 공개 HTTPS 도메인을 가진다 — [deployment-aws.md](./deployment-aws.md) §0.

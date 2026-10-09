@@ -2595,3 +2595,17 @@ env-spec 부터). `POSTGRES_HOST_PORT` 처럼 `origin: 'local'` 로 선언하고
   시작해 첫 시도 실패(작업 `queued` · 0, 환급 없음) 뒤 원본을 되돌리자 5초 뒤 재시도가 `done`(원장은 예약 -100 하나), 원본을 지운 채
   두면 0 · 5 · 10초 뒤 세 번 시도하고 마지막에만 `failed`(INTERNAL) · 환급 1회. 워커 220건 · `npm test -w apps/api` 41개 파일 626건 ·
   `npm run verify:mobile` 176개 스위트 1412건 통과(lint 경고 1건은 원래 있던 것). 기기 화면은 보지 않았다.
+
+## 2026-10-10 (이어서) — SNS 업로드 준비 경고가 서명 호스트를 본다(backlog E-21 닫음)
+
+인스타 · 틱톡에 넘기는 영상 URL 은 결과물의 presigned GET 이고, 서명 호스트는 `S3_PUBLIC_ENDPOINT` → `S3_ENDPOINT` → AWS S3 순이다
+(`apps/api/src/services/storage.service.ts` `presignClient`). 그런데 기동 때 외부 도달 여부를 경고하는 `snsUploadReadiness` 는 CloudFront 를 먼저 보는
+`publicBaseUrl` 을 판정해, `CLOUDFRONT_DOMAIN` 만 터널 주소이고 `S3_PUBLIC_ENDPOINT` 가 localhost 면 경고 없이 업로드가 400 이 됐다.
+
+- **고친 것** — `StorageConfig.presignOrigin` 을 `presignClient` 와 같은 순서로 정하고(`apps/api/src/config.ts`), 기동 경고가 그 값을 본다
+  (`apps/api/src/app.ts`). 경고와 업로드 거절(400) 문구가 고칠 값으로 `CLOUDFRONT_DOMAIN` 대신 `S3_PUBLIC_ENDPOINT` 를 말한다. 터널 스크립트
+  (`apps/api/scripts/dev-tunnel.sh`)가 `.env` 에 넣을 값으로 `S3_PUBLIC_ENDPOINT=https://media-dev.<도메인>` 도 출력하고, 그 값을 손으로 넣으라던
+  [local-tunnel.md](./local-tunnel.md) §6 · [sns-setup.md](./sns-setup.md) §1 을 고쳤다. AWS 서버는 엔드포인트가 비어 서명 호스트가 AWS S3 라 경고가 없다.
+- **검증**: `config.test.ts` 에 서명 호스트 세 경우(AWS S3 · 공개 엔드포인트 · CloudFront 만 공개 — 수정 전 셋 다 실패)를 더했다. `npm test -w apps/api` 41개 파일 629건 ·
+  typecheck · lint 통과.
+- **남은 것**: 터널로 실제 키 업로드를 다시 돌리는 확인은 backlog F 로 옮겼다(C-2 · D-3 와 같은 자리에서).

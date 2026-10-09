@@ -85,6 +85,7 @@ cat <<INFO
 API_BASE_URL=https://${API_HOST}
 INSTAGRAM_REDIRECT_URI=https://${API_HOST}/sns/instagram/callback
 TIKTOK_REDIRECT_URI=https://${API_HOST}/sns/tiktok/callback
+S3_PUBLIC_ENDPOINT=https://${MEDIA_HOST}
 CLOUDFRONT_DOMAIN=https://${MEDIA_HOST}/snaply-dev
 
 ── 플랫폼 콘솔에 등록할 값 ────────────────────────────────
