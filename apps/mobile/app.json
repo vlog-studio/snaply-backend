@@ -128,6 +128,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "owner": "dayomi",
+    "extra": {
+      "eas": {
+        "projectId": "880090ab-2b0a-4be3-b0ca-5854914bd22b"
+      }
     }
   }
 }

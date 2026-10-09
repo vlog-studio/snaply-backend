@@ -135,6 +135,14 @@ Release builds need more Gradle daemon memory than the template default (`-Xmx20
 
 When Expo Go is insufficient, build a simulator/emulator dev client in the cloud (Expo's servers have Xcode 26), install the result on the local device, and connect Metro with `npx expo start --dev-client`. This exercises all native modules regardless of the local Xcode version. It requires a free Expo account; `eas login` must be performed by the user (account authentication).
 
+### Tester build against the AWS contest server — `tester` profile
+
+`eas.json` defines one profile, `tester`: an internal-distribution Android APK whose `EXPO_PUBLIC_API_BASE_URL` is `https://snaply-api.dweaxai.com`. Build it with `npx --yes eas-cli@24.12.1 build --profile tester --platform android` from this directory; the result is an install link that any Android tester can open. The Supabase client values are not in `eas.json` (the repository is public) but in the EAS project's `preview` environment variables, and they must name the same Supabase project as the server. Setup, credits, and the server side are in the root [`docs/deployment-aws.md`](../../../../docs/deployment-aws.md) §8.
+
+- EAS signs the APK with its own keystore, so it does not install over a local debug build (`INSTALL_FAILED_UPDATE_INCOMPATIBLE`); uninstall first.
+- `eas init` (or any EAS command that links the project) rewrites `app.json` with the resolved config — plugin-derived permissions and `extra`. Keep only `owner` and `extra.eas.projectId` and revert the rest; the config plugins stay the source of truth.
+- Without a device, an emulator is enough to check upload → edit → playback: `sdkmanager` the `google_apis_playstore` arm64 image, create an AVD, `adb install` the APK, and push test clips into `/sdcard/DCIM/Camera` (create the folder first) for the `가져오기` flow. The emulator's back camera is `emulated`, so capture also runs, but camera quality and LTE uploads still need a physical device.
+
 ## Notes
 
 - `ios/` and `android/` are git-ignored (managed workflow). A `prebuild` may generate `ios/`; do not commit it.
