@@ -5,11 +5,11 @@
 **범위**: API·AI 워커·compose가 공유하는 **서버 환경변수**의 위치, 운영 주입 방식, 변수 목록의 관리 원칙을 기록한다.
 **원천**: 서버 환경변수의 위치·주입 경로·목록 관리 방식은 이 문서가 원천이다. 모바일의
 `EXPO_PUBLIC_*`는 `apps/mobile/.env`와 `apps/mobile/.env.example`이 별도로 관리한다.
-**후속 작업의 원천**: [backlog.md](../backlog.md) B-1(배포 플랫폼·시크릿 연결)
+**후속 작업의 원천**: [backlog.md](../backlog.md) B-8(AWS 서버의 시크릿 연결)
 변수 하나하나의 목록은 [`apps/api/src/env-spec.ts`](../../apps/api/src/env-spec.ts),
 사람이 복사해 쓰는 표현은 [`.env.example`](../../.env.example).
 
-관련: [ONBOARDING.md](../../ONBOARDING.md) §3-3 · [backlog.md](../backlog.md) B-1(배포 인프라)
+관련: [ONBOARDING.md](../../ONBOARDING.md) §3-3 · [backlog.md](../backlog.md) B-8(배포 인프라)
 
 ---
 

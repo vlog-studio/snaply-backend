@@ -3,7 +3,7 @@
 **작성일**: 2026-09-05
 **상태**: 미결 — 결정 대기. 고정 도메인 작업(D-1)은 어느 답이든 필요하므로 도메인 작업을 막지 않는다.
 **출처**: [meetings/2026-08-31-dev-sync.md](../meetings/2026-08-31-dev-sync.md) §1 "Web hook 연동하려면 도메인 필요함"
-**관련 문서**: [sns-setup.md](../sns-setup.md) §웹훅 · [specs/sns-sharing.md](../specs/sns-sharing.md) SNS-5~7 · [backlog.md](../backlog.md) D-1 · B-1 · C-1 · C-6 ·
+**관련 문서**: [sns-setup.md](../sns-setup.md) §웹훅 · [specs/sns-sharing.md](../specs/sns-sharing.md) SNS-5~7 · [backlog.md](../backlog.md) D-1 · B-8 · C-1 · C-6 ·
 착수 순서는 [README.md](README.md) §결정 대기
 
 ## 한 줄 요약
@@ -62,8 +62,9 @@
 
 ## 권장
 
-**B 를 지금, C 는 C-3(틱톡 직접 게시 승인) 이후 재검토.** 도메인 작업(사내 AWS 현황 파악 → 서브도메인 →
-인증서 → 배포 타깃)은 이 결정과 무관하게 바로 시작한다. D 는 기각.
+**B 를 지금, C 는 C-3(틱톡 직접 게시 승인) 이후 재검토.** 도메인·배포 타깃은 2026-10-08 에 채워졌다 —
+AWS 공모전 서버가 `https://snaply-api.dweaxai.com` 으로 바깥의 호출을 받는다(B-8). **다만 공모전이 끝나면
+내려가므로**, 계속 쓸 도메인은 이 결정과 무관하게 그 전에 정한다(D-1). D 는 기각.
 
 ## 결정 기록
 
