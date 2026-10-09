@@ -2683,3 +2683,9 @@ Expo Go 를 받는 명령은 `https://api.expo.dev/v2/versions` 의 응답(`sdkV
 `scheduleOnRN(fn, ...args)` 로 바꾸고, 문서에 규칙과 이유를 적었다. Gesture Handler 의 `.runOnJS(true)`(`extract-strip.tsx`)는 다른 API 라 그대로다.
 
 - **검증**: `npm run verify:mobile` 통과(176개 스위트 1412건, lint 경고 1건은 원래 있던 것). 기기에서는 보지 않았다 — 바텀 시트 닫기 · 컷 다듬기 · 추출 창 · 촬영 비행 애니메이션의 완료 콜백이 대상이다.
+
+## 2026-10-10 (이어서) — env-management 의 후속 연계를 배너로 옮긴다(backlog H-11 닫음)
+
+[decisions/env-management.md](./decisions/env-management.md)의 "후속 연계"는 작성 뒤에 덧붙인 결정(배포 플랫폼 = AWS 공모전 서버)인데 본문 절로 남아
+있었다([doc-conventions.md](./doc-conventions.md) §헤더: 후속 결정은 헤더 아래 배너). 헤더의 `> **후속 결정**(2026-10-08)` 배너로 압축하고 절을 지웠다.
+빈 값을 옮기지 않는 이유 같은 쓸모 있는 사실은 배너에 남겼고, 지운 절을 가리키는 링크는 없었다.
