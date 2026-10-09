@@ -26,6 +26,12 @@ export type EditJobState = {
    * arrive, and `editFailureMessage` reads an unknown one as `INTERNAL`.
    */
   errorCode?: string;
+  /**
+   * When the run ended, as the backend recorded it (epoch ms) — what a finished
+   * movie is dated by. Absent until the run ends, or when the stamp is missing
+   * or unreadable.
+   */
+  completedAt?: number;
 };
 
 const editJobSchema = z.object({
@@ -36,17 +42,20 @@ const editJobSchema = z.object({
   videoId: z.string(),
   errorMessage: z.string().nullable().optional(),
   errorCode: z.string().nullable().optional(),
+  completedAt: z.string().nullable().optional(),
 });
 
 function mapEditJob(dto: z.infer<typeof editJobSchema>): EditJobState {
   const known = ['queued', 'processing', 'done', 'failed', 'canceled'] as const;
   const status = known.find((value) => value === dto.status) ?? 'processing';
+  const completedAt = dto.completedAt ? Date.parse(dto.completedAt) : Number.NaN;
   return {
     status,
     progress: Math.min(100, Math.max(0, Math.round(dto.progress))),
     videoId: dto.videoId,
     ...(dto.errorMessage ? { errorMessage: dto.errorMessage } : null),
     ...(dto.errorCode ? { errorCode: dto.errorCode } : null),
+    ...(Number.isFinite(completedAt) ? { completedAt } : null),
   };
 }
 

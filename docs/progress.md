@@ -2517,3 +2517,15 @@ env-spec 부터). `POSTGRES_HOST_PORT` 처럼 `origin: 'local'` 로 선언하고
   백로그 목록의 7개 파일에 같은 표현을 쓰던 `use-sign-up-flow.ts` · `sign-up-provider.ts` 를 더했다.
 - `apps/mobile/.prettierignore` — 없는 대상(`src/shared/api/schema.d.ts` · `docs/api/openapi.json` · `docs/guides/**/*.html`)과 없는 스크립트를 가리키던 줄을 지웠다.
 - **검증**: `npm test -w apps/api` 41개 파일 624건 · API typecheck · `npm run verify:mobile`(175개 스위트 1398건, lint 경고 1건은 원래 있던 것) 통과.
+
+## 2026-10-09 (이어서) — 무비의 완성 시각은 서버가 기록한 작업 종료 시각이다(backlog E-26 닫음)
+
+다른 기기에서 8:20 에 끝난 무비가 늦게 켠 에뮬레이터에서 "오후 8:37 완성"으로 보였다 — 진행 중이던 작업을 이어받은 기기가 끝을 확인한 순간의
+`Date.now()` 를 `render.renderedAt` 으로 썼기 때문이다(`apps/mobile/src/features/compose-movie/model/use-generation-runner.ts` `finish`).
+백로그는 무비 계약에 시각을 더해야 한다고 적었지만, 앱이 끝을 확인하는 `GET /edit-jobs/{id}` 가 이미 `completedAt` 을 싣고 있어 계약은 그대로 두었다.
+
+- **고친 것** — `getEditJob` 이 `completedAt` 을 epoch ms 로 읽고(`api/get-edit-job.ts`, 없거나 읽을 수 없으면 뺀다), 러너가 그 값을 `renderedAt` 으로
+  쓴다. 서버가 시각을 주지 않았을 때만 지금 시각으로 떨어진다. 받아 온 `ready` 무비 중 작업 id 가 없는 것은 그대로 무비의 `updatedAt` 을 쓴다
+  (`entities/movie/lib/movie-sync.ts`). 기능 문서 [movie.md](../apps/mobile/docs/features/movie.md) Watch mode.
+- **검증**: 러너 테스트(서버의 종료 시각으로 날짜를 매긴다 — 수정 전 실패)와 `get-edit-job` 테스트(읽기 · 없을 때 빼기)를 더했다. `npm run verify:mobile` 통과
+  (175개 스위트 1403건, lint 경고 1건은 원래 있던 것). 기기에서는 보지 않았다 — 테스터 앱을 다시 빌드해 두 기기로 보면 된다.

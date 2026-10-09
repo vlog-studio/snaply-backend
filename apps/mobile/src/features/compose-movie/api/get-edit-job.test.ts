@@ -71,6 +71,22 @@ describe('getEditJob', () => {
     await expect(getEditJob('job-1')).resolves.toMatchObject({ errorMessage: reason });
   });
 
+  // A finished movie is dated by when the backend says the run ended.
+  it('reads the completion time as epoch milliseconds', async () => {
+    respondWith({ status: 'done', completedAt: '2026-10-09T11:20:00.000Z' });
+    await expect(getEditJob('job-1')).resolves.toMatchObject({
+      completedAt: Date.parse('2026-10-09T11:20:00.000Z'),
+    });
+  });
+
+  it.each([null, undefined, 'not a date'])(
+    'omits a completion time the server did not give (%s)',
+    async (completedAt) => {
+      respondWith({ completedAt });
+      await expect(getEditJob('job-1')).resolves.not.toHaveProperty('completedAt');
+    },
+  );
+
   it('omits the reason when the server sent none', async () => {
     respondWith({ errorMessage: null });
     await expect(getEditJob('job-1')).resolves.not.toHaveProperty('errorMessage');
