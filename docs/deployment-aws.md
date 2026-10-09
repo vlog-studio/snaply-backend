@@ -153,7 +153,8 @@ curl -s localhost:3000/health
 | 배포 잡이 Set up runner 에서 실패 | 작업 전 검사가 거부했다 — main 의 `deploy.yml` 이 아닌 작업이다 |
 | Write the secrets file 에서 실패 | 값에 작은따옴표 · 줄바꿈이 있거나 `POSTGRES_PASSWORD` 가 비었다(§2) |
 | `analysis-worker` 가 재시작을 반복 | `OPENAI_API_KEY` 가 없다(의도된 동작) |
-| 도메인이 502 · WebSocket 이 끊김 · 디스크 | 인프라 문서 8장 |
+| 도메인이 502 · 디스크 · presigned URL 의 `ExpiredToken` | 인프라 문서 8장 |
+| WebSocket 이 끊김 | 서버가 30초마다 ping 을 보내 ALB 유휴 제한(180초)을 넘기지 않는다(2026-10-09). 그래도 끊기면 앱이 다시 붙는다 — 인프라 문서 8장 |
 
 ## 7. 인스턴스를 교체하면
 

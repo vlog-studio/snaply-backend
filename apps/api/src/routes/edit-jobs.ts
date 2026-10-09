@@ -16,6 +16,10 @@ import {
   getEditJobOutputUrl,
 } from '../services/edit-job.service.js';
 
+// 진행률 WebSocket 의 프로토콜 ping 간격. 운영의 공용 ALB 는 180초 동안 오가는 데이터가 없으면 연결을
+// 끊는데(인프라 문서 §2), 편집은 단계 사이가 그보다 길 수 있다. 여유를 두고 그 1/6 로 잡는다.
+const WS_KEEPALIVE_INTERVAL_MS = 30_000;
+
 export async function editJobRoutes(app: FastifyInstance): Promise<void> {
   const routes = app.withTypeProvider<ZodTypeProvider>();
 
@@ -216,10 +220,20 @@ export async function editJobRoutes(app: FastifyInstance): Promise<void> {
 
       await sub.subscribe(channel);
 
+      // 운영의 ALB 는 180초 동안 오가는 데이터가 없으면 연결을 끊는다. 편집은 단계 사이가 그보다 길 수
+      // 있으므로 프로토콜 ping 을 주기적으로 보낸다 — 앱 쪽 메시지 계약에는 보이지 않는다.
+      const keepalive = setInterval(() => {
+        if (ws.readyState === ws.OPEN) {
+          ws.ping();
+        }
+      }, WS_KEEPALIVE_INTERVAL_MS);
+
       ws.on('close', () => {
+        clearInterval(keepalive);
         void cleanup();
       });
       ws.on('error', () => {
+        clearInterval(keepalive);
         void cleanup();
       });
     },
