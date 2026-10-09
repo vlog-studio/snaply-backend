@@ -2660,3 +2660,10 @@ CI(`.github/workflows/ci.yml`)가 문서만 바꾼 PR 과 `main` push 에도 네
 `push` · `pull_request` 에 `paths-ignore: ['docs/**', '**/*.md']` 를 두었다. 코드가 하나라도 섞이면 지금처럼 전부 돈다. `main` 에 브랜치 보호 ·
 필수 검사가 없어(2026-10-10 확인) 건너뛴 PR 의 머지가 막히지 않는다 — 나중에 필수 검사를 걸면 문서 PR 이 "대기"로 남지 않게 다시 봐야 한다.
 [ONBOARDING.md](../ONBOARDING.md) §3 의 CI 설명을 맞췄다.
+
+## 2026-10-10 (이어서) — 만료 예외 결정 문서에 결정 기록을 채운다(backlog H-3 닫음)
+
+오너가 권장안을 골랐다. [movie-snap-expiry-exemption.md](./decisions/movie-snap-expiry-exemption.md)는 상태가 `결정(잠정)` 인데 결정 기록이 없고
+인덱스에서는 "결정 대기" 표에 있었다. 상태는 그대로 두고 결정 기록 표를 새로 만들어 잠정 결정 A(예외 없음, 2026-09-15)와 기각 이유를 채웠다 —
+결정자는 커밋에도 남지 않아 "기록 없음"으로 적었다. [decisions/README.md](./decisions/README.md)에서는 "결정 완료" 표로 옮기고 "잠정 · 다음 회의에서
+C 부터"라고 밝혔다. 다시 볼 안건은 그대로 backlog A-1 에 있다.
