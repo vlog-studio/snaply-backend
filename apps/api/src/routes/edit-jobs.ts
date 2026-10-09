@@ -100,7 +100,7 @@ export async function editJobRoutes(app: FastifyInstance): Promise<void> {
         description: [
           '`POST /edit-jobs`로 만든 작업의 진행 상태. WebSocket 대신 **폴링으로 확인할 때 쓰는 엔드포인트**라 Swagger에서 편집 전 과정을 추적할 수 있다.',
           '',
-          '- `status`: `queued`(워커 대기) → `processing` → `done` | `failed` | `canceled`(사용자 취소)',
+          '- `status`: `queued`(워커 대기) → `processing` → `done` | `failed` | `canceled`(사용자 취소). 일시적 실패 뒤 워커가 다시 시도하면 `processing` → `queued` 로 돌아간다(최대 3회 시도, `failed` 는 마지막 시도에서만)',
           '- `progress`: 0~100. 워커가 단계별로 갱신한다',
           '- `videoId`: **결과물** 영상 id (원본 클립이 아니다). 완료 후 `GET /videos/{videoId}`로 `editedUrl`을 얻는다',
           '- `errorMessage`: `failed`일 때만 채워진다 (서버 진단용 원문 — 사용자 노출 문구가 아니다)',

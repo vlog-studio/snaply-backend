@@ -32,6 +32,15 @@ class JobCanceled(Exception):
     """API가 작업을 canceled로 바꿔 파이프라인을 중단해야 할 때."""
 
 
+class JobSettled(Exception):
+    """이미 끝난(failed·done) 작업을 큐가 다시 넘겼을 때. 취소가 아니므로 따로 기록한다."""
+
+
+#: 일시적 실패 뒤 다시 시도할 때 진행 채널에 싣는 단계. 앱이 "다시 시도하는 중"으로 읽는다
+#: (apps/mobile 의 edit-step-label.ts). 진행률은 0 이지만 앱은 진행률을 되돌리지 않는다.
+RETRY_STEP = "다시 시도"
+
+
 class SourceUnavailableError(RuntimeError):
     """원본 클립을 찾을 수 없음 — 실패 분류 코드 SOURCE_UNAVAILABLE."""
 
@@ -83,7 +92,10 @@ async def _run_pipeline(job_id: str, data: dict, work_dir: str) -> None:
     output_video_id = ctx["video_id"]
 
     if not await db.mark_processing(job_id):
-        raise JobCanceled(job_id)
+        # 다시 시도로 온 작업이 그 사이 취소됐거나, 이미 실패·완료로 끝난 작업이다.
+        if await db.fetch_job_status(job_id) == "canceled":
+            raise JobCanceled(job_id)
+        raise JobSettled(job_id)
     await _publish(job_id, {"progress": 0, "step": "시작"})
 
     # 1) 원본 클립 다운로드
@@ -160,6 +172,18 @@ async def _run_pipeline(job_id: str, data: dict, work_dir: str) -> None:
     logger.info("편집 완료 job_id={} url={}", job_id, edited_url)
 
 
+def _is_last_attempt(job) -> bool:
+    """이번이 큐가 주는 마지막 시도인가. 큐 설정(attempts)은 API 의 edit-queue.ts 가 정한다."""
+    attempts = int((job.opts or {}).get("attempts") or 1)
+    return job.attemptsMade + 1 >= attempts
+
+
+async def _fail(job_id: str, message: str, code: str, user_error: str) -> None:
+    """실패를 확정한다 — 상태 · 환급(db.mark_failed) · 앱에 알릴 마지막 프레임."""
+    await db.mark_failed(job_id, message, code)
+    await _publish(job_id, {"status": "failed", "error": user_error, "code": code})
+
+
 async def process_edit_job(job, _job_token) -> dict:
     job_id = job.data["jobId"]
     edit_spec = job.data.get("editSpec") or {}
@@ -184,30 +208,39 @@ async def process_edit_job(job, _job_token) -> dict:
         # raise하지 않아 BullMQ 재시도도 일어나지 않는다.
         logger.info("편집 취소 감지, 중단 job_id={}", job_id)
         return {"jobId": job_id, "status": "canceled"}
+    except JobSettled:
+        logger.info("이미 끝난 작업이라 건너뜀 job_id={}", job_id)
+        return {"jobId": job_id, "status": "settled"}
+    # 다시 해도 같은 결과가 나오는 실패는 바로 확정한다(specs/movie.md MOV-12). `discarded` 는 큐의
+    # 남은 시도를 버린다 — 시간 초과를 세 번 기다리게 하지 않는다.
     except asyncio.TimeoutError:
         logger.error("편집 타임아웃 job_id={}", job_id)
-        await db.mark_failed(job_id, "편집 시간이 초과되었습니다.", "TIMEOUT")
-        await _publish(
-            job_id,
-            {"status": "failed", "error": "편집 시간이 초과되었습니다.", "code": "TIMEOUT"},
-        )
+        job.discarded = True
+        await _fail(job_id, "편집 시간이 초과되었습니다.", "TIMEOUT", "편집 시간이 초과되었습니다.")
         raise
     except SourceUnavailableError as exc:
         logger.error("원본 클립 없음 job_id={}", job_id)
-        await db.mark_failed(job_id, str(exc), "SOURCE_UNAVAILABLE")
-        await _publish(
-            job_id,
-            {"status": "failed", "error": str(exc), "code": "SOURCE_UNAVAILABLE"},
-        )
+        job.discarded = True
+        await _fail(job_id, str(exc), "SOURCE_UNAVAILABLE", str(exc))
         raise
     except Exception as exc:  # noqa: BLE001
-        logger.exception("편집 실패 job_id={}", job_id)
         _capture(exc)
-        await db.mark_failed(job_id, str(exc), "INTERNAL")
-        await _publish(
+        if _is_last_attempt(job):
+            logger.exception("편집 실패 job_id={}", job_id)
+            await _fail(job_id, str(exc), "INTERNAL", "편집 중 오류가 발생했습니다.")
+            raise
+        # 일시적일 수 있는 실패(네트워크 · 저장소) — 사용자에게 실패를 알리지 않고 큐의 다음 시도에 맡긴다.
+        # 실패 확정과 환급은 마지막 시도에서만 한다(backlog E-27).
+        if not await db.requeue_for_retry(job_id):
+            logger.info("편집 취소 감지, 중단 job_id={}", job_id)
+            return {"jobId": job_id, "status": "canceled"}
+        logger.opt(exception=exc).warning(
+            "편집 실패, 다시 시도 예정 job_id={} attempt={}/{}",
             job_id,
-            {"status": "failed", "error": "편집 중 오류가 발생했습니다.", "code": "INTERNAL"},
+            job.attemptsMade + 1,
+            (job.opts or {}).get("attempts"),
         )
+        await _publish(job_id, {"progress": 0, "step": RETRY_STEP})
         raise
     finally:
         shutil.rmtree(work_dir, ignore_errors=True)

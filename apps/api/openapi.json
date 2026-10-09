@@ -6146,7 +6146,7 @@
         "tags": [
           "edit-jobs"
         ],
-        "description": "`POST /edit-jobs`로 만든 작업의 진행 상태. WebSocket 대신 **폴링으로 확인할 때 쓰는 엔드포인트**라 Swagger에서 편집 전 과정을 추적할 수 있다.\n\n- `status`: `queued`(워커 대기) → `processing` → `done` | `failed` | `canceled`(사용자 취소)\n- `progress`: 0~100. 워커가 단계별로 갱신한다\n- `videoId`: **결과물** 영상 id (원본 클립이 아니다). 완료 후 `GET /videos/{videoId}`로 `editedUrl`을 얻는다\n- `errorMessage`: `failed`일 때만 채워진다 (서버 진단용 원문 — 사용자 노출 문구가 아니다)\n- `errorCode`: `failed`일 때의 분류 코드. `TIMEOUT` | `SOURCE_UNAVAILABLE` | `QUEUE_FAILED` | `INTERNAL`. 앱은 이 코드로 사용자 문구를 분기한다\n- `pipelineVersion`/`editSpec`/`renderSpec`: 재현 가능한 작업 스냅샷\n\n남의 작업은 404.",
+        "description": "`POST /edit-jobs`로 만든 작업의 진행 상태. WebSocket 대신 **폴링으로 확인할 때 쓰는 엔드포인트**라 Swagger에서 편집 전 과정을 추적할 수 있다.\n\n- `status`: `queued`(워커 대기) → `processing` → `done` | `failed` | `canceled`(사용자 취소). 일시적 실패 뒤 워커가 다시 시도하면 `processing` → `queued` 로 돌아간다(최대 3회 시도, `failed` 는 마지막 시도에서만)\n- `progress`: 0~100. 워커가 단계별로 갱신한다\n- `videoId`: **결과물** 영상 id (원본 클립이 아니다). 완료 후 `GET /videos/{videoId}`로 `editedUrl`을 얻는다\n- `errorMessage`: `failed`일 때만 채워진다 (서버 진단용 원문 — 사용자 노출 문구가 아니다)\n- `errorCode`: `failed`일 때의 분류 코드. `TIMEOUT` | `SOURCE_UNAVAILABLE` | `QUEUE_FAILED` | `INTERNAL`. 앱은 이 코드로 사용자 문구를 분기한다\n- `pipelineVersion`/`editSpec`/`renderSpec`: 재현 가능한 작업 스냅샷\n\n남의 작업은 404.",
         "parameters": [
           {
             "schema": {

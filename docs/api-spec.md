@@ -135,6 +135,7 @@ OpenAPI 로 표현되지 않아 아래 [WebSocket](#websocket-edit-jobsidprogres
 ```
 { "progress": 12, "step": "연결됨" }                     ← 연결 직후 현재 진행률 스냅샷 1건
 { "progress": 30, "step": "음악 매칭 중..." }
+{ "progress": 0, "step": "다시 시도" }                   ← 일시적 실패 뒤 처음부터 다시(아래)
 { "progress": 100, "step": "완료", "outputUrl": "https://..." }
 { "status": "failed", "error": "편집 중 오류가 발생했습니다.", "code": "INTERNAL" }
 { "progress": 0, "step": "취소됨", "status": "canceled" }
@@ -145,6 +146,10 @@ OpenAPI 로 표현되지 않아 아래 [WebSocket](#websocket-edit-jobsidprogres
 편집은 단계 사이가 그보다 길 수 있어서다. 앱은 여전히 끊기면 다시 붙는 쪽이 안전하다(재연결 시 스냅샷 1건을 다시 받는다).
 
 - 진행 메시지의 `step` 은 워커의 진행 단계 원문이다 — 화면에 그대로 쓰지 말고 앱이 단계별 문구로 바꾼다. 단계는 거칠어서(한 작업에 여섯 번 안팎) 그 사이에 진행률이 멈춰 있는 것이 정상이다.
+- **일시적 실패는 워커가 다시 시도한다**(MOV-12, 2026-10-10). 큐가 한 작업에 최대 3번 시도하고, 마지막 시도 전의 실패는
+  작업을 `queued`(진행률 0)로 되돌린 뒤 `{ "progress": 0, "step": "다시 시도" }` 를 보낸다 — `failed` 프레임도 환급도 없다. 그래서
+  `GET` 의 `status` 는 `processing` 에서 `queued` 로 돌아갈 수 있고, 진행률도 0 부터 다시 오른다(앱은 진행률을 되돌리지 않는다).
+  다시 해도 같은 실패(`SOURCE_UNAVAILABLE` · `TIMEOUT`)는 다시 시도하지 않고 바로 `failed` 다. 예약 크레딧은 확정된 실패에서 한 번만 환급된다.
 - 완료/실패/취소 시 서버가 연결을 종료한다. `code` 는 GET 응답의 `errorCode` 와 같은 분류다.
 - 이미 종료된 작업에 연결하면 최종 상태 메시지 1건만 받고 닫힌다. `done` 이면 위 완료 메시지(`outputUrl` 포함)와 동일, `canceled` 는 `{ "status": "canceled" }` 한 건.
 - 없는 작업이거나 남의 작업이면 `{ "status": "failed", "error": "편집 작업을 찾을 수 없습니다." }` 후 종료. 실제 편집 실패가 아니라 `code` 가 없다 — 앱은 `code` 유무로 구분한다.

@@ -95,6 +95,27 @@ async def mark_processing(job_id: str) -> bool:
         return row is not None
 
 
+async def fetch_job_status(job_id: str) -> str | None:
+    """작업의 지금 상태. 시작이 거절된 이유(취소인지, 이미 끝났는지)를 가를 때 쓴다."""
+    async with _pool_or_raise().acquire() as conn:
+        return await conn.fetchval("SELECT status FROM edit_jobs WHERE id=$1", job_id)
+
+
+async def requeue_for_retry(job_id: str) -> bool:
+    """일시적 실패 뒤 큐의 다음 시도를 기다리도록 queued 로 되돌린다(진행률 0).
+
+    processing 일 때만 바꾼다. False 면 그 사이 취소된 작업 — 다시 시도하지 않는다.
+    상태가 queued 라 앱의 따라잡기는 "아직 만드는 중"으로 읽고, 실패도 환급도 일어나지 않는다.
+    """
+    async with _pool_or_raise().acquire() as conn:
+        row = await conn.fetchrow(
+            "UPDATE edit_jobs SET status='queued', progress=0 "
+            "WHERE id=$1 AND status='processing' RETURNING id",
+            job_id,
+        )
+        return row is not None
+
+
 async def update_progress(job_id: str, progress: int) -> bool:
     """processing일 때만 갱신. False면 그 사이 취소된 작업 — 파이프라인을 중단해야 한다."""
     async with _pool_or_raise().acquire() as conn:
