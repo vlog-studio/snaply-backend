@@ -2727,3 +2727,10 @@ MinIO 커뮤니티판은 이미지 배포와 보안 패치를 멈췄고, 우리�
   같은 날 확인 때는 익명 토큰이 발급되지 않고 manifest 가 `403` 이라 아직 비공개였다 — 설정 변경과 ONBOARDING 문구는 backlog G.
 - **옮겨 둔 것** — 백로그 본문에만 있던 "업스트림 `.hotfix.*` 태그는 amd64 만 있다"는 주의를 태그를 올리는 `minio-image.yml` 주석으로 옮겼다.
 - **실수** — 익명 pull 을 확인하려고 이 Mac 에서 `docker logout ghcr.io` 를 실행했다. 로그인이 있었다면 풀렸다(`docker login ghcr.io` 로 되돌린다).
+
+## 2026-10-10 (이어서) — MinIO 미러 패키지는 비공개로 둔다(backlog G 항목 지움)
+
+바로 위에서 공개하기로 했던 GHCR 패키지 `vlog-studio/snaply-backend/minio` 를 **비공개로 유지**한다. 공개는 새 개발자의 첫 실행 몇 분을
+줄이는 편의일 뿐이고, 비공개여도 막히는 곳이 없다 — `ensure-minio-image.sh` 가 받지 못하면 같은 Dockerfile 로 로컬 빌드하고(CI 도 같다),
+배포 잡은 잡 토큰으로 받는다. 회사 조직 이름으로 이미지를 외부에 내놓는 일과 MinIO(AGPL) 바이너리 공개 배포의 의무를 따질 필요도 없어진다.
+ONBOARDING §3 의 "`docker login ghcr.io` 가 되어 있으면 받아 오고, 아니면 로컬 빌드" 는 그대로 맞다.
