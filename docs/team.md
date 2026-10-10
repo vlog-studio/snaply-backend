@@ -114,6 +114,10 @@ youngtaek_hong 이 두 트랙의 앱·API·워커를 함께 고쳤고(2026-08-31
 - 운영 DB 반영은 손으로 하지 않는다 — main 머지 때 배포 잡이 컨테이너 교체 전에 마이그레이션을
   적용한다([deployment-aws.md](./deployment-aws.md) §3).
 - API 통합 테스트는 `snaply_test`를 자동 생성한다. 실행 규칙은 [AGENTS.md](../AGENTS.md) §테스트.
+- **새 테이블을 만들면 같은 변경에서 [`rls-policies.sql`](../apps/api/prisma/rls-policies.sql)에 정책을 쓴다.**
+  로컬과 AWS 서버는 RLS 를 쓰지 않지만, 공유 Supabase DB 로 돌아가면 정책 없는 테이블은 앱에 든 공개 키로 열린다.
+  소유자 컬럼이 있으면 `user_id = current_app_user_id()`, 없으면 부모를 거쳐(`exists`) 판정하고, 서버만 쓰는 데이터는
+  조회 정책만 둔다. 소유자가 없는 제품 데이터는 RLS 를 켜고 정책을 두지 않는다(`movie_templates`).
 
 ---
 

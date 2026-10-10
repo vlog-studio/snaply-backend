@@ -178,3 +178,49 @@ create policy "movie_clips_delete_own" on public.movie_clips
       where m.id = movie_id and m.user_id = public.current_app_user_id()
     )
   );
+
+-- ── user_consents ──────────────────────────────────────
+-- 동의 기록은 "언제 무엇에 동의했는가"의 근거다. 기록은 API(service_role)가 사용자의 선택을 받아
+-- 남기므로 조회만 본인 것으로 허용한다 — 클라이언트가 직접 쓰면 동의 이력을 지어낼 수 있다.
+alter table public.user_consents enable row level security;
+
+create policy "user_consents_select_own" on public.user_consents
+  for select using (user_id = public.current_app_user_id());
+
+-- ── video_signals ──────────────────────────────────────
+-- 스냅의 로컬 신호(렌디션 워커가 계산). 소유자 컬럼이 없어 소속 스냅을 거쳐 판정한다.
+-- 쓰기는 워커(service_role)만 한다.
+alter table public.video_signals enable row level security;
+
+create policy "video_signals_select_own" on public.video_signals
+  for select using (
+    exists (
+      select 1 from public.videos v
+      where v.id = video_id and v.user_id = public.current_app_user_id()
+    )
+  );
+
+-- ── movie_recommendations · movie_recommendation_items ─
+-- 추천은 서버가 만들고 앱은 API 로만 받는다. 조회만 본인 것으로 허용한다.
+alter table public.movie_recommendations enable row level security;
+
+create policy "movie_recommendations_select_own" on public.movie_recommendations
+  for select using (user_id = public.current_app_user_id());
+
+-- 항목에는 소유자 컬럼이 없다. 소속 추천을 거쳐 판정한다.
+alter table public.movie_recommendation_items enable row level security;
+
+create policy "movie_recommendation_items_select_own" on public.movie_recommendation_items
+  for select using (
+    exists (
+      select 1 from public.movie_recommendations r
+      where r.id = recommendation_id and r.user_id = public.current_app_user_id()
+    )
+  );
+
+-- ── movie_drafts ───────────────────────────────────────
+-- AI 편집 초안은 서버가 만든다. 조회만 본인 것으로 허용한다.
+alter table public.movie_drafts enable row level security;
+
+create policy "movie_drafts_select_own" on public.movie_drafts
+  for select using (user_id = public.current_app_user_id());

@@ -2700,3 +2700,17 @@ principle-priority 는 그 문장을 그대로 인용한다. [ux/README.md](../a
 
 2026-10-09 정리에서 A-1 "서버 전환 실기기 검증"의 ② "편집이 PATCH 된다"를 2026-10-01 실기기 기록으로 통과 처리한 것을 오너가 그대로 두기로 했다 —
 ② 는 무비 편집이 서버에 PATCH 로 닿는다는 뜻이다. 2026-10-09 휴대폰에서 바꾼 스타일이 결과물에 반영된 것도 같은 경로다.
+
+## 2026-10-10 (이어서) — RLS 정책이 없던 테이블 다섯 개(backlog E-19 닫음)
+
+`rls-policies.sql` 은 "모든 테이블에 RLS 를 켠다"는 원칙인데 뒤에 생긴 `user_consents` · `video_signals` · `movie_recommendations` ·
+`movie_recommendation_items` · `movie_drafts` 는 RLS 를 켜는 줄도 없었다. 로컬과 AWS 서버는 각자의 Postgres 라 새는 것은 없지만,
+공유 Supabase DB 로 돌아가면 이 다섯은 앱에 든 공개(anon) 키로 Data API 에서 열린다. (a) 원칙을 지키기로 했다.
+
+- **정책** — 다섯 모두 서버(API · 워커)만 쓰는 데이터라 기존 `video_analyses` · `credit_ledger` 처럼 **본인 것 조회만** 연다. 소유자 컬럼이
+  없는 `video_signals` 는 `videos` 를, `movie_recommendation_items` 는 `movie_recommendations` 를 거쳐(`exists`) 판정한다. 동의 기록은
+  클라이언트가 쓰면 이력을 지어낼 수 있어 특히 쓰기를 열지 않는다. 새 테이블을 만들 때 정책을 같이 쓰라는 규칙을 [team.md](./team.md) §3 에 넣었다.
+- **검증** — 로컬 Postgres 에 임시 DB 를 만들어 `snaply_test` 스키마를 복사하고, Supabase 의 `auth.uid()` · `authenticated` 역할을 흉내 낸 뒤
+  파일 전체를 `ON_ERROR_STOP` 으로 적용했다(오류 없음). 사용자 A · B 의 행을 넣고 A 로 읽으면 다섯 테이블 모두 A 의 1행만, 로그인 없이 읽으면
+  0행이었다. 쓰기 권한을 일부러 준 상태에서도 A 의 동의 기록 추가는 `violates row-level security policy` 로 거절되고 초안 수정은 0행이었다.
+  임시 DB 와 역할은 지웠다. 실제 Supabase 에는 적용하지 않았다 — 공유 DB 를 쓰지 않는다.

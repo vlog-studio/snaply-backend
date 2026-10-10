@@ -761,20 +761,6 @@ GHCR 패키지를 공개로 돌릴지도 정한다 — 공개면 새 개발자�
 **완료 조건**: 대체 여부 결정 → 바꾼다면 compose 2곳 · CI + 문서 갱신 + `npm test -w apps/api`
 (통합 테스트가 MinIO 를 쓴다) 통과. 두기로 하면 이 항목을 "소스 빌드 미러 유지"로 좁혀 닫는다.
 
-### E-19. RLS 정책이 없는 테이블이 다섯 개다
-
-[`apps/api/prisma/rls-policies.sql`](../apps/api/prisma/rls-policies.sql)은 "모든 테이블에 RLS 를 켠다"는 원칙으로 쓰였는데, 그 뒤에
-생긴 `user_consents` · `video_signals` · `movie_recommendations` · `movie_recommendation_items` · `movie_drafts` 에는 정책이 없다.
-API 는 서버 권한으로 DB 에 붙고 소유권을 코드에서 검사하므로 지금 새는 것은 없다. RLS 가 실제로 효력을 갖는 것은 클라이언트가
-Supabase 로 DB 에 직접 닿을 수 있는 공유 Supabase DB 를 쓸 때뿐이다 — 로컬과 AWS 서버는 각자의 Postgres 를 쓴다
-([ONBOARDING.md](../ONBOARDING.md) §3).
-
-**결정할 것**: (a) 다섯 테이블에 다른 테이블과 같은 모양(`user_id = auth.uid()`)의 정책을 더한다 — 원칙 유지, 공유 DB 로 돌아가도 안전
-(b) RLS 를 쓰지 않는 구성이 현행이므로 파일의 원칙 문구를 "공유 Supabase DB 에서만 쓰는 방어선"으로 고치고 정책 추가를 멈춘다.
-
-**완료 조건**: 고른 쪽으로 SQL 이나 원칙 문구를 고치고, (a) 면 새 테이블을 만들 때 정책을 함께 쓰라는 줄을
-[team.md](./team.md) §3 에 넣는다.
-
 ---
 
 ## F. 남은 실검증
@@ -898,6 +884,7 @@ Supabase 로 DB 에 직접 닿을 수 있는 공유 Supabase DB 를 쓸 때뿐�
 - **E-16** 대표 프레임 하나를 못 뽑으면 중복 비교의 위치가 어긋난다 — 2026-10-02 → progress 2026-10-02 "대표 프레임 해시의 자리"
 - **E-17** 결과물이 원본의 위치 태그를 싣는다(무비 결과물에서 지움 — 배포본은 A-4 위치 항목으로) — 2026-10-07 → progress 2026-10-07 "무비 결과물이 찍은 곳을 싣고 나가지 않는다"
 - **E-18** 지운 스냅의 분석 결과가 남는다(ANA-3, 개인정보처리방침과 다름) — 2026-10-09 → progress 2026-10-09 "지운 스냅의 분석 결과를 지운다"
+- **E-19** RLS 정책이 없는 테이블 다섯 개(`user_consents` · `video_signals` · `movie_recommendations` · `movie_recommendation_items` · `movie_drafts`) — 2026-10-10, (a) 다른 테이블과 같은 모양의 조회 정책을 더하고 새 테이블 규칙을 [team.md](./team.md) §3 에 넣었다 → progress 2026-10-10 "RLS 정책이 없던 테이블 다섯 개"
 - **E-20** 사내 서버 오버레이만 바꾼 머지는 배포되지 않는다 — 2026-10-09 사내 서버 경로를 지우면서(`docker-compose.prod.yml` 삭제) 사라졌다 → progress 2026-10-09 "사내 서버를 접고 배포 대상을 AWS 하나로"(낡은 머리 주석은 G)
 - **E-21** SNS 업로드 준비 경고가 실제 업로드 주소를 보지 않는다(서명 호스트로 판정 · 터널 스크립트가 `S3_PUBLIC_ENDPOINT` 를 출력, 실키 재검증은 F) — 2026-10-10 → progress 2026-10-10 "SNS 업로드 준비 경고가 서명 호스트를 본다"
 - **E-22** `API_HOST_PORT` 가 환경변수 원천에 없다 — 2026-10-09 → progress 2026-10-09 "`API_HOST_PORT` 를 환경변수 원천에 선언한다"
