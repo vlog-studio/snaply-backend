@@ -736,31 +736,6 @@ A-7 의 비트 싱크가 들어오면 컷 지점까지 달라져 피해가 커�
 **완료 조건**: 선택된 트랙 ID·난수 시드를 `editSpec` 에 핀으로 남기고, 재생성이 같은 산출물을
 내는 것을 테스트로 고정한다. 트랙 ID 를 가지려면 `bgm_tracks` 가 필요하므로 A-7 과 함께 간다.
 
-### E-7. MinIO 커뮤니티 이미지의 수명 — 로컬·CI 스토리지 대체 검토
-
-MinIO 커뮤니티 에디션은 이미지 배포를 멈췄고(Docker Hub 이미지 삭제, quay.io 익명 pull 차단) 유료 AIStor 로
-대체되는 중이다. 지금은 같은 릴리스(`RELEASE.2025-09-07T16-13-09Z`)를 아카이브된 소스에서 빌드한 GHCR 미러를
-쓴다 — [`deploy/minio/Dockerfile`](../deploy/minio/Dockerfile) · [`minio-image.yml`](../.github/workflows/minio-image.yml) ·
-받지 못하면 로컬 빌드하는 [`scripts/ensure-minio-image.sh`](../scripts/ensure-minio-image.sh)
-([progress.md](./progress.md) 2026-09-25). 태그를 올릴 때는 amd64·arm64 매니페스트를 둘 다 확인한다
-(`.hotfix.*` 태그는 amd64 만 있어 Apple Silicon 에서 pull 이 실패한다).
-
-**왜 열려 있는지**: 미러는 공급 문제만 푼다.
-
-- 커뮤니티 릴리스는 2025-09-07 이후 패치가 없다. 보안 수정은 AIStor 에만 간다 — 우리가 빌드해도 같다
-- **2026-10-09 로 급박함이 줄었다.** 사내 서버를 접으면서(배포 대상은 AWS S3 하나다) MinIO 가 네트워크에
-  노출되는 자리가 없어졌다 — 남은 쓰임은 로컬 개발과 CI 뿐이다. 패치가 끊긴 서버를 **운영에서**
-  노출하던 문제는 사라졌고, 공급(이미지를 못 받는 것)만 남았다
-
-**결정할 것**: 대체 S3 호환 서버(RustFS · Garage · SeaweedFS 등)로 바꿀지, 미러로 둘지. 코드는 `S3_ENDPOINT` 만 바꾸는
-구조라 교체 비용은 compose 2곳(`docker-compose.yml` · `docker-compose.dev.yml`) · CI(`.github/workflows/ci.yml` 의 MinIO 단계) ·
-[ONBOARDING.md](../ONBOARDING.md) · [deployment-aws.md](./deployment-aws.md)
-와, MinIO 전용 API 에 기대는 곳이 있는지 확인(`dev:public-bucket` 스크립트 · 헬스체크 경로) 정도다.
-GHCR 패키지를 공개로 돌릴지도 정한다 — 공개면 새 개발자가 로그인 없이 받고, 로컬 빌드(몇 분)를 건너뛴다.
-
-**완료 조건**: 대체 여부 결정 → 바꾼다면 compose 2곳 · CI + 문서 갱신 + `npm test -w apps/api`
-(통합 테스트가 MinIO 를 쓴다) 통과. 두기로 하면 이 항목을 "소스 빌드 미러 유지"로 좁혀 닫는다.
-
 ---
 
 ## F. 남은 실검증
@@ -797,6 +772,10 @@ GHCR 패키지를 공개로 돌릴지도 정한다 — 공개면 새 개발자�
 - [ ] **테스트 게시물 정리** — 인스타 릴스는 API 로 삭제할 수 없으므로 앱에서 수동으로 지운다.
       **틱톡 받은함 초안 3건은 지우지 않는다** — C-2("API 는 ok 인데 알림 미도착")의 유일한 증거물이라
       C-2 가 닫힌 뒤에 정리한다.
+- [ ] **MinIO 미러 이미지 공개 전환** — 2026-10-10 GHCR 패키지 `vlog-studio/snaply-backend/minio` 를 공개로 하기로 했다(E-7 닫음).
+      조직 Packages → Package settings → Change visibility → Public 은 오너가 한다. 같은 날 확인 때는 아직 익명 pull 이
+      거절됐다(`unauthorized`). 바뀐 뒤 로그인 없이 받아지는지 보고 [ONBOARDING.md](../ONBOARDING.md) §3 의
+      "`docker login ghcr.io` 가 되어 있으면 받아 오고, 아니면 로컬 빌드" 를 "로그인 없이 받는다"로 고친다
 
 ---
 
@@ -873,6 +852,7 @@ GHCR 패키지를 공개로 돌릴지도 정한다 — 공개면 새 개발자�
 - **E-3** S3 삭제 실패분 정리 배치 — 2026-09-09 → progress 2026-09-09 "보관 기간 만료 정리 배치" ③
 - **E-4** 빌드한 이미지의 스모크 검사(빌드 → 스모크 → 푸시) — 2026-09-11 → progress 2026-09-11 "이미지 스모크 검사 · e2e 무비 경로 전환"
 - **E-6** 낡은 Prisma 클라이언트 프리체크 — 2026-09-09 → progress 2026-09-09 "촬영 시각 저장 · 무비 서버 엔티티" ②
+- **E-7** MinIO 커뮤니티 이미지의 수명 — 2026-10-10, 대체 서버로 바꾸지 않고 **소스 빌드 미러를 유지**한다(운영은 S3 라 MinIO 는 로컬 · CI 만 쓴다). 미러 빌드가 깨지거나 운영에서 MinIO 를 다시 쓰게 되면 다시 연다. 패키지 공개는 G → progress 2026-10-10 "MinIO 는 소스 빌드 미러를 유지한다"
 - **E-8** 영상 삭제·정리가 자기 소유 객체만 지운다 — 2026-09-27 → progress 2026-09-27 "영상 삭제가 자기가 소유한 객체만 지운다"
 - **E-9** 무비 생성의 402 가 부족분 숫자를 싣지 못한다 — 2026-10-03 → progress 2026-10-03 "무비 생성의 402 가 부족분 숫자를 싣는다"
 - **E-10** 재생 화면의 길이 표시가 라이트 테마에서 거의 보이지 않는다 — 2026-10-07 → progress 2026-10-07 "재생 화면은 테마와 상관없이 어둡다"

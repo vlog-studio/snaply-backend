@@ -74,7 +74,8 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Apple Silicon 개발 머신을 위해 arm64 도 올린다.
+      # Apple Silicon 개발 머신을 위해 arm64 도 올린다. 릴리스를 바꿀 때는 올라간 매니페스트에 amd64 · arm64 가
+      # 둘 다 있는지 본다 — 업스트림 `.hotfix.*` 태그는 amd64 만 있어 그 소스로는 Apple Silicon 에서 pull 이 실패한다.
       - name: Push multi-arch image
         if: github.event_name != 'pull_request'
         uses: docker/build-push-action@v6
